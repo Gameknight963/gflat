@@ -70,7 +70,7 @@ public sealed class IpEndpointTests
                          for(nuint i=0;i<written;i++)if(output[i+1]!=expected[i])return 11;
                          for(nuint i=written+1;i<51;i++)if(output[i]!='!')return 12;}
                  }
-                 nuint written=99;if(value.TryFormat((char*)1,0,ref written)||written!=0)return 13;
+                 nuint written=99;if(value.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 13;
                 }
                 """);
         }
@@ -105,8 +105,8 @@ public sealed class IpEndpointTests
         }
         body.Append("""
             {int before=attempts;deny=true;nuint[3] counts=[0,54,(nuint)0-(nuint)1];
-             for(nuint i=0;i<3;i++){IpEndpoint value=initial;if(IpEndpoint::TryParse((readonly(char)*)1,counts[i],&value)||!value.Equals(&zero))return 5;}
-             IpEndpoint value=initial;nuint written=99;if(value.TryFormat((char*)1,0,ref written)||written!=0)return 6;
+             for(nuint i=0;i<3;i++){IpEndpoint value=initial;if(IpEndpoint::TryParse(((nuint)1).reinterpret<readonly(char)*>(),counts[i],&value)||!value.Equals(&zero))return 5;}
+             IpEndpoint value=initial;nuint written=99;if(value.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 6;
              readonly(char)* embedded="192.0.2.1:80\0suffix";value=initial;
              if(IpEndpoint::TryParse(embedded,19,&value)||!value.Equals(&zero))return 7;
              if(!IpEndpoint::TryParse(embedded,&value)||value.Port!=(ushort)80)return 8;
@@ -141,7 +141,7 @@ public sealed class IpEndpointTests
                 IpEndpoint v4=IpEndpoint::Parse("192.0.2.1:443");IpEndpoint mapped=IpEndpoint::Parse("[::ffff:192.0.2.1]:443");
                 int before=attempts;deny=true;
                 if(!value.Equals(&same)||!value.Equals(&typed)||value.GetHashCode()!=same.GetHashCode()||value.Equals(&otherPort)||v4.Equals(&mapped))return 2;
-                IpEndpoint[8] backing;char* bytes=(char*)&backing[0];nuint extent=(nuint)sizeof(IpEndpoint)*8;
+                IpEndpoint[8] backing;char* bytes=(&backing[0]).reinterpret<char*>();nuint extent=(nuint)sizeof(IpEndpoint)*8;
                 if(extent<80||extent>512)return 3;
                 readonly(char)* input="[2001:0DB8::1]:00443";readonly(char)* expected="[2001:db8::1]:443";
                 nuint[3] offsets=[0,1,(nuint)sizeof(IpEndpoint)-1];

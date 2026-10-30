@@ -97,7 +97,7 @@ public sealed class FileSHA512HashTests
                 using std; using std::IO; using std::Hashing;
                 int main(int argc,char** argv){
                     File input=File::OpenRead(argv[1]);int caught=0;char[3] scratch=['?','?','?'];
-                    try{FileHash::SHA512(&input,(char*)1,0);}catch(ref IOException error){caught++;}
+                    try{FileHash::SHA512(&input,((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){caught++;}
                     if(caught!=1||!input.IsOpen||input.ReadByte()!='a')return 1;
                     try{FileHash::SHA512(&input,&scratch[1],0);}catch(ref IOException error){caught++;}
                     if(caught!=2||scratch[0]!='?'||scratch[1]!='?'||scratch[2]!='?'||input.ReadByte()!='b')return 2;

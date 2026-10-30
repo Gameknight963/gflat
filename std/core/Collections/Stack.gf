@@ -20,8 +20,8 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
     {
         if (storage.Count == 0) return false;
         Span<T> elements = storage.AsSpan();
-        nuint start = (nuint)elements.Data!;
-        nuint output = (nuint)&result;
+        nuint start = (elements.Data!).reinterpret<nuint>();
+        nuint output = (&result).reinterpret<nuint>();
         nuint stride = (nuint)sizeof(T);
         if (stride == 0) stride = 1;
         if (output >= start && output - start < storage.Capacity * stride)

@@ -13,7 +13,7 @@ public sealed class PrimitiveInterfaceEditorTests
                 immutable int Hash();
                 implementation int { public immutable int Hash() => *this; }
             }
-            int Read<T : IHash>(this ref immutable(T) value) => value.Hash();
+            extension<T : IHash> T{public immutable int Read()=> (*this).Hash();}
             int main() { int value=42; return value.Read(); }
             """;
         var source = new SourceFile(Path.GetFullPath("primitive-extension.gf"), text);

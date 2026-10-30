@@ -66,7 +66,7 @@ public sealed class SpanBooleanParsingTests
             }
             bool CheckBooleanView(Span<readonly(char)> text,bool* result) nothrow=>text.TryParseBool(result);
             int main(){
-                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new((readonly(char)*)1,0);
+                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 bool value=true;if(CheckBooleanView(empty,&value)||value)return 1;
                 value=true;if(CheckBooleanView(zero,&value)||value)return 2;
                 char[7] input=['?','T','r','U','e','?','?'];
@@ -96,7 +96,7 @@ public sealed class SpanBooleanParsingTests
         =>Run("""
             using std; using std::Text; using std::Memory;
             int main(){
-                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new((readonly(char)*)1,0);
+                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 bool value=true;int caught=0;
                 try{value=empty.ParseBool();return 1;}catch(ref Exception error){caught++;}
                 try{value=zero.ParseBool();return 2;}catch(ref Exception error){caught++;}

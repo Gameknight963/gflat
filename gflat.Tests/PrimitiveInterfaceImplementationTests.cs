@@ -14,9 +14,11 @@ public sealed class PrimitiveInterfaceImplementationTests
                 immutable bool Equal(T other);
                 implementation int : IEqual<int> { public immutable bool Equal(int other) => *this == other; }
             }
-            int Read<T : IHash>(this ref immutable(T) value) => value.Hash();
+            int Read<T : IHash>(ref immutable(T) value) => value.Hash();
+            extension<T : IHash> T { public immutable int Read() => (*this).Hash(); }
             struct Box<T> { public T value; public Box(T item) { value=item; } }
-            bool Same<T : IEqual<T>>(this ref Box<T> box, T other) => box.value.Equal(other);
+            bool Same<T : IEqual<T>>(ref Box<T> box, T other) => box.value.Equal(other);
+            extension<T : IEqual<T>> Box<T> { public bool Same(T other) => (*this).value.Equal(other); }
             int main() {
                 int value=42;
                 Box<int> box=new(value);
@@ -35,8 +37,10 @@ public sealed class PrimitiveInterfaceImplementationTests
                 immutable bool Equal(T other);
                 implementation int : IEqual<int> { public immutable bool Equal(int other) => *this == other; }
             }
-            int Read<T : IHash>(this T value) => value.Hash();
-            bool Same<T : IEqual<T>>(this T value, T other) => value.Equal(other);
+            int Read<T : IHash>(T value) => value.Hash();
+            extension<T : IHash> T { public int Read() => (*this).Hash(); }
+            bool Same<T : IEqual<T>>(T value, T other) => value.Equal(other);
+            extension<T : IEqual<T>> T { public bool Same(T other) => (*this).Equal(other); }
             int main() => 0;
             """, options: new() { NoStdLib=true });
         int members=ast.Members.Count;

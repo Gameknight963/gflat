@@ -128,28 +128,28 @@ public sealed class FloatingBinaryTests
                 byte[10] data;
                 for (nuint index = 0; index < {{Values(wide).Length}}; index++) {
                     {{integer}} bits = values[index];
-                    {{type}} original = *(({{type}}*)&bits);
+                    {{type}} original = (bits).reinterpret<{{type}}>();
                     {{type}} decoded = ({{type}})1;
                     for (nuint i = 0; i < 10; i++) data[i] = (byte)165;
                     if (!BinaryPrimitives::TryWrite{{name}}(&data[1], 9, original)) return 1;
                     if (data[0] != (byte)165 || data[{{width + 1}}] != (byte)165) return 2;
                     for (nuint i = 0; i < {{width}}; i++) if (data[i + 1] != expected[index * {{width}} + i]) return 3;
-                    if (!BinaryPrimitives::TryRead{{name}}(&data[1], {{width}}, ref decoded) || *(({{integer}}*)&decoded) != bits) return 4;
+                    if (!BinaryPrimitives::TryRead{{name}}(&data[1], {{width}}, ref decoded) || (decoded).reinterpret<{{integer}}>() != bits) return 4;
                     for (nuint count = 0; count < {{width}}; count++) {
                         decoded = original;
-                        if (BinaryPrimitives::TryRead{{name}}(&data[1], count, ref decoded) || *(({{integer}}*)&decoded) != ({{integer}})0) return 5;
+                        if (BinaryPrimitives::TryRead{{name}}(&data[1], count, ref decoded) || (decoded).reinterpret<{{integer}}>() != ({{integer}})0) return 5;
                         if (BinaryPrimitives::TryWrite{{name}}(&data[1], count, ({{type}})0)) return 6;
                         for (nuint i = 0; i < {{width}}; i++) if (data[i + 1] != expected[index * {{width}} + i]) return 7;
                         if (data[0] != (byte)165 || data[{{width + 1}}] != (byte)165) return 8;
                     }
                     // The aligned output value may occupy the input itself.
-                    byte* sameStorage = (byte*)&decoded;
+                    byte* sameStorage = (&decoded).reinterpret<byte*>();
                     for (nuint i = 0; i < {{width}}; i++) sameStorage[i] = expected[index * {{width}} + i];
-                    if (!BinaryPrimitives::TryRead{{name}}(sameStorage, {{width}}, ref decoded) || *(({{integer}}*)&decoded) != bits) return 9;
+                    if (!BinaryPrimitives::TryRead{{name}}(sameStorage, {{width}}, ref decoded) || (decoded).reinterpret<{{integer}}>() != bits) return 9;
                 }
                 byte*? absent = null;
                 {{type}} zero = ({{type}})1;
-                if (BinaryPrimitives::TryRead{{name}}(absent!, 0, ref zero) || *(({{integer}}*)&zero) != ({{integer}})0) return 10;
+                if (BinaryPrimitives::TryRead{{name}}(absent!, 0, ref zero) || (zero).reinterpret<{{integer}}>() != ({{integer}})0) return 10;
                 if (BinaryPrimitives::TryWrite{{name}}(absent!, 0, zero)) return 11;
                 """);
             code.AppendLine("}");
@@ -175,7 +175,7 @@ public sealed class FloatingBinaryTests
                 byte[10] data;
                 for (nuint index = 0; index < {{Values(wide).Length}}; index++) {
                     {{integer}} bits = values[index];
-                    {{type}} original = *(({{type}}*)&bits);
+                    {{type}} original = (bits).reinterpret<{{type}}>();
                     for (nuint i = 0; i < 10; i++) data[i] = (byte)165;
                     BinaryBufferWriter writer = new(data, {{width + 1}});
                     if (!writer.TrySkip(1) || !writer.TryWrite{{name}}(original) || writer.Position != {{width + 1}} || writer.Remaining != 0) return 1;
@@ -183,13 +183,13 @@ public sealed class FloatingBinaryTests
                     for (nuint i = 0; i < {{width}}; i++) if (data[i + 1] != expected[index * {{width}} + i]) return 3;
                     BinaryBufferReader reader = new(data, {{width + 1}});
                     {{type}} decoded = ({{type}})1;
-                    if (!reader.TrySkip(1) || !reader.TryRead{{name}}(ref decoded) || *(({{integer}}*)&decoded) != bits || reader.Position != {{width + 1}}) return 4;
+                    if (!reader.TrySkip(1) || !reader.TryRead{{name}}(ref decoded) || (decoded).reinterpret<{{integer}}>() != bits || reader.Position != {{width + 1}}) return 4;
                     for (nuint count = 0; count < {{width}}; count++) {
                         BinaryBufferReader shortReader = new(data, count + 1);
                         BinaryBufferWriter shortWriter = new(data, count + 1);
                         if (!shortReader.TrySkip(1) || !shortWriter.TrySkip(1)) return 5;
                         decoded = original;
-                        if (shortReader.TryRead{{name}}(ref decoded) || *(({{integer}}*)&decoded) != ({{integer}})0 || shortReader.Position != 1) return 6;
+                        if (shortReader.TryRead{{name}}(ref decoded) || (decoded).reinterpret<{{integer}}>() != ({{integer}})0 || shortReader.Position != 1) return 6;
                         if (shortWriter.TryWrite{{name}}(({{type}})0) || shortWriter.Position != 1) return 7;
                         for (nuint i = 0; i < {{width}}; i++) if (data[i + 1] != expected[index * {{width}} + i]) return 8;
                         if (data[0] != (byte)165 || data[{{width + 1}}] != (byte)165) return 9;
@@ -197,7 +197,7 @@ public sealed class FloatingBinaryTests
                 }
                 BinaryBufferReader emptyReader = new(); BinaryBufferWriter emptyWriter = new();
                 {{type}} zero = ({{type}})1;
-                if (emptyReader.TryRead{{name}}(ref zero) || *(({{integer}}*)&zero) != ({{integer}})0 || emptyReader.Position != 0) return 10;
+                if (emptyReader.TryRead{{name}}(ref zero) || (zero).reinterpret<{{integer}}>() != ({{integer}})0 || emptyReader.Position != 0) return 10;
                 if (emptyWriter.TryWrite{{name}}(zero) || emptyWriter.Position != 0) return 11;
                 """);
             code.AppendLine("}");

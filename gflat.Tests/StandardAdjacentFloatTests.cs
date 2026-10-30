@@ -88,18 +88,18 @@ public sealed class StandardAdjacentFloatTests
                     {{integer}}[{{edges.Length}}] increment = [{{string.Join(',', increment.Select(bits => bits + suffix))}}];
                     {{integer}}[{{edges.Length}}] decrement = [{{string.Join(',', decrement.Select(bits => bits + suffix))}}];
                     for (nuint index = 0; index < {{edges.Length}}; index++) {
-                        {{integer}} bits = edges[index]; {{scalar}} value = *(({{scalar}}*)&bits);
+                        {{integer}} bits = edges[index]; {{scalar}} value = (bits).reinterpret<{{scalar}}>();
                         {{scalar}} up = Math::BitIncrement(value); {{scalar}} down = Math::BitDecrement(value);
-                        if (*(({{integer}}*)&up) != increment[index] || *(({{integer}}*)&down) != decrement[index]) return 1;
+                        if ((up).reinterpret<{{integer}}>() != increment[index] || (down).reinterpret<{{integer}}>() != decrement[index]) return 1;
                     }
                     // Test each NaN payload bit in both signs explicitly, independent of the host's NaN ABI.
                     for (int payload = 0; payload < {{fractionBits}}; payload++) {
                         for (int negative = 0; negative < 2; negative++) {
                             {{integer}} bits = {{infinity}}{{suffix}} | (({{integer}})1 << payload);
                             if (negative != 0) bits = bits | {{sign}}{{suffix}};
-                            {{scalar}} value = *(({{scalar}}*)&bits);
+                            {{scalar}} value = (bits).reinterpret<{{scalar}}>();
                             {{scalar}} up = Math::BitIncrement(value); {{scalar}} down = Math::BitDecrement(value);
-                            if (*(({{integer}}*)&up) != bits || *(({{integer}}*)&down) != bits) return 3;
+                            if ((up).reinterpret<{{integer}}>() != bits || (down).reinterpret<{{integer}}>() != bits) return 3;
                         }
                     }
                     ulong hash = 14695981039346656037ul;
@@ -108,17 +108,17 @@ public sealed class StandardAdjacentFloatTests
                             for (int negative = 0; negative < 2; negative++) {
                                 {{integer}} bits = ({{integer}})((long)((ulong)exponent << {{fractionBits}}) + (long)offset);
                                 if (negative != 0) bits = bits | {{sign}}{{suffix}};
-                                {{scalar}} value = *(({{scalar}}*)&bits);
+                                {{scalar}} value = (bits).reinterpret<{{scalar}}>();
                                 {{scalar}} up = Math::BitIncrement(value); {{scalar}} down = Math::BitDecrement(value);
-                                hash = Mix(Mix(hash, (ulong)*(({{integer}}*)&up)), (ulong)*(({{integer}}*)&down));
+                                hash = Mix(Mix(hash, (ulong)(up).reinterpret<{{integer}}>()), (ulong)(down).reinterpret<{{integer}}>());
                             }
                         }
                     }
                     ulong state = 839217ul;
                     for (int index = 0; index < 512; index++) {
-                        {{integer}} bits = ({{integer}})Next(ref state); {{scalar}} value = *(({{scalar}}*)&bits);
+                        {{integer}} bits = ({{integer}})Next(ref state); {{scalar}} value = (bits).reinterpret<{{scalar}}>();
                         {{scalar}} up = Math::BitIncrement(value); {{scalar}} down = Math::BitDecrement(value);
-                        hash = Mix(Mix(hash, (ulong)*(({{integer}}*)&up)), (ulong)*(({{integer}}*)&down));
+                        hash = Mix(Mix(hash, (ulong)(up).reinterpret<{{integer}}>()), (ulong)(down).reinterpret<{{integer}}>());
                     }
                     if (hash != {{hash}}ul || state != {{state}}ul) return 2;
                 }

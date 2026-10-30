@@ -122,7 +122,7 @@ public sealed class AbiScalarInteropTests
         string ir = Compiler.Emit("""
             alias GC=Collector;
             static class Collector{
-                public static void* Allocate(nuint bytes,nuint alignment)=>(void*)1;
+                public static void* Allocate(nuint bytes,nuint alignment)=>((nuint)1).reinterpret<void*>();
                 public static void ReferenceAdded(void* slot) nothrow {}
                 public static void ReferenceRemoved(void* slot) nothrow {}
             }

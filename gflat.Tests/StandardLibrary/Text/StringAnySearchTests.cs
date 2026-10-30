@@ -85,10 +85,10 @@ public sealed class StringAnySearchTests
                     char[256] bytes;for(int index=0;index<256;index++)bytes[index]=(char)index;
                     String text=String::From(bytes,256);immutable(String)* view=&text;
                     int before=attempts;deny=true;
-                    if(none.IndexOfAny((readonly(char)*)1,0)!=String::NotFound||none.LastIndexOfAny((readonly(char)*)1,0)!=String::NotFound)return 1;
-                    if(none.IndexOfAny((readonly(char)*)1,123)!=String::NotFound||none.LastIndexOfAny((readonly(char)*)1,123)!=String::NotFound)return 2;
-                    if(view.IndexOfAny((readonly(char)*)1,0)!=String::NotFound||view.LastIndexOfAny((readonly(char)*)1,0)!=String::NotFound)return 3;
-                    if(view.IndexOfAny((readonly(char)*)1,123,256)!=String::NotFound)return 4;
+                    if(none.IndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),0)!=String::NotFound||none.LastIndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),0)!=String::NotFound)return 1;
+                    if(none.IndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),123)!=String::NotFound||none.LastIndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),123)!=String::NotFound)return 2;
+                    if(view.IndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),0)!=String::NotFound||view.LastIndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),0)!=String::NotFound)return 3;
+                    if(view.IndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),123,256)!=String::NotFound)return 4;
                     for(nuint index=0;index<256;index++)if(view.IndexOfAny(view.Data+index,1)!=index||view.LastIndexOfAny(view.Data+index,1)!=index)return 5;
                     nuint[7] offsets=[0,1,127,128,254,255,256];
                     for(nuint row=0;row<7;row++){
@@ -106,7 +106,7 @@ public sealed class StringAnySearchTests
                     for(nuint index=0;index<256;index++)if(view.Data[index]!=bytes[index]||bytes[index]!=(char)index)return 11;
                     for(int mode=0;mode<2;mode++){
                         nuint start=257;if(mode==1)start=(nuint)0-1;bool caught=false;deny=true;
-                        try{view.IndexOfAny((readonly(char)*)1,0,start);}catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"String search start out of range"))return 12;caught=true;}
+                        try{view.IndexOfAny(((nuint)1).reinterpret<readonly(char)*>(),0,start);}catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"String search start out of range"))return 12;caught=true;}
                         deny=false;if(!caught||text.Length!=256)return 13;
                         for(nuint index=0;index<256;index++)if(view.Data[index]!=(char)index)return 14;
                     }

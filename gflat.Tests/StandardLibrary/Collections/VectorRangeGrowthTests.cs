@@ -43,10 +43,10 @@ public sealed class VectorRangeGrowthTests
                  if(target.Count!=4||target.Capacity!=capacity||target.AsImmutable().Data!=address)return 2;
                  for(nuint i=0;i<4;i++)if(target[i]!=(int)i)return 3;
                  int before=allocations;
-                 Span<readonly(int)> excessive=new((readonly(int)*)1,(nuint)0-(nuint)1);
+                 Span<readonly(int)> excessive=new(((nuint)1).reinterpret<readonly(int)*>(),(nuint)0-(nuint)1);
                  try{target.AddRange(excessive);return 4;}catch(ref Exception error){}
                  if(largeAllocations!=0||target.Count!=4||target.Capacity!=capacity)return 5;
-                 Span<readonly(int)> excessiveBytes=new((readonly(int)*)1,((nuint)0-(nuint)1)/(nuint)sizeof(int));
+                 Span<readonly(int)> excessiveBytes=new(((nuint)1).reinterpret<readonly(int)*>(),((nuint)0-(nuint)1)/(nuint)sizeof(int));
                  try{target.AddRange(excessiveBytes);return 6;}catch(ref Exception error){}
                  if(largeAllocations!=0||target.Count!=4||target.Capacity!=capacity)return 7;
                  target.AddRange(target.AsImmutable());

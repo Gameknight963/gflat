@@ -107,7 +107,7 @@ public sealed class Base32TextTests
                     String output=s"unchanged";readonly(char)* original=output.Data;nuint capacity=output.Capacity;int caught=0;
                     {{checks}}
                     deny=true;
-                    try { output=Base32Text::Encode((readonly(char)*)1,(nuint)0-1);return 3; }
+                    try { output=Base32Text::Encode(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-1);return 3; }
                     catch(ref Exception error) { if(!CString::Equals(error.GetMessage(),"Base32 length overflow"))return 4;caught++; }
                     deny=false;
                     if(caught!={{invalid.Length+1}}||output.Data!=original||output.Capacity!=capacity||!output.StartsWith("unchanged"))return 5;
@@ -121,8 +121,8 @@ public sealed class Base32TextTests
                     for(nuint index=0;index<4095;index++)if(invalid[index]!='A')return 9;
                     if(invalid[4095]!='!')return 10;
                     before=allocations;deny=true;
-                    String encoded=Base32Text::Encode((readonly(char)*)1,0);
-                    String decoded=Base32Text::Decode((readonly(char)*)1,0);deny=false;
+                    String encoded=Base32Text::Encode(((nuint)1).reinterpret<readonly(char)*>(),0);
+                    String decoded=Base32Text::Decode(((nuint)1).reinterpret<readonly(char)*>(),0);deny=false;
                     if(!encoded.IsEmpty||!decoded.IsEmpty||encoded.Data[0]!='\0'||decoded.Data[0]!='\0'||allocations!=before)return 11;
                 }
                 if(allocations!=releases)return 12;return 0;

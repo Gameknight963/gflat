@@ -125,7 +125,7 @@ public sealed class ConsoleStandardWriterTests
                 void* stream = __gflat_stdio_stderr();
                 // Keep the CRT descriptor valid but make its underlying OS handle
                 // unwritable. UCRT's temporary stderr buffer flush then fails.
-                if (CloseHandle((void*)_get_osfhandle(_fileno(stream))) == 0) return 1;
+                if (CloseHandle((_get_osfhandle(_fileno(stream))).reinterpret<void*>()) == 0) return 1;
                 try { Console::Error.Write("not delivered", 13); return 2; }
                 catch (std::IO::IOException* failure) { }
                 if (ferror(stream) == 0) return 3;

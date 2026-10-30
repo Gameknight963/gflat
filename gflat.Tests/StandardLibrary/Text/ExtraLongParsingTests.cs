@@ -51,7 +51,7 @@ public sealed class ExtraLongParsingTests
                 public replace void Free(void* pointer) nothrow{free(pointer);}
             }
             int main(){
-                extralong[4] storage;char* text=(char*)storage;
+                extralong[4] storage;char* text=((extralong*)storage).reinterpret<char*>();
                 readonly(char)* minimum="-170141183460469231731687303715884105728";
                 for(nuint i=0;i<40;i++)text[i]=minimum[i];
                 deny=true;
@@ -59,7 +59,7 @@ public sealed class ExtraLongParsingTests
                 text[0]='1';text[1]='2';text[2]='x';
                 if(TryParseExtraLong(text,3,&storage[0])||storage[0]!=(extralong)0)return 2;
                 extralong result=(extralong)9;
-                if(TryParseExtraLong((readonly(char)*)1,0,&result)||result!=(extralong)0)return 3;
+                if(TryParseExtraLong(((nuint)1).reinterpret<readonly(char)*>(),0,&result)||result!=(extralong)0)return 3;
                 char[4] nul=['1','2','\0','9'];
                 if(TryParseExtraLong(nul,4,&result)||result!=(extralong)0)return 4;
                 if(!TryParseExtraLong(nul,&result)||result!=(extralong)12)return 5;

@@ -13,7 +13,8 @@ public sealed class ExtensionArgumentInferenceTests
         new("extension.gf", """
             using Containers;
             namespace Algorithms {
-                int Measure<A,B>(this Box<A> first, Box<B> second) => sizeof(A)*10+sizeof(B);
+                int Measure<A,B>(Box<A> first, Box<B> second) => sizeof(A)*10+sizeof(B);
+                extension<A> Box<A> { public int Measure<B>(Box<B> second) => sizeof(A)*10+sizeof(B); }
             }
             """),
         new("main.gf", $$"""
@@ -58,7 +59,8 @@ public sealed class ExtensionArgumentInferenceTests
                 using Models;
                 namespace Helpers {
                     alias Selected=Models::Tag;
-                    int Read<T>(this int receiver, Pair<Selected,T> value) => sizeof(T);
+                    int Read<T>(int receiver, Pair<Selected,T> value) => sizeof(T);
+                    extension int { public int Read<T>(Pair<Selected,T> value) => sizeof(T); }
                 }
                 """),
             new("main.gf", """

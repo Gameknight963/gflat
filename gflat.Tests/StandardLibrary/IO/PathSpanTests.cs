@@ -56,7 +56,7 @@ public sealed class PathSpanTests
                 if(counted[0]!='a'||counted[1]!='/'||counted[2]!='b'||counted[5]!='.')return 5;
                 Span<readonly(char)> empty=new();
                 if(Paths::GetFileName(empty,PathStyle::Windows).Data!=null||Paths::GetDirectoryName(empty,PathStyle::Unix).Data!=null||Paths::GetExtension(empty,PathStyle::Windows).Data!=null||Paths::GetFileNameWithoutExtension(empty,PathStyle::Unix).Data!=null||Paths::GetRoot(empty,PathStyle::Windows).Data!=null)return 6;
-                Span<readonly(char)> zero=new((readonly(char)*)1,0);
+                Span<readonly(char)> zero=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 if(!Paths::GetFileName(zero,PathStyle::Windows).IsEmpty||!Paths::GetRoot(zero,PathStyle::Windows).IsEmpty)return 7;
                 if(allocations!=0)return 8;return 0;
             }

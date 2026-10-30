@@ -14,6 +14,7 @@ public sealed partial class EditorModel
             ClassDeclaration c => c.GenericParameters.Any(p => p.Name == name),
             StructDeclaration s => s.GenericParameters.Any(p => p.Name == name),
             InterfaceDeclaration i => i.GenericParameters.Any(p => p.Name == name),
+            ExtensionDeclaration e => e.GenericParameters.Any(p => p.Name == name),
             _ => false
         })) return symbols.FirstOrDefault(s => s.IsTypeParameter && s.Name == name &&
             s.Scope != null && (s.Scope == context.Syntax || Parents(context.Syntax).Contains(s.Scope)));
@@ -218,7 +219,7 @@ public sealed partial class EditorModel
                 if (parameter.IsExtensionReceiver) Keyword("this");
                 if (parameter.IsConst) Keyword("const");
                 var originalParameter = symbol.BoundParameters != null && symbol.Syntax.Node is MethodDeclaration sourceMethod
-                    ? sourceMethod.Parameters.ElementAtOrDefault(i + (symbol.BoundExtension ? 1 : 0)) : parameter;
+                    ? sourceMethod.Parameters.ElementAtOrDefault(i + (symbol.BoundExtension && sourceMethod.Parameters.FirstOrDefault()?.IsExtensionReceiver == true ? 1 : 0)) : parameter;
                 Type(symbol.BoundParameters != null ? parameter.Type : snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(originalParameter == null ? null : declarations.GetValueOrDefault(originalParameter)) : null);
                 if (parameter.DefaultValue != null)
                 {
@@ -339,6 +340,7 @@ public sealed partial class EditorModel
             ClassDeclaration c => c.GenericParameters.Select(p => p.Name),
             StructDeclaration st => st.GenericParameters.Select(p => p.Name),
             InterfaceDeclaration i => i.GenericParameters.Select(p => p.Name),
+            ExtensionDeclaration e => e.GenericParameters.Select(p => p.Name),
             _ => Enumerable.Empty<string>()
         }).ToHashSet();
         int delta = 0;

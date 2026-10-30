@@ -9,6 +9,6 @@ public partial class TypeChecker
     {
         if (method.Accessibility == TokenKind.Private && method.Span.SourceId != use.SourceId &&
             _functionNamespaces.ContainsKey(method) && !TryGetMethodOwner(method, out _, out _))
-            throw new TypeCheckException($"Namespace function '{DisplayName(method.Name)}' is private to its source file", use);
+            throw new TypeCheckException($"Namespace function '{DisplayName(ExtensionMemberName(method))}' is private to its source file", use);
     }
 }

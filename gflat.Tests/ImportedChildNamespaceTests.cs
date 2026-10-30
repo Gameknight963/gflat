@@ -85,7 +85,7 @@ public sealed class ImportedChildNamespaceTests
     {
         SourceFile[] sources=[
             new("types.gf","namespace Library::Tools{struct Box<T>{public T Value;public Box(T value){Value=value;}}}namespace Other::Tools{struct Box<T>{public T Value;}}"),
-            new("extensions.gf","using Library;namespace Helpers {T Add<T>(this Tools::Box<T> self,Tools::Box<T> other)=>self.Value+other.Value;}"),
+            new("extensions.gf","using Library;namespace Helpers {T Add<T>(Tools::Box<T> self,Tools::Box<T> other)=>self.Value+other.Value;\nextension<T> Tools::Box<T> { public T Add(Tools::Box<T> other) =>(*this).Value+other.Value; }}"),
             new("main.gf","using Other;using Helpers;int main(){Library::Tools::Box<int> first=new(20);Library::Tools::Box<int> second=new(22);return first.Add(second);}")];
         Assert.Equal(42,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
@@ -95,7 +95,7 @@ public sealed class ImportedChildNamespaceTests
     {
         SourceFile[] sources=[
             new("types.gf","namespace Library::Tools{struct Box<T>{public T Value;}}"),
-            new("extensions.gf","namespace Helpers {T Read<T>(this Tools::Box<T> self)=>self.Value;}"),
+            new("extensions.gf","namespace Helpers {T Read<T>(Tools::Box<T> self)=>self.Value;\nextension<T> Tools::Box<T> { public T Read() =>(*this).Value; }}"),
             new("main.gf","using Library;using Helpers;int main(){Library::Tools::Box<int> first=new();return first.Read();}")];
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(sources));
         Assert.Contains("no field or method 'Read'",error.Message);
@@ -106,7 +106,7 @@ public sealed class ImportedChildNamespaceTests
     {
         SourceFile[] sources=[
             new("types.gf","namespace First::Tools{struct Box<T>{public T Value;}}namespace Second::Tools{struct Box<T>{public T Value;}}"),
-            new("extensions.gf","using First;using Second;namespace Helpers {T Read<T>(this Tools::Box<T> self)=>self.Value;}"),
+            new("extensions.gf","using First;using Second;namespace Helpers {T Read<T>(Tools::Box<T> self)=>self.Value;\nextension<T> Tools::Box<T> { public T Read() =>(*this).Value; }}"),
             new("main.gf","int main(){First::Tools::Box<int> value=new();return 0;}")];
         var (ast,checker)=Compiler.Check(sources);
         int members=ast.Members.Count;

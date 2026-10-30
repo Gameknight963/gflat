@@ -63,7 +63,7 @@ public sealed class OwnedExceptionMessageTests
                 SourceScope scope = new();
                 char[6] bytes = ['o', 'w', 'n', 'e', 'd', '\0'];
                 String local = String::From(bytes);
-                watchedSource = (nuint)local.Data;
+                watchedSource = (local.Data).reinterpret<nuint>();
                 bytes[0] = 'X';
                 throw new MessageError(local.Data);
             }
@@ -83,7 +83,7 @@ public sealed class OwnedExceptionMessageTests
                         if (sourceScopesDestroyed != 1 || sourceReleases != 1) return 1;
                         if (!CString::Equals(error.GetMessage(), "owned")) return 2;
                         if (!CString::Equals(error.message, "")) return 3;
-                        firstObject = (nuint)&error;
+                        firstObject = (&error).reinterpret<nuint>();
                         firstMessage = error.GetMessage();
                         watchedMessage = (nuint)error.GetMessage();
                         if (watchedMessage == watchedSource || messageReleases != 0) return 8;
@@ -95,7 +95,7 @@ public sealed class OwnedExceptionMessageTests
                 catch (ref MessageError error)
                 {
                     caught = true;
-                    if ((nuint)&error != firstObject || error.GetMessage() != firstMessage) return 4;
+                    if ((&error).reinterpret<nuint>() != firstObject || error.GetMessage() != firstMessage) return 4;
                     if (!CString::Equals(error.GetMessage(), "owned")) return 5;
                     if (messageReleases != 0) return 9;
                     if (allocations != firstAllocations || releases != firstReleases) return 6;

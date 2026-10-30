@@ -11,10 +11,10 @@ public sealed class GenericExtensionOverloadTests
     [InlineData(true,2)]
     public void ReceiverAndLaterArgumentsSelectMixedFamiliesWithoutDefinitionCacheCollisions(bool reverse,int optimization)
     {
-        string kind=Order(reverse,"int Kind(this int value)=>11;","int Kind<T>(this T value)=>22;");
-        string measure=Order(reverse,"int Measure<T>(this T value)=>20;","int Measure<T>(this Box<T> value)=>22;");
-        string arity=Order(reverse,"int Read<T>(this Box<T> value)=>11;","int Read<T>(this Box<T> value,int tag)=>22;");
-        string later=Order(reverse,"int Later<T,U>(this Box<T> value,U tag)=>22;","int Later<T>(this Box<T> value,bool tag)=>11;");
+        string kind=Order(reverse,"int Kind(int value)=>11;\nextension int { public int Kind() =>11; }","int Kind<T>(T value)=>22;\nextension<T> T { public int Kind() =>22; }");
+        string measure=Order(reverse,"int Measure<T>(T value)=>20;\nextension<T> T { public int Measure() =>20; }","int Measure<T>(Box<T> value)=>22;\nextension<T> Box<T> { public int Measure() =>22; }");
+        string arity=Order(reverse,"int Read<T>(Box<T> value)=>11;\nextension<T> Box<T> { public int Read() =>11; }","int Read<T>(Box<T> value,int tag)=>22;\nextension<T> Box<T> { public int Read(int tag) =>22; }");
+        string later=Order(reverse,"int Later<T,U>(Box<T> value,U tag)=>22;\nextension<T> Box<T> { public int Later<U>(U tag) =>22; }","int Later<T>(Box<T> value,bool tag)=>11;\nextension<T> Box<T> { public int Later(bool tag) =>11; }");
         Run($$"""
             struct Box<T>{public T Value;}
             {{kind}}
@@ -23,11 +23,11 @@ public sealed class GenericExtensionOverloadTests
             {{later}}
             int main(){
                 int value=1;long wide=2l;Box<int> box=new();
-                if(value.Kind()!=11||wide.Kind()!=22||value.Kind<int>()!=22)return 1;
-                if(value.Measure<int>()!=20||box.Measure<int>()!=22||box.Measure()!=22)return 2;
-                if(box.Measure<int>()!=22||value.Measure<int>()!=20)return 3;
+                if(value.Kind()!=11||wide.Kind()!=22||Kind<int>(value)!=22)return 1;
+                if(Measure<int>(value)!=20||box.Measure()!=22||box.Measure()!=22)return 2;
+                if(box.Measure()!=22||Measure<int>(value)!=20)return 3;
                 if(box.Read()!=11||box.Read(1)!=22||box.Read()!=11)return 4;
-                if(box.Later(1l)!=22||box.Later(true)!=11||box.Later<int,long>(1l)!=22)return 5;
+                if(box.Later(1l)!=22||box.Later(true)!=11||box.Later<long>(1l)!=22)return 5;
                 return 0;
             }
             """,optimization);
@@ -38,25 +38,27 @@ public sealed class GenericExtensionOverloadTests
     [InlineData(false,2)]
     [InlineData(true,0)]
     [InlineData(true,2)]
-    public void ConstraintsExactReceiverTierAndEvaluationOrderKeepLosersDeferred(bool reverse,int optimization)
+    public void ConstraintsBorrowedPointeesAndEvaluationOrderKeepLosersDeferred(bool reverse,int optimization)
     {
-        string constrained=Order(reverse,"int Check(this int value,long tag)=>42;","int Check<T:I>(this int value,T tag)=>MissingConstraintLoser();");
-        string tier=Order(reverse,"int Tier<T>(this T* value,long tag)=>11;","int Tier(this ref int value,int tag)=>22;");
-        string read=Order(reverse,"int Read<T>(this T* value,int tag)=>(int)*value;","int Read<T>(this ref int value,T tag)=>MissingAdaptedLoser();");
+        string constrained=Order(reverse,"int Check(int value,long tag)=>42;\nextension int { public int Check(long tag) =>42; }","int Check<T:I>(int value,T tag)=>MissingConstraintLoser();\nextension int { public int Check<T:I>(T tag) =>MissingConstraintLoser(); }");
+        string tier=Order(reverse,"int Tier<T>(T* value,long tag)=>11;\nextension<T> T { public int Tier(long tag) =>11; }","int Tier(ref int value,int tag)=>22;\nextension int { public int Tier(int tag) =>22; }");
+        string read=Order(reverse,"int Read<T>(T* value,int tag)=>(int)*value;\nextension<T> T { public int Read(int tag) =>(int)*this; }","int Read<T:I>(ref int value,T tag)=>MissingConstraintLoser();\nextension int { public int Read<T:I>(T tag) =>MissingConstraintLoser(); }");
         Run($$"""
             interface I{int Read();}
             struct Good:I{public int Read()=>42;}
             {{constrained}}
             {{tier}}
             {{read}}
-            int Valid(this long value)=>1;
-            int Valid<T:I>(this T value)=>value.Read();
+            int Valid(long value)=>1;
+            extension long { public int Valid() =>1; }
+            int Valid<T:I>(T value)=>value.Read();
+            extension<T:I> T { public int Valid() =>(*this).Read(); }
             int* Receiver(ref int steps){steps=steps*10+1;return &steps;}
             int Argument(ref int steps){steps=steps*10+2;return 0;}
             int main(){
                 int value=1;if(value.Check(1)!=42)return 1;
                 Good good=new();if(good.Valid()!=42)return 4;
-                int* pointer=&value;if(pointer.Tier(0)!=11)return 2;
+                int* pointer=&value;if(pointer.Tier(0)!=22)return 2;
                 int steps=0;
                 if(Receiver(ref steps).Read(Argument(ref steps))!=12||steps!=12)return 3;
                 return 0;
@@ -71,14 +73,14 @@ public sealed class GenericExtensionOverloadTests
     [InlineData(true,2)]
     public void VisibleGenericFamiliesBindAliasesInTheirOwnDeclarationContexts(bool reverse,int optimization)
     {
-        string declarations=Order(reverse,"int Read<T>(this Models::Box<T> value,Word tag)=>42;","int Read<T>(this T value,long tag)=>11;");
+        string declarations=Order(reverse,"int Read<T>(Models::Box<T> value,Word tag)=>42;\nextension<T> Models::Box<T> { public int Read(Word tag) =>42; }","int Read<T>(T value,long tag)=>11;\nextension<T> T { public int Read(long tag) =>11; }");
         SourceFile[] sources=
         [
             new("types.gf","namespace Models{struct Box<T>{public T Value;}}"),
             new("helpers.gf",$$"""
                 namespace Helpers{alias Word=int; {{declarations}} }
                 """),
-            new("other.gf","namespace Other{int Read(this int value,bool tag)=>1;}"),
+            new("other.gf","namespace Other{int Read(int value,bool tag)=>1;\nextension int { public int Read(bool tag) =>1; }}"),
             new("main.gf","""
                 using Helpers;using Other;alias Word=long;
                 int main(){Models::Box<byte> box=new();if(box.Read(1)!=42)return 1;int value=1;if(value.Read(true)!=1)return 2;return 0;}
@@ -116,12 +118,12 @@ public sealed class GenericExtensionOverloadTests
 
     public static IEnumerable<object[]> InvalidExtensionCalls()
     {
-        yield return ["int Read<T>(this T value,int tag)=>11;int Read<T>(this ref T value,bool tag)=>22;int main(){int value=0;return value.Read(0);}","ambiguous"];
-        yield return ["int Read<T>(this T* self,long tag,bool extra)=>11;int Read(this ref int self,int tag)=>22;int main(){int value=0;int* pointer=&value;return pointer.Read(0);}",""];
-        yield return ["struct S{public int Read(int value)=>value;}int Read<T>(this ref T self)=>42;int main(){S value=new();return value.Read();}","expects"];
-        yield return ["int Read(this ref int value)=>42;int Read<T>(this ref int value,T tag)=>1;int main(){int*? value=null;return value.Read();}",""];
-        yield return ["int Read<T>(this ref T value)=>42;int Read<U>(this ref U value)=>1;int main()=>0;","cannot differ"];
-        yield return ["interface I{int Read();}int Read<T:I>(this T value)=>MissingLoser();int main(){int value=1;return value.Read();}",""];
+        yield return ["using A; using B; namespace A { extension<T> T { public int Read(int tag)=>11; } } namespace B { extension<T> T { public int Read(int tag)=>22; } } int main(){int value=0;return value.Read(0);}","ambiguous"];
+        yield return ["int Read<T>(T* self,long tag,bool extra)=>11;\nextension<T> T { public int Read(long tag, bool extra) =>11; }int Read(ref int self,int tag)=>22;\nextension int { public int Read(int tag) =>22; }int main(){int value=0;int* pointer=&value;return pointer.Read();}",""];
+        yield return ["struct S{public int Read(int value)=>value;}int Read<T>(ref T self)=>42;\nextension<T> T { public int Read() =>42; }int main(){S value=new();return value.Read();}","expects"];
+        yield return ["int Read(ref int value)=>42;\nextension int { public int Read() =>42; }int Read<T>(ref int value,T tag)=>1;\nextension int { public int Read<T>(T tag) =>1; }int main(){int*? value=null;return value.Read();}",""];
+        yield return ["int Read<T>(ref T value)=>42;\nextension<T> T { public int Read() =>42; }int Read<U>(ref U value)=>1;\nextension<U> U { public int Read() =>1; }int main()=>0;","cannot differ"];
+        yield return ["interface I{int Read();}int Read<T:I>(T value)=>MissingLoser();\nextension<T:I> T { public int Read() =>MissingLoser(); }int main(){int value=1;return value.Read();}",""];
     }
 
     [Theory]

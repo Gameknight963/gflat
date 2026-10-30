@@ -54,7 +54,7 @@ public struct SHA256
             }
             if (buffered == 64)
             {
-                this.ProcessBlock((readonly(char)*)block);
+                this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
                 buffered = 0;
             }
         }
@@ -114,13 +114,13 @@ public struct SHA256
         if (buffered > 56)
         {
             while (buffered < 64) { block[buffered] = (byte)0; buffered++; }
-            this.ProcessBlock((readonly(char)*)block);
+            this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
             buffered = 0;
         }
         while (buffered < 56) { block[buffered] = (byte)0; buffered++; }
         ulong bits = length << 3;
         for (int i = 0; i < 8; i++) block[56 + i] = (byte)(bits >> ((7 - i) * 8));
-        this.ProcessBlock((readonly(char)*)block);
+        this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
     }
 
     public immutable byte[32] GetHash() nothrow

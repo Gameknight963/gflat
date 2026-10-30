@@ -113,7 +113,7 @@ public sealed class StandardCsvWriterTests
                             for(int column=0;column<columns;column++){
                                 int size=ReadInt(stream);if(size<0||size>8192)return 3;
                                 if(fread((void*)(char*)field,1,(nuint)size,stream)!=(nuint)size)return 4;
-                                if(size==0)writer.WriteField((readonly(char)*)1,0);
+                                if(size==0)writer.WriteField(((nuint)1).reinterpret<readonly(char)*>(),0);
                                 else writer.WriteField(field,(nuint)size);
                             }
                             writer.WriteEndRecord();
@@ -153,14 +153,14 @@ public sealed class StandardCsvWriterTests
                 try{
                     writer.WriteField("plain",5);
                     writer.WriteField("a\"b,\r\n",6);
-                    writer.WriteField((readonly(char)*)1,0);
+                    writer.WriteField(((nuint)1).reinterpret<readonly(char)*>(),0);
                     writer.WriteEndRecord();
                     writer.WriteEndRecord();
                 }catch(SinkFailure* error){if(error.GetCode()!=77)return false;caught++;}
                 catch{return false;}
                 if(caught!=1||sink.Count!=(nuint)budget)return false;
                 int calls=sink.Calls;sink.Budget=999;
-                try{writer.WriteField((readonly(char)*)1,0);}catch(Exception* error){caught++;}
+                try{writer.WriteField(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(Exception* error){caught++;}
                 try{writer.WriteField("later",5);}catch(Exception* error){caught++;}
                 try{writer.WriteEndRecord();}catch(Exception* error){caught++;}
                 CsvWriter copy=writer;
@@ -195,7 +195,7 @@ public sealed class StandardCsvWriterTests
                 {
                     CsvWriter writer=new(&sink);
                     writer.WriteEndRecord();
-                    writer.WriteField((readonly(char)*)1,0);writer.WriteEndRecord();
+                    writer.WriteField(((nuint)1).reinterpret<readonly(char)*>(),0);writer.WriteEndRecord();
                     writer.WriteField("a\"b",3);writer.WriteField("c,d",3);writer.WriteEndRecord();
                 }
                 CsvReader reader=new(output,sink.Count);char[8] field;nuint written=0;int index=0;

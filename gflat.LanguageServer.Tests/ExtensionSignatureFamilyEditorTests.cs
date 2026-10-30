@@ -10,10 +10,12 @@ public sealed class ExtensionSignatureFamilyEditorTests
     {
         const string library="""
             namespace Extras {
-                int Pick(this int value,int amount)=>amount;
-                int Pick(this int value,long amount)=>0;
-                int Pick(this bool value,int amount)=>amount;
-                int Pick(this bool value,long amount)=>0;
+                int Pick(int value,int amount)=>amount; int Pick(int value,long amount)=>0;
+                int Pick(bool value,int amount)=>amount; int Pick(bool value,long amount)=>0;
+                extension int{public int Pick(int amount)=>amount;}
+                extension int{public int Pick(long amount)=>0;}
+                extension bool{public int Pick(int amount)=>amount;}
+                extension bool{public int Pick(long amount)=>0;}
             }
             """;
         const string text="using Extras; int main(){int value=1;return value.Pick(1)+Extras::Pick(value,1);}";
@@ -32,8 +34,8 @@ public sealed class ExtensionSignatureFamilyEditorTests
         const string library="""
             struct Box<T>{public T Value;}
             namespace Extras {
-                T Pick<T>(this Box<T> value,int amount)=>value.Value;
-                T Pick<T,U>(this Box<T> value,U other,int marker)=>value.Value;
+                extension<T> Box<T>{public T Pick(int amount)=>(*this).Value;}
+                extension<T> Box<T>{public T Pick<U>(U other,int marker)=>(*this).Value;}
             }
             """;
         const string text="using Extras; int main(){Box<int> value=new();return value.Pick(1);}";

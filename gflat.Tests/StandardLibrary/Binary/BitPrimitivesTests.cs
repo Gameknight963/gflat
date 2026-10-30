@@ -92,9 +92,9 @@ public sealed class BitPrimitivesTests
                         if(BitPrimitives::TryWriteUInt64(&data[1],9,huge[row],width,order,0ul))return 7;
                     }
                     ulong zero=99ul;
-                    if(!BitPrimitives::TryReadUInt64((readonly(byte)*)1,0,0,0,order,ref zero)||zero!=0ul)return 8;
-                    if(!BitPrimitives::TryWriteUInt64((byte*)1,0,0,0,order,0ul))return 9;
-                    if(BitPrimitives::TryWriteUInt64((byte*)1,0,0,0,order,1ul))return 10;
+                    if(!BitPrimitives::TryReadUInt64(((nuint)1).reinterpret<readonly(byte)*>(),0,0,0,order,ref zero)||zero!=0ul)return 8;
+                    if(!BitPrimitives::TryWriteUInt64(((nuint)1).reinterpret<byte*>(),0,0,0,order,0ul))return 9;
+                    if(BitPrimitives::TryWriteUInt64(((nuint)1).reinterpret<byte*>(),0,0,0,order,1ul))return 10;
                 }
                 int[2] invalidOrders=[-1,2];
                 for(nuint row=0;row<2;row++)for(int width=0;width<2;width++){

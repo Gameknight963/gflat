@@ -187,7 +187,7 @@ public sealed class TryExtremaByTests
             void Fail(int code)
             {
                 try { throw new Exception("original failure", code); }
-                catch (ref Exception error) { failureAddress = (nuint)&error; throw; }
+                catch (ref Exception error) { failureAddress = (&error).reinterpret<nuint>(); throw; }
             }
             struct Owner
             {
@@ -262,7 +262,7 @@ public sealed class TryExtremaByTests
                         catch (ref Exception error)
                         {
                             caught = true;
-                            if (error.GetCode() != 70 + failure || (nuint)&error != failureAddress) return 1;
+                            if (error.GetCode() != 70 + failure || (&error).reinterpret<nuint>() != failureAddress) return 1;
                             if (!CString::Equals(error.GetMessage(), "original failure")) return 2;
                         }
                         mode = 0;

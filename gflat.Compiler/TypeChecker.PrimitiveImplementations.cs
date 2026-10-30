@@ -48,13 +48,19 @@ public partial class TypeChecker
                             throw new TypeCheckException("A primitive implementation can contain only ordinary instance methods with bodies", member.Span);
                         if (!helpers.TryAdd(source.Name, null!))
                             throw new TypeCheckException($"Duplicate primitive implementation method '{source.Name}'", source.Span);
-                        var receiver = new PointerTypeExpression(declaration.Target, false, declaration.Line, isReadOnly: source.IsReadOnly);
+                        var receiver = new PointerTypeExpression(source.IsImmutable ? TypeQualifiers.Immutable(declaration.Target) : declaration.Target,
+                            false, declaration.Line, isReadOnly: source.IsReadOnly);
                         var helper = new MethodDeclaration($"$primitive${owner.Name}${primitiveImplementationSources.Count}${source.Name}",
-                            source.ReturnType, new[] { new Parameter("this", receiver, source.Line) }.Concat(source.Parameters).ToList(),
+                            source.ReturnType, new[] { new Parameter("this", receiver, source.Line) { IsExtensionReceiver = declaration.ExposesExtensions } }.Concat(source.Parameters).ToList(),
                             source.Body, TokenKind.Public, false, false, false, false, source.Line, isNoThrow: source.IsNoThrow)
                             { Span = source.Span, IsInline = source.IsInline, Attributes = source.Attributes };
                         helpers[source.Name] = helper;
                         primitiveMethodSources[helper] = source;
+                        if (declaration.ExposesExtensions)
+                        {
+                            helper.ExtensionReceiverType = declaration.Target;
+                            helper.ExtensionMemberName = source.Name;
+                        }
                         declarationNamespaces[source] = declarationNamespaces.GetValueOrDefault(owner) ?? "";
                         declarationNamespaces[helper] = declarationNamespaces.GetValueOrDefault(owner) ?? "";
                         namespaceHiddenDeclarations.Add(helper);

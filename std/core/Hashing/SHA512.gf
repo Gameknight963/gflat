@@ -71,7 +71,7 @@ public struct SHA512
             }
             if (buffered == 128)
             {
-                this.ProcessBlock((readonly(char)*)block);
+                this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
                 buffered = 0;
             }
         }
@@ -131,7 +131,7 @@ public struct SHA512
         if (buffered > 112)
         {
             while (buffered < 128) { block[buffered] = (byte)0; buffered++; }
-            this.ProcessBlock((readonly(char)*)block);
+            this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
             buffered = 0;
         }
         while (buffered < 112) { block[buffered] = (byte)0; buffered++; }
@@ -142,7 +142,7 @@ public struct SHA512
             block[112 + i] = (byte)(bitsHigh >> ((7 - i) * 8));
             block[120 + i] = (byte)(bitsLow >> ((7 - i) * 8));
         }
-        this.ProcessBlock((readonly(char)*)block);
+        this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
     }
 
     /// Returns an independent 64-byte digest without consuming or resetting this state.

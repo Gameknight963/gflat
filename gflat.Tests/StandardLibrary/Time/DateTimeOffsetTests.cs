@@ -124,7 +124,7 @@ public sealed class DateTimeOffsetTests
                 }
                 if(sizeof(DateTimeOffset)>32)return 9;
                 for(nuint offset=0;offset<=32;offset+=8)for(nuint capacity=32;capacity<=33;capacity++){
-                    DateTimeOffset[8] storage;char* data=(char*)&storage[0];for(nuint i=0;i<(nuint)sizeof(DateTimeOffset)*8;i++)data[i]='!';storage[1]=saved;
+                    DateTimeOffset[8] storage;char* data=(&storage[0]).reinterpret<char*>();for(nuint i=0;i<(nuint)sizeof(DateTimeOffset)*8;i++)data[i]='!';storage[1]=saved;
                     char[256] prior;for(nuint i=0;i<(nuint)sizeof(DateTimeOffset)*8;i++)prior[i]=data[i];nuint written=99;int before=attempts;deny=true;
                     bool success=storage[1].TryFormat(data+offset,capacity,ref written);deny=false;
                     if(success!=(capacity==33)||attempts!=before)return 10;
@@ -133,7 +133,7 @@ public sealed class DateTimeOffsetTests
                         if(i>=offset&&i<offset+33){if(data[i]!="2024-01-02T03:04:05.1234567+05:45"[i-offset])return 14;}else if(data[i]!=prior[i])return 15;
                     }}
                 }
-                DateTimeOffset[8] parseStorage;char* borrowed=(char*)&parseStorage[0];for(nuint i=0;i<33;i++)borrowed[i]="2024-01-02T03:04:05.1234567+05:45"[i];
+                DateTimeOffset[8] parseStorage;char* borrowed=(&parseStorage[0]).reinterpret<char*>();for(nuint i=0;i<33;i++)borrowed[i]="2024-01-02T03:04:05.1234567+05:45"[i];
                 if(!DateTimeOffset::TryParse(borrowed,33,&parseStorage[0])||!parseStorage[0].EqualsExact(&saved))return 16;
                 Writer writer=new();bool caught=false;try{saved.Format(&writer);}catch(ref Exception error){if(error.GetCode()!=73)return 17;caught=true;}
                 if(!caught||writer.Calls!=1||writer.First!='2'||saved.Offset.Ticks!=207000000000l||at!={{{hex.Length}}}||allocated!=released)return 18;return 0;

@@ -15,16 +15,17 @@ public sealed partial class EditorModel
     private Symbol? ExtensionCallSymbol(CallExpression call)
     {
         if (snapshot.Checker is not { } checker || checker.GetExtensionDefinition(call) is not { } definition ||
-            !declarations.TryGetValue(definition, out var symbol) || checker.GetResolvedCall(call) is not MethodDeclaration target)
+            SourceCallable(definition) is not { } symbol || checker.GetResolvedCall(call) is not MethodDeclaration target)
             return null;
         var bindings = definition.GenericParameters.Select(parameter => parameter.Name)
             .Zip(checker.GetExtensionCall(call)!.TypeArguments).ToDictionary(pair => pair.First, pair => pair.Second);
         var cloner = CreateDisplayCloner(bindings);
-        var parameters = definition.Parameters.Skip(1).Select(parameter => new Parameter(parameter.Name,
+        var sourceDefinition = (MethodDeclaration)symbol.Syntax.Node;
+        var parameters = sourceDefinition.Parameters.Select(parameter => new Parameter(parameter.Name,
             cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type), parameter.Line,
             parameter.IsConst, parameter.DefaultValue) { Span = parameter.Span }).ToArray();
         return symbol with {
-            Type = cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(definition) ?? definition.ReturnType),
+            Type = cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(sourceDefinition) ?? sourceDefinition.ReturnType),
             BoundParameters = parameters,
             GenericBindings = bindings,
             BoundMethod = target,
@@ -50,9 +51,6 @@ public sealed partial class EditorModel
         }
         receiverType = SourceNominalExtensionReceiver(receiverType, sourceReceiver, path, offset);
         return checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, memberName: memberName, receiverStorageType: storageType)
-            .GroupBy(candidate => candidate.Definition.Name)
-            .SelectMany(group => group.Any(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact)
-                ? group.Where(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact) : group)
             .Select(candidate => ExtensionCandidateSymbol(candidate)).OfType<Symbol>()
             .Where(symbol => Accessible(symbol, path, offset));
     }
@@ -61,7 +59,7 @@ public sealed partial class EditorModel
     {
         if (receiver is not NamedTypeExpression { Namespace: null, TypeArguments.Count: > 0 } named ||
             source is not NamedTypeExpression original || snapshot.Checker!.IsResolvedTypeIdentity(named) ||
-            !sourceTypeNames.TryGetValue(original.NameSpan, out var captured) || !ReferenceEquals(original, captured)) return receiver;
+            !sourceTypeNames.TryGetValue(original.NameSpan, out var captured) || !IsSourceNominalView(original, captured)) return receiver;
         var lexical = Visible(path, offset, original.Name).FirstOrDefault(symbol => symbol.Name == original.Name &&
             (symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration));
         string? identity = lexical?.IsTypeParameter == false ? lexical.Syntax.Node switch {
@@ -73,6 +71,14 @@ public sealed partial class EditorModel
             Span = named.Span, NameSpan = named.NameSpan
         }.WithQualifiersFrom(named);
     }
+
+    private static bool IsSourceNominalView(NamedTypeExpression type, TypeExpression captured)
+        // Readonly/immutable receiver projections clone the wrapper only. Accept
+        // those views while retaining the source argument-list identity; a
+        // rewritten specialization or substituted signature is not a source use.
+        => ReferenceEquals(type, captured) || captured is NamedTypeExpression original &&
+            type.Name == original.Name && type.Namespace == original.Namespace &&
+            ReferenceEquals(type.TypeArguments, original.TypeArguments);
 
     private Dictionary<string, TypeExpression>? OpenExtensionParameterBinding(string path, int offset, TypeExpression type)
     {
@@ -111,13 +117,14 @@ public sealed partial class EditorModel
 
     private Symbol? ExtensionCandidateSymbol(TypeChecker.ExtensionMethodCandidate candidate)
     {
-        if (!declarations.TryGetValue(candidate.Definition, out var symbol)) return null;
+        if (SourceCallable(candidate.Definition) is not { } symbol) return null;
         var cloner = CreateDisplayCloner(candidate.GenericBindings);
-        var parameters = candidate.Definition.Parameters.Skip(1).Select(parameter => new Parameter(parameter.Name,
+        var sourceDefinition = (MethodDeclaration)symbol.Syntax.Node;
+        var parameters = sourceDefinition.Parameters.Select(parameter => new Parameter(parameter.Name,
             cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type), parameter.Line,
             parameter.IsConst, parameter.DefaultValue) { Span = parameter.Span }).ToArray();
         return symbol with {
-            Type = cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(candidate.Definition) ?? candidate.Definition.ReturnType),
+            Type = cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(sourceDefinition) ?? sourceDefinition.ReturnType),
             BoundParameters = parameters,
             GenericBindings = candidate.GenericBindings,
             BoundExtension = true

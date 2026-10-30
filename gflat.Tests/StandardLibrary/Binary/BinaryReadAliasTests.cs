@@ -24,7 +24,7 @@ public class BinaryReadAliasTests
             string type = width == 2 ? "ushort" : width == 4 ? "uint" : "ulong";
             string method = $"TryReadUInt{width * 8}{(little ? "Little" : "Big")}Endian";
             // The scalar is naturally aligned; only its byte view aliases input.
-            code.Append($"{{ {type} value=({type})0; byte* bytes=(byte*)&value;");
+            code.Append($"{{ {type} value=({type})0; byte* bytes=(&value).reinterpret<byte*>();");
             for (int i = 0; i < width; i++) code.Append($"bytes[{i}]=(byte){bytes[i]};");
             code.Append($"if(!BinaryPrimitives::{method}(bytes,{width},ref value)||(ulong)value!={expected}ul)return 1;");
             // Failure zeroes the output even when that changes overlapping bytes.

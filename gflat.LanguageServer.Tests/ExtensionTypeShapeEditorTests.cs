@@ -13,7 +13,7 @@ public sealed class ExtensionTypeShapeEditorTests
     {
         string marked = $$"""
             struct Handler<F>{public int value;}
-            int Read<T>(this Handler<{{type}}> self,T value)=>42;
+            extension Handler<{{type}}>{public int Read<T>(T value)=>42;}
             int main(){Handler<{{type}}> handler=new Handler<{{type}}>();handler.|;return 0;}
             """;
         int offset = marked.IndexOf('|');

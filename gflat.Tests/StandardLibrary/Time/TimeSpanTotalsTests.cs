@@ -50,7 +50,7 @@ public sealed class TimeSpanTotalsTests
                 ulong highBits = unchecked((ulong)BitConverter.DoubleToInt64Bits(high));
                 body.AppendLine($"if(!Within(value.{unit.Name},{lowBits}ul,{highBits}ul))return 1;");
                 if (tick == 0)
-                    body.AppendLine($"{{double total=value.{unit.Name};if(*((ulong*)&total)!=0ul)return 2;}}");
+                    body.AppendLine($"{{double total=value.{unit.Name};if((total).reinterpret<ulong>()!=0ul)return 2;}}");
                 else if (tick < 0)
                     body.AppendLine($"if(value.{unit.Name}>=0d)return 3;");
                 else
@@ -83,7 +83,7 @@ public sealed class TimeSpanTotalsTests
                 public replace void Free(void* storage) nothrow {}
             }
             bool Within(double value,ulong lowBits,ulong highBits) nothrow {
-                return value>=*((double*)&lowBits) && value<=*((double*)&highBits);
+                return value>=(lowBits).reinterpret<double>() && value<=(highBits).reinterpret<double>();
             }
             double Observe(immutable(TimeSpan)* value) nothrow => value.TotalMilliseconds;
             int main() {

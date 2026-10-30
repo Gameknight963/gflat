@@ -42,10 +42,10 @@ public sealed class ReferenceTests
     }
 
     [Fact]
-    public void BoundAndOrdinaryExtensionCallsShareTheirDeclaration()
+    public void CallsOnSeparateBorrowedReceiversShareTheirDeclaration()
     {
-        var (model, source, offset) = Analyze("using Extras; int F() { int n = 2; return n.|Double() + Extras::Double(n); }",
-            "namespace Extras; int Double(this int n) => n * 2;");
+        var (model, source, offset) = Analyze("using Extras; int F() { int n = 2; int m = 3; return n.|Double() + m.Double(); }",
+            "namespace Extras; extension int{public int Double()=> (*this) * 2;}");
         Assert.Equal(2, model.References(source.Path, offset, false).Length);
         Assert.Equal(3, model.References(source.Path, offset, true).Length);
     }

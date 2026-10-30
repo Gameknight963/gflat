@@ -28,7 +28,7 @@ public sealed class AggregateLayoutLimitTests
         var error = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.EmitIr("""
             alias GC = TestCollector;
             static class TestCollector {
-                public static void* Allocate(nuint bytes, nuint alignment) => (void*)1;
+                public static void* Allocate(nuint bytes, nuint alignment) => ((nuint)1).reinterpret<void*>();
                 public static void ReferenceAdded(void* slot) nothrow {}
                 public static void ReferenceRemoved(void* slot) nothrow {}
             }

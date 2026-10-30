@@ -79,7 +79,7 @@ public sealed class ImportedNamespaceEditorTests
             """);
         var extensions = new SourceFile(Path.GetFullPath("imported-extensions.gf"), """
             using Library;
-            namespace Extras { int Measure<T>(this Tools::Box<T> value) => sizeof(T); }
+            namespace Extras { extension<T> Tools::Box<T>{public int Measure()=> sizeof(T);} }
             """);
         var source = new SourceFile(Path.GetFullPath("imported-main.gf"), """
             using Library;
@@ -97,7 +97,7 @@ public sealed class ImportedNamespaceEditorTests
             using Right;
             namespace Left::Shared { struct Box<T> { public T Value; } }
             namespace Right::Shared { struct Box<T> { public T Value; } }
-            namespace Extras { int Broken<T>(this Shared::Box<T> value) => 0; }
+            namespace Extras { extension<T> Shared::Box<T>{public int Broken()=> 0;} }
             void Problem() { missing(); }
             """));
         var snapshot = new AnalysisSnapshot(sources, new() { NoStdLib = true });

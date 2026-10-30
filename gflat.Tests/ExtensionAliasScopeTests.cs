@@ -8,11 +8,14 @@ public sealed class ExtensionAliasScopeTests
     [InlineData("immutable(Second)")]
     public void AliasTargetDoesNotCaptureMethodParameter(string selected)
     {
+        string target = selected == "immutable(Second)" ? "Second" : selected;
+        string qualifier = selected == "immutable(Second)" ? "immutable " : "";
         string source=$$"""
             struct T {public int value;}
             alias Selected=T;
             alias Second=Selected;
-            int Read<T>(this {{selected}} first,T second)=>sizeof(T);
+            int Read<T>({{selected}} first,T second)=>sizeof(T);
+            extension {{target}} { public {{qualifier}}int Read<T>(T second) =>sizeof(T); }
             int main(){T value=new T();return value.Read((byte)1);}
             """;
         AssertValid([new SourceFile("extension-alias.gf",source)]);
@@ -25,7 +28,7 @@ public sealed class ExtensionAliasScopeTests
         SourceFile[] sources = [
             new("types.gf", "namespace A {struct Word{public int value;}} namespace B {struct Word{public long value;}}"),
             new("alias.gf", "using A; alias Selected=Word;"),
-            new("extension.gf", "using B; int Read<T>(this Selected first,T second)=>sizeof(T);"),
+            new("extension.gf", "using B; int Read<T>(Selected first,T second)=>sizeof(T);\nextension Selected { public int Read<T>(T second) =>sizeof(T); }"),
             new("main.gf", "int main(){A::Word value=new A::Word();return value.Read((byte)1);}")
         ];
         AssertValid(sources);
@@ -40,7 +43,8 @@ public sealed class ExtensionAliasScopeTests
             struct Word {public int value;}
             namespace Imported {struct Word {public long value;}}
             alias Selected=Word;
-            int Read<T>(this Selected first,T second)=>sizeof(T);
+            int Read<T>(Selected first,T second)=>sizeof(T);
+            extension Selected { public int Read<T>(T second) =>sizeof(T); }
             int main(){Word value=new Word();return value.Read((byte)1);}
             """;
         AssertValid([new SourceFile("global-precedence.gf",source)]);
@@ -52,7 +56,8 @@ public sealed class ExtensionAliasScopeTests
     {
         const string source="""
             alias Selected=Missing;
-            int Read<Missing>(this Selected first,Missing second)=>sizeof(Missing);
+            int Read<Missing>(Selected first,Missing second)=>sizeof(Missing);
+            extension Selected { public int Read<Missing>(Missing second) =>sizeof(Missing); }
             int main(){int value=1;return value.Read(2);}
             """;
         Assert.Contains(Compiler.Analyze([new SourceFile("unknown.gf",source)],new(){NoStdLib=true}),

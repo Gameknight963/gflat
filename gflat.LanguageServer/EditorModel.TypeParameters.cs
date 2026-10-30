@@ -8,7 +8,15 @@ public sealed partial class EditorModel
     {
         // Generic definitions are intentionally not specialized for editor queries.
         // Parameters are source identities scoped to their declaring definition.
-        foreach (var owner in symbols.ToArray())
+        // Blocks have no ordinary named symbol, but their type parameters still
+        // own a lexical scope covering the receiver and all member bodies.
+        var blockScopes = snapshot.Nodes.Where(node => node.Node is ExtensionDeclaration && node.Span.Source != null)
+            .Select(node => {
+                var marker = tokens[node.Span.Source!.Path].First(token => token.Start >= node.Span.Start);
+                return new Symbol("extension", 0, "keyword", node, marker.Span,
+                    Namespace(Parents(node)), null, node, null, false, TokenKind.Public);
+            });
+        foreach (var owner in symbols.ToArray().Concat(blockScopes))
         {
             var parameters = owner.Syntax.Node switch
             {
@@ -16,6 +24,7 @@ public sealed partial class EditorModel
                 ClassDeclaration type => type.GenericParameters,
                 StructDeclaration type => type.GenericParameters,
                 InterfaceDeclaration type => type.GenericParameters,
+                ExtensionDeclaration block => block.GenericParameters,
                 _ => null
             };
             if (parameters == null || parameters.Count == 0 || owner.NameSpan.Source is not { } source) continue;

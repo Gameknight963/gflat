@@ -101,7 +101,7 @@ public sealed class StandardCsvReaderTests
                         if(fread((void*)(char*)input,1,(nuint)header[0],stream)!=(nuint)header[0])return 2;
                         for(nuint i=0;i<(nuint)header[0];i++)original[i]=input[i];
                         CsvReader reader=new(input,(nuint)header[0]);nuint written=9;
-                        if(reader.TryCopyValue((char*)1,0,ref written)||written!=0||reader.RawField.Data!=null)return 3;
+                        if(reader.TryCopyValue(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0||reader.RawField.Data!=null)return 3;
                         for(int field=0;field<header[1];field++){
                             if(fread((void*)(int*)metadata,20,1,stream)!=1)return 4;
                             nuint count=(nuint)metadata[2];
@@ -127,11 +127,11 @@ public sealed class StandardCsvReaderTests
                             for(nuint i=0;i<count;i++)if(output[i+1]!=expected[i])return 14;
                             if(output[0]!='?'||output[count+1]!='?')return 15;
                             if(!reader.TryCopyValue((char*)output+1,count+1,ref written)||written!=count)return 16;
-                            if(count==0&&!reader.TryCopyValue((char*)1,0,ref written))return 17;
+                            if(count==0&&!reader.TryCopyValue(((nuint)1).reinterpret<char*>(),0,ref written))return 17;
                         }
                         if(reader.Read()||reader.Read()||reader.RawField.Data!=null||reader.EndOfRecord)return 18;
                         if(reader.ValueLength!=0||reader.IsQuoted||reader.FieldOffset!=0)return 19;
-                        if(reader.TryCopyValue((char*)1,0,ref written)||written!=0)return 20;
+                        if(reader.TryCopyValue(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 20;
                         for(nuint i=0;i<(nuint)header[0];i++)if(input[i]!=original[i])return 21;
                     }
                     if(attempts!=0)return 22;return fclose(stream);
@@ -156,7 +156,7 @@ public sealed class StandardCsvReaderTests
                 return reader.TryCopyValue(output,16,ref written)&&reader.RawField.Length!=0;
             }
             int main(){
-                if(!Shape((readonly(char)*)1,0,0,0)||!Shape("\n",1,1,1)||!Shape("\r\n",2,1,1))return 1;
+                if(!Shape(((nuint)1).reinterpret<readonly(char)*>(),0,0,0)||!Shape("\n",1,1,1)||!Shape("\r\n",2,1,1))return 1;
                 if(!Shape(",",1,2,1)||!Shape("a,",2,2,1)||!Shape("a\n",2,1,1))return 2;
                 if(!Shape("a\n\n",3,2,2)||!Shape(",\n",2,2,1)||!Shape("\"\"",2,1,1))return 3;
                 CsvReader reader=new(" first,\"x\"\"y\",last\r\n",20);

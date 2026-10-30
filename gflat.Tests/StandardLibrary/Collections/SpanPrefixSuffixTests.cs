@@ -40,7 +40,7 @@ public sealed class SpanPrefixSuffixTests
         }
         Run(Allocator+$$"""
             int calls=0;
-            immutable(int)* leftOrigin=(immutable(int)*)1;immutable(int)* rightOrigin=(immutable(int)*)1;
+            immutable(int)* leftOrigin=((nuint)1).reinterpret<immutable(int)*>();immutable(int)* rightOrigin=((nuint)1).reinterpret<immutable(int)*>();
             bool Equal(immutable(int)* left,immutable(int)* right){
                 if(left!=leftOrigin+calls||right!=rightOrigin+calls)throw new Exception("address order",99);
                 calls++;return *left==*right;
@@ -118,14 +118,14 @@ public sealed class SpanPrefixSuffixTests
             public replace void Free(void* storage) nothrow {released++;free(storage);}
         }
         int calls=0; int failAt=-1; nuint failureAddress=0;
-        immutable(int)* leftOrigin=(immutable(int)*)1;
-        immutable(int)* rightOrigin=(immutable(int)*)1;
+        immutable(int)* leftOrigin=((nuint)1).reinterpret<immutable(int)*>();
+        immutable(int)* rightOrigin=((nuint)1).reinterpret<immutable(int)*>();
         bool Equal(immutable(int)* left,immutable(int)* right) {
             if(left!=leftOrigin+calls||right!=rightOrigin+calls)throw new Exception("address order",99);
             int position=calls;calls++;
             if(position==failAt) {
                 try{throw new Exception("original equality",77);}
-                catch(ref Exception error){failureAddress=(nuint)&error;throw;}
+                catch(ref Exception error){failureAddress=(&error).reinterpret<nuint>();throw;}
             }
             return *left==*right;
         }
@@ -139,7 +139,7 @@ public sealed class SpanPrefixSuffixTests
         bool SameOwner(immutable(Owner)* left,immutable(Owner)* right){ownerCalls++;return left.Id==right.Id;}
         int main() {
             int[5] ones=[1,1,1,1,1];Span<int> values=new(ones,5);
-            Span<immutable(int)> empty=new((immutable(int)*)1,0);
+            Span<immutable(int)> empty=new(((nuint)1).reinterpret<immutable(int)*>(),0);
             int[2] live=[1,2];Span<int> small=new(live,1);Span<int> longer=new(live,2);
             int baseline=attempts;deny=true;
             if(!StartsWith<int>(empty,empty,Unexpected)||!EndsWith<int>(empty,empty,Unexpected))return 1;
@@ -169,7 +169,7 @@ public sealed class SpanPrefixSuffixTests
                     else EndsWith<int>(source.AsImmutable(),source.Slice(start,2).AsImmutable(),Equal);
                 }
                 catch(ref Exception error) {
-                    caught=(nuint)&error==failureAddress&&error.GetCode()==77&&CString::Equals(error.GetMessage(),"original equality");
+                    caught=(&error).reinterpret<nuint>()==failureAddress&&error.GetCode()==77&&CString::Equals(error.GetMessage(),"original equality");
                 }
                 if(!caught||calls!=failure+1)return 12;
                 for(nuint i=0;i<4;i++)if(data[i]!=(int)i+1)return 13;
@@ -178,13 +178,13 @@ public sealed class SpanPrefixSuffixTests
             {
                 Vector<Owner> owners=new();owners.Reserve(4);
                 for(int id=0;id<4;id++)owners.Add(new Owner(id));
-                nuint[4] tokens;for(nuint i=0;i<4;i++)tokens[i]=(nuint)owners[i].Token.Data;
+                nuint[4] tokens;for(nuint i=0;i<4;i++)tokens[i]=(owners[i].Token.Data).reinterpret<nuint>();
                 baseline=attempts;deny=true;ownerCalls=0;
                 if(!StartsWith<Owner>(owners.AsImmutable(),owners.AsImmutable().Slice(0,2),SameOwner)||ownerCalls!=2)return 14;
                 ownerCalls=0;
                 if(!EndsWith<Owner>(owners.AsImmutable(),owners.AsImmutable().Slice(2,2),SameOwner)||ownerCalls!=2)return 15;
                 if(attempts!=baseline||made!=4||dead!=0||owners.Count!=4)return 16;
-                for(nuint i=0;i<4;i++)if(owners[i].Id!=(int)i||(nuint)owners[i].Token.Data!=tokens[i])return 17;
+                for(nuint i=0;i<4;i++)if(owners[i].Id!=(int)i||(owners[i].Token.Data).reinterpret<nuint>()!=tokens[i])return 17;
                 deny=false;
             }
             if(made!=4||dead!=4||allocated!=released)return 18;

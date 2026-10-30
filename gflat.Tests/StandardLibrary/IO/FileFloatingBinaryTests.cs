@@ -34,7 +34,7 @@ public sealed class FileFloatingBinaryTests
                         if(input.ReadByte()!=165)return 2;output.WriteByte((char)165);
                         float first=FileBinary::ReadFloat{{order}}(&input);
                         double second=FileBinary::ReadDouble{{order}}(&input);
-                        if(*((uint*)&first)!=floatBits[i]||*((ulong*)&second)!=doubleBits[i])return 3;
+                        if((first).reinterpret<uint>()!=floatBits[i]||(second).reinterpret<ulong>()!=doubleBits[i])return 3;
                         FileBinary::WriteFloat{{order}}(&output,first);FileBinary::WriteDouble{{order}}(&output,second);
                         if(input.ReadByte()!=90)return 4;output.WriteByte('Z');
                     }

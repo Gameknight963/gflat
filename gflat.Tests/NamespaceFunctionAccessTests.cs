@@ -12,7 +12,7 @@ public sealed class NamespaceFunctionAccessTests
     [InlineData("namespace Lib{private int Hidden()=>42;}", "int Read(){int()* callback=Lib::Hidden;return callback();}")]
     [InlineData("namespace Lib{private T Hidden<T>(T value)=>value;}", "int Read()=>Lib::Hidden<int>(42);")]
     [InlineData("namespace Lib{private T Hidden<T>(T value)=>value;}", "using Lib;int Read()=>Hidden(42);")]
-    [InlineData("namespace Lib{private int Hidden(this int value)=>value;}", "using Lib;int Read(){int value=42;return value.Hidden();}")]
+    [InlineData("namespace Lib{private int Hidden(int value)=>value;\nextension int { private int Hidden() =>(*this); }}", "using Lib;int Read(){int value=42;return value.Hidden();}")]
     [InlineData("namespace Lib{public long Hidden(long value)=>value;private int Hidden(int value)=>value;}", "int Read()=>Lib::Hidden(42);")]
     [InlineData("namespace Lib{public long Hidden(long value)=>value;private int Hidden(int value)=>value;}", "int Read(){int(int)* callback=Lib::Hidden;return callback(42);}")]
     [InlineData("namespace Lib{public long Hidden(long value)=>value;private int Hidden(int value)=>value;}", "int Read(){int(int)* callback=&Lib::Hidden;return callback(42);}")]

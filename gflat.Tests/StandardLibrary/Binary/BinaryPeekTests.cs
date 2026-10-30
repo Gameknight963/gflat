@@ -66,8 +66,8 @@ public sealed class BinaryPeekTests
             int main(){
                 BinaryBufferReader empty=new();byte value=(byte)99;
                 if(empty.TryPeekByte(ref value)||value!=(byte)0||empty.Data!=null||empty.Position!=0||empty.Remaining!=0)return 1;
-                BinaryBufferReader fake=new((readonly(byte)*)1,0);value=(byte)99;
-                if(fake.TryPeekByte(ref value)||value!=(byte)0||fake.Position!=0||fake.Length!=0||fake.Data!=(readonly(byte)*)1)return 2;
+                BinaryBufferReader fake=new(((nuint)1).reinterpret<readonly(byte)*>(),0);value=(byte)99;
+                if(fake.TryPeekByte(ref value)||value!=(byte)0||fake.Position!=0||fake.Length!=0||fake.Data!=((nuint)1).reinterpret<readonly(byte)*>())return 2;
                 if(!fake.TrySkip(0)||fake.TrySkip((nuint)0-1))return 3;
                 fake.Reset();value=(byte)99;if(fake.TryPeekByte(ref value)||value!=(byte)0)return 4;
                 byte[2] data=[(byte)255,(byte)0];BinaryBufferReader reader=new(data,2);

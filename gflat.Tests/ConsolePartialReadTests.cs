@@ -1,4 +1,4 @@
-﻿namespace gflat.Tests;
+namespace gflat.Tests;
 
 public sealed class ConsolePartialReadTests
 {
@@ -21,7 +21,7 @@ public sealed class ConsolePartialReadTests
                 extern int _fileno(void* stream);
                 extern nint _get_osfhandle(int descriptor);
                 extern int CloseHandle(void* handle);
-                bool Invalidate(void* stream) => CloseHandle((void*)_get_osfhandle(_fileno(stream))) != 0;
+                bool Invalidate(void* stream) => CloseHandle((_get_osfhandle(_fileno(stream))).reinterpret<void*>()) != 0;
                 """ : """
                 extern int fileno(void* stream);
                 extern int close(int descriptor);

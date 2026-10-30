@@ -73,7 +73,7 @@ public sealed class ConsoleLineWriterTests
         {
             string executable=Compile(directory,DenyAllocation+"""
                 int main(){
-                    CountingWriter count=new();count.Write((readonly(char)*)1,7);
+                    CountingWriter count=new();count.Write(((nuint)1).reinterpret<readonly(char)*>(),7);
                     if(!Console::TryReadLine(&count)||count.Length!=1048583)return 1;
                     count.Clear();if(!Console::TryReadLine(&count)||count.Length!=0)return 2;
                     if(!Console::TryReadLine(&count)||count.Length!=10)return 3;

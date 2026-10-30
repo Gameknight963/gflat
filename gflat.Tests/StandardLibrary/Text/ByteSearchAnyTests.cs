@@ -121,7 +121,7 @@ public sealed class ByteSearchAnyTests
         =>await Run("""
             using std; using std::Text;
             int main(){
-                readonly(byte)* invalid=(readonly(byte)*)1;nuint maximum=(nuint)0-(nuint)1;
+                readonly(byte)* invalid=((nuint)1).reinterpret<readonly(byte)*>();nuint maximum=(nuint)0-(nuint)1;
                 if(ByteSearch::IndexOfAny(invalid,0,invalid,maximum)!=0)return 1;
                 if(ByteSearch::LastIndexOfAny(invalid,0,invalid,maximum)!=0)return 2;
                 if(ByteSearch::IndexOfAny(invalid,maximum,invalid,0)!=maximum)return 3;

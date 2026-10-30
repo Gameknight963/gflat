@@ -1,9 +1,15 @@
 using std::Collections;
 namespace std::Queries;
 
-public void ForEach<T, S, E>(this Enumerable<T, S, E> source, void(T)* action)
+public void ForEach<T, S, E>(Enumerable<T, S, E> source, void(T)* action)
+=> source.ForEach(action);
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    E iterator = source.GetEnumerator();
-    while (iterator.MoveNext()) action(iterator.Current);
+    public void ForEach(void(T)* action)
+    {
+        E iterator = (*this).GetEnumerator();
+        while (iterator.MoveNext()) action(iterator.Current);
+    }
 }
 

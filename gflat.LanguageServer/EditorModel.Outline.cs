@@ -27,13 +27,16 @@ public sealed partial class EditorModel
                 ConstructorDeclaration => ownerName,
                 DestructorDeclaration => "~" + ownerName,
                 OperatorDeclaration op => "operator " + op.OperatorSymbol,
+                MethodDeclaration { IsExplicitConversion: true } conversion => "explicit operator " + DisplayType(conversion.ReturnType),
+                ExtensionDeclaration extension => "extension " + DisplayType(extension.Target),
                 _ => Describe(node).Name ?? ""
             };
             var symbol = declarations.GetValueOrDefault(node);
             string selectedName = node switch {
                 NamespaceDeclaration => name.Split("::")[0],
                 DestructorDeclaration => name[1..],
-                OperatorDeclaration => "operator",
+                OperatorDeclaration or MethodDeclaration { IsExplicitConversion: true } => "operator",
+                ExtensionDeclaration => "extension",
                 _ => name
             };
             var selection = node is ConstructorDeclaration or DestructorDeclaration ? NameSpan(syntax, selectedName, null)
@@ -62,6 +65,7 @@ public sealed partial class EditorModel
     private static int OutlineKind(AstNode node) => node switch {
         NamespaceDeclaration => 3, ClassDeclaration => 5, StructDeclaration => 23,
         InterfaceDeclaration => 11, EnumDeclaration => 10, EnumMemberDeclaration => 22,
+        ExtensionDeclaration => 3, MethodDeclaration { IsExplicitConversion: true } => 25,
         ConstructorDeclaration or MethodDeclaration { StaticConstructorName: not null } => 9, DestructorDeclaration => 6, OperatorDeclaration => 25,
         MethodDeclaration { PropertyName: null } => 6, ExternDeclaration => 12,
         PropertyDeclaration => 7, FieldDeclaration { IsConst: true } => 14,

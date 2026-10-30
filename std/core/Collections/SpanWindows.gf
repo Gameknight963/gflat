@@ -73,5 +73,11 @@ public struct SpanWindows<T> : IEnumerable<Span<T>, SpanWindows<T>::Enumerator>
     }
 }
 
-public SpanWindows<T> Windows<T>(this Span<T> source, nuint width, nuint step = 1)
-    => new SpanWindows<T>(source.Data, source.Length, width, step);
+public SpanWindows<T> Windows<T>(Span<T> source, nuint width, nuint step = 1)
+    => source.Windows(width, step);
+
+extension<T> Span<T>
+{
+    public SpanWindows<T> Windows(nuint width, nuint step = 1)
+    => new SpanWindows<T>((*this).Data, (*this).Length, width, step);
+}

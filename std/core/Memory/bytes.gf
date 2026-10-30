@@ -12,7 +12,7 @@ public void Move(void* destination, readonly(void)* source, nuint count) nothrow
 {
     byte* output = (byte*)destination;
     readonly(byte)* input = (readonly(byte)*)source;
-    if ((nuint)output <= (nuint)input)
+    if ((output).reinterpret<nuint>() <= (input).reinterpret<nuint>())
     {
         for (nuint i = 0; i < count; i++) output[i] = input[i];
     }

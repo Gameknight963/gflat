@@ -72,7 +72,7 @@ public sealed class CountedPathTests
                 return Paths::IsRooted(path,style)||Paths::IsFullyQualified(path,style);
             }
             int main(){
-                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new((readonly(char)*)1,0);
+                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 if(ClassifyCounted(empty,PathStyle::Unix)||ClassifyCounted(zero,PathStyle::Windows))return 1;
                 char[3] root=['C',':','/'];Span<readonly(char)> view=new(root,3);
                 if(!ClassifyCounted(view,PathStyle::Windows)||ClassifyCounted(view,PathStyle::Unix))return 2;

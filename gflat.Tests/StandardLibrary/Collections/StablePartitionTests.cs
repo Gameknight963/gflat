@@ -25,7 +25,7 @@ public sealed class StablePartitionTests
         }
         Run(Allocator + $$"""
             int calls=0;int mask=0;bool invalid=false;
-            immutable(int)* origin=(immutable(int)*)1;
+            immutable(int)* origin=((nuint)1).reinterpret<immutable(int)*>();
             bool Selected(immutable(int)* element){
                 int expected=calls;calls++;
                 if(element!=origin+expected||*element!=expected){invalid=true;return false;}
@@ -59,7 +59,7 @@ public sealed class StablePartitionTests
     public void NoncopyableOwnersKeepIdentityAndEveryPredicateFailureLeavesAValidPermutation(int optimization)
         => Run(Allocator + """
             int made=0;int dead=0;int calls=0;int failAt=-1;
-            immutable(Owner)* origin=(immutable(Owner)*)1;
+            immutable(Owner)* origin=((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner{
                 public int Id;public String Token;
                 public Owner(int id){Id=id;Token=s"owner";made++;}
@@ -79,7 +79,7 @@ public sealed class StablePartitionTests
                         Vector<Owner> owners=new();owners.Reserve(10);owners.Add(new Owner(8));
                         for(int id=0;id<8;id++)owners.Add(new Owner(id));owners.Add(new Owner(9));
                         nuint[10] tokens;
-                        for(nuint i=0;i<10;i++)tokens[(nuint)owners[i].Id]=(nuint)owners[i].Token.Data;
+                        for(nuint i=0;i<10;i++)tokens[(nuint)owners[i].Id]=(owners[i].Token.Data).reinterpret<nuint>();
                         origin=&owners[1];nuint capacity=owners.Capacity;calls=0;failAt=failure;
                         nuint boundary=99;bool caught=false;int before=attempts;
                         if(failure<0){
@@ -98,7 +98,7 @@ public sealed class StablePartitionTests
                         for(nuint i=0;i<10;i++){
                             int id=owners[i].Id;if(id<0||id>=10||(seen&(1<<id))!=0)return 6;
                             seen=seen|(1<<id);
-                            if((nuint)owners[i].Token.Data!=tokens[(nuint)id]||owners[i].Token.Length!=5)return 7;
+                            if((owners[i].Token.Data).reinterpret<nuint>()!=tokens[(nuint)id]||owners[i].Token.Length!=5)return 7;
                         }
                         if(seen!=1023)return 8;
                     }

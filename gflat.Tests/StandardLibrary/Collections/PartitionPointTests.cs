@@ -72,7 +72,7 @@ public sealed class PartitionPointTests
             bool Positive(immutable(int)* value) { calls++; return *value > 0; }
             int main() {
                 Span<immutable(int)> empty = new();
-                Span<immutable(int)> unreadable = new((immutable(int)*)1, 0);
+                Span<immutable(int)> unreadable = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                 int[1] data = [5]; Span<int> singleton = new(data, 1);
                 int baseline = attempts; deny = true;
                 if (PartitionPoint<int>(empty, Unexpected) != 0 || PartitionPoint<int>(unreadable, Unexpected) != 0 || calls != 0) return 1;
@@ -90,7 +90,7 @@ public sealed class PartitionPointTests
     public void NoncopyableOwnersAreBorrowedWithoutAllocationAndEveryPredicateFailurePreservesInput(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int boundary = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
             bool[9] visited;
             struct Owner {
                 public int Id; public String Token;
@@ -112,7 +112,7 @@ public sealed class PartitionPointTests
                     Vector<Owner> owners = new(); owners.Reserve(9);
                     for (int id = 0; id < 9; id++) owners.Add(new Owner(id));
                     origin = &owners[0]; nuint[9] tokens;
-                    for (nuint i = 0; i < 9; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 9; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     int live = allocated - released; nuint capacity = owners.Capacity;
                     for (int split = 0; split <= 9; split++) {
                         boundary = split; failAt = -1; Reset(); int baseline = attempts; deny = true;
@@ -129,7 +129,7 @@ public sealed class PartitionPointTests
                             if (made != 9 || dead != 0 || owners.Count != 9 || owners.Capacity != capacity || allocated - released != live) return 4;
                             for (nuint i = 0; i < 9; i++)
                                 if (&owners[i] != origin + i || owners[i].Id != (int)i ||
-                                    (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 5;
+                                    (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 5;
                         }
                     }
                 }

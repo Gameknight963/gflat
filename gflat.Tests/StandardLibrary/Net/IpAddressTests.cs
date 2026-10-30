@@ -81,7 +81,7 @@ public sealed class IpAddressTests
                                 for(nuint i=0;i<written;i++)if(output[i+1]!=expected.Data[i])return 8;
                                 for(nuint i=written+1;i<41;i++)if(output[i]!='!')return 9;}
                         }
-                        nuint written=9;if(value.TryFormat((char*)1,0,ref written)||written!=0)return 10;
+                        nuint written=9;if(value.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 10;
                         previous=value;
                     }
                     file.Close();return 0;
@@ -138,9 +138,9 @@ public sealed class IpAddressTests
                             catch(Exception* error){caught=CString::Equals(error.GetMessage(),"Invalid IP address");}if(!caught)return 8;}
                     }
                     IpAddress value=seed;
-                    if(IpAddress::TryParse((readonly(char)*)1,0,&value)||!value.Equals(&zero))return 9;
-                    value=seed;if(IpAddress::TryParse((readonly(char)*)1,46,&value)||!value.Equals(&zero))return 10;
-                    value=seed;if(IpAddress::TryParse((readonly(char)*)1,(nuint)0-(nuint)1,&value)||!value.Equals(&zero))return 11;
+                    if(IpAddress::TryParse(((nuint)1).reinterpret<readonly(char)*>(),0,&value)||!value.Equals(&zero))return 9;
+                    value=seed;if(IpAddress::TryParse(((nuint)1).reinterpret<readonly(char)*>(),46,&value)||!value.Equals(&zero))return 10;
+                    value=seed;if(IpAddress::TryParse(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1,&value)||!value.Equals(&zero))return 11;
                     file.Close();return 0;
                 }
                 """, [manifest], optimization);
@@ -162,7 +162,7 @@ public sealed class IpAddressTests
                 IpAddress value=new();if(!IpAddress::TryParse(text,45,&value)||value.IsIpv4)return 1;
                 IpAddress other=IpAddress::Parse(expected);IpAddress copied=other;
                 if(!value.Equals(&other)||value.CompareTo(&other)!=0||value.GetHashCode()!=other.GetHashCode())return 2;
-                IpAddress[4] backing;char* bytes=(char*)&backing[0];nuint extent=(nuint)sizeof(IpAddress)*4;
+                IpAddress[4] backing;char* bytes=(&backing[0]).reinterpret<char*>();nuint extent=(nuint)sizeof(IpAddress)*4;
                 if(extent<46)return 3;
                 for(nuint i=0;i<45;i++)bytes[i]=text[i];bytes[45]='\0';
                 if(!IpAddress::TryParse(bytes,45,&backing[0])||!backing[0].Equals(&other))return 4;
@@ -176,7 +176,7 @@ public sealed class IpAddressTests
                 for(nuint i=0;i<18;i++)bytes[i]=bad[i];
                 if(IpAddress::TryParse(bytes,18,&backing[0]))return 9;IpAddress zero=new();
                 if(!backing[0].Equals(&zero))return 10;
-                value=other;if(IpAddress::TryParse((readonly(char)*)1,0,&value)||!value.Equals(&zero))return 11;
+                value=other;if(IpAddress::TryParse(((nuint)1).reinterpret<readonly(char)*>(),0,&value)||!value.Equals(&zero))return 11;
                 if(allocations!=0||!copied.Equals(&other))return 12;return 0;
             }
             """, [], optimization));

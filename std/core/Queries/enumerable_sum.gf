@@ -12,14 +12,20 @@ private long CheckedSumAdd(long total, long value)
 
 // T must support ordinary implicit value conversion to long.
 // Check each signed 64-bit prefix, returning zero for an empty sequence.
-public long Sum<T, S, E>(this Enumerable<T, S, E> source)
+public long Sum<T, S, E>(Enumerable<T, S, E> source)
+=> source.Sum();
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    long total = 0l;
-    E iterator = source.GetEnumerator();
-    while (iterator.MoveNext())
+    public long Sum()
     {
-        long current = iterator.Current;
-        total = CheckedSumAdd(total, current);
+        long total = 0l;
+        E iterator = (*this).GetEnumerator();
+        while (iterator.MoveNext())
+        {
+            long current = iterator.Current;
+            total = CheckedSumAdd(total, current);
+        }
+        return total;
     }
-    return total;
 }

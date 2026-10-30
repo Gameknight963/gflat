@@ -72,15 +72,15 @@ public sealed class LastSplitOnceTests
                 text=original;if(!text.TrySplitLastOnce(':',ref text,ref after)||text.Length!=8||after.Data!=null)return 5;
                 text=original;if(!text.TrySplitLastOnce(':',ref before,ref text)||before.Length!=8||text.Data!=null)return 6;
                 bytes[0]='A';if(before[0]!='A')return 7;
-                Span<readonly(char)> empty=new();Span<readonly(char)> fake=new((readonly(char)*)1,0);
-                if(!empty.TrySplitLastOnce((readonly(char)*)1,0,ref before,ref after)||before.Data!=null||after.Data!=null)return 8;
-                if(!fake.TrySplitLastOnce(empty,ref before,ref after)||before.Data!=(readonly(char)*)1||after.Data!=null)return 9;
+                Span<readonly(char)> empty=new();Span<readonly(char)> fake=new(((nuint)1).reinterpret<readonly(char)*>(),0);
+                if(!empty.TrySplitLastOnce(((nuint)1).reinterpret<readonly(char)*>(),0,ref before,ref after)||before.Data!=null||after.Data!=null)return 8;
+                if(!fake.TrySplitLastOnce(empty,ref before,ref after)||before.Data!=((nuint)1).reinterpret<readonly(char)*>()||after.Data!=null)return 9;
                 if(!original.TrySplitLastOnce(fake,ref before,ref after)||before.Data!=original.Data||before.Length!=9||after.Data!=null)return 10;
                 text=original;if(!text.TrySplitLastOnce(empty,ref text,ref after)||text.Length!=9||after.Data!=null)return 11;
                 separator=empty;if(!original.TrySplitLastOnce(separator,ref before,ref separator)||before.Length!=9||separator.Data!=null)return 12;
-                if(empty.TrySplitLastOnce((readonly(char)*)1,1,ref before,ref after)||before.Data!=null||after.Data!=null)return 13;
-                if(original.TrySplitLastOnce((readonly(char)*)1,10,ref before,ref after)||before.Data!=null||after.Data!=null)return 14;
-                if(original.TrySplitLastOnce((readonly(char)*)1,(nuint)0-(nuint)1,ref before,ref after))return 15;
+                if(empty.TrySplitLastOnce(((nuint)1).reinterpret<readonly(char)*>(),1,ref before,ref after)||before.Data!=null||after.Data!=null)return 13;
+                if(original.TrySplitLastOnce(((nuint)1).reinterpret<readonly(char)*>(),10,ref before,ref after)||before.Data!=null||after.Data!=null)return 14;
+                if(original.TrySplitLastOnce(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1,ref before,ref after))return 15;
                 if(fake.TrySplitLastOnce(':',ref before,ref after)||before.Data!=null||after.Data!=null)return 16;
                 if(allocations!=0)return 17;return 0;
             }

@@ -2,44 +2,56 @@ using std::Collections;
 namespace std::Queries;
 
 // Eager owning groups; HashMap additionally needs the matching IEquatable<K>.
-public HashMap<K, Vector<T>> ToLookup<T, K : IHashable, S, E>(this Enumerable<T, S, E> source, K(T)* keySelector)
+public HashMap<K, Vector<T>> ToLookup<T, K : IHashable, S, E>(Enumerable<T, S, E> source, K(T)* keySelector)
+=> source.ToLookup<K>(keySelector);
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    HashMap<K, Vector<T>> result = new();
-    E iterator = source.GetEnumerator();
-    while (iterator.MoveNext())
+    public HashMap<K, Vector<T>> ToLookup<K : IHashable>(K(T)* keySelector)
     {
-        T current = iterator.Current;
-        K key = keySelector(current);
-        Vector<T>*? existing = result.Find(&key);
-        if (existing != null) existing!.Add(move current);
-        else
+        HashMap<K, Vector<T>> result = new();
+        E iterator = (*this).GetEnumerator();
+        while (iterator.MoveNext())
         {
-            Vector<T> group = new();
-            group.Add(move current);
-            result.Add(move key, move group);
+            T current = iterator.Current;
+            K key = keySelector(current);
+            Vector<T>*? existing = result.Find(&key);
+            if (existing != null) existing!.Add(move current);
+            else
+            {
+                Vector<T> group = new();
+                group.Add(move current);
+                result.Add(move key, move group);
+            }
         }
+        return move result;
     }
-    return move result;
 }
 
-public HashMap<K, Vector<V>> ToLookup<T, K : IHashable, V, S, E>(this Enumerable<T, S, E> source,
+public HashMap<K, Vector<V>> ToLookup<T, K : IHashable, V, S, E>(Enumerable<T, S, E> source,
     K(T)* keySelector, V(T)* valueSelector)
+=> source.ToLookup<K, V>(keySelector, valueSelector);
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    HashMap<K, Vector<V>> result = new();
-    E iterator = source.GetEnumerator();
-    while (iterator.MoveNext())
+    public HashMap<K, Vector<V>> ToLookup<K : IHashable, V>(K(T)* keySelector, V(T)* valueSelector)
     {
-        T current = iterator.Current;
-        K key = keySelector(current);
-        V value = valueSelector(current);
-        Vector<V>*? existing = result.Find(&key);
-        if (existing != null) existing!.Add(move value);
-        else
+        HashMap<K, Vector<V>> result = new();
+        E iterator = (*this).GetEnumerator();
+        while (iterator.MoveNext())
         {
-            Vector<V> group = new();
-            group.Add(move value);
-            result.Add(move key, move group);
+            T current = iterator.Current;
+            K key = keySelector(current);
+            V value = valueSelector(current);
+            Vector<V>*? existing = result.Find(&key);
+            if (existing != null) existing!.Add(move value);
+            else
+            {
+                Vector<V> group = new();
+                group.Add(move value);
+                result.Add(move key, move group);
+            }
         }
+        return move result;
     }
-    return move result;
 }

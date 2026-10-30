@@ -31,14 +31,14 @@ public static class FileBytes
     public static void WriteAll(immutable(char*) path, readonly(byte)* data, nuint count)
     {
         File output = File::OpenWrite(path);
-        output.Write((readonly(char)*)data, count);
+        output.Write(data.reinterpret<readonly(char)*>(), count);
         output.Close();
     }
 
     public static void AppendAll(immutable(char*) path, readonly(byte)* data, nuint count)
     {
         File output = File::OpenAppend(path);
-        output.Write((readonly(char)*)data, count);
+        output.Write(data.reinterpret<readonly(char)*>(), count);
         output.Close();
     }
 
@@ -48,7 +48,7 @@ public static class FileBytes
         if (bytes.Count != 0)
         {
             Span<immutable(byte)> view = bytes.AsImmutable();
-            output.Write((readonly(char)*)view.Data!, view.Length);
+            output.Write((view.Data!).reinterpret<readonly(char)*>(), view.Length);
         }
         output.Close();
     }
@@ -59,7 +59,7 @@ public static class FileBytes
         if (bytes.Count != 0)
         {
             Span<immutable(byte)> view = bytes.AsImmutable();
-            output.Write((readonly(char)*)view.Data!, view.Length);
+            output.Write((view.Data!).reinterpret<readonly(char)*>(), view.Length);
         }
         output.Close();
     }

@@ -82,8 +82,8 @@ public sealed class HexIntegerParsingTests
             code.AppendLine($$"""
                 {
                     ulong[4] storage = [0ul, 0ul, 0ul, 0ul];
-                    char* text = (char*)&storage[0];
-                    {{type}}* output = ({{type}}*)&storage[0];
+                    char* text = (&storage[0]).reinterpret<char*>();
+                    {{type}}* output = (&storage[0]).reinterpret<{{type}}*>();
                     text[0] = '0'; text[1] = 'x'; text[2] = 'a'; text[3] = 'F'; text[4] = '\0';
                     if (!TryParseHex{{name}}(text, 4, output) || *output != ({{type}})175) return 1;
                     text[0] = 'F'; text[1] = 'f'; text[2] = '\0';
@@ -91,7 +91,7 @@ public sealed class HexIntegerParsingTests
                     text[0] = '0'; text[1] = 'x'; text[2] = '1'; text[3] = 'g'; text[4] = '\0';
                     if (TryParseHex{{name}}(text, 4, output) || *output != ({{type}})0) return 3;
                     *output = ({{type}})7;
-                    if (TryParseHex{{name}}((readonly(char)*)1, 0, output) || *output != ({{type}})0) return 4;
+                    if (TryParseHex{{name}}(((nuint)1).reinterpret<readonly(char)*>(), 0, output) || *output != ({{type}})0) return 4;
                     text[0] = '0'; text[1] = 'x';
                     if (!TryParseHex{{name}}(text, 1, output) || *output != ({{type}})0) return 5;
                 }

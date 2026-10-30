@@ -125,7 +125,7 @@ public sealed class Base64UrlTests
                 public replace void Free(void* data) nothrow{}
             }
             int main(){
-                readonly(char)* unreadable=(readonly(char)*)1;char* unwritable=(char*)1;
+                readonly(char)* unreadable=((nuint)1).reinterpret<readonly(char)*>();char* unwritable=((nuint)1).reinterpret<char*>();
                 nuint length=99;
                 if(!Base64Url::TryEncode(unreadable,0,unwritable,0,ref length)||length!=0)return 1;
                 if(!Base64Url::TryDecode(unreadable,0,unwritable,0,ref length)||length!=0)return 2;

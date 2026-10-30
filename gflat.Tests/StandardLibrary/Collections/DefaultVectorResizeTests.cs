@@ -88,7 +88,7 @@ public sealed class DefaultVectorResizeTests
                 int index=calls;calls++;
                 if(index==failAt){
                     try{throw new Failure();}
-                    catch(ref Failure error){failureAddress=(nuint)&error;throw;}
+                    catch(ref Failure error){failureAddress=(&error).reinterpret<nuint>();throw;}
                 }
                 Id=made;Token=s"owned";made++;
             }
@@ -107,11 +107,11 @@ public sealed class DefaultVectorResizeTests
                     {
                         Vector<Owner> values=new();values.Reserve(2);values.Resize(2);
                         if(roomy==1)values.Reserve(8);
-                        nuint origin=(nuint)&values[0];nuint token=(nuint)values[0].Token.Data;
+                        nuint origin=(&values[0]).reinterpret<nuint>();nuint token=(values[0].Token.Data).reinterpret<nuint>();
                         int live=allocated-freed;failAt=calls+failure;bool caught=false;
                         try{values.Resize(5);return 1;}
                         catch(ref Failure error){
-                            caught=(nuint)&error==failureAddress&&error.GetCode()==73
+                            caught=(&error).reinterpret<nuint>()==failureAddress&&error.GetCode()==73
                                 &&CString::Equals(error.GetMessage(),"original default constructor");
                         }
                         if(!caught)return 21;
@@ -119,9 +119,9 @@ public sealed class DefaultVectorResizeTests
                         if(made!=2+failure)return 23;
                         if(dead!=failure)return 24;
                         if(values.Capacity!=5&&roomy==0)return 3;
-                        if(roomy==1&&(values.Capacity!=8||(nuint)&values[0]!=origin))return 4;
-                        if(roomy==0&&(nuint)&values[0]==origin)return 5;
-                        if(values[0].Id!=0||values[1].Id!=1||(nuint)values[0].Token.Data!=token)return 6;
+                        if(roomy==1&&(values.Capacity!=8||(&values[0]).reinterpret<nuint>()!=origin))return 4;
+                        if(roomy==0&&(&values[0]).reinterpret<nuint>()==origin)return 5;
+                        if(values[0].Id!=0||values[1].Id!=1||(values[0].Token.Data).reinterpret<nuint>()!=token)return 6;
                         if(allocated-freed!=live)return 7;
                         for(int i=0;i<failure;i++)if(destroyed[i]!=1+failure-i)return 8;
                         failAt=-1;values.Resize(4);values.Resize(1);

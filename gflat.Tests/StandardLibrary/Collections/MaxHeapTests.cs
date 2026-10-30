@@ -150,7 +150,7 @@ public sealed class MaxHeapTests
                     int comparisons=0;
                     {
                         Vector<Owner> values=new();Fill(&values);Span<Owner> work=values.AsSpan().Slice(1,31);
-                        nuint[33] identities;for(nuint index=0;index<33;index++)identities[(nuint)values[index].Id]=(nuint)values[index].Token.Data;
+                        nuint[33] identities;for(nuint index=0;index<33;index++)identities[(nuint)values[index].Id]=(values[index].Token.Data).reinterpret<nuint>();
                         Prepare(operation,work);calls=0;failAt=-1;
                         int before=attempts;deny=true;bool success=Apply(operation,work);comparisons=calls;deny=false;
                         if(!success||comparisons==0||attempts!=before)return 1;
@@ -161,7 +161,7 @@ public sealed class MaxHeapTests
                         for(nuint index=0;index<33;index++){
                             int id=values[index].Id;if(id<0||id>=33||(live&(1ul<<id))!=0ul)return 13;
                             live=live|(1ul<<id);
-                            if((nuint)values[index].Token.Data!=identities[(nuint)id]||values[index].Token.Length!=5)return 14;
+                            if((values[index].Token.Data).reinterpret<nuint>()!=identities[(nuint)id]||values[index].Token.Length!=5)return 14;
                         }
                         if(live!=8589934591ul)return 15;
                     }
@@ -172,7 +172,7 @@ public sealed class MaxHeapTests
                             Span<Owner> work=values.AsSpan().Slice(1,31);Prepare(operation,work);
                             nuint[33] tokens;int[33] positions;
                             for(nuint index=0;index<33;index++){
-                                int id=values[index].Id;tokens[(nuint)id]=(nuint)values[index].Token.Data;positions[index]=id;
+                                int id=values[index].Id;tokens[(nuint)id]=(values[index].Token.Data).reinterpret<nuint>();positions[index]=id;
                             }
                             nuint capacity=values.Capacity;calls=0;failAt=failure;bool caught=false;
                             try{Apply(operation,work);}
@@ -184,7 +184,7 @@ public sealed class MaxHeapTests
                             for(nuint index=0;index<33;index++){
                                 int id=values[index].Id;if(id<0||id>=33||(seen&(1ul<<id))!=0ul)return 8;
                                 seen=seen|(1ul<<id);
-                                if((nuint)values[index].Token.Data!=tokens[(nuint)id]||values[index].Token.Length!=5)return 9;
+                                if((values[index].Token.Data).reinterpret<nuint>()!=tokens[(nuint)id]||values[index].Token.Length!=5)return 9;
                                 if(operation==3&&id!=positions[index])return 10;
                             }
                             if(seen!=8589934591ul)return 11;

@@ -90,7 +90,7 @@ public sealed class StandardJsonReaderRawTokenTests
             using std; using std::Text; using std::Json; using std::Memory;
             bool Empty(ref immutable(JsonReader) reader){Span<readonly(char)> raw=reader.RawToken;return raw.Length==0&&raw.Data==null;}
             int main(){
-                JsonReader unread=new((readonly(char)*)1,100);
+                JsonReader unread=new(((nuint)1).reinterpret<readonly(char)*>(),100);
                 if(!Empty(ref unread))return 1;
                 unread.Reset();if(!Empty(ref unread))return 2;
                 JsonReader reader=new("[true,?]",8);
@@ -102,7 +102,7 @@ public sealed class StandardJsonReaderRawTokenTests
                 try{reader.Read();return 6;}catch(ref JsonParseException error){}
                 if(!Empty(ref reader))return 7;
                 reader.Reset();if(!Empty(ref reader))return 8;
-                JsonReader empty=new((readonly(char)*)1,0);
+                JsonReader empty=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 try{empty.Read();return 9;}catch(ref JsonParseException error){}
                 if(!Empty(ref empty))return 10;
                 return 0;

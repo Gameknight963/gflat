@@ -11,10 +11,14 @@ public sealed class ExtensionTypeShapeTests
                 public T* data;
                 public View(T* storage) { data = storage; }
             }
-            void Copy<T>(this View<immutable(T)> source, View<T> destination) {
-                T* output = destination.data;
-                output[0] = source.data[0];
-            }
+            void Copy<T>(View<immutable(T)> source, View<T> destination) {
+                            T* output = destination.data;
+                            output[0] = source.data[0];
+                        }
+            extension<T> View<immutable(T)> { public void Copy(View<T> destination) {
+                            T* output = destination.data;
+                            output[0] = (*this).data[0];
+                        } }
             void CopyScalar<T>(immutable(T)* source, T* destination) { *destination = *source; }
             int main() {
                 readonly(int) source = 42;
@@ -36,7 +40,8 @@ public sealed class ExtensionTypeShapeTests
                 public T* data;
                 public View(T* storage) { data = storage; }
             }
-            View<T> Identity<T>(this View<T> source) => source;
+            View<T> Identity<T>(View<T> source) => source;
+            extension<T> View<T> { public View<T> Identity() => (*this); }
             int main() {
                 readonly(int) value = 42;
                 View<readonly(int)> input = new(&value);
@@ -59,7 +64,8 @@ public sealed class ExtensionTypeShapeTests
         string call = direct ? "Read<int>(handler, 0)" : "handler.Read(0)";
         Assert.Equal(42, CompilerTestHelper.Run($$"""
             struct Handler<F>{public int value;}
-            int Read<T>(this Handler<{{type}}> self,T value)=>42;
+            int Read<T>(Handler<{{type}}> self,T value)=>42;
+            extension Handler<{{type}}> { public int Read<T>(T value) =>42; }
             int main(){Handler<{{type}}> handler=new Handler<{{type}}>();return {{call}};}
             """).ExitCode);
     }
@@ -70,7 +76,8 @@ public sealed class ExtensionTypeShapeTests
     public void InferredTypeArgumentsRetainTheirLayoutMeaning(string type, int expected)
         => Assert.Equal(expected, CompilerTestHelper.Run($$"""
             struct Handler<F>{public int value;}
-            int HasValueLayout<F>(this Handler<F> self){if(typeof(F).HasLayout)return 1;return 42;}
+            int HasValueLayout<F>(Handler<F> self){if(typeof(F).HasLayout)return 1;return 42;}
+            extension<F> Handler<F> { public int HasValueLayout() {if(typeof(F).HasLayout)return 1;return 42;} }
             int main(){Handler<{{type}}> handler=new Handler<{{type}}>();return handler.HasValueLayout();}
             """).ExitCode);
 }

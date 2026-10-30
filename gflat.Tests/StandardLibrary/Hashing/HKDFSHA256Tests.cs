@@ -121,8 +121,8 @@ public sealed class HKDFSHA256Tests
                 byte[96] storage;for(nuint i=0;i<96;i++)storage[i]=(byte)i;byte[96] saved=storage;
                 nuint[3] infoOffsets=[32,40,40];nuint[3] outputOffsets=[40,32,40];
                 for(nuint i=0;i<3;i++){
-                    if(HKDFSHA256::TryExpand((readonly(char)*)1,32,(readonly(char)*)&storage[infoOffsets[i]],10,&storage[outputOffsets[i]],33))return 6;
-                    if(HKDFSHA256::TryExpand((readonly(char)*)1,32,(readonly(char)*)&storage[infoOffsets[i]],10,&storage[outputOffsets[i]],16))return 14;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,(readonly(char)*)&storage[infoOffsets[i]],10,&storage[outputOffsets[i]],33))return 6;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,(readonly(char)*)&storage[infoOffsets[i]],10,&storage[outputOffsets[i]],16))return 14;
                     for(nuint j=0;j<96;j++)if(storage[j]!=saved[j])return 7;
                 }
                 // Adjacent, disjoint intervals within one allocation remain accepted.
@@ -146,18 +146,18 @@ public sealed class HKDFSHA256Tests
         => Run(DenyAllocation+"""
             int main(){
                 byte[40] output;for(nuint i=0;i<40;i++)output[i]=(byte)165;
-                if(HKDFSHA256::TryExpand((readonly(char)*)1,32,(readonly(char)*)1,0,(byte*)1,0))return 1;
-                if(HKDFSHA256::TryExpand((readonly(char)*)1,32,(readonly(char)*)1,0,(byte*)1,8161))return 2;
-                if(HKDFSHA256::TryExpand((readonly(char)*)1,31,(readonly(char)*)1,0,output,33))return 3;
+                if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<byte*>(),0))return 1;
+                if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<byte*>(),8161))return 2;
+                if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),31,((nuint)1).reinterpret<readonly(char)*>(),0,output,33))return 3;
                 if(sizeof(nuint)==8){
-                    if(HKDFSHA256::TryExpand((readonly(char)*)1,(nuint)2305843009213693952ul,(readonly(char)*)1,0,output,33))return 4;
-                    if(HKDFSHA256::TryExpand((readonly(char)*)1,32,(readonly(char)*)1,(nuint)2305843009213693887ul,output,32))return 5;
-                    if(HKDFSHA256::TryExpand((readonly(char)*)1,32,(readonly(char)*)1,(nuint)2305843009213693855ul,output,33))return 6;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693952ul,((nuint)1).reinterpret<readonly(char)*>(),0,output,33))return 4;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693887ul,output,32))return 5;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693855ul,output,33))return 6;
                 }
                 for(nuint i=0;i<40;i++)if(output[i]!=(byte)165)return 7;
-                byte[32] empty=HKDFSHA256::Extract((readonly(char)*)1,0,(readonly(char)*)1,0);
+                byte[32] empty=HKDFSHA256::Extract(((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<readonly(char)*>(),0);
                 byte[1] result;
-                if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)empty,32,(readonly(char)*)1,0,result,1))return 8;
+                if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)empty,32,((nuint)1).reinterpret<readonly(char)*>(),0,result,1))return 8;
                 if(attempts!=0)return 9;return 0;
             }
             """,optimization);
@@ -172,8 +172,8 @@ public sealed class HKDFSHA256Tests
                 byte[32] result;for(nuint i=0;i<32;i++)result[i]=(byte)165;
                 if(sizeof(nuint)==8){
                     int caught=0;
-                    try{result=HKDFSHA256::Extract((readonly(char)*)1,(nuint)2305843009213693952ul,(readonly(char)*)1,0);}catch(ref Exception error){caught++;}
-                    try{result=HKDFSHA256::Extract((readonly(char)*)1,1,(readonly(char)*)1,(nuint)2305843009213693888ul);}catch(ref Exception error){caught++;}
+                    try{result=HKDFSHA256::Extract(((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693952ul,((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){caught++;}
+                    try{result=HKDFSHA256::Extract(((nuint)1).reinterpret<readonly(char)*>(),1,((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693888ul);}catch(ref Exception error){caught++;}
                     if(caught!=2)return 1;
                     for(nuint i=0;i<32;i++)if(result[i]!=(byte)165)return 2;
                 }

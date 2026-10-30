@@ -14,8 +14,10 @@ public sealed class ExtensionAliasConstraintTests
         }
         weak alias Selected:IProvider=Answer;
         struct Handler<P>{}
-        int Visible<P:IProvider>(this Handler<P> value)=>P::Read();
-        int Hidden<P:IExtra>(this Handler<P> value)=>P::Extra();
+        int Visible<P:IProvider>(Handler<P> value)=>P::Read();
+        extension<P:IProvider> Handler<P> { public int Visible() =>P::Read(); }
+        int Hidden<P:IExtra>(Handler<P> value)=>P::Extra();
+        extension<P:IExtra> Handler<P> { public int Hidden() =>P::Extra(); }
         """;
 
     [Fact]
@@ -70,10 +72,14 @@ public sealed class ExtensionAliasConstraintTests
             class Derived:Base,IExtra {public static int Extra()=>7;}
             weak alias Selected:Base=Derived;
             struct Handler<P>{}
-            int BaseMethod<P:Base>(this Handler<P> value)=>0;
-            int ProviderMethod<P:IProvider>(this Handler<P> value)=>0;
-            int DerivedMethod<P:Derived>(this Handler<P> value)=>0;
-            int ExtraMethod<P:IExtra>(this Handler<P> value)=>0;
+            int BaseMethod<P:Base>(Handler<P> value)=>0;
+            extension<P:Base> Handler<P> { public int BaseMethod() =>0; }
+            int ProviderMethod<P:IProvider>(Handler<P> value)=>0;
+            extension<P:IProvider> Handler<P> { public int ProviderMethod() =>0; }
+            int DerivedMethod<P:Derived>(Handler<P> value)=>0;
+            extension<P:Derived> Handler<P> { public int DerivedMethod() =>0; }
+            int ExtraMethod<P:IExtra>(Handler<P> value)=>0;
+            extension<P:IExtra> Handler<P> { public int ExtraMethod() =>0; }
             int main(){Handler<Selected> value=new Handler<Selected>();return 0;}
             """;
         var (_,checker)=Compiler.Check(source,options:new(){NoStdLib=true});

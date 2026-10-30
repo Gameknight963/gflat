@@ -63,8 +63,8 @@ public sealed class StandardJsonStringTests
                     }
                 }
                 nuint needed=0; nuint written=0;
-                if(!JsonString::TryGetQuotedLength((readonly(char)*)1,0,ref needed)||needed!=2)return 8;
-                if(!JsonString::TryQuote((readonly(char)*)1,0,output,2,ref written)||written!=2)return 9;
+                if(!JsonString::TryGetQuotedLength(((nuint)1).reinterpret<readonly(char)*>(),0,ref needed)||needed!=2)return 8;
+                if(!JsonString::TryQuote(((nuint)1).reinterpret<readonly(char)*>(),0,output,2,ref written)||written!=2)return 9;
                 if(output[0]!='"'||output[1]!='"')return 10;
                 return 0;
             }

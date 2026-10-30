@@ -3215,6 +3215,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitCallCore(CallExpression node)
     {
+        if (TryEmitReinterpretCall(node)) return;
         if (TryEmitLlvmCall(node)) return;
         if (_typeChecker.GetExtensionCall(node) is { } extensionCall)
         {
@@ -4451,6 +4452,8 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(CastExpression node)
     {
+        if (TryEmitInterfaceViewCast(node)) return;
+        if (TryEmitExplicitConversionCast(node)) return;
         // The checker already bound imports, aliases and generic arguments in
         // the cast's lexical scope. Emission must use that checked identity.
         TypeExpression dstType = _typeChecker.GetType(node);

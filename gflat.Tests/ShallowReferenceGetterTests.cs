@@ -42,7 +42,7 @@ public sealed class ShallowReferenceGetterTests
     [Fact]
     public void ExplicitShallowGetterCannotReassignTheOwnersPointerField()
     {
-        const string source="struct Cell{int* data;public Cell(int* p){data=p;}public ref int Value{readonly get{data=(int*)1;return *data;}}}";
+        const string source="struct Cell{int* data;public Cell(int* p){data=p;}public ref int Value{readonly get{data=((nuint)1).reinterpret<int*>();return *data;}}}";
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(source,options:new(){NoStdLib=true}));
         Assert.Contains("Cannot assign",error.Description);
     }

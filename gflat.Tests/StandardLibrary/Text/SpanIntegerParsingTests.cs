@@ -75,9 +75,9 @@ public sealed class SpanIntegerParsingTests
             }
             int main(){
                 char[4] input=['x','1','2','x'];Span<readonly(char)> text=new(&input[1],2);
-                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new((readonly(char)*)1,0);
+                Span<readonly(char)> empty=new();Span<readonly(char)> zero=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 if(!SpanParsingCheck(text,empty,zero))return 1;
-                extralong[3] aligned;char* bytes=(char*)&aligned[0];bytes[0]='4';bytes[1]='2';
+                extralong[3] aligned;char* bytes=(&aligned[0]).reinterpret<char*>();bytes[0]='4';bytes[1]='2';
                 Span<readonly(char)> overlap=new(bytes,2);
                 if(!overlap.TryParseExtraLong(&aligned[0])||aligned[0]!=(extralong)42)return 2;
                 bytes[0]='4';bytes[1]='x';

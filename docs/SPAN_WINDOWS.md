@@ -13,7 +13,7 @@ foreach (Span<int> pair in values.Windows(2)) {
 }
 ```
 
-`Windows<T>(this Span<T> source, nuint width, nuint step = 1)` returns
+`Windows(nuint width, nuint step = 1)` on `Span<T>` returns
 `SpanWindows<T>`. Every result is a full `Span<T>` of `width` elements; starts are
 0, `step`, twice `step`, and so on while the full window fits. No partial final
 window is produced. Width and step must be positive, even for an empty source.

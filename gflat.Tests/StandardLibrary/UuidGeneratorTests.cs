@@ -31,7 +31,7 @@ public sealed class UuidGeneratorTests
             using std; using std::Text;
             extern void*? malloc(nuint count); extern void free(void* storage);
             bool deny=false; int allocations=0; int calls=0; nuint requested=0;
-            readonly(byte)* payload=(readonly(byte)*)1;
+            readonly(byte)* payload=((nuint)1).reinterpret<readonly(byte)*>();
             namespace Memory {
                 public replace void*? Allocate(nuint count) { if(deny){allocations++;return null;}return malloc(count); }
                 public replace void Free(void* storage) nothrow { free(storage); }

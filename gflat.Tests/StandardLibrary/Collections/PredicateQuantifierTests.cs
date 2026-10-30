@@ -38,7 +38,7 @@ public sealed class PredicateQuantifierTests
             packet.AddRange(sample);
         }
         Run(Allocator + $$"""
-            int calls = 0; immutable(int)* origin = (immutable(int)*)1;
+            int calls = 0; immutable(int)* origin = ((nuint)1).reinterpret<immutable(int)*>();
             bool Positive(immutable(int)* value) {
                 if (value != origin + calls) throw new Exception("wrong callback order", 99);
                 calls++; return *value > 0;
@@ -73,7 +73,7 @@ public sealed class PredicateQuantifierTests
                 calls++; if (*value == 99) throw new Exception("unreachable suffix", 77); return *value > 0;
             }
             int main() {
-                Span<immutable(int)> empty = new(); Span<immutable(int)> unreadable = new((immutable(int)*)1, 0);
+                Span<immutable(int)> empty = new(); Span<immutable(int)> unreadable = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                 int baseline = attempts; deny = true;
                 if (AnyOf<int>(empty, Unexpected) || AnyOf<int>(unreadable, Unexpected) ||
                     !NoneOf<int>(empty, Unexpected) || !NoneOf<int>(unreadable, Unexpected) || calls != 0) return 1;
@@ -91,7 +91,7 @@ public sealed class PredicateQuantifierTests
     public void NoncopyableOwnersAreBorrowedAndEveryReachedExceptionPreservesOwnersAndResult(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int match = -1; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner {
                 public int Id; public String Token;
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
@@ -107,7 +107,7 @@ public sealed class PredicateQuantifierTests
                     Vector<Owner> owners = new(); owners.Reserve(7);
                     for (int id = 0; id < 7; id++) owners.Add(new Owner(id));
                     origin = &owners[0]; nuint[7] tokens;
-                    for (nuint i = 0; i < 7; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 7; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     int live = allocated - released; nuint capacity = owners.Capacity; int[4] matches = [-1, 0, 3, 6];
                     for (nuint pattern = 0; pattern < 4; pattern++) {
                         match = matches[pattern]; bool any = match >= 0; int expectedCalls = 7;
@@ -131,7 +131,7 @@ public sealed class PredicateQuantifierTests
                                 if (made != 7 || dead != 0 || owners.Count != 7 || owners.Capacity != capacity || allocated - released != live) return 3;
                                 for (nuint i = 0; i < 7; i++)
                                     if (&owners[i] != origin + i || owners[i].Id != (int)i ||
-                                        (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 4;
+                                        (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 4;
                             }
                         }
                     }

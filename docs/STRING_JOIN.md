@@ -6,8 +6,12 @@ owners into one independent owning String. It adds these nongeneric extensions:
 ```csharp
 using std::Text;
 using std::Memory;
-String Join(this Span<immutable(String)> values, readonly(char)* separator);
-String Join(this Span<immutable(String)> values, readonly(char)* separator, nuint separatorCount);
+extension Span<immutable(String)> {
+    public readonly String Join(readonly(char)* separator);
+}
+extension Span<immutable(String)> {
+    public readonly String Join(readonly(char)* separator, nuint separatorCount);
+}
 ```
 
 For example:
@@ -21,7 +25,7 @@ fields.Add(s"two");
 String line = fields.AsImmutable().Join(", "); // one, two
 ```
 
-The source span copies only its pointer and count; its String elements are never
+The method borrows the source span; its String elements are never
 copied or consumed. Both overloads preserve every byte of every element, including
 embedded zeros and non-UTF-8 bytes. The C-string separator ends at its first zero;
 the counted overload preserves all separator bytes, including zeros.

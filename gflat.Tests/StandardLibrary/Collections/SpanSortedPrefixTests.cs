@@ -72,7 +72,7 @@ public sealed class SpanSortedPrefixTests
     [InlineData(2)]
     public void AdjacentAddressesDirectionAndEarlyStopAreExactAndShortSpansNeverCompare(int optimization)
         => Run(Allocator + """
-            int calls = 0; immutable(int)* origin = (immutable(int)*)1;
+            int calls = 0; immutable(int)* origin = ((nuint)1).reinterpret<immutable(int)*>();
             int Unexpected(immutable(int)* left, immutable(int)* right) {
                 calls++; throw new Exception("unexpected comparison", 99);
             }
@@ -85,7 +85,7 @@ public sealed class SpanSortedPrefixTests
             int main() {
                 int[7] data = [91, 1, 2, 3, 1, 9, 92]; int[7] saved = [91, 1, 2, 3, 1, 9, 92];
                 Span<int> all = new(data, 7); Span<immutable(int)> values = all.Slice(1, 5).AsImmutable();
-                Span<immutable(int)> empty = new((immutable(int)*)1, 0);
+                Span<immutable(int)> empty = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                 Span<immutable(int)> singleton = all.Slice(1, 1).AsImmutable();
                 int before = attempts; deny = true;
                 if (FindUnsortedIndex<int>(empty, Unexpected) != 0 || FindUnsortedIndex<int>(singleton, Unexpected) != 1 || calls != 0) return 1;
@@ -110,7 +110,7 @@ public sealed class SpanSortedPrefixTests
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
                 ~Owner() { dead++; }
             }
-            immutable(Owner)* origin = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
             int Compare(immutable(Owner)* left, immutable(Owner)* right) {
                 if (calls >= 3 || left != origin + calls || right != origin + calls + 1)
                     throw new Exception("wrong owner address", 99);
@@ -123,7 +123,7 @@ public sealed class SpanSortedPrefixTests
                     Vector<Owner> owners = new(); owners.Reserve(6); int[6] ids = [1, 2, 3, 2, 4, 5]; nuint[6] tokens;
                     for (nuint i = 0; i < 6; i++) owners.Add(new Owner(ids[i]));
                     origin = &owners[0]; nuint capacity = owners.Capacity;
-                    for (nuint i = 0; i < 6; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 6; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     int before = attempts; deny = true;
                     if (FindUnsortedIndex<Owner>(owners.AsImmutable(), Compare) != 3 || calls != 3) return 1;
                     deny = false; if (attempts != before) return 2;
@@ -136,7 +136,7 @@ public sealed class SpanSortedPrefixTests
                         if (!caught || result != 42 || calls != failure + 1 || made != 6 || dead != 0) return 3;
                         if (owners.Count != 6 || owners.Capacity != capacity) return 4;
                         for (nuint i = 0; i < 6; i++)
-                            if (&owners[i] != origin + i || owners[i].Id != ids[i] || (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 5;
+                            if (&owners[i] != origin + i || owners[i].Id != ids[i] || (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 5;
                     }
                 }
                 if (made != 6 || dead != 6 || allocations != releases) return 6;

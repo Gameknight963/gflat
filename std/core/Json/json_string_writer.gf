@@ -2,7 +2,7 @@ namespace std::Json;
 
 // Optional writer adapter. Unlike JsonString's counted-buffer API, writer
 // failures can leave a prefix in the destination after preflight succeeds.
-public void WriteJsonString(this ITextWriter* output, readonly(char)* input, nuint length)
+public void WriteJsonString(ITextWriter* output, readonly(char)* input, nuint length)
 {
     nuint required = 0;
     if (!JsonString::TryGetQuotedLength(input, length, ref required))
@@ -27,4 +27,10 @@ public void WriteJsonString(this ITextWriter* output, readonly(char)* input, nui
     }
     if (start < length) output.Write(input + start, length - start);
     output.Write("\"", 1);
+}
+
+extension ITextWriter
+{
+    public void WriteJsonString(readonly(char)* input, nuint length)
+    => std::Json::WriteJsonString(this, input, length);
 }

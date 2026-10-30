@@ -66,7 +66,7 @@ public sealed class StandardFindLastIndexTests
             int main(){
                 {
                     Vector<Owner> owners=new();for(int id=1;id<=5;id++)owners.Add(new Owner(id));
-                    nuint[5] addresses;nuint[5] tokens;for(nuint i=0;i<5;i++){addresses[i]=(nuint)&owners[i];tokens[i]=(nuint)owners[i].Token.Data;}
+                    nuint[5] addresses;nuint[5] tokens;for(nuint i=0;i<5;i++){addresses[i]=(&owners[i]).reinterpret<nuint>();tokens[i]=(owners[i].Token.Data).reinterpret<nuint>();}
                     int before=attempts;int live=allocated-released;deny=true;calls=0;
                     if(FindLastIndex<Owner>(owners.AsImmutable(),Even)!=3||calls!=2||visited[0]!=5||visited[1]!=4)return 1;
                     Span<immutable(Owner)> empty=new();calls=0;
@@ -77,7 +77,7 @@ public sealed class StandardFindLastIndexTests
                     catch(ref Exception error){if(error.GetCode()!=77||!CString::Equals(error.GetMessage(),"original predicate"))return 4;caught=true;}
                     if(!caught||result!=99||calls!=3||visited[0]!=5||visited[1]!=4||visited[2]!=3)return 5;
                     if(made!=5||dead!=0||owners.Count!=5||allocated-released!=live)return 6;
-                    for(nuint i=0;i<5;i++)if((nuint)&owners[i]!=addresses[i]||(nuint)owners[i].Token.Data!=tokens[i]||owners[i].Id!=(int)i+1)return 7;
+                    for(nuint i=0;i<5;i++)if((&owners[i]).reinterpret<nuint>()!=addresses[i]||(owners[i].Token.Data).reinterpret<nuint>()!=tokens[i]||owners[i].Id!=(int)i+1)return 7;
                 }
                 if(made!=dead||allocated!=released)return 8;return 0;
             }

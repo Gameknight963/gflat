@@ -1,7 +1,7 @@
 namespace std::Encoding;
 
 // Stream counted bytes as hexadecimal to a borrowed writer.
-public void WriteHex(this ITextWriter* output, readonly(char)* data, nuint count, bool uppercase = true)
+public void WriteHex(ITextWriter* output, readonly(char)* data, nuint count, bool uppercase = true)
 {
     nuint required = 0;
     if (!Hex::TryGetEncodedLength(count, ref required))
@@ -18,4 +18,10 @@ public void WriteHex(this ITextWriter* output, readonly(char)* data, nuint count
         output.Write(encoded, written);
         offset += amount;
     }
+}
+
+extension ITextWriter
+{
+    public void WriteHex(readonly(char)* data, nuint count, bool uppercase = true)
+    => std::Encoding::WriteHex(this, data, count, uppercase);
 }

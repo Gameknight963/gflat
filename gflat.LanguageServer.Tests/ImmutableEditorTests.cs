@@ -13,8 +13,8 @@ public sealed class ImmutableEditorTests
             public int Mutate(){data[0]=2;return data[0];}
             public int Value{immutable get=>data[0];}
         }
-        int DeepExtension(this ref immutable(Buffer) value)=>value.Read();
-        int ShallowExtension(this ref readonly(Buffer) value)=>value.Shallow();
+        extension Buffer{public immutable int DeepExtension()=>(*this).Read();}
+        extension Buffer{public readonly int ShallowExtension()=>(*this).Shallow();}
         """;
 
     [Theory]

@@ -62,7 +62,7 @@ public sealed partial class EditorModel
             // Missing closing braces are routine while typing. The parser's
             // consumed-token range excludes trailing trivia, but the scope extends
             // through the caret at EOF until that brace is supplied.
-            foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration or PropertyDeclaration or LambdaExpression or OperatorDeclaration))
+            foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration or PropertyDeclaration or LambdaExpression or OperatorDeclaration or ExtensionDeclaration))
                 if (braces.Any(start => start >= node.Span.Start && start < node.Span.Start + node.Span.Length))
                     scopeEnds[node] = file.Text.Length + 1;
         }
@@ -74,7 +74,8 @@ public sealed partial class EditorModel
             if (entry.Node is ConstructorDeclaration)
                 name = parents.Where(parent => IsType(parent.Node)).Select(parent => SourceName(parent.Node)).FirstOrDefault() ?? name;
             if (name.Contains('$')) continue;
-            string ns = snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
+            string ns = entry.Parent?.Node is ExtensionDeclaration ? Namespace(parents)
+                : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
             string? owner = Owner(parents);
             if (owner == null && entry.Node is MethodDeclaration qualified && snapshot.Checker != null &&
                 snapshot.Checker.TryGetMethodOwner(qualified, out string methodOwner, out _))
@@ -302,6 +303,7 @@ public sealed partial class EditorModel
             .Where(s => s.Syntax.Node switch
             {
                 // Owning-type members were checked in inheritedOrder above.
+                MethodDeclaration when s.Syntax.Parent?.Node is ExtensionDeclaration => false,
                 MethodDeclaration => s.Owner != null || Accessible(s, path, offset),
                 ExternDeclaration or PropertyDeclaration or FieldDeclaration => Accessible(s, path, offset),
                 _ => true
@@ -359,7 +361,7 @@ public sealed partial class EditorModel
                 : resolved?.Syntax.Node is AliasDeclaration
                     ? TypeOwner(resolved.Type, resolved.NameSpan.Source?.Path ?? path, resolved.NameSpan.Start) ?? qualifier
                     : resolved?.Qualified ?? qualifier);
-            return SymbolsNamed(name).Where(s => s.Scope == null &&
+            return SymbolsNamed(name).Where(s => s.Scope == null && s.Syntax.Parent?.Node is not ExtensionDeclaration &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }
         var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression or LiteralExpression or PrefixedStringLiteralExpression or InterpolatedStringExpression && n.Span.Start + n.Span.Length == left.End + 1)
@@ -368,7 +370,7 @@ public sealed partial class EditorModel
         if (type == null)
             type = Visible(path, offset, left.Text).FirstOrDefault(s => s.Name == left.Text)?.Type;
         string? owner = TypeOwner(type, path, offset);
-        if (left.Text == "this") owner = ScopeAt(path, offset).Owner;
+        if (left.Text == "this" && ScopeAt(path, offset).Owner is { } thisOwner) owner = thisOwner;
         var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset) && ReceiverAllowsMember(s, type))
             .Select(member => ProjectSourceMemberType(BindInstanceMember(member, type), type, path, offset)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type, name)
@@ -421,6 +423,13 @@ public sealed partial class EditorModel
         if (checkedType != null && TypeChecker.TypeName(checkedType) != "<error>") return checkedType;
         // Incomplete access often prevents checking. Recover only unambiguous
         // declaration types; never guess between overloads with different returns.
+        if (node is IdentifierExpression { Name: "this" } &&
+            ContextParents(path, offset).FirstOrDefault(parent => parent.Node is ExtensionDeclaration)?.Node is ExtensionDeclaration block)
+        {
+            var method = ContextParents(path, offset).Select(parent => parent.Node).OfType<MethodDeclaration>().FirstOrDefault();
+            var target = method?.IsImmutable == true ? TypeQualifiers.Immutable(block.Target) : block.Target;
+            return new PointerTypeExpression(target, false, node.Line, method?.IsReadOnly == true);
+        }
         if (node is IdentifierExpression identifier) return Visible(path, offset, identifier.Name).FirstOrDefault(s => s.Name == identifier.Name)?.Type;
         if (node is NewExpression creation) return creation.Type;
         if (node is CastExpression cast) return cast.TargetType;
@@ -617,10 +626,13 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var" or "implementation")) return false;
+        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var" or "implementation" or "extension" or "explicit")) return false;
         foreach (var syntax in nodes[path])
         {
             if (token.Text == "implementation" && syntax.Node is PrimitiveImplementationDeclaration && token.Start == syntax.Span.Start) return true;
+            if (token.Text == "extension" && syntax.Node is ExtensionDeclaration && token.Start == syntax.Span.Start) return true;
+            if (token.Text == "explicit" && syntax.Node is MethodDeclaration { IsExplicitConversion: true } conversion &&
+                token.Start >= syntax.Span.Start && token.End < conversion.ReturnType.Span.Start) return true;
             if (token.Text == "var" && syntax.Node is VariableDeclaration { IsTypeInferred: true } &&
                 tokens[path].FirstOrDefault(t => t.Start >= syntax.Span.Start && t.Text == "var")?.Start == token.Start) return true;
             if (token.Text == "this" && syntax.Node is Parameter { IsExtensionReceiver: true } && token.Start == syntax.Span.Start) return true;
@@ -712,7 +724,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly", "immutable", "managed" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)

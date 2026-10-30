@@ -9,7 +9,7 @@ public sealed class ExtensionPreviewIntegrityTests
     [InlineData("Entry")]
     public void SignaturePreviewPreservesBorrowedReceiverArgumentSpans(string argumentName)
     {
-        string text="struct Entry{}struct Box<T>{}void Second<T>(this ref Box<T> target){}void Use(Box<"+argumentName+">* target){}";
+        string text="struct Entry{}struct Box<T>{}void Second<T>(ref Box<T> target){}\nextension<T> Box<T> { public void Second() {} }void Use(Box<"+argumentName+">* target){}";
         var source=new SourceFile("extension-preview-integrity.gf",text);
         var (ast,checker)=Compiler.Check(source,options:new(){NoStdLib=true});
         int members=ast.Members.Count;
@@ -18,7 +18,8 @@ public sealed class ExtensionPreviewIntegrityTests
         var original=argument.Span;
         var receiver=new NamedTypeExpression("Box",null,1,[argument]);
         var candidate=Assert.Single(checker.GetVisibleExtensions("",[],receiver,true,false,memberName:"Second"));
-        Assert.Equal("Second",candidate.Definition.Name);
+        Assert.Equal("Second",TypeChecker.ExtensionMemberName(candidate.Definition));
+        Assert.Equal("Second",checker.GetExtensionMethodSource(candidate.Definition)!.Name);
         Assert.Equal(argumentName,Assert.IsType<NamedTypeExpression>(candidate.GenericBindings["T"]).Name);
         Assert.Equal(members,ast.Members.Count);
         Assert.Equal(original,argument.Span);

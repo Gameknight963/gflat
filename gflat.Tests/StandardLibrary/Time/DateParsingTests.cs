@@ -117,7 +117,7 @@ public sealed class DateParsingTests
             }
             int main(){
                 long[4] aligned;
-                char* bytes=(char*)&aligned[0];
+                char* bytes=(&aligned[0]).reinterpret<char*>();
                 char[32] before;
                 readonly(char)* text="2000-02-29";
                 Date expected=new(2000,2,29);
@@ -144,10 +144,10 @@ public sealed class DateParsingTests
                     }
                 }
                 Date reset=new(2024,1,1);
-                if(Date::TryParse((readonly(char)*)1,0,&reset)||reset.DayNumber!=0)return 4;
+                if(Date::TryParse(((nuint)1).reinterpret<readonly(char)*>(),0,&reset)||reset.DayNumber!=0)return 4;
                 reset=new(2024,1,1);
                 nuint maximum=0;maximum--;
-                if(Date::TryParse((readonly(char)*)1,maximum,&reset)||reset.DayNumber!=0)return 5;
+                if(Date::TryParse(((nuint)1).reinterpret<readonly(char)*>(),maximum,&reset)||reset.DayNumber!=0)return 5;
                 if(allocations!=0)return 6;
                 return 0;
             }

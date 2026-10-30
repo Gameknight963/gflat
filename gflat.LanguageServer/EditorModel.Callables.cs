@@ -24,7 +24,7 @@ public sealed partial class EditorModel
         return index >= 0 && tokens[index].Kind is TokenKind.Identifier or TokenKind.Base or TokenKind.New ? index : -1;
     }
 
-    private Symbol? SourceCallable(AstNode target) => target is MethodDeclaration method && snapshot.Checker?.GetPrimitiveMethodSource(method) is { } original
+    private Symbol? SourceCallable(AstNode target) => target is MethodDeclaration method && (snapshot.Checker?.GetExtensionMethodSource(method) ?? snapshot.Checker?.GetPrimitiveMethodSource(method)) is { } original
         ? declarations.GetValueOrDefault(original) : declarations.GetValueOrDefault(target) ??
         sourceCallableDeclarations.GetValueOrDefault((target.GetType(), target.Span));
 

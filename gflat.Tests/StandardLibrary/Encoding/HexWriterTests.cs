@@ -74,7 +74,7 @@ public sealed class HexWriterTests
                     for(nuint i=0;i<prefix;i++)if(output[1+i]!='F')return 4;
                     sink.FailAt=0;writer.WriteHex(&payload[0],2,false);
                     if(sink.Calls!=failure+1||sink.Length!=prefix+4||output[1+prefix]!='0'||output[2+prefix]!='0'||output[3+prefix]!='f'||output[4+prefix]!='f'||output[5+prefix]!='Z')return 5;
-                    writer.WriteHex((readonly(char)*)1,0);if(sink.Calls!=failure+1)return 6;
+                    writer.WriteHex(((nuint)1).reinterpret<readonly(char)*>(),0);if(sink.Calls!=failure+1)return 6;
                 }
                 String text=s"prefix:";ITextWriter* writer=&text;writer.WriteHex(&payload[0],2);writer.WriteHex(&payload[0],2,false);
                 if(text.Length!=15||!CString::Equals(text.Data,"prefix:00FF00ff"))return 7;
@@ -92,10 +92,10 @@ public sealed class HexWriterTests
             namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
             struct Sink:ITextWriter{public int Calls;public Sink(){Calls=0;}public void Write(readonly(char)* data,nuint count){Calls++;throw new Exception("touched writer",77);}}
             int main(){
-                Sink sink=new();ITextWriter* writer=&sink;writer.WriteHex((readonly(char)*)1,0);writer.WriteHex((readonly(char)*)1,0,false);
+                Sink sink=new();ITextWriter* writer=&sink;writer.WriteHex(((nuint)1).reinterpret<readonly(char)*>(),0);writer.WriteHex(((nuint)1).reinterpret<readonly(char)*>(),0,false);
                 if(sink.Calls!=0)return 1;nuint maximum=(nuint)0-(nuint)1;nuint[2] counts=[maximum/2+1,maximum];
                 for(nuint i=0;i<2;i++){
-                    bool caught=false;try{writer.WriteHex((readonly(char)*)1,counts[i]);}catch(ref Exception error){
+                    bool caught=false;try{writer.WriteHex(((nuint)1).reinterpret<readonly(char)*>(),counts[i]);}catch(ref Exception error){
                         readonly(char)* message=error.GetMessage();readonly(char)* expected="Hex length overflow";
                         for(nuint at=0;at<20;at++)if(message[at]!=expected[at])return 2;caught=true;
                     }

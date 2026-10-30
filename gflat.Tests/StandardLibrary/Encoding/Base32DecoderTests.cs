@@ -59,10 +59,10 @@ public sealed class Base32DecoderTests
                     for(nuint mode=0;mode<12;mode++){
                         char[648] text;for(nuint i=0;i<size;i++)text[i]=encoded[textOffset+i];
                         char[403] output;for(nuint i=0;i<403;i++)output[i]='?';Sink sink=new(&output[1]);Base32Decoder decoder=new(&sink);
-                        decoder.Write((readonly(char)*)1,0);nuint position=0;
+                        decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);nuint position=0;
                         while(position<size){
                             nuint count=size-position;if(count>chunks[mode])count=chunks[mode];decoder.Write((readonly(char)*)text+position,count);
-                            for(nuint i=0;i<count;i++)text[position+i]='?';position+=count;decoder.Write((readonly(char)*)1,0);
+                            for(nuint i=0;i<count;i++)text[position+i]='?';position+=count;decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         }
                         if(sink.Count!=length)return 1;nuint calls=sink.Calls;decoder.Complete();decoder.Complete();
                         if(sink.Calls!=calls||output[0]!='?'||output[length+1]!='?')return 2;
@@ -110,7 +110,7 @@ public sealed class Base32DecoderTests
                 if(caught!=1||sink.Bad||sink.Count>prefixLength||output[0]!='?'||output[401]!='?')return false;
                 for(nuint i=0;i<sink.Count;i++)if((byte)output[i+1]!=(byte)(Digit(prefix[2*i])*16+Digit(prefix[2*i+1])))return false;
                 nuint calls=sink.Calls;nuint count=sink.Count;
-                try{decoder.Write((readonly(char)*)1,0);}catch(ref Exception error){caught++;}
+                try{decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){caught++;}
                 try{decoder.Write("AAAAAAAA",8);}catch(ref Exception error){caught++;}
                 try{decoder.Complete();}catch(ref Exception error){caught++;}
                 Base32Decoder duplicate=decoder;try{duplicate.Complete();}catch(ref Exception error){caught++;}
@@ -174,7 +174,7 @@ public sealed class Base32DecoderTests
                 if(caught!=1||sink.Count!=(nuint)budget||output[0]!='?'||output[(nuint)budget+1]!='?')return false;
                 for(nuint i=0;i<(nuint)budget;i++)if((byte)output[i+1]!=(byte)(Digit(oracle[2*i])*16+Digit(oracle[2*i+1])))return false;
                 nuint calls=sink.Calls;sink.Budget=1000;
-                try{decoder.Write((readonly(char)*)1,0);}catch(ref Exception error){caught++;}
+                try{decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){caught++;}
                 try{decoder.Write("AAAAAAAA",8);}catch(ref Exception error){caught++;}
                 try{decoder.Complete();}catch(ref Exception error){caught++;}
                 Base32Decoder duplicate=decoder;try{duplicate.Complete();}catch(ref Exception error){caught++;}
@@ -194,11 +194,11 @@ public sealed class Base32DecoderTests
                             moved.Write(original+carry,8-carry);moved.Complete();decoder.Write(alternate+carry,8-carry);decoder.Complete();
                             if(sink.Count!=10)return 23;for(nuint i=0;i<10;i++)if(output[i+1]!="foobafoob`"[i])return 24;
                             Base32Decoder complete=moved;nuint calls=sink.Calls;complete.Complete();complete.Complete();if(sink.Calls!=calls||attempts!=before)return 25;
-                            int rejected=0;try{complete.Write((readonly(char)*)1,0);}catch(ref Exception error){rejected++;}
+                            int rejected=0;try{complete.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){rejected++;}
                             if(rejected!=1||sink.Calls!=calls)return 26;
                         }
                         nuint calls=sink.Calls;{Base32Decoder abandoned=new(&sink);abandoned.Write("M",1);}
-                        Base32Decoder empty=new(&sink);empty.Write((readonly(char)*)1,0);empty.Complete();empty.Complete();
+                        Base32Decoder empty=new(&sink);empty.Write(((nuint)1).reinterpret<readonly(char)*>(),0);empty.Complete();empty.Complete();
                         if(sink.Calls!=calls||destroyed!=beforeDestroyed||output[0]!='?'||output[11]!='?')return 27;
                     }
                     if(destroyed!=beforeDestroyed+1)return 28;
@@ -209,7 +209,7 @@ public sealed class Base32DecoderTests
                     byte[16] text=[{{string.Join(",", Encoding.ASCII.GetBytes(small).Select(value => "(byte)" + value))}}];BinaryBufferReader reader=new(text,16);IByteReader* input=&reader;
                     char[5] scratch;for(nuint i=0;i<5;i++)scratch[i]='!';
                     if(std::IO::CopyTo(input,&decoder,&scratch[1],3)!=16||reader.Position!=16||sink.Count!=6)return 29;
-                    decoder.Write((readonly(char)*)1,0);nuint calls=sink.Calls;decoder.Complete();decoder.Complete();
+                    decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);nuint calls=sink.Calls;decoder.Complete();decoder.Complete();
                     if(sink.Calls!=calls||attempts!=baseline||scratch[0]!='!'||scratch[4]!='!'||output[0]!='?'||output[7]!='?')return 30;
                     for(nuint i=0;i<6;i++)if(output[i+1]!="foobar"[i])return 31;
                 }

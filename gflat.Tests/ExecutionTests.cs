@@ -268,14 +268,14 @@ namespace gflat.Tests
                 {
                     int val = 123;
                     int* ptr = &val;
-                    long addr = (long)ptr;
+                    long addr = ptr.reinterpret<long>();
                     if (addr == 0L)
                     {
                         return 1;
                     }
 
                     int*? nullPtr = null;
-                    long nullAddr = (long)nullPtr;
+                    long nullAddr = nullPtr.reinterpret<long>();
                     if (nullAddr != 0L)
                     {
                         return 2;
@@ -628,7 +628,7 @@ namespace gflat.Tests
                         isNullAfter = 1;
                     }
 
-                    long addr = (long)fn;
+                    long addr = fn.reinterpret<long>();
                     int hasAddress = 0;
                     if (addr != 0L)
                     {
@@ -1169,8 +1169,8 @@ namespace gflat.Tests
                 {
                     int val = 42;
                     int* ptr = &val;
-                    nuint addr = (nuint)ptr;
-                    int* ptr2 = (int*)addr;
+                    nuint addr = ptr.reinterpret<nuint>();
+                    int* ptr2 = addr.reinterpret<int*>();
                     return *ptr2;
                 }
                 """;
@@ -2432,9 +2432,9 @@ namespace gflat.Tests
                     // Offset 0..7:   vtable pointer (8 bytes)
                     // Offset 8..11:  Animal.age (4 bytes)
                     // Offset 12..15: Dog.barkPitch (4 bytes)
-                    byte* raw = (byte*)dog;
-                    int ageVal = *(int*)(raw + 8);
-                    int pitchVal = *(int*)(raw + 12);
+                    byte* raw = dog.reinterpret<byte*>();
+                    int ageVal = *(raw + 8).reinterpret<int*>();
+                    int pitchVal = *(raw + 12).reinterpret<int*>();
 
                     if (ageVal != 7 || pitchVal != 42)
                     {
@@ -2444,12 +2444,12 @@ namespace gflat.Tests
 
                     // 2. Direct ABI vtable dispatch:
                     // Load vtable pointer at offset 0
-                    void*** vtablePtrLocation = (void***)dog;
+                    void*** vtablePtrLocation = dog.reinterpret<void***>();
                     void** vtable = *vtablePtrLocation;
 
                     // Slot 0 is Speak()
                     void* rawMethod = vtable[0];
-                    int(Dog*)* directFn = (int(Dog*)*)rawMethod;
+                    int(Dog*)* directFn = rawMethod.reinterpret<int(Dog*)*>();
 
                     // Invoke slot 0 directly with 'dog' as 'this'
                     int directResult = directFn(dog);

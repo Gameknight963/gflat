@@ -21,7 +21,7 @@ struct HashSet<T : IHashable>
     public void ExceptWith(immutable(HashSet<T>)* other)
     {
         if (this.Count == 0) return;
-        if ((nuint)this == (nuint)other) { this.Clear(); return; }
+        if ((this).reinterpret<nuint>() == (other).reinterpret<nuint>()) { this.Clear(); return; }
         Enumerator iterator = other.GetEnumerator();
         while (iterator.MoveNext()) this.Remove(iterator.Current);
     }

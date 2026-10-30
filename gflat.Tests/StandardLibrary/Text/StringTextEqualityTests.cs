@@ -101,9 +101,9 @@ public sealed class StringTextEqualityTests
                 HashMap<String,int> map=new();map.Add(value,42);
                 immutable(String)* view=&value;IEquatable<String>* equality=&value;
                 int baseline=attempts;deny=true;
-                if(!empty.Equals((readonly(char)*)1,0)||empty.Equals((readonly(char)*)1,1))return 1;
-                if(value.Equals((readonly(char)*)1,0)||value.Equals((readonly(char)*)1,2))return 2;
-                if(value.Equals((readonly(char)*)1,(nuint)0-(nuint)1))return 3;
+                if(!empty.Equals(((nuint)1).reinterpret<readonly(char)*>(),0)||empty.Equals(((nuint)1).reinterpret<readonly(char)*>(),1))return 1;
+                if(value.Equals(((nuint)1).reinterpret<readonly(char)*>(),0)||value.Equals(((nuint)1).reinterpret<readonly(char)*>(),2))return 2;
+                if(value.Equals(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1))return 3;
                 if(!empty.Equals("")||value.Equals(value.Data)||!value.Equals(value.Data,value.Length))return 4;
                 if(!prefix.Equals(value.Data)||!prefix.Equals(value.Data,1)||prefix.Equals(value.Data,3))return 5;
                 if(!original.Equals(original.Data)||!suffix.Equals(original.Data+1,3)||!suffix.Equals(original.Data+1))return 6;

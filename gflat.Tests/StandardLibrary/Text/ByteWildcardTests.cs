@@ -66,7 +66,7 @@ public sealed class ByteWildcardTests
                     for(nuint i=0;i<514;i++)if(text[i]!=savedText[i]||pattern[i]!=savedPattern[i])return 2;
                 }
                 if(at!={{hex.Length}})return 3;
-                readonly(char)* none=(readonly(char)*)1;
+                readonly(char)* none=((nuint)1).reinterpret<readonly(char)*>();
                 if(!MatchesWildcard(none,0,none,0)||!MatchesWildcard(none,0,"***",3))return 4;
                 if(MatchesWildcard(none,0,"?",1)||MatchesWildcard(none,0,"\\",1))return 5;
                 return 0;

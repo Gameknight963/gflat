@@ -15,8 +15,10 @@ public sealed class GenericOverloadContractTests
         struct Handler<P>{}
         int Pick<P:IProvider>(Handler<P> value,long tag)=>P::Read();
         int Pick<P:IExtra>(Handler<P> value,int tag)=>P::Extra();
-        int PickExtension<P:IProvider>(this Handler<P> value,long tag)=>P::Read();
-        int PickExtension<P:IExtra>(this Handler<P> value,int tag)=>P::Extra();
+        int PickExtension<P:IProvider>(Handler<P> value,long tag)=>P::Read();
+        extension<P:IProvider> Handler<P> { public int PickExtension(long tag) =>P::Read(); }
+        int PickExtension<P:IExtra>(Handler<P> value,int tag)=>P::Extra();
+        extension<P:IExtra> Handler<P> { public int PickExtension(int tag) =>P::Extra(); }
         """;
 
     [Theory]

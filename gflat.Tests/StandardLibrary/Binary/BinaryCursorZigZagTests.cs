@@ -95,7 +95,7 @@ public sealed class BinaryCursorZigZagTests
                 if(empty.ReadZigZagInt32(ref small)!=VarInt::Status::NeedMore||small!=-73||empty.Position!=0)return 1;
                 if(empty.ReadZigZagInt64(ref big)!=VarInt::Status::NeedMore||big!=-79l||empty.Position!=0)return 2;
                 if(writer.TryWriteZigZagInt32(0)||writer.TryWriteZigZagInt64(0l)||writer.Position!=0)return 3;
-                BinaryBufferReader fake=new((readonly(byte)*)1,0);BinaryBufferWriter noStorage=new((byte*)1,0);
+                BinaryBufferReader fake=new(((nuint)1).reinterpret<readonly(byte)*>(),0);BinaryBufferWriter noStorage=new(((nuint)1).reinterpret<byte*>(),0);
                 if(fake.ReadZigZagInt32(ref small)!=VarInt::Status::NeedMore||fake.ReadZigZagInt64(ref big)!=VarInt::Status::NeedMore)return 4;
                 if(small!=-73||big!=-79l||fake.Position!=0||noStorage.TryWriteZigZagInt32(-1)||noStorage.TryWriteZigZagInt64(-1l)||noStorage.Position!=0)return 5;
                 byte[12] data;
@@ -135,7 +135,7 @@ public sealed class BinaryCursorZigZagTests
     public async Task AlignedValueAliasesBorrowedBytesWithSeparateCursorMetadata(int optimization)
         => await WithDirectory(directory=>Run(directory,NoAllocation+"""
             int main(){
-                int[4] aligned;byte* bytes=(byte*)&aligned[0];byte[16] saved;
+                int[4] aligned;byte* bytes=(&aligned[0]).reinterpret<byte*>();byte[16] saved;
                 for(nuint i=0;i<16;i++)bytes[i]=204;bytes[0]=173;bytes[1]=2;
                 BinaryBufferReader input=new(bytes,2);
                 if(input.ReadZigZagInt32(ref aligned[0])!=VarInt::Status::Done||aligned[0]!=-151||input.Position!=2)return 1;
@@ -145,7 +145,7 @@ public sealed class BinaryCursorZigZagTests
                 BinaryBufferWriter output=new(bytes,5);
                 if(!output.TryWriteZigZagInt32(aligned[0])||output.Position!=2||bytes[0]!=173||bytes[1]!=2)return 3;
                 for(nuint i=2;i<16;i++)if(bytes[i]!=saved[i])return 4;
-                long[2] aligned64;byte* wideBytes=(byte*)&aligned64[0];
+                long[2] aligned64;byte* wideBytes=(&aligned64[0]).reinterpret<byte*>();
                 for(nuint i=0;i<16;i++)wideBytes[i]=204;
                 for(nuint i=0;i<9;i++)wideBytes[i]=255;wideBytes[9]=1;
                 long minimum=-9223372036854775807l-1l;BinaryBufferReader wide=new(wideBytes,10);

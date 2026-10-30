@@ -74,8 +74,8 @@ public sealed class AdjacentFindTests
             }
             int main() {
                 Span<immutable(int)> empty = new();
-                Span<immutable(int)> unreadableEmpty = new((immutable(int)*)1, 0);
-                Span<immutable(int)> unreadableSingleton = new((immutable(int)*)1, 1);
+                Span<immutable(int)> unreadableEmpty = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
+                Span<immutable(int)> unreadableSingleton = new(((nuint)1).reinterpret<immutable(int)*>(), 1);
                 int baseline = attempts; deny = true;
                 if (AdjacentFind<int>(empty, Unexpected) != 0) return 1;
                 if (AdjacentFind<int>(unreadableEmpty, Unexpected) != 0) return 2;
@@ -92,7 +92,7 @@ public sealed class AdjacentFindTests
     public void NoncopyableOwnersAreBorrowedAndEachOriginalFailureLeavesSourceUnchanged(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner {
                 public int Id; public String Token;
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
@@ -109,7 +109,7 @@ public sealed class AdjacentFindTests
                     Vector<Owner> owners = new();
                     for (int id = 0; id < 5; id++) owners.Add(new Owner(id));
                     origin = &owners[0]; nuint[5] tokens;
-                    for (nuint i = 0; i < 5; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 5; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     int baseline = attempts; int live = allocated - released; deny = true;
                     if (AdjacentFind<Owner>(owners.AsImmutable(), Match) != 5 || calls != 4) return 1;
                     deny = false;
@@ -124,7 +124,7 @@ public sealed class AdjacentFindTests
                         if (made != 5 || dead != 0 || owners.Count != 5 || allocated - released != live) return 4;
                         for (nuint i = 0; i < 5; i++)
                             if (&owners[i] != origin + i || owners[i].Id != (int)i ||
-                                (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 5;
+                                (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 5;
                     }
                 }
                 if (made != dead || allocated != released) return 6;

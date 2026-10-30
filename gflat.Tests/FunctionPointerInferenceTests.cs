@@ -26,7 +26,8 @@ public sealed class FunctionPointerInferenceTests
             new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Memory/Span.gf"))),
             new SourceFile("main.gf", """
                 using std; using std::Memory; using std::Queries; using std::Collections;
-                U Select<T, U>(this Span<T> source, U(T)* callback) => callback(source[(nuint)0]);
+                U Select<T, U>(Span<T> source, U(T)* callback) => callback(source[(nuint)0]);
+                extension<T> Span<T> { public U Select<U>(U(T)* callback) => callback((*this)[(nuint)0]); }
                 int main() {
                     int[1] buffer = [42]; Span<int> source = new Span<int>(buffer, 1);
                     long result = source.Select((int value) => (long)value);

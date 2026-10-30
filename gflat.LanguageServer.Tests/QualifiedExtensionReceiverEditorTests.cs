@@ -12,7 +12,7 @@ public sealed class QualifiedExtensionReceiverEditorTests
     {
         var library=new SourceFile(Path.GetFullPath("qualified-extension-library.gf"),"""
             namespace Models { struct Box<T> { public T Value; } }
-            namespace Extras { int Measure<T>(this Models::Box<T> value) => sizeof(T); }
+            namespace Extras { extension<T> Models::Box<T>{public int Measure()=> sizeof(T);} }
             """);
         var source=new SourceFile(Path.GetFullPath("qualified-extension-main.gf"),"""
             using Extras;
@@ -30,7 +30,7 @@ public sealed class QualifiedExtensionReceiverEditorTests
         var completion=JsonSerializer.SerializeToElement(model.Completion(source.Path,member),Protocol.JsonOptions);
         Assert.Contains(completion.GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="Measure");
         var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,member+2),Protocol.JsonOptions);
-        Assert.Contains("int Extras::Measure<int>()",hover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("int Extras::Measure()",hover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("qualified-extension-library.gf",JsonSerializer.Serialize(model.Definition(source.Path,member+2),Protocol.JsonOptions));
     }
 }

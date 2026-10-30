@@ -81,7 +81,7 @@ public sealed class HMACSHA512Tests
                                 }
                                 position+=take;
                             }
-                            if(!hash.TryAppend((readonly(char)*)1,0)||!Same(hash.GetHash(),expected)||!Same(hash.GetHash(),expected))return 7;
+                            if(!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!Same(hash.GetHash(),expected)||!Same(hash.GetHash(),expected))return 7;
                             byte[64] changed=hash.GetHash();changed[0]=(byte)(changed[0]^(byte)255);
                             if(Same(changed,expected)||!Same(hash.GetHash(),expected))return 8;
                             hash.Reset();if(!Same(hash.GetHash(),empty))return 9;
@@ -122,8 +122,8 @@ public sealed class HMACSHA512Tests
                 if(!Same(hash.GetHash(),a)||!Same(copy.GetHash(),b)||!Same(frozen.GetHash(),before))return 4;
                 HMACSHA512 moved=move copy;if(!Same(moved.GetHash(),b))return 5;
                 hash.Reset();if(!Same(hash.GetHash(),empty)||!hash.TryAppend("again",5)||!Same(hash.GetHash(),again))return 6;
-                HMACSHA512 emptyKey=new((readonly(char)*)1,0);
-                if(!emptyKey.TryAppend((readonly(char)*)1,0))return 7;return 0;
+                HMACSHA512 emptyKey=new(((nuint)1).reinterpret<readonly(char)*>(),0);
+                if(!emptyKey.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0))return 7;return 0;
             }
             """,optimization);
     }
@@ -149,8 +149,8 @@ public sealed class HMACSHA512Tests
                 // 128+127 pending-byte congruence is 127, matching the seeded maximum.
                 hash.running.lengthHigh=0x1ffffffffffffffful;hash.running.lengthLow=0xfffffffffffffffful;
                 HMACSHA512 before=hash;byte[64] digest=hash.GetHash();
-                if(hash.TryAppend((readonly(char)*)1,1)||!SameState(&hash,&before)||!Same(hash.GetHash(),digest))return 3;
-                if(!hash.TryAppend((readonly(char)*)1,0)||!SameState(&hash,&before))return 4;
+                if(hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),1)||!SameState(&hash,&before)||!Same(hash.GetHash(),digest))return 3;
+                if(!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!SameState(&hash,&before))return 4;
                 hash.Reset();if(hash.running.lengthLow!=128ul||hash.running.lengthHigh!=0ul||!Same(hash.GetHash(),empty))return 5;
                 // Low-word carry also passes through the adapter with congruent pending input.
                 if(!hash.TryAppend(input,124))return 6;

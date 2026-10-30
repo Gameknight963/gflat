@@ -118,7 +118,8 @@ public sealed class TargetTypedCreationTests
     public void BaseConstructorsAndGenericExtensionsAcceptContextualArguments() => Succeeds("""
         class Base { public int value; public Base(Thing item) { value = item.value; } }
         class Derived : Base { public Derived() : base(new(21)) {} }
-        int Combine<T>(this T first, T second) => 21;
+        int Combine<T>(T first, T second) => 21;
+        extension<T> T { public int Combine(T second) => 21; }
         int main() { Derived d = new(); Thing t = new(); return d.value + t.Combine(new()) - 42; }
         """);
 
@@ -192,7 +193,7 @@ public sealed class TargetTypedCreationTests
     [InlineData("int main() { Thing x = new^(); return 0; }", "without '*'")]
     [InlineData("interface I {} int main() { I* x = new(); return 0; }", "constructible")]
     [InlineData("int main() { void* x = new(); return 0; }", "constructible")]
-    [InlineData("int main() { Thing x = new() at (Thing*)1; return 0; }", "raw pointer target")]
+    [InlineData("int main() { Thing x = new() at ((nuint)1).reinterpret<Thing*>(); return 0; }", "raw pointer target")]
     [InlineData("int main() { Thing x = new(1, 2); return 0; }", "constructor")]
     [InlineData("void Use<T>(T value) {} int main() { Use(new()); return 0; }", "infer type parameter")]
     public void MissingOrAmbiguousTargetsAndInvalidFormsAreRejected(string source, string message)

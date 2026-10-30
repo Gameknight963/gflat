@@ -168,7 +168,7 @@ public class FreestandingCoreUtilitiesTests
             if(std::Text::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 66;
             if(std::Text::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=0) return 67;
             if(std::Text::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=64) return 68;
-            char* cText=(char*)searchInput;
+            char* cText=((byte*)searchInput).reinterpret<char*>();
             if(std::Text::CString::Length(cText)!=1) return 69;
             if(std::Text::CString::Compare(cText,&cText[2])!=0 || !std::Text::CString::Equals(cText,&cText[2])) return 70;
             if(!std::Text::CString::StartsWith(cText,&cText[2]) || !std::Text::CString::EndsWith(cText,&cText[2])) return 71;
@@ -197,16 +197,16 @@ public class FreestandingCoreUtilitiesTests
             if(Memory::Compare((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],1)!=255-(int)searchInput[0]) return 83;
             if(Memory::Compare((readonly(void)*)&searchInput[0],(readonly(void)*)&memoryOutput[1],1)!=(int)searchInput[0]-255) return 84;
             if(Memory::Equal((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],moveCount)) return 85;
-            Memory::Copy((void*)1,(readonly(void)*)1,0);
-            Memory::Move((void*)1,(readonly(void)*)1,0);
-            Memory::Fill((void*)1,(byte)0,0);
-            if(Memory::Compare((readonly(void)*)1,(readonly(void)*)1,0)!=0 || !Memory::Equal((readonly(void)*)1,(readonly(void)*)1,0)) return 86;
+            Memory::Copy(((nuint)1).reinterpret<void*>(),((nuint)1).reinterpret<readonly(void)*>(),0);
+            Memory::Move(((nuint)1).reinterpret<void*>(),((nuint)1).reinterpret<readonly(void)*>(),0);
+            Memory::Fill(((nuint)1).reinterpret<void*>(),(byte)0,0);
+            if(Memory::Compare(((nuint)1).reinterpret<readonly(void)*>(),((nuint)1).reinterpret<readonly(void)*>(),0)!=0 || !Memory::Equal(((nuint)1).reinterpret<readonly(void)*>(),((nuint)1).reinterpret<readonly(void)*>(),0)) return 86;
             byte_search_input((byte*)searchInput);
             char[388] jsonOutput;
             for(nuint i=0;i<388;i++)jsonOutput[i]='Z';
             nuint jsonNeeded=0; nuint jsonWritten=0;
-            if(!std::Json::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=386) return 87;
-            if(!std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=386) return 88;
+            if(!std::Json::JsonString::TryGetQuotedLength(((byte*)searchInput).reinterpret<char*>(),64,ref jsonNeeded)||jsonNeeded!=386) return 87;
+            if(!std::Json::JsonString::TryQuote(((byte*)searchInput).reinterpret<char*>(),64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=386) return 88;
             if(jsonOutput[0]!='Z'||jsonOutput[387]!='Z'||jsonOutput[1]!='"'||jsonOutput[386]!='"') return 89;
             for(nuint i=0;i<64;i++) {
                 nuint at=2+i*6;
@@ -215,16 +215,16 @@ public class FreestandingCoreUtilitiesTests
                 if(jsonOutput[at+5]!=digit) return 91;
             }
             searchInput[0]=(byte)'"';searchInput[1]=(byte)'\\';searchInput[2]=(byte)'\n';
-            if(!std::Json::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=374) return 92;
-            if(!std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=374) return 93;
+            if(!std::Json::JsonString::TryGetQuotedLength(((byte*)searchInput).reinterpret<char*>(),64,ref jsonNeeded)||jsonNeeded!=374) return 92;
+            if(!std::Json::JsonString::TryQuote(((byte*)searchInput).reinterpret<char*>(),64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=374) return 93;
             readonly(char)* jsonPrefix="\\\"\\\\\\n\\u0000";
             for(nuint i=0;i<12;i++)if(jsonOutput[i+2]!=jsonPrefix[i]) return 94;
             for(nuint i=0;i<388;i++)jsonOutput[i]='Z';
-            if(std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded-1,ref jsonWritten)||jsonWritten!=0) return 95;
+            if(std::Json::JsonString::TryQuote(((byte*)searchInput).reinterpret<char*>(),64,&jsonOutput[1],jsonNeeded-1,ref jsonWritten)||jsonWritten!=0) return 95;
             for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 96;
             searchInput[63]=(byte)255;
-            if(std::Json::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=0) return 97;
-            if(std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],386,ref jsonWritten)||jsonWritten!=0) return 98;
+            if(std::Json::JsonString::TryGetQuotedLength(((byte*)searchInput).reinterpret<char*>(),64,ref jsonNeeded)||jsonNeeded!=0) return 97;
+            if(std::Json::JsonString::TryQuote(((byte*)searchInput).reinterpret<char*>(),64,&jsonOutput[1],386,ref jsonWritten)||jsonWritten!=0) return 98;
             for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 99;
             byte[12] variable;
             for(nuint i=0;i<12;i++)variable[i]=(byte)90;
@@ -245,7 +245,7 @@ public class FreestandingCoreUtilitiesTests
             if(std::Binary::VarInt::ReadUInt32(&variable[1],variableLength,ref narrowDecoded,ref variableConsumed)!=std::Binary::VarInt::Status::Done||narrowDecoded!=narrowVariable||variableConsumed!=variableLength) return 110;
             uint floatBits=(uint)(runtimeInput>>32)|0x7f800001u;
             ulong doubleBits=runtimeInput|0x7ff0000000000001ul;
-            float floatingValue=*((float*)&floatBits); double doubleValue=*((double*)&doubleBits);
+            float floatingValue=(floatBits).reinterpret<float>(); double doubleValue=(doubleBits).reinterpret<double>();
             byte[14] ieee; ieee[0]=(byte)90; ieee[13]=(byte)165;
             std::Binary::BinaryBufferWriter ieeeWriter=new(&ieee[1],12);
             if(!ieeeWriter.TryWriteFloatLittleEndian(floatingValue)||!ieeeWriter.TryWriteDoubleBigEndian(doubleValue)||ieeeWriter.Position!=12) return 111;
@@ -253,7 +253,7 @@ public class FreestandingCoreUtilitiesTests
             std::Binary::BinaryBufferReader ieeeReader=new(&ieee[1],12);
             float decodedFloat=(float)0; double decodedDouble=(double)0;
             if(!ieeeReader.TryReadFloatLittleEndian(ref decodedFloat)||!ieeeReader.TryReadDoubleBigEndian(ref decodedDouble)||ieeeReader.Position!=12) return 113;
-            if(*((uint*)&decodedFloat)!=floatBits||*((ulong*)&decodedDouble)!=doubleBits) return 114;
+            if((decodedFloat).reinterpret<uint>()!=floatBits||(decodedDouble).reinterpret<ulong>()!=doubleBits) return 114;
             for(nuint i=0;i<22;i++)decimalText[i]='Z';
             if(!std::Text::IntegerFormatting::TryFormatHex(unsignedMaximum,&decimalText[1],20,ref length,20,false)||length!=20) return 115;
             for(nuint i=1;i<5;i++)if(decimalText[i]!='0') return 116;
@@ -293,7 +293,7 @@ public class FreestandingCoreUtilitiesTests
             booleanText[4]=(char)(runtimeInput>>56);
             if(std::Text::TryParseBool(booleanText,5,&parsedBoolean)||parsedBoolean) return 135;
             parsedBoolean=true;
-            if(std::Text::TryParseBool((readonly(char)*)1,0,&parsedBoolean)||parsedBoolean) return 136;
+            if(std::Text::TryParseBool(((nuint)1).reinterpret<readonly(char)*>(),0,&parsedBoolean)||parsedBoolean) return 136;
             char[3] copySource=[(char)((runtimeInput>>56)|1ul),'A','\0'];
             cText=copySource;
             char[7] copied;
@@ -304,7 +304,7 @@ public class FreestandingCoreUtilitiesTests
             if(!std::Text::CString::TryCopy(&copied[1],&copied[2],3)||!std::Text::CString::Equals(cText,&copied[2])) return 140;
             if(!std::Text::CString::TryCopy(&copied[2],&copied[1],3)||!std::Text::CString::Equals(cText,&copied[1])) return 141;
             if(copied[0]!='Z'||copied[5]!='Z'||copied[6]!='Z') return 142;
-            if(std::Text::CString::TryCopy((readonly(char)*)1,(char*)1,0)) return 143;
+            if(std::Text::CString::TryCopy(((nuint)1).reinterpret<readonly(char)*>(),((nuint)1).reinterpret<char*>(),0)) return 143;
             if(std::Binary::VarInt::ZigZagEncode((long)runtimeInput)!=unsignedMaximum ||
                 std::Binary::VarInt::ZigZagDecode(unsignedMaximum)!=(long)runtimeInput) return 144;
             if(std::Binary::VarInt::ZigZagEncode((int)(runtimeInput>>32))!=(uint)unsignedMaximum ||

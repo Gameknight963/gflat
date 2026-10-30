@@ -4,7 +4,7 @@ using gflat.diagnostics;
 
 namespace gflat
 {
-    public class Parser
+    public partial class Parser
     {
         private List<Token> _tokens = new();
         private bool _copyTokensOnSplit;
@@ -351,6 +351,14 @@ namespace gflat
             if (Check(TokenKind.Interface))
                 return Finish(ParseInterfaceDeclaration(accessibility, line, isStatic));
 
+            if (Check(TokenKind.Identifier) && Current.Text == "extension")
+            {
+                if (firstAccessibility != null || isStatic || isReadonly || isConst || isAbstract || isInline ||
+                    implementation != FunctionImplementationKind.Ordinary || attributes.Count != 0)
+                    throw new TypeCheckException("Declare accessibility and modifiers on extension members, not the block", Current.Span);
+                return ParseExtensionDeclaration();
+            }
+
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
             while (Match(TokenKind.DoubleColon)) name += "::" + Expect(TokenKind.Identifier).Text;
@@ -667,7 +675,14 @@ namespace gflat
             {
                 while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
                 {
-                    if (Check(TokenKind.Identifier) && Current.Text == "implementation" && Peek(2).Kind != TokenKind.OpenParen && Peek(2).Kind != TokenKind.Semicolon)
+                    if (Check(TokenKind.Identifier) && Current.Text == "extension" && Peek().Kind == TokenKind.Identifier && Peek().Text == "implementation")
+                    {
+                        Consume();
+                        var implementation = ParsePrimitiveImplementation();
+                        implementation.ExposesExtensions = true;
+                        implementations.Add(implementation);
+                    }
+                    else if (Check(TokenKind.Identifier) && Current.Text == "implementation" && Peek(2).Kind != TokenKind.OpenParen && Peek(2).Kind != TokenKind.Semicolon)
                         implementations.Add(ParsePrimitiveImplementation());
                     else members.Add(ParseMember());
                 }
@@ -805,6 +820,14 @@ namespace gflat
                 return Finish(ParseAliasDeclaration(accessibility, line, implementation));
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
+
+            if (Check(TokenKind.Identifier) && Current.Text == "explicit" && Peek().Kind == TokenKind.Operator)
+            {
+                if (!isStatic || isReadonly || isVirtual || isOverride || isAbstract ||
+                    implementation != FunctionImplementationKind.Ordinary || _interfaceDepth != 0)
+                    throw new TypeCheckException("Conversion operators must be ordinary static class or struct members", Current.Span);
+                return ApplyInline(ParseExplicitConversion(accessibility, line, attributes, isConst), isInline);
+            }
 
             bool isRef = Check(TokenKind.Identifier) && Current.Text == "ref";
             if (isRef) Consume();
@@ -985,7 +1008,7 @@ namespace gflat
         {
             int line = Current.Line;
             bool isReceiver = Check(TokenKind.Identifier) && Current.Text == "this";
-            if (isReceiver) Consume();
+            if (isReceiver) throw new TypeCheckException("The this parameter modifier was removed; use an extension block with a borrowed instance receiver", Current.Span);
             bool isConst = Match(TokenKind.Const);
             TypeExpression paramType = ParseParameterType();
             string paramName = Expect(TokenKind.Identifier).Text;

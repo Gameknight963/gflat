@@ -13,14 +13,14 @@ public sealed class ArrayValueConversionTests
             int Sum(readonly(byte)* values) => (int)values[0] + (int)values[1];
             int main() {
                 byte* pointer = Make();
-                if ((nuint)pointer == 0 || calls != 1) return 1;
-                if (((readonly(char)*)Make())[1] != (char)22 || calls != 2) return 2;
-                if (((int*)(byte*)Words())[1] != 22 || calls != 3) return 3;
+                if (pointer.reinterpret<nuint>() == 0 || calls != 1) return 1;
+                if ((((byte*)Make()).reinterpret<readonly(char)*>())[1] != (char)22 || calls != 2) return 2;
+                if ((((int*)Words()).reinterpret<byte*>().reinterpret<int*>())[1] != 22 || calls != 3) return 3;
                 if (Sum(Make()) != 42 || calls != 4) return 4;
                 if (Sum((readonly(byte)*)Make()) != 42 || calls != 5) return 5;
                 int[2] local = [20, 22];
-                byte* localBytes = (byte*)local;
-                if (((int*)localBytes)[1] != 22) return 6;
+                byte* localBytes = ((int*)local).reinterpret<byte*>();
+                if ((localBytes.reinterpret<int*>())[1] != 22) return 6;
                 return 0;
             }
             """, optimization);

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace gflat.Tests;
@@ -45,9 +45,9 @@ public sealed class StandardSquareRootTests
                     {{integer}}[{{expected.Length}}] expected = [{{string.Join(",", expected.Select(value => value + suffix))}}];
                     for (nuint i = 0; i < {{input.Length}}; i++) {
                         {{integer}} bits = input[i];
-                        {{type}} original = *(({{type}}*)&bits);
+                        {{type}} original = (bits).reinterpret<{{type}}>();
                         {{type}} value = Math::Sqrt(original);
-                        {{integer}} actual = *(({{integer}}*)&value);
+                        {{integer}} actual = (value).reinterpret<{{integer}}>();
                         bool nan = (expected[i] & {{nanMask}}) == {{nanMask}} && (expected[i] & {{fractionMask}}) != ({{integer}})0;
                         if (nan) {
                             if ((actual & {{nanMask}}) != {{nanMask}} || (actual & {{fractionMask}}) == ({{integer}})0) return 1;

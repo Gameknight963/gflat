@@ -63,8 +63,8 @@ public sealed class FindRunTests
         }
         Run(Allocator + $$"""
             int calls = 0;
-            immutable(int)* origin = (immutable(int)*)1;
-            immutable(int)* needle = (immutable(int)*)1;
+            immutable(int)* origin = ((nuint)1).reinterpret<immutable(int)*>();
+            immutable(int)* needle = ((nuint)1).reinterpret<immutable(int)*>();
             bool Match(immutable(int)* element, immutable(int)* key) {
                 if (element != origin + calls || key != needle) throw new Exception("borrow/order mismatch");
                 calls++; return *element >= *key;
@@ -107,7 +107,7 @@ public sealed class FindRunTests
             bool Ieee(immutable(double)* element, immutable(double)* key) => *element == *key;
             int main() {
                 {
-                    Span<immutable(int)> empty = new((immutable(int)*)1, 0);
+                    Span<immutable(int)> empty = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                     int[4] storage = [1, 2, 3, 4];
                     Span<immutable(int)> nonempty = new(&storage[0], 4);
                     String[4] data = [s"a", s"a\0b", s"a\0b", s"a"];
@@ -115,13 +115,13 @@ public sealed class FindRunTests
                     double nan = 0.0 / 0.0; double[4] numbers = [1.0, nan, nan, 3.0]; Span<double> floats = new(numbers, 4);
                     double[3] zeroData = [-0.0, 0.0, 1.0]; Span<double> zeros = new(zeroData, 3); double zero = 0.0;
                     int baseline = attempts; deny = true;
-                    if (FindRun<int>(empty, 0, (immutable(int)*)1, Unexpected) != 0) return 1;
-                    if (FindRun<int>(empty, 1, (immutable(int)*)1, Unexpected) != 0) return 2;
-                    if (FindRun<int>(nonempty, 0, (immutable(int)*)1, Unexpected) != 0) return 3;
-                    if (FindRun<int>(nonempty, 5, (immutable(int)*)1, Unexpected) != 4) return 4;
+                    if (FindRun<int>(empty, 0, ((nuint)1).reinterpret<immutable(int)*>(), Unexpected) != 0) return 1;
+                    if (FindRun<int>(empty, 1, ((nuint)1).reinterpret<immutable(int)*>(), Unexpected) != 0) return 2;
+                    if (FindRun<int>(nonempty, 0, ((nuint)1).reinterpret<immutable(int)*>(), Unexpected) != 0) return 3;
+                    if (FindRun<int>(nonempty, 5, ((nuint)1).reinterpret<immutable(int)*>(), Unexpected) != 4) return 4;
                     nuint maximum = (nuint)0 - (nuint)1;
-                    if (FindRun<int>(nonempty, maximum, (immutable(int)*)1, Unexpected) != 4) return 5;
-                    if (FindRun<int>(nonempty, 0, (immutable(int)*)1) != 0 || FindRun<int>(nonempty, maximum, (immutable(int)*)1) != 4) return 6;
+                    if (FindRun<int>(nonempty, maximum, ((nuint)1).reinterpret<immutable(int)*>(), Unexpected) != 4) return 5;
+                    if (FindRun<int>(nonempty, 0, ((nuint)1).reinterpret<immutable(int)*>()) != 0 || FindRun<int>(nonempty, maximum, ((nuint)1).reinterpret<immutable(int)*>()) != 4) return 6;
                     if (calls != 0) return 7;
                     if (FindRun<String>(text.AsImmutable(), 2, &key) != 1) return 8;
                     if (FindRun<String>(text.AsImmutable(), 2, &key, SamePrefix) != 0) return 9;
@@ -141,8 +141,8 @@ public sealed class FindRunTests
     public void NoncopyableOwnersStayBorrowedAndOriginalCallbackExceptionsPropagate(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
-            immutable(Owner)* needle = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
+            immutable(Owner)* needle = ((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner {
                 public int Id; public String Token;
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
@@ -159,7 +159,7 @@ public sealed class FindRunTests
                     Vector<Owner> owners = new(); owners.Reserve(6); int[6] ids = [7, 7, 0, 7, 7, 7];
                     for (nuint i = 0; i < 6; i++) owners.Add(new Owner(ids[i]));
                     origin = &owners[0]; needle = &owners[4]; nuint[6] tokens;
-                    for (nuint i = 0; i < 6; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 6; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     nuint capacity = owners.Capacity; int baseline = attempts; deny = true;
                     if (FindRun<Owner>(owners.AsImmutable(), 2, needle, Match) != 0 || calls != 2) return 1;
                     calls = 0;
@@ -177,7 +177,7 @@ public sealed class FindRunTests
                         if (!caught || result != 99 || calls != failure + 1) return 5;
                         if (made != 6 || dead != 0 || owners.Count != 6 || owners.Capacity != capacity) return 6;
                         for (nuint i = 0; i < 6; i++)
-                            if (&owners[i] != origin + i || owners[i].Id != ids[i] || (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 7;
+                            if (&owners[i] != origin + i || owners[i].Id != ids[i] || (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 7;
                     }
                 }
                 if (made != 6 || dead != 6 || allocated != released) return 8;

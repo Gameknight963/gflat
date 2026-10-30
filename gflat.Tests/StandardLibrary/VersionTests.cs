@@ -127,7 +127,7 @@ public sealed class VersionTests
                 if((nuint)sizeof(Version)>32)return 9;
                 Version specimen=new(1,2,0,0);
                 for(nuint offset=0;offset<=32;offset+=8)for(nuint capacity=0;capacity<=8;capacity++){
-                    Version[8] storage;char* buffer=(char*)&storage[0];for(nuint i=0;i<(nuint)sizeof(Version)*8;i++)buffer[i]='!';storage[1]=specimen;
+                    Version[8] storage;char* buffer=(&storage[0]).reinterpret<char*>();for(nuint i=0;i<(nuint)sizeof(Version)*8;i++)buffer[i]='!';storage[1]=specimen;
                     char[256] saved;for(nuint i=0;i<(nuint)sizeof(Version)*8;i++)saved[i]=buffer[i];nuint written=99;int before=attempts;deny=true;
                     bool success=storage[1].TryFormat(buffer+offset,capacity,ref written);deny=false;
                     if(success!=(capacity>=7)||attempts!=before)return 10;
@@ -137,7 +137,7 @@ public sealed class VersionTests
                     }}
                 }
                 for(int badInput=0;badInput<2;badInput++){
-                    Version[8] storage;char* buffer=(char*)&storage[0];for(nuint i=0;i<7;i++)buffer[i]="1.2.0.0"[i];if(badInput==1)buffer[6]='x';
+                    Version[8] storage;char* buffer=(&storage[0]).reinterpret<char*>();for(nuint i=0;i<7;i++)buffer[i]="1.2.0.0"[i];if(badInput==1)buffer[6]='x';
                     bool success=Version::TryParse(buffer,7,&storage[0]);if(success!=(badInput==0))return 16;
                     if(success){if(!storage[0].Equals(&specimen))return 17;}else if(!storage[0].Equals(&zero))return 18;
                 }

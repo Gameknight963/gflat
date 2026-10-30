@@ -6,16 +6,16 @@ namespace gflat.Tests;
 public sealed class ExtensionMethodTests
 {
     [Theory]
-    [InlineData("int Add(this int self, int n = 2) => self + n; int main() { int n = 40; return n.Add(); }")]
-    [InlineData("using Helpers; namespace Helpers { int Add(this int self, int n) => self + n; } int main() { int n = 40; return n.Add(2); }")]
-    [InlineData("namespace Helpers { int Add(this int self, int n) => self + n; } int main() { return Helpers::Add(40, 2); }")]
-    [InlineData("int Read(this int* self) => *self; int main() { int n = 42; int* p = &n; return p.Read(); }")]
-    [InlineData("int Read(this ref readonly(int) self) => self; int main() { int n = 42; int* p = &n; return p.Read(); }")]
-    [InlineData("void Set(this ref int self, int n) { self = n; } int main() { int n = 0; n.Set(42); return n; }")]
-    [InlineData("int Read(this int*? self) { if (self == null) return 42; return *self; } int main() { int*? p = null; return p.Read(); }")]
-    [InlineData("T Identity<T>(this T self) => self; int main() { int n = 42; return n.Identity(); }")]
-    [InlineData("struct Item { public int Read() => 42; } int Read(this ref Item self) => 1; int main() { Item n = new Item(); return n.Read(); }")]
-    [InlineData("struct Item { public int Count { get => 40; } } int Add(this ref Item self, int n) => self.Count + n; int main() { Item n = new Item(); return n.Add(2); }")]
+    [InlineData("int Add(int self, int n = 2) => self + n;\nextension int { public int Add(int n = 2) => (*this) + n; } int main() { int n = 40; return n.Add(); }")]
+    [InlineData("using Helpers; namespace Helpers { int Add(int self, int n) => self + n;\nextension int { public int Add(int n) => (*this) + n; } } int main() { int n = 40; return n.Add(2); }")]
+    [InlineData("namespace Helpers { int Add(int self, int n) => self + n;\nextension int { public int Add(int n) => (*this) + n; } } int main() { return Helpers::Add(40, 2); }")]
+    [InlineData("int Read(int* self) => *self;\nextension int { public int Read() => *this; } int main() { int n = 42; int* p = &n; return p.Read(); }")]
+    [InlineData("int Read(ref readonly(int) self) => self;\nextension int { public readonly int Read() => (*this); } int main() { int n = 42; int* p = &n; return p.Read(); }")]
+    [InlineData("void Set(ref int self, int n) { self = n; }\nextension int { public void Set(int n) { (*this) = n; } } int main() { int n = 0; n.Set(42); return n; }")]
+    [InlineData("int Read(int*? self) { if (self == null) return 42; return *self; } int main() { int*? p = null; return Read(p); }")]
+    [InlineData("T Identity<T>(T self) => self;\nextension<T> T { public T Identity() => (*this); } int main() { int n = 42; return n.Identity(); }")]
+    [InlineData("struct Item { public int Read() => 42; } int Read(ref Item self) => 1;\nextension Item { public int Read() => 1; } int main() { Item n = new Item(); return n.Read(); }")]
+    [InlineData("struct Item { public int Count { get => 40; } } int Add(ref Item self, int n) => self.Count + n;\nextension Item { public int Add(int n) => (*this).Count + n; } int main() { Item n = new Item(); return n.Add(2); }")]
     public void NamespaceExtensionsUseOrdinaryCalls(string source)
     {
         var result = CompilerTestHelper.Run(source);
@@ -23,45 +23,47 @@ public sealed class ExtensionMethodTests
     }
 
     [Theory]
-    [InlineData("int Bad(int n, this int self) => n; int main() => 0;", "first parameter")]
-    [InlineData("int Bad(this int self = 0) => self; int main() => 0;", "default")]
-    [InlineData("struct S { public int Bad(this int self) => self; } int main() => 0;", "namespace functions")]
-    [InlineData("extern int Bad(this int self); int main() => 0;", "namespace functions")]
-    [InlineData("int main() { int(int)* f = (this int n) => n; return 0; }", "namespace functions")]
-    [InlineData("namespace Helpers { int Add(this int self) => self; } int main() { int n = 0; return n.Add(); }", "struct or class")]
-    [InlineData("void Set(this ref int self) { self = 1; } int main() { readonly(int) n = 0; n.Set(); return 0; }", "struct or class")]
-    [InlineData("int Read(this ref int self) => self; int main() { int*? p = null; return p.Read(); }", "nullable")]
+    [InlineData("int Bad(int n, this int self) => n; int main() => 0;", "this parameter modifier was removed")]
+    [InlineData("extension int* { public int Bad() => **this; } int main() => 0;", "pointer")]
+    [InlineData("struct S { public int Bad(this int self) => self; } int main() => 0;", "this parameter modifier was removed")]
+    [InlineData("extern int Bad(this int self); int main() => 0;", "this parameter modifier was removed")]
+    [InlineData("extension int { public void Set() { *this = 1; } } int main() { immutable(int) n = 0; n.Set(); return 0; }", "Set")]
+    [InlineData("namespace Helpers { extension int { public int Add() => *this; } } int main() { int n = 0; return n.Add(); }", "Add")]
+    [InlineData("extension int { public void Set() { *this = 1; } } int main() { readonly(int) n = 0; n.Set(); return 0; }", "Set")]
+    [InlineData("extension int { public readonly int Read() => *this; } int main() { int*? p = null; return p.Read(); }", "nullable")]
     public void InvalidExtensionsHaveSourceDiagnostics(string source, string message)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(source));
         Assert.Contains(message, error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(error.Span.Length > 0);
     }
 
     [Fact]
-    public void ExactPointerReceiverWinsBeforePointeeAdaptation()
+    public void PointerAndValueReceiversCannotDeclareDifferentImplementationsForTheSameMember()
     {
-        var result = CompilerTestHelper.Run("int Read(this int* self) => 42; int Read(this ref int self) => 1; int main() { int n = 0; int* p = &n; return p.Read(); }");
-        Assert.Equal(42, result.ExitCode);
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("extension int { public int Read() => 42; } extension int { public int Read() => 1; } int main() => 0;"));
+        Assert.Contains("Read", error.Message);
+        Assert.True(error.Span.Length > 0);
     }
 
     [Fact]
     public void VisibleNamespacesParticipateInOverloadResolution()
     {
-        var result = CompilerTestHelper.Run("using A; using B; namespace A { int Add(this int self, int n) => self + n; } namespace B { int Add(this int self, bool n) => 0; } int main() { int n = 40; return n.Add(2); }");
+        var result = CompilerTestHelper.Run("using A; using B; namespace A { int Add(int self, int n) => self + n;\nextension int { public int Add(int n) => (*this) + n; } } namespace B { int Add(int self, bool n) => 0;\nextension int { public int Add(bool n) => 0; } } int main() { int n = 40; return n.Add(2); }");
         Assert.Equal(42, result.ExitCode);
     }
 
     [Fact]
     public void EqualVisibleCandidatesAreAmbiguous()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("using A; using B; namespace A { int Add(this int self) => self; } namespace B { int Add(this int self) => self; } int main() { int n = 0; return n.Add(); }"));
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("using A; using B; namespace A { int Add(int self) => self;\nextension int { public int Add() => (*this); } } namespace B { int Add(int self) => self;\nextension int { public int Add() => (*this); } } int main() { int n = 0; return n.Add(); }"));
         Assert.Contains("ambiguous", error.Message);
     }
 
     [Fact]
     public void InstanceMethodErrorsAreNotHiddenByExtensions()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("struct S { public int Read(int n) => n; } int Read(this ref S self) => 42; int main() { S s = new S(); return s.Read(); }"));
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("struct S { public int Read(int n) => n; } int Read(ref S self) => 42;\nextension S { public int Read() => 42; } int main() { S s = new S(); return s.Read(); }"));
         Assert.Contains("expects", error.Message);
     }
 
@@ -71,14 +73,15 @@ public sealed class ExtensionMethodTests
         var result = CompilerTestHelper.Run("""
             int* Receiver(ref int steps) { steps = steps * 10 + 1; return &steps; }
             int Argument(ref int steps) { steps = steps * 10 + 2; return 0; }
-            int Read(this int* self, int ignored) => *self;
+            int Read(int* self, int ignored) => *self;
+            extension int { public int Read(int ignored) => *this; }
             int main() { int steps = 0; return Receiver(ref steps).Read(Argument(ref steps)); }
             """);
         Assert.Equal(12, result.ExitCode);
     }
 
     [Fact]
-    public void ValueReceiverCopiesAndDestroysWhileReferenceReceiverBorrows()
+    public void AllExtensionReceiversBorrowWithoutCopyingOrDestroyingTheValue()
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(immutable(char*) text, ...);
@@ -88,12 +91,14 @@ public sealed class ExtensionMethodTests
                 public copy R(immutable(R)* source) { n = source.n; printf("C"); }
                 ~R() { printf("D"); }
             }
-            int Read(this R self) => self.n;
-            int Borrow(this ref immutable(R) self) => self.n;
+            int Read(R self) => self.n;
+            extension R { public int Read() => (*this).n; }
+            int Borrow(ref immutable(R) self) => self.n;
+            extension R { public immutable int Borrow() => (*this).n; }
             int main() { R r = new R(21); return r.Read() + r.Borrow(); }
             """);
         Assert.Equal(42, result.ExitCode);
-        Assert.Equal("CDD", result.StandardOutput);
+        Assert.Equal("D", result.StandardOutput);
     }
 
     [Fact]
@@ -102,7 +107,8 @@ public sealed class ExtensionMethodTests
         var result = CompilerTestHelper.Run("""
             extern int printf(immutable(char*) text, ...);
             struct R { public int n; public R() { n = 42; } ~R() { printf("D"); } }
-            int Read(this R self) => self.n;
+            int Read(R self) => self.n;
+            extension R { public int Read() => (*this).n; }
             int main() => new R().Read();
             """);
         Assert.Equal(42, result.ExitCode);
@@ -114,7 +120,8 @@ public sealed class ExtensionMethodTests
     {
         var result = CompilerTestHelper.Run("""
             struct Box<T> { public T value; public Box(T n) { value = n; } }
-            T Read<T>(this ref immutable(Box<T>) self) => self.value;
+            T Read<T>(ref immutable(Box<T>) self) => self.value;
+            extension<T> Box<T> { public immutable T Read() => (*this).value; }
             int main() { Box<int> box = new Box<int>(42); return box.Read(); }
             """);
         Assert.Equal(42, result.ExitCode);
@@ -125,7 +132,8 @@ public sealed class ExtensionMethodTests
     {
         var (ast, checker) = Compiler.Check("""
             struct Box<T> { public T value; public Box(T n) { value = n; } }
-            T Broken<T>(this ref immutable(Box<T>) self) { return MissingFunction(); }
+            T Broken<T>(ref immutable(Box<T>) self) { return MissingFunction(); }
+            extension<T> Box<T> { public immutable T Broken() { return MissingFunction(); } }
             int main() { Box<int> box = new Box<int>(42); return 0; }
             """);
         int count = ast.Members.Count;
@@ -141,25 +149,26 @@ public sealed class ExtensionMethodTests
     public void ExtensionCallPropagatesExceptionsAndUsesDefaults()
     {
         var result = CompilerTestHelper.Run("""
-            int Fail(this int self, int code = 42) { throw new Exception("extension", code); }
+            int Fail(int self, int code = 42) { throw new Exception("extension", code); }
+            extension int { public int Fail(int code = 42) { throw new Exception("extension", code); } }
             int main() { int n = 0; try { return n.Fail(); } catch (Exception* error) { return error.GetCode(); } }
             """);
         Assert.Equal(42, result.ExitCode);
     }
 
     [Fact]
-    public void ReplacementCannotSilentlyRemoveExtensionMarker()
+    public void LegacyThisModifierCannotBeReintroducedByAReplacement()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("weak int Read(this int self) => self; replace int Read(int self) => self; int main() => 0;"));
-        Assert.Contains("modifiers", error.Message);
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("weak int Read(int self) => self; replace int Read(this int self) => self; int main() => 0;"));
+        Assert.Contains("this parameter modifier was removed", error.Message);
     }
 
     [Fact]
-    public void RefReceiverKeepsDeclaredNullableStorage()
+    public void ExplicitRefFunctionsCanReplaceNullablePointerSlots()
     {
         var result = CompilerTestHelper.Run("""
-            void Clear(this ref int*? self) { self = null; }
-            int main() { int n = 42; int*? p = &n; if (p == null) return 1; p.Clear(); if (p == null) return 42; return 0; }
+            void Clear(ref int*? self) { self = null; }
+            int main() { int n = 42; int*? p = &n; if (p == null) return 1; Clear(ref p); if (p == null) return 42; return 0; }
             """);
         Assert.Equal(42, result.ExitCode);
     }
@@ -170,7 +179,7 @@ public sealed class ExtensionMethodTests
         var result = CompilerTestHelper.Run(new[] {
             new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
             new SourceFile("GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
-            new SourceFile("main.gf", "int Read(this int^ self) { GC::Collect(); return *self; } int main() => (new^ int(42)).Read();") });
+            new SourceFile("main.gf", "int Read(int^ self) { GC::Collect(); return *self; }\nextension int { public int Read() { GC::Collect(); return *this; } } int main() => (new^ int(42)).Read();") });
         Assert.Equal(42, result.ExitCode);
     }
 
@@ -181,7 +190,8 @@ public sealed class ExtensionMethodTests
             using A;
             namespace A {
                 struct Box<T> { public T value; public Box(T n) { value = n; } }
-                T Read<T>(this ref immutable(Box<T>) self) => self.value;
+                T Read<T>(ref immutable(Box<T>) self) => self.value;
+                extension<T> Box<T> { public immutable T Read() => (*this).value; }
             }
             namespace B { struct Box<T> { public T value; public Box(T n) { value = n; } } }
             int main() { B::Box<int> other = new B::Box<int>(0); A::Box<int> box = new A::Box<int>(42); return box.Read(); }
@@ -190,33 +200,34 @@ public sealed class ExtensionMethodTests
     }
 
     [Fact]
-    public void RefReceiverCannotChangeNarrowedSlotToNonnullable()
+    public void ExtensionBlocksCannotTargetPointerSlots()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("int Read(this ref int* self) => *self; int main() { int n = 42; int*? p = &n; if (p == null) return 0; return p.Read(); }"));
-        Assert.Contains("not a struct or class", error.Message);
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("extension int* { public int Read() => **this; } int main() => 0;"));
+        Assert.Contains("pointer", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void BorrowingReceiverInvalidatesExposedNullableFacts()
+    public void ExplicitRefPointerCallsInvalidateExposedNullableFacts()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("void Clear(this ref int*? self) { self = null; } int main() { int n = 42; int*? p = &n; if (p == null) return 0; p.Clear(); return *p; }"));
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("void Clear(ref int*? self) { self = null; } int main() { int n = 42; int*? p = &n; if (p == null) return 0; Clear(ref p); return *p; }"));
         Assert.Contains("nullable", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void ReceiverCopyEffectsHappenBeforeLaterArgumentAnalysis()
+    public void BorrowingAnExtensionDoesNotRunTheReceiversCopyConstructor()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+        var result = CompilerTestHelper.Run("""
             struct R {
                 public int*?* slot;
                 public R(int*?* s) { slot = s; }
-                public copy R(immutable(R)* other) nothrow { slot = other.slot; *slot = null; }
+                public copy R(readonly(R)* other) nothrow { slot = other.slot; *slot = null; }
                 ~R() {}
             }
-            int Read(this R self, int value) => value;
+            int Read(R self, int value) => value;
+            extension R { public int Read(int value) => value; }
             int main() { int n = 42; int*? p = &n; R r = new R(&p); if (p == null) return 0; return r.Read(*p); }
-            """));
-        Assert.Contains("nullable", error.Message, StringComparison.OrdinalIgnoreCase);
+            """);
+        Assert.Equal(42, result.ExitCode);
     }
 
     [Fact]
@@ -226,26 +237,27 @@ public sealed class ExtensionMethodTests
             alias Callback = int()*;
             int Actual() => 42;
             struct S { public Callback Read; public S() { Read = &Actual; } }
-            int Read(this ref S self) => 1;
+            int Read(ref S self) => 1;
+            extension S { public int Read() => 1; }
             int main() { S s = new S(); return s.Read(); }
             """);
         Assert.Equal(42, result.ExitCode);
     }
 
     [Fact]
-    public void ManagedPointeeDoesNotBecomeBorrowableThroughExtensions()
+    public void ManagedPointeesBorrowTheSameInstanceReceiver()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(new[] {
+        var result = CompilerTestHelper.Run(new[] {
             new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
-            new SourceFile("GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
-            new SourceFile("main.gf", "struct S {} int Read(this ref S self) => 42; int main() { S^ s = new^ S(); return s.Read(); }") }));
-        Assert.Contains("no field or method", error.Message, StringComparison.OrdinalIgnoreCase);
+            new SourceFile("GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
+            new SourceFile("main.gf", "struct S { public int value; } extension S { public int Read() { GC::Collect(); return this.value; } } int main() { S^ s = new^ S(); s.value = 42; return s.Read(); }") });
+        Assert.Equal(42, result.ExitCode);
     }
 
     [Fact]
     public void LocalFunctionPointerNameDoesNotHijackAnExtension()
     {
-        var result = CompilerTestHelper.Run("int Wrong() => 1; int Read(this int self) => self; int main() { int()* Read = &Wrong; int n = 42; return n.Read(); }");
+        var result = CompilerTestHelper.Run("int Wrong() => 1; int Read(int self) => self;\nextension int { public int Read() => (*this); } int main() { int()* Read = &Wrong; int n = 42; return n.Read(); }");
         Assert.Equal(42, result.ExitCode);
     }
 
@@ -254,8 +266,10 @@ public sealed class ExtensionMethodTests
     {
         var result = CompilerTestHelper.Run("""
             using A; using B;
-            namespace A { const int Plus(this int self, int n = 2) => self + n; }
-            namespace B { const int Plus(this char self, int n = 2) => 0; }
+            namespace A { const int Plus(int self, int n = 2) => self + n;
+            extension int { public const int Plus(int n = 2) => (*this) + n; } }
+            namespace B { const int Plus(char self, int n = 2) => 0;
+            extension char { public const int Plus(int n = 2) => 0; } }
             const int Answer = (40).Plus();
             int main() => Answer;
             """);
@@ -268,7 +282,8 @@ public sealed class ExtensionMethodTests
         var result = CompilerTestHelper.Run("""
             using Models; using Helpers;
             namespace Models { struct Box<T> { public T value; public Box(T n) { value = n; } } }
-            namespace Helpers { T Read<T>(this ref immutable(Box<T>) self) => self.value; }
+            namespace Helpers { T Read<T>(ref immutable(Box<T>) self) => self.value;
+            extension<T> Box<T> { public immutable T Read() => (*this).value; } }
             int main() { Box<int> box = new Box<int>(42); return box.Read(); }
             """);
         Assert.Equal(42, result.ExitCode);
@@ -280,7 +295,8 @@ public sealed class ExtensionMethodTests
         var (ast, checker) = Compiler.Check("""
             interface I { int Read(); }
             struct S : I { public int Read() => 42; }
-            T Identity<T : I>(this T self) { return MissingFunction(); }
+            T Identity<T : I>(T self) { return MissingFunction(); }
+            extension<T : I> T { public T Identity() { return MissingFunction(); } }
             int main() => 0;
             """);
         int count = ast.Members.Count;
@@ -297,7 +313,8 @@ public sealed class ExtensionMethodTests
                 interface I { int Read(); }
                 alias Contract = I;
                 struct S : I { public int Read() => 42; }
-                T Identity<T : Contract>(this T self) { return MissingFunction(); }
+                T Identity<T : Contract>(T self) { return MissingFunction(); }
+                extension<T : Contract> T { public T Identity() { return MissingFunction(); } }
             }
             int main() => 0;
             """);
@@ -312,8 +329,10 @@ public sealed class ExtensionMethodTests
     public void RefParametersComposeWithRefReceiverExtensions()
     {
         var result = CompilerTestHelper.Run("""
-            void Set(this ref int self, int n) { self = n; }
-            int Read(this ref readonly(int) self) => self;
+            void Set(ref int self, int n) { self = n; }
+            extension int { public void Set(int n) { (*this) = n; } }
+            int Read(ref readonly(int) self) => self;
+            extension int { public readonly int Read() => (*this); }
             int Update(ref int value) { value.Set(42); return value.Read(); }
             int main() { int value = 0; return Update(ref value); }
             """);
@@ -325,7 +344,7 @@ public sealed class ExtensionMethodTests
     {
         var result = CompilerTestHelper.Run(new[] {
             new SourceFile("contracts.gf", "namespace Contracts; interface I { int Read(); } struct S : I { public int Read() => 42; }"),
-            new SourceFile("extensions.gf", "using Contracts; namespace Helpers; int ReadValue<T : I>(this T self) => self.Read();"),
+            new SourceFile("extensions.gf", "using Contracts; namespace Helpers; int ReadValue<T : I>(T self) => self.Read();\nextension<T : I> T { public int ReadValue() => (*this).Read(); }"),
             new SourceFile("main.gf", "using Helpers; int main() { Contracts::S s = new Contracts::S(); return s.ReadValue(); }") });
         Assert.Equal(42, result.ExitCode);
     }
@@ -335,7 +354,7 @@ public sealed class ExtensionMethodTests
     {
         var (ast, checker) = Compiler.Check("""
             struct Box<T> { public T value; }
-            int Unused<T>(this Box<T>(Box<T>)* callback) => 0;
+            struct Callback<F> {} extension<T> Callback<Box<T>(Box<T>)> { public int Unused() => 0; }
             int main() => 0;
             """);
         int count = ast.Members.Count;
@@ -354,7 +373,8 @@ public sealed class ExtensionMethodTests
         string declaration = checkedReceiver ? "Box<int> value = new();" : "";
         var (ast, checker) = Compiler.Check($$$"""
             struct Box<T> { public T value; }
-            int Inspect<T>(this ref immutable(T) value) => MissingFunction();
+            int Inspect<T>(ref immutable(T) value) => MissingFunction();
+            extension<T> T { public immutable int Inspect() => MissingFunction(); }
             int main() { {{{declaration}}} return 0; }
             """);
         int count = ast.Members.Count;
@@ -368,17 +388,21 @@ public sealed class ExtensionMethodTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void PreviewPreservesDeclaredPointerReceiverBeforeConsideringPointeeOverloads(int optimization)
+    public void PreviewBorrowsThePointeeAndSelectsTheConstrainedOverload(int optimization)
         => Assert.Equal(0, CompilerTestHelper.Run("""
             interface IMark { void Mark(); }
             struct Item : IMark { public void Mark() {} }
-            int Touch<S>(this ref S value, long tag) => 1;
-            int Touch<S : IMark>(this ref S value, int tag) => 2;
-            int Forward<P>(P value) => value.Touch(0);
+            int Touch<S>(ref S value, long tag) => 1;
+            extension<S> S { public int Touch(long tag) => 1; }
+            int Touch<S : IMark>(ref S value, int tag) => 2;
+            extension<S : IMark> S { public int Touch(int tag) => 2; }
+            int Forward<P>(P* value) => value.Touch(0);
+            int ForwardMarked<P : IMark>(P* value) => value.Touch(0);
             int main() {
                 Item value = new();
                 Item* pointer = &value;
-                return Forward<Item*>(pointer) - 1;
+                if (value.Touch(0) != 2 || ForwardMarked<Item>(pointer) != 2) return 1;
+                return Forward<Item>(pointer) - 1;
             }
             """, optimization).ExitCode);
 }

@@ -12,7 +12,7 @@ public sealed class LinuxSystemRandomTests
             Probe::Calls++;
             nuint expected = Probe::Length - Probe::Offset;
             if (expected > 256) expected = 256;
-            if ((nuint)output != Probe::Address + Probe::Offset || count != expected || count == 0 || count > 256)
+            if ((output).reinterpret<nuint>() != Probe::Address + Probe::Offset || count != expected || count == 0 || count > 256)
                 { Probe::BadArguments = true; return -1; }
             byte* bytes = (byte*)output;
             if (Probe::Calls == Probe::FailAt) { bytes[0] = (byte)17; return -1; }
@@ -38,14 +38,14 @@ public sealed class LinuxSystemRandomTests
     public void DeterministicStubChecksZeroChunkBoundariesAddressesAndGuards(int optimization)
         => RunStub("""
             int main() nothrow {
-                if (!Linux::SystemRandom::TryFill((byte*)1, 0) || Probe::Calls != 0) return 1;
+                if (!Linux::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), 0) || Probe::Calls != 0) return 1;
                 byte[515] storage;
                 nuint[6] sizes = [0, 1, 255, 256, 257, 513];
                 int[6] calls = [0, 1, 1, 1, 2, 3];
                 for (nuint sample = 0; sample < 6; sample++) {
                     for (nuint i = 0; i < 515; i++) storage[i] = (byte)165;
                     Probe::Calls = 0; Probe::FailAt = 0; Probe::Offset = 0; Probe::BadArguments = false;
-                    Probe::Address = (nuint)&storage[1]; Probe::Length = sizes[sample];
+                    Probe::Address = (&storage[1]).reinterpret<nuint>(); Probe::Length = sizes[sample];
                     if (!Linux::SystemRandom::TryFill(&storage[1], sizes[sample])) return 2;
                     if (Probe::Calls != calls[sample] || Probe::Offset != sizes[sample] || Probe::BadArguments) return 3;
                     for (nuint i = 0; i < sizes[sample]; i++) if (storage[i + 1] != (byte)(i % 251)) return 4;
@@ -66,7 +66,7 @@ public sealed class LinuxSystemRandomTests
                 for (int failAt = 1; failAt <= 2; failAt++) {
                     for (nuint i = 0; i < 515; i++) storage[i] = (byte)165;
                     Probe::Calls = 0; Probe::Offset = 0; Probe::FailAt = failAt; Probe::BadArguments = false;
-                    Probe::Address = (nuint)&storage[1]; Probe::Length = 513;
+                    Probe::Address = (&storage[1]).reinterpret<nuint>(); Probe::Length = 513;
                     if (Linux::SystemRandom::TryFill(&storage[1], 513)) return 1;
                     if (Probe::Calls != failAt || Probe::BadArguments) return 2;
                     nuint completed = 0;
@@ -140,7 +140,7 @@ public sealed class LinuxSystemRandomTests
                     if (storage[0] != (byte)165) return 2;
                     for (nuint i = count + 1; i < 4098; i++) if (storage[i] != (byte)165) return 3;
                 }
-                if (!Linux::SystemRandom::TryFill((byte*)1, 0)) return 4;
+                if (!Linux::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), 0)) return 4;
                 return 0;
             }
             """;

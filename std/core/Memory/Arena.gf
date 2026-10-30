@@ -40,7 +40,7 @@ struct Arena
         if (head != null)
         {
             Block* current = head!;
-            nuint address = (nuint)current.Data + current.Used;
+            nuint address = (current.Data).reinterpret<nuint>() + current.Used;
             nuint remainder = address & slack;
             nuint padding = 0;
             if (remainder != 0) padding = alignment - remainder;
@@ -61,7 +61,7 @@ struct Arena
         if (allocation == null) throw new BadAllocException("Arena allocation failed");
         byte* data = (byte*)allocation + header;
         Block* block = new* Block(head, data, payload) at (Block*)allocation!;
-        nuint remainder = (nuint)data & slack;
+        nuint remainder = (data).reinterpret<nuint>() & slack;
         nuint padding = 0;
         if (remainder != 0) padding = alignment - remainder;
         block.Used = padding + bytes;

@@ -17,14 +17,15 @@ public sealed class ToStringExtensionEditorTests
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, files);
         foreach (var row in new[] {
-            (Receiver: "number", File: "primitive_string.gf", Declaration: "public String ToString(this int value)"),
-            (Receiver: "label", File: "formattable_string.gf", Declaration: "public String ToString<T"),
-            (Receiver: "borrowed", File: "formattable_string.gf", Declaration: "public String ToString<T"),
+            (Receiver: "number", File: "primitive_string.gf", Declaration: "public String ToString()"),
+            (Receiver: "label", File: "formattable_string.gf", Declaration: "public immutable String ToString("),
+            (Receiver: "borrowed", File: "formattable_string.gf", Declaration: "public immutable String ToString("),
             (Receiver: "original", File: "String.gf", Declaration: "public immutable String ToString()") })
         {
             int use = text.IndexOf(row.Receiver + ".ToString", StringComparison.Ordinal) + row.Receiver.Length + 1;
             var library = files.Single(file => Path.GetFileName(file.Path) == row.File);
-            int declaration = library.Text.IndexOf(row.Declaration, StringComparison.Ordinal) + row.Declaration.IndexOf("ToString", StringComparison.Ordinal);
+            int start = row.Receiver == "number" ? library.Text.IndexOf("extension int", StringComparison.Ordinal) : 0;
+            int declaration = library.Text.IndexOf(row.Declaration, start, StringComparison.Ordinal) + row.Declaration.IndexOf("ToString", StringComparison.Ordinal);
             var expected = model.Definition(library.Path, declaration);
             Assert.NotNull(expected);
             Assert.Equal(expected, model.Definition(source.Path, use));

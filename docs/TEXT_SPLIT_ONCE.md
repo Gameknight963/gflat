@@ -4,8 +4,9 @@
 
 ```csharp
 using std::Memory;
-bool TrySplitOnce(this Span<readonly(char)> text, char separator,
-    ref Span<readonly(char)> before, ref Span<readonly(char)> after);
+extension Span<readonly(char)> {
+    public readonly bool TrySplitOnce(char separator, ref Span<readonly(char)> before, ref Span<readonly(char)> after);
+}
 ```
 
 It scans for the first matching byte and returns borrowed views before and after

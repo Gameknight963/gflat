@@ -74,11 +74,11 @@ public sealed class LinePrefixWriterTests
                         nuint chunks=(nuint)FileBinary::ReadUInt32LittleEndian(&input);
                         if(size>8)return 1;input.ReadExactly(prefix,size);
                         LinePrefixWriter writer=new(&output,prefix,size);ITextWriter* sink=&writer;
-                        sink.Write((readonly(char)*)1,0);
+                        sink.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         for(nuint part=0;part<chunks;part++){
                             nuint count=(nuint)FileBinary::ReadUInt32LittleEndian(&input);
                             if(count>8192)return 2;input.ReadExactly(chunk,count);
-                            sink.Write(chunk,count);sink.Write((readonly(char)*)1,0);
+                            sink.Write(chunk,count);sink.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         }
                     }
                     if(input.ReadByte()!=-1||attempts!=0)return 3;
@@ -98,7 +98,7 @@ public sealed class LinePrefixWriterTests
                 char[3] prefix=['[','\0',']'];
                 {
                     LinePrefixWriter writer=new(&sink,prefix,3);
-                    writer.Write((readonly(char)*)1,0);if(sink.Length!=0)return 1;
+                    writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);if(sink.Length!=0)return 1;
                     writer.Write("a",1);prefix[0]='{';writer.Write("\nb",2);
                     if(sink.Length!=9||bytes[0]!='['||bytes[1]!='\0'||bytes[2]!=']'||bytes[3]!='a'||bytes[4]!='\n')return 2;
                     if(bytes[5]!='{'||bytes[6]!='\0'||bytes[7]!=']'||bytes[8]!='b')return 3;
@@ -112,7 +112,7 @@ public sealed class LinePrefixWriterTests
                 sink.Clear();first.Write("c",1);if(sink.Length!=1||bytes[0]!='c')return 6;
                 sink.Clear();LinePrefixWriter moved=move copied;moved.Write("d",1);
                 if(sink.Length!=2||bytes[0]!='p'||bytes[1]!='d')return 7;
-                sink.Clear();LinePrefixWriter empty=new(&sink,(readonly(char)*)1,0);
+                sink.Clear();LinePrefixWriter empty=new(&sink,((nuint)1).reinterpret<readonly(char)*>(),0);
                 empty.Write("\0\n",2);if(sink.Length!=2||bytes[0]!='\0'||bytes[1]!='\n')return 8;
                 if(attempts!=0)return 9;return 0;
             }
@@ -143,7 +143,7 @@ public sealed class LinePrefixWriterTests
                     for(nuint i=0;i<limit;i++)if(bytes[i]!=expected[i])return 3;
                     int calls=sink.Calls;
                     try{writer.Write("x",1);}catch(Exception* error){errors++;}
-                    try{writer.Write((readonly(char)*)1,0);}catch(Exception* error){errors++;}
+                    try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(Exception* error){errors++;}
                     if(errors!=3||sink.Calls!=calls||sink.Count!=limit)return 4;
                     LinePrefixWriter copied=writer;
                     try{copied.Write("y",1);return 5;}catch(Exception* error){}

@@ -99,8 +99,8 @@ public sealed class SpanSubsequenceSearchTests
     public void ValidPreflightsAsymmetricTraceOverlapAndDefaultsKeepTheirContracts(int optimization)
         => Run(Allocator + """
             int calls = 0;
-            immutable(int)* origin = (immutable(int)*)1;
-            immutable(int)* sought = (immutable(int)*)1;
+            immutable(int)* origin = ((nuint)1).reinterpret<immutable(int)*>();
+            immutable(int)* sought = ((nuint)1).reinterpret<immutable(int)*>();
             int[5] lefts = [0, 1, 1, 2, 3]; int[5] rights = [0, 1, 0, 0, 1];
             bool Unexpected(immutable(int)* element, immutable(int)* pattern) {
                 calls++; throw new Exception("unexpected callback");
@@ -116,7 +116,7 @@ public sealed class SpanSubsequenceSearchTests
                 {
                     int[4] data = [3, 1, 4, 4]; int[2] small = [2, 3]; int[5] overlap = [1, 2, 1, 2, 3];
                     Span<int> values = new(data, 4); Span<int> pattern = new(small, 2); Span<int> shared = new(overlap, 5);
-                    Span<immutable(int)> empty = new((immutable(int)*)1, 0);
+                    Span<immutable(int)> empty = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                     String[4] textData = [s"a", s"a\0b", s"a\0b", s"z"]; Span<String> text = new(textData, 4);
                     double nan = 0.0 / 0.0; double[4] numbers = [1.0, nan, nan, 2.0]; double[2] nanPattern = [nan, nan];
                     Span<double> floats = new(numbers, 4); Span<double> nans = new(nanPattern, 2);
@@ -150,8 +150,8 @@ public sealed class SpanSubsequenceSearchTests
     public void OverlappingNoncopyableOwnersAreBorrowedAndOriginalExceptionsPropagate(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
-            immutable(Owner)* sought = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
+            immutable(Owner)* sought = ((nuint)1).reinterpret<immutable(Owner)*>();
             int[7] lefts = [0, 1, 2, 1, 2, 3, 4]; int[7] rights = [0, 1, 2, 0, 0, 1, 2];
             struct Owner {
                 public int Id; public String Token;
@@ -170,7 +170,7 @@ public sealed class SpanSubsequenceSearchTests
                     Vector<Owner> owners = new(); owners.Reserve(6); int[6] ids = [1, 2, 1, 2, 3, 4];
                     for (nuint i = 0; i < 6; i++) owners.Add(new Owner(ids[i]));
                     origin = &owners[0]; sought = &owners[2]; nuint[6] tokens;
-                    for (nuint i = 0; i < 6; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 6; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     nuint capacity = owners.Capacity; int baseline = attempts; deny = true;
                     if (IndexOf<Owner>(owners.AsImmutable(), owners.AsImmutable().Slice(2, 3), Match) != 2 || calls != 7) return 1;
                     deny = false; if (attempts != baseline) return 2;
@@ -183,7 +183,7 @@ public sealed class SpanSubsequenceSearchTests
                         if (!caught || result != 99 || calls != failure + 1) return 3;
                         if (made != 6 || dead != 0 || owners.Count != 6 || owners.Capacity != capacity) return 4;
                         for (nuint i = 0; i < 6; i++)
-                            if (&owners[i] != origin + i || owners[i].Id != ids[i] || (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 5;
+                            if (&owners[i] != origin + i || owners[i].Id != ids[i] || (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 5;
                     }
                 }
                 if (made != 6 || dead != 6 || allocated != released) return 6;

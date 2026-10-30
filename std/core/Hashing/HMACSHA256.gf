@@ -43,7 +43,7 @@ public struct HMACSHA256
     {
         byte[32] inner = running.GetHash();
         SHA256 outer = outerSeed;
-        outer.TryAppend((readonly(char)*)(byte*)inner, 32);
+        outer.TryAppend(((byte*)inner).reinterpret<readonly(char)*>(), 32);
         return outer.GetHash();
     }
 }

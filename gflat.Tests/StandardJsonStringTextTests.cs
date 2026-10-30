@@ -103,7 +103,7 @@ public sealed class StandardJsonStringTextTests
                     String quoted=JsonStringText::Quote(data,3);String decoded=JsonStringText::Unquote(quoted.Data,quoted.Length);
                     if(decoded.Data==&data[0]||decoded.Data==quoted.Data||decoded.Length!=3)return 5;
                     data[0]='X';quoted.Clear();if(decoded[0]!='a'||decoded[1]!='\0'||decoded[2]!='b')return 6;
-                    if(!JsonStringText::Quote((readonly(char)*)1,0).StartsWith("\"\""))return 7;
+                    if(!JsonStringText::Quote(((nuint)1).reinterpret<readonly(char)*>(),0).StartsWith("\"\""))return 7;
                     before=allocations;String empty=JsonStringText::Unquote("\"\"",2);
                     if(!empty.IsEmpty||allocations!=before)return 8;
                     String emptyQuoted=JsonStringText::Quote(absent);

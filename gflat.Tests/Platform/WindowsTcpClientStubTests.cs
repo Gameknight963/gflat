@@ -50,7 +50,7 @@ public sealed class WindowsTcpClientStubTests
     {
         ("private extern int WSAStartup(ushort version, void* data) nothrow;","""
         private int WSAStartup(ushort version,void* data)nothrow{
-            Probe::Starts++;if(version!=(ushort)514||(nuint)data%8!=0){Probe::Bad=true;return 10022;}
+            Probe::Starts++;if(version!=(ushort)514||(data).reinterpret<nuint>()%8!=0){Probe::Bad=true;return 10022;}
             if(Probe::StartupError!=0){Probe::LastError=9999;return Probe::StartupError;}
             Probe::Active++;*((ushort*)data)=Probe::Version;return 0;
         }
@@ -74,8 +74,8 @@ public sealed class WindowsTcpClientStubTests
         private int connect(nuint socket,readonly(void)* address,int length)nothrow{
             Probe::Connects++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             int expectedLength=16;if(Probe::Family==23)expectedLength=28;
-            if(length!=expectedLength||(nuint)address%4!=0){Probe::Bad=true;return Probe::Fail(10022);}
-            readonly(byte)* data=(readonly(byte)*)address;
+            if(length!=expectedLength||(address).reinterpret<nuint>()%4!=0){Probe::Bad=true;return Probe::Fail(10022);}
+            readonly(byte)* data=address.reinterpret<readonly(byte)*>();
             byte[16] ipv6=[(byte)0x20,(byte)1,(byte)0x0d,(byte)0xb8,(byte)0x12,(byte)0x34,(byte)0x56,(byte)0x78,(byte)0x90,(byte)0xab,(byte)0xcd,(byte)0xef,(byte)1,(byte)2,(byte)3,(byte)4];
             for(int index=0;index<length;index++){
                 byte expected=0;if(index==0)expected=(byte)Probe::Family;else if(index==2)expected=(byte)0x12;else if(index==3)expected=(byte)0x34;
@@ -91,7 +91,7 @@ public sealed class WindowsTcpClientStubTests
             Probe::Reads++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             if(count<=0||flags!=0)Probe::Bad=true;
             if(Probe::ExpectCap&&count!=2147483647)Probe::Bad=true;
-            if(Probe::CheckAddress&&((nuint)data!=Probe::Base+(nuint)Probe::Received||count!=Probe::Total-Probe::Received))Probe::Bad=true;
+            if(Probe::CheckAddress&&((data).reinterpret<nuint>()!=Probe::Base+(nuint)Probe::Received||count!=Probe::Total-Probe::Received))Probe::Bad=true;
             if(Probe::ReadMode==2)return Probe::Fail(10054);
             if(Probe::ReadMode==1||(Probe::ReadMode==3&&Probe::Received==3))return 0;
             int amount=count;if(amount>2)amount=2;if(Probe::ReadMode==3&&amount>3-Probe::Received)amount=3-Probe::Received;
@@ -104,7 +104,7 @@ public sealed class WindowsTcpClientStubTests
             Probe::Writes++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             if(count<=0||flags!=0)Probe::Bad=true;
             if(Probe::ExpectCap&&count!=2147483647)Probe::Bad=true;
-            if(Probe::CheckAddress&&((nuint)data!=Probe::Base+(nuint)Probe::Sent||count!=Probe::Total-Probe::Sent))Probe::Bad=true;
+            if(Probe::CheckAddress&&((data).reinterpret<nuint>()!=Probe::Base+(nuint)Probe::Sent||count!=Probe::Total-Probe::Sent))Probe::Bad=true;
             if(Probe::WriteMode==2||(Probe::WriteMode==3&&Probe::Sent>=2))return Probe::Fail(10054);
             if(Probe::WriteMode==1)return 0;
             int amount=count;if(amount>2)amount=2;
@@ -155,9 +155,9 @@ public sealed class WindowsTcpClientStubTests
             Probe::Reset();
             {
                 TcpClient closed=new();if(closed.IsOpen)return 1;closed.Close();closed.Close();int closedErrors=0;
-                try{closed.Read((char*)1,0);}catch(ref IOException error){closedErrors++;}
-                try{closed.ReadExactly((char*)1,0);}catch(ref IOException error){closedErrors++;}
-                try{closed.Write((readonly(char)*)1,0);}catch(ref IOException error){closedErrors++;}
+                try{closed.Read(((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){closedErrors++;}
+                try{closed.ReadExactly(((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){closedErrors++;}
+                try{closed.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref IOException error){closedErrors++;}
                 try{closed.ShutdownSend();}catch(ref IOException error){closedErrors++;}
                 if(closedErrors!=4)return 2;
             }
@@ -208,10 +208,10 @@ public sealed class WindowsTcpClientStubTests
             Probe::Reset();
             {
                 TcpClient value=TcpClient::Connect(Endpoint());int before=Probe::Reads;
-                if(value.Read((char*)1,0)!=0)return 18;value.ReadExactly((char*)1,0);value.Write((readonly(char)*)1,0);
+                if(value.Read(((nuint)1).reinterpret<char*>(),0)!=0)return 18;value.ReadExactly(((nuint)1).reinterpret<char*>(),0);value.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                 if(Probe::Reads!=before||Probe::Writes!=0)return 19;
                 char[8] buffer;for(nuint index=0;index<8;index++)buffer[index]=(char)165;
-                Probe::Base=(nuint)&buffer[1];Probe::Total=6;Probe::CheckAddress=true;
+                Probe::Base=(&buffer[1]).reinterpret<nuint>();Probe::Total=6;Probe::CheckAddress=true;
                 if(value.Read(&buffer[1],6)!=2||Probe::Reads!=1||buffer[1]!=(char)48||buffer[2]!=(char)49||buffer[3]!=(char)165)return 20;
                 Probe::Received=0;Probe::Reads=0;value.ReadExactly(&buffer[1],6);
                 if(Probe::Reads!=3)return 21;for(nuint index=0;index<6;index++)if(buffer[index+1]!=(char)(48+index))return 22;
@@ -222,7 +222,7 @@ public sealed class WindowsTcpClientStubTests
                 if(Probe::Reads!=3||Probe::Received!=6)return 37;
                 for(nuint index=0;index<6;index++)if(buffer[index+1]!=(char)(48+index))return 38;
                 if(buffer[0]!=(char)165||buffer[7]!=(char)165)return 39;
-                std::IO::ReadExactly(input,(char*)1,0);
+                std::IO::ReadExactly(input,((nuint)1).reinterpret<char*>(),0);
                 if(Probe::Reads!=3||Probe::Received!=6)return 40;
                 for(nuint index=0;index<8;index++)buffer[index]=(char)165;
                 Probe::Received=0;Probe::Reads=0;Probe::ReadMode=3;Probe::Total=5;caught=false;
@@ -236,7 +236,7 @@ public sealed class WindowsTcpClientStubTests
                 Probe::ExpectCap=true;caught=false;try{value.Read(buffer,(nuint)2147483648ul);}catch(ref SocketException error){caught=error.GetCode()==10054;}
                 if(!caught)return 29;Probe::ExpectCap=false;
                 for(nuint index=0;index<6;index++)buffer[index+1]=(char)(index*37);
-                Probe::Base=(nuint)&buffer[1];Probe::Total=6;Probe::CheckAddress=true;Probe::WriteMode=0;Probe::Sent=0;
+                Probe::Base=(&buffer[1]).reinterpret<nuint>();Probe::Total=6;Probe::CheckAddress=true;Probe::WriteMode=0;Probe::Sent=0;
                 value.Write(&buffer[1],6);if(Probe::Writes!=3||Probe::Sent!=6)return 30;
                 Probe::Sent=0;Probe::WriteMode=3;caught=false;
                 try{value.Write(&buffer[1],6);}catch(ref SocketException error){caught=error.GetCode()==10054;}

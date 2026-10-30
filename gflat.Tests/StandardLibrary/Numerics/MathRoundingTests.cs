@@ -46,10 +46,10 @@ public sealed class MathRoundingTests
                     {{integer}}[5] row;{{scalar}}[4] actual;
                     while(true){
                         nuint read=fread((void*)&row[0],1,{{recordSize}},file!);if(read==0)break;if(read!={{recordSize}})return 2;
-                        {{scalar}} value=*(({{scalar}}*)&row[0]);
+                        {{scalar}} value=(row[0]).reinterpret<{{scalar}}>();
                         actual[0]=Math::Truncate(value);actual[1]=Math::Floor(value);
                         actual[2]=Math::Ceiling(value);actual[3]=Math::Round(value);
-                        for(nuint i=0;i<4;i++)if(*(({{integer}}*)&actual[i])!=row[i+1])return (int)i+3;
+                        for(nuint i=0;i<4;i++)if((actual[i]).reinterpret<{{integer}}>()!=row[i+1])return (int)i+3;
                     }
                     if(ferror(file!)!=0)return 7;return fclose(file!);
                 }

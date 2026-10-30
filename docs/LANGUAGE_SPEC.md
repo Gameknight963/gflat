@@ -188,6 +188,60 @@ Enums are distinct integral types, optionally with an underlying type such as `u
 
 Enum storage currently supports integer underlying types up to 64 bits; `extralong` enum storage is not yet supported. Each member value, including an automatically incremented value, must fit the selected underlying type. Different member names may share the same numeric value.
 
+## Explicit conversions and representation casts
+
+An ordinary `(Target)value` cast requests a conversion or a supported view. Numeric
+casts convert values. Related class/interface views adjust the existing reference;
+raw `void*` recovery, matching pointer qualification changes, and exact-element
+array decay remain ordinary casts. Unrelated pointer views, pointer/integer address
+conversions, and function-pointer signature changes require explicit reinterpretation.
+
+`value.reinterpret<Target>()` preserves the representation. Numeric and enum operands
+must have equal storage size. Raw pointers and function pointers may be reinterpreted
+as one another or as pointer-sized integers. Arrays and object values are not bitcast,
+and managed references and fat interface pointers cannot be stripped into raw bits.
+The programmer remains responsible for alignment, valid storage, lifetime, and the
+actual function ABI. A raw address may point to an object containing managed fields;
+reinterpreting the address does not convert or untrack those fields.
+
+```csharp
+int main() {
+    uint bits = 1065353216u;
+    float number = bits.reinterpret<float>();
+    int value = 42;
+    nuint address = (&value).reinterpret<nuint>();
+    int* restored = address.reinterpret<int*>();
+    if (number != 1.0f || *restored != 42) return 1;
+    return 0;
+}
+```
+
+Non-null pointer results retain the ordinary checked-cast behavior: known zero is
+rejected and a runtime null traps. Required constant evaluation supports numeric
+representations, except single-precision NaN payloads, which currently require
+runtime evaluation. Symbolic constant addresses cannot become host-process integers.
+
+A class or struct can declare an explicit conversion operator. Exactly one ordinary
+value parameter supplies the source; the return type supplies the target. One endpoint
+must be the containing type. Operators are public static methods, can be `const` or
+`nothrow`, and use ordinary copying, movement, cleanup, and exception propagation.
+Selection matches the source and target exactly; it does not chain user conversions
+or silently insert them into assignments and calls. Built-in conversions cannot be
+replaced. Duplicate or ambiguous source/target pairs are errors.
+
+```csharp
+struct Distance {
+    public int Value;
+    public Distance(int value) { Value = value; }
+    public static explicit operator Distance(int value) => new Distance(value);
+    public static explicit operator int(Distance value) => value.Value;
+}
+int main() {
+    Distance distance = (Distance)42;
+    return (int)distance - 42;
+}
+```
+
 ## Inferred locals
 
 `var name = expression;` infers a local's concrete type from its initializer.
@@ -264,6 +318,18 @@ declared in a namespace or attached by reopening the interface. Each primitive
 and interface specialization has at most one implementation. Different
 interfaces can independently implement the same primitive.
 
+A plain implementation is available through an interface reference or generic
+constraint. Prefixing the block with `extension implementation` also exposes its
+members through ordinary extension lookup. This opt-in follows namespace visibility
+and extension ambiguity rules; it does not add inheritance to the primitive.
+
+An interface can also be used as an immediate cast view, such as
+`((IHashable)value).GetHashCode()` or `((IHashable)42).GetHashCode()`. The receiver is
+borrowed, with an ordinary full-expression temporary when necessary. No boxing or
+heap allocation is introduced. A bare interface view cannot be stored, returned,
+or have its address taken. Use `IHashable*` for an explicitly stored interface
+reference and take responsibility for its receiver's lifetime.
+
 In a generic interface, the block must name the exact enclosing interface
 specialization, for example `implementation int : IEquatable<int>`. The block
 does not inherit the enclosing interface's open type parameters. Generic or
@@ -319,46 +385,48 @@ nontrivial copying or destruction.
 
 ## Extension methods
 
-A namespace function can mark its first parameter with contextual `this`:
+An extension block adds borrowed instance-style methods to an existing value type:
 
 ```csharp
+using Numbers;
 namespace Numbers {
-    int Plus(this int value, int extra = 2) => value + extra;
+    extension int {
+        public readonly int Plus(int extra = 2) => *this + extra;
+    }
 }
 
 int main() {
     int value = 40;
-    return Numbers::Plus(value);
+    return value.Plus();
 }
 ```
 
-With `using Numbers;`, the same function can be called as `value.Plus()`.
 Current and enclosing namespaces and the source file's using directives determine
-which extensions are visible. Extensions remain ordinary functions with ordinary
-signatures: no object metadata or different calling convention is introduced.
-The receiver evaluates once, before the remaining arguments.
+which extensions are visible. The receiver evaluates once before the arguments.
+Calling an extension borrows the receiver; it never implicitly copies or consumes
+it. A temporary remains alive until the call finishes. Raw and managed references
+borrow their pointee, as ordinary instance calls do. Nullable references require
+the usual null check or explicit suppression before calling a member.
 
-`this T` passes a value using the usual copy or transfer rules. `this ref T`
-borrows mutable existing storage, and `this ref immutable(T)` borrows an immutable
-view. Ref receivers cannot be temporaries, value properties, or storage inside
-managed objects. A pointer receiver can instead be declared explicitly as
-`this T*` or `this T^`; nullable receiver parameters are allowed. Ref arguments
-retain the slot's declared nullability, even after a null guard narrows a read.
+Inside the block, `this` points to the borrowed value. The target is a value type,
+not a pointer variable: `extension int*` is rejected. Use an ordinary function
+with a `ref int*` parameter when an operation must replace a pointer slot.
+There is no `this` parameter modifier. An ordinary function remains available
+when passing or transferring the receiver as an explicit argument is desired.
 
-Callable instance members take priority and retain their normal diagnostics.
-Missing or non-callable members allow extension lookup. Exact receiver candidates
-are considered first; only when none accepts the receiver does a non-null raw
-pointer try one pointee dereference, including borrowing its existing storage.
-This does not chase multiple pointer levels or borrow into managed storage.
-Overloads within the chosen receiver tier use normal argument ranking. Mixing
-value and ref receiver shapes within that tier is ambiguous. Qualify the ordinary
-function call when an explicit choice is needed.
+Bare `readonly` and `immutable` qualify extension receivers just as they qualify
+ordinary instance methods. Return qualifiers remain independent. Callable
+instance members take priority and retain their normal diagnostics; missing or
+non-callable members allow extension lookup. Applicable overloads use normal
+argument ranking, without separate value-versus-reference receiver tiers.
 
-An extension receiver must be first and cannot be const or optional. Only
-namespace functions support the marker. Generic extensions use existing generic
-constraints and inference, including overloaded generic families.
-Extensions do not add properties, operators, bound method groups, or static
-type calls such as `int.Parse()`. Replacements must preserve the receiver marker.
+Receiver type parameters belong to the block; additional method parameters
+belong to the method. For example, `extension<T> Box<T>` can contain
+`public U Map<U>(U(T)* selector)`; a call infers T from the Box and may specify
+only U as `box.Map<long>(selector)`. Constraints and declaration-scope imports
+follow the existing generic rules. Extension declarations add no object metadata
+or dynamic dispatch. They do not add properties, operators, bound method groups,
+or static type calls such as `int.Parse()`.
 
 ## Weak defaults and explicit replacements
 

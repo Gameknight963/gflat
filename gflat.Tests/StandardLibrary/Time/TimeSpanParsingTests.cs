@@ -97,12 +97,12 @@ public sealed class TimeSpanParsingTests
                     }
                     for(nuint count=27;count<=40;count++){
                         TimeSpan value=TimeSpan::FromTicks(73l);
-                        if(TimeSpan::TryParse((readonly(char)*)1,count,&value)||value.Ticks!=0l)return 7;
+                        if(TimeSpan::TryParse(((nuint)1).reinterpret<readonly(char)*>(),count,&value)||value.Ticks!=0l)return 7;
                     }
                     TimeSpan value=TimeSpan::FromTicks(73l);
-                    if(TimeSpan::TryParse((readonly(char)*)1,0,&value)||value.Ticks!=0l)return 8;
+                    if(TimeSpan::TryParse(((nuint)1).reinterpret<readonly(char)*>(),0,&value)||value.Ticks!=0l)return 8;
                     value=TimeSpan::FromTicks(73l);
-                    if(TimeSpan::TryParse((readonly(char)*)1,(nuint)0-(nuint)1,&value)||value.Ticks!=0l)return 9;
+                    if(TimeSpan::TryParse(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1,&value)||value.Ticks!=0l)return 9;
                     char[27] unterminated;for(nuint i=0;i<27;i++)unterminated[i]='0';
                     value=TimeSpan::FromTicks(73l);if(TimeSpan::TryParse(unterminated,&value)||value.Ticks!=0l)return 10;
                     // Counted embedded NUL is invalid; C-string semantics stop at that byte.
@@ -124,7 +124,7 @@ public sealed class TimeSpanParsingTests
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* value)nothrow{frees++;}}
             int main(){
-                TimeSpan[4] aligned;char* input=(char*)&aligned[0];
+                TimeSpan[4] aligned;char* input=(&aligned[0]).reinterpret<char*>();
                 readonly(char)* endpoint="-10675199.02:48:05.4775808";long minimum=-9223372036854775807l-1l;
                 readonly(char)* shortFraction="000000000.00:00:00.0000001";
                 for(int offset=0;offset<=3;offset++){
@@ -141,9 +141,9 @@ public sealed class TimeSpanParsingTests
                 TimeSpan value=TimeSpan::Parse(endpoint);TimeSpan counted=TimeSpan::Parse(endpoint,26);
                 if(value.Ticks!=minimum||counted.Ticks!=minimum)return 5;
                 value=TimeSpan::FromTicks(73l);
-                if(TimeSpan::TryParse((readonly(char)*)1,0,&value)||value.Ticks!=0l)return 6;
+                if(TimeSpan::TryParse(((nuint)1).reinterpret<readonly(char)*>(),0,&value)||value.Ticks!=0l)return 6;
                 value=TimeSpan::FromTicks(73l);
-                if(TimeSpan::TryParse((readonly(char)*)1,27,&value)||value.Ticks!=0l)return 7;
+                if(TimeSpan::TryParse(((nuint)1).reinterpret<readonly(char)*>(),27,&value)||value.Ticks!=0l)return 7;
                 char[26] output;nuint written=91;if(!counted.TryFormat(output,26,ref written)||written!=26)return 8;
                 for(nuint i=0;i<26;i++)if(output[i]!=endpoint[i])return 9;
                 if(allocations!=0||frees!=0)return 10;return 0;

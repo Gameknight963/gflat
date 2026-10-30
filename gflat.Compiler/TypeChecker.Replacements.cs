@@ -86,7 +86,7 @@ public partial class TypeChecker
                 {
                     // Validate receiver metadata before implementation selection can
                     // discard a weak body, while preserving later editor analysis.
-                    if (method.IsReadOnly && (owner == null || method.IsStatic))
+                    if (method.IsReadOnly && (owner == null && method.ExtensionReceiverType == null || method.IsStatic))
                         AnalyzeSafely(() => throw new TypeCheckException("Readonly methods require an instance receiver", method.Span));
                     if (owner == null && scope == _globalScope && method.Name is "__gflat_alloc" or "__gflat_free")
                         throw new TypeCheckException("Legacy allocator hooks are no longer supported; replace Memory::Allocate and Memory::Free together", method.Line);

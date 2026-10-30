@@ -80,12 +80,12 @@ public sealed class OwningCodecTests
                 {
                     String output=s"unchanged";readonly(char)* original=output.Data;nuint capacity=output.Capacity;int caught=0;
                     {{cases}}
-                    try{output=Base64UrlText::Encode((readonly(char)*)1,(nuint)0-1);return 2;}catch(ref Exception error){caught++;}
+                    try{output=Base64UrlText::Encode(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-1);return 2;}catch(ref Exception error){caught++;}
                     if(caught!={{invalid.Length+1}}||output.Data!=original||output.Length!=9||output.Capacity!=capacity)return 3;
                     if(!output.StartsWith("unchanged"))return 4;
                     int before=allocations;deny=true;
-                    String emptyEncoded=Base64UrlText::Encode((readonly(char)*)1,0);
-                    String emptyDecoded=Base64UrlText::Decode((readonly(char)*)1,0);deny=false;
+                    String emptyEncoded=Base64UrlText::Encode(((nuint)1).reinterpret<readonly(char)*>(),0);
+                    String emptyDecoded=Base64UrlText::Decode(((nuint)1).reinterpret<readonly(char)*>(),0);deny=false;
                     if(!emptyEncoded.IsEmpty||!emptyDecoded.IsEmpty||allocations!=before)return 5;
                     if(emptyEncoded.Data[0]!='\0'||emptyDecoded.Data[0]!='\0')return 6;
                 }

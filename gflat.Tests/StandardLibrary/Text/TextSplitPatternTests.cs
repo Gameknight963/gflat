@@ -117,14 +117,14 @@ public sealed class TextSplitPatternTests
             }
             int main(){
                 Span<readonly(char)> empty=new();Span<readonly(char)> before=new("stale",5);Span<readonly(char)> after=new("stale",5);
-                if(!empty.TrySplitOnce((readonly(char)*)1,0,ref before,ref after)||before.Data!=null||after.Data!=null)return 1;
-                if(empty.TrySplitOnce((readonly(char)*)1,1,ref before,ref after)||before.Data!=null||after.Data!=null)return 2;
+                if(!empty.TrySplitOnce(((nuint)1).reinterpret<readonly(char)*>(),0,ref before,ref after)||before.Data!=null||after.Data!=null)return 1;
+                if(empty.TrySplitOnce(((nuint)1).reinterpret<readonly(char)*>(),1,ref before,ref after)||before.Data!=null||after.Data!=null)return 2;
                 if(!empty.TrySplitOnce(empty,ref before,ref after)||before.Data!=null||after.Data!=null)return 3;
                 char[1] storage=['x'];Span<readonly(char)> nonnullEmpty=new(storage,0);Span<readonly(char)> source=new(storage,1);
                 if(!nonnullEmpty.TrySplitOnce(empty,ref before,ref after)||before.Data!=null||after.Data!=&storage[0])return 4;
                 if(!source.TrySplitOnce(empty,ref before,ref after)||before.Data!=null||after.Data!=source.Data||after.Length!=1)return 5;
-                if(source.TrySplitOnce((readonly(char)*)1,2,ref before,ref after)||before.Data!=null||after.Data!=null)return 6;
-                if(source.TrySplitOnce((readonly(char)*)1,(nuint)0-(nuint)1,ref before,ref after))return 7;
+                if(source.TrySplitOnce(((nuint)1).reinterpret<readonly(char)*>(),2,ref before,ref after)||before.Data!=null||after.Data!=null)return 6;
+                if(source.TrySplitOnce(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1,ref before,ref after))return 7;
                 if(allocations!=0)return 8;return 0;
             }
             """,[],optimization));

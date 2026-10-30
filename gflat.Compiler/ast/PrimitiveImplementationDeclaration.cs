@@ -7,5 +7,6 @@ public sealed class PrimitiveImplementationDeclaration(TypeExpression target, Ty
     public TypeExpression Target { get; } = target;
     public TypeExpression? Contract { get; } = contract;
     public List<AstNode> Members { get; } = members;
+    public bool ExposesExtensions { get; set; }
     public override void Accept(IVisitor visitor) => visitor.Visit(this);
 }

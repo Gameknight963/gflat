@@ -83,7 +83,7 @@ public sealed class SpanIncludesTests
     public void ExactValuesFirstCallbackTraceEarlyFailurePreflightsAndAliasedSpansArePreserved(int optimization)
         => Run(Allocator + """
             int calls = 0; int limit = 5; int[5] rights = [0, 0, 1, 2, 2];
-            immutable(int)* origin = (immutable(int)*)1; immutable(int)* target = (immutable(int)*)1;
+            immutable(int)* origin = ((nuint)1).reinterpret<immutable(int)*>(); immutable(int)* target = ((nuint)1).reinterpret<immutable(int)*>();
             int Unexpected(immutable(int)* left, immutable(int)* right) { calls++; throw new Exception("unexpected comparison", 99); }
             int Compare(immutable(int)* left, immutable(int)* right) {
                 if (calls >= limit || left != origin + calls || right != target + rights[calls]) throw new Exception("comparison order", 98);
@@ -123,7 +123,7 @@ public sealed class SpanIncludesTests
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
                 ~Owner() { dead++; }
             }
-            immutable(Owner)* origin = (immutable(Owner)*)1; immutable(Owner)* target = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>(); immutable(Owner)* target = ((nuint)1).reinterpret<immutable(Owner)*>();
             int Compare(immutable(Owner)* left, immutable(Owner)* right) {
                 if (calls >= 5 || left != origin + calls || right != target + rights[calls]) throw new Exception("owner address", 99);
                 int position = calls; calls++; if (position == failAt) throw new Exception("original comparison", 73);
@@ -136,8 +136,8 @@ public sealed class SpanIncludesTests
                     for (nuint i = 0; i < 5; i++) values.Add(new Owner(ids[i]));
                     for (nuint i = 0; i < 3; i++) required.Add(new Owner(wanted[i]));
                     origin = &values[0]; target = &required[0]; nuint capacity = values.Capacity; nuint requiredCapacity = required.Capacity;
-                    for (nuint i = 0; i < 5; i++) tokens[i] = (nuint)values[i].Token.Data;
-                    for (nuint i = 0; i < 3; i++) requiredTokens[i] = (nuint)required[i].Token.Data;
+                    for (nuint i = 0; i < 5; i++) tokens[i] = (values[i].Token.Data).reinterpret<nuint>();
+                    for (nuint i = 0; i < 3; i++) requiredTokens[i] = (required[i].Token.Data).reinterpret<nuint>();
                     int before = attempts; deny = true;
                     if (!Includes<Owner>(values.AsImmutable(), required.AsImmutable(), Compare) || calls != 5) return 1;
                     deny = false; if (attempts != before) return 2;
@@ -147,8 +147,8 @@ public sealed class SpanIncludesTests
                         catch (ref Exception error) { caught = error.GetCode() == 73 && CString::Equals(error.GetMessage(), "original comparison"); }
                         if (!caught || result || calls != failure + 1 || made != 8 || dead != 0) return 3;
                         if (values.Count != 5 || required.Count != 3 || values.Capacity != capacity || required.Capacity != requiredCapacity) return 4;
-                        for (nuint i = 0; i < 5; i++) if (&values[i] != origin + i || values[i].Id != ids[i] || (nuint)values[i].Token.Data != tokens[i] || values[i].Token.Length != 5) return 5;
-                        for (nuint i = 0; i < 3; i++) if (&required[i] != target + i || required[i].Id != wanted[i] || (nuint)required[i].Token.Data != requiredTokens[i] || required[i].Token.Length != 5) return 6;
+                        for (nuint i = 0; i < 5; i++) if (&values[i] != origin + i || values[i].Id != ids[i] || (values[i].Token.Data).reinterpret<nuint>() != tokens[i] || values[i].Token.Length != 5) return 5;
+                        for (nuint i = 0; i < 3; i++) if (&required[i] != target + i || required[i].Id != wanted[i] || (required[i].Token.Data).reinterpret<nuint>() != requiredTokens[i] || required[i].Token.Length != 5) return 6;
                     }
                 }
                 if (made != 8 || dead != 8 || allocations != releases) return 7;

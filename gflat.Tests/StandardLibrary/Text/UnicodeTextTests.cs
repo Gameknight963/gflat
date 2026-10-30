@@ -53,8 +53,8 @@ public sealed class UnicodeTextTests
             for(int i=0;i<units.Length;i++)code.AppendLine($"if(units[{i}]!=(ushort){units[i]})return 7;");
         }
         code.AppendLine("""
-            {int before=allocations;String empty=UnicodeText::FromUtf16((readonly(ushort)*)1,0);
-             Vector<ushort> zero=UnicodeText::ToUtf16((readonly(char)*)1,0);
+            {int before=allocations;String empty=UnicodeText::FromUtf16(((nuint)1).reinterpret<readonly(ushort)*>(),0);
+             Vector<ushort> zero=UnicodeText::ToUtf16(((nuint)1).reinterpret<readonly(char)*>(),0);
              if(!empty.IsEmpty||!zero.IsEmpty||allocations!=before)return 8;}
             if(allocations!=releases)return 9;return 0;}
             """);

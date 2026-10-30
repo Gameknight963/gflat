@@ -166,14 +166,14 @@ public sealed class Base32Tests
                 if(Base32::TryGetEncodedLength(boundary+1,ref written)||written!=0)return 2;
                 if(Base32::TryGetEncodedLength(maximum,ref written)||written!=0)return 3;
                 char[4] output;for(nuint i=0;i<4;i++)output[i]='?';
-                if(Base32::TryEncode((char*)1,maximum,&output[1],maximum,ref written)||written!=0)return 4;
-                if(Base32::TryEncode((char*)1,boundary,&output[1],0,ref written)||written!=0)return 5;
+                if(Base32::TryEncode(((nuint)1).reinterpret<char*>(),maximum,&output[1],maximum,ref written)||written!=0)return 4;
+                if(Base32::TryEncode(((nuint)1).reinterpret<char*>(),boundary,&output[1],0,ref written)||written!=0)return 5;
                 for(nuint count=1;count<8;count++){
-                    if(Base32::TryGetDecodedLength((char*)1,count,ref written)||written!=0)return 6;
-                    if(Base32::TryDecode((char*)1,count,&output[1],2,ref written)||written!=0)return 7;
+                    if(Base32::TryGetDecodedLength(((nuint)1).reinterpret<char*>(),count,ref written)||written!=0)return 6;
+                    if(Base32::TryDecode(((nuint)1).reinterpret<char*>(),count,&output[1],2,ref written)||written!=0)return 7;
                 }
-                if(!Base32::TryEncode((char*)1,0,&output[1],0,ref written)||written!=0)return 8;
-                if(!Base32::TryDecode((char*)1,0,&output[1],0,ref written)||written!=0)return 9;
+                if(!Base32::TryEncode(((nuint)1).reinterpret<char*>(),0,&output[1],0,ref written)||written!=0)return 8;
+                if(!Base32::TryDecode(((nuint)1).reinterpret<char*>(),0,&output[1],0,ref written)||written!=0)return 9;
                 if(Base32::TryDecode("MZXW6YTB",8,&output[1],2,ref written)||written!=0)return 10;
                 for(nuint i=0;i<4;i++)if(output[i]!='?')return 11;
                 return 0;

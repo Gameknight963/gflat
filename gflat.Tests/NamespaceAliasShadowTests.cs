@@ -12,7 +12,8 @@ public sealed class NamespaceAliasShadowTests
                 interface IProtocol {int Marker{get;}}
                 struct Box<T> {public int Marker;}
                 struct Other<T> {public int Marker;}
-                void Second<T>(this ref Box<T> target){}
+                void Second<T>(ref Box<T> target){}
+                extension<T> Box<T> { public void Second() {} }
             }
             namespace Caller {
                 alias Box=Library::Other<int>;

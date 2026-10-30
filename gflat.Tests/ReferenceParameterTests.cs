@@ -8,7 +8,7 @@ public class ReferenceParameterTests
     [InlineData("void F(ref R borrowed) { R owned = move borrowed; }")]
     [InlineData("struct Box { public Box(ref R borrowed) { R owned = move borrowed; } }")]
     [InlineData("void F() { void(ref R)* action = (ref R borrowed) => { R owned = move borrowed; }; }")]
-    [InlineData("void Consume(this ref R borrowed) { R owned = move borrowed; }")]
+    [InlineData("void Consume(ref R borrowed) { R owned = move borrowed; } extension R { public void AttemptConsume() { Consume(ref *this); } }")]
     [InlineData("void F<T>(ref T borrowed) { T owned = move borrowed; } int main() { R value = new R(65); F(ref value); return 0; }")]
     public void OwnedValuesCannotBeConsumedThroughBorrowedParameterBindings(string declaration)
     {

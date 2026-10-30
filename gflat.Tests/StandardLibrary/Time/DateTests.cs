@@ -96,7 +96,7 @@ public sealed class DateTests
                 String direct=new();date.Format(&direct);if(!CString::Equals(direct.Data,"2024-02-29"))return 3;
                 FailWriter output=new();try{date.Format(&output);return 4;}catch(ref Exception error){}
                 if(date.Year!=2024||date.Month!=2||date.Day!=29)return 5;
-                nuint written=99;if(date.TryFormat((char*)1,0,ref written)||written!=0)return 6;
+                nuint written=99;if(date.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 6;
                 HashMap<Date,int> map=new();Date key=new(2024,2,29);map.Add(key,17);
                 if(map[&key]!=17)return 7;return 0;
             }

@@ -116,15 +116,15 @@ public sealed class DequeIndexTests
                     {
                         Deque<Owner> values=new();values.Reserve(4);for(int i=1;i<=4;i++)values.AddLast(new Owner(i));
                         values.RemoveFirst();values.RemoveFirst();values.AddLast(new Owner(5));values.AddLast(new Owner(6));
-                        nuint[4] addresses;for(nuint i=0;i<4;i++)addresses[i]=(nuint)&values[i];nuint capacity=values.Capacity;int baseline=allocated-released;
+                        nuint[4] addresses;for(nuint i=0;i<4;i++)addresses[i]=(&values[i]).reinterpret<nuint>();nuint capacity=values.Capacity;int baseline=allocated-released;
                         failCopy=true;bool caught=false;
                         try{values.Insert(indices[sample],values[3]);}catch(ref Exception error){if(error.GetCode()!=71)return 1;caught=true;}failCopy=false;
                         if(!caught||values.Count!=4||values.Capacity!=capacity||liveOwners!=4||allocated-released!=baseline)return 2;
-                        for(nuint i=0;i<4;i++)if((nuint)&values[i]!=addresses[i]||values[i].Id!=(int)i+3)return 3;
+                        for(nuint i=0;i<4;i++)if((&values[i]).reinterpret<nuint>()!=addresses[i]||values[i].Id!=(int)i+3)return 3;
                         Owner incoming=new(7);failAfter=0;caught=false;int deniedBefore=denied;
                         try{values.Insert(indices[sample],move incoming);}catch(ref BadAllocException error){caught=true;}failAfter=-1;
                         if(!caught||denied!=deniedBefore+1||values.Count!=4||values.Capacity!=capacity||liveOwners!=4||allocated-released!=baseline)return 4;
-                        for(nuint i=0;i<4;i++)if((nuint)&values[i]!=addresses[i]||values[i].Id!=(int)i+3)return 5;
+                        for(nuint i=0;i<4;i++)if((&values[i]).reinterpret<nuint>()!=addresses[i]||values[i].Id!=(int)i+3)return 5;
                         int beforeCopies=copies;values.Insert(indices[sample],values[3]);
                         if(values.Count!=5||values[indices[sample]].Id!=6||copies!=beforeCopies+1||liveOwners!=5)return 6;
                         nuint originalIndex=3;if(indices[sample]<=3)originalIndex++;
@@ -135,10 +135,10 @@ public sealed class DequeIndexTests
                             caught=false;try{kept=values.RemoveAt(bad[i]);}catch(ref Exception error){caught=true;}
                             if(!caught||kept.Id!=88||kept.Token.Data!=keptData||values.Count!=5)return 9;
                         }
-                        nuint front=(nuint)&values[0];capacity=values.Capacity;nuint[2] badInsert=[values.Count+1,(nuint)0-1];
+                        nuint front=(&values[0]).reinterpret<nuint>();capacity=values.Capacity;nuint[2] badInsert=[values.Count+1,(nuint)0-1];
                         for(nuint i=0;i<2;i++){
                             caught=false;try{values.Insert(badInsert[i],new Owner(99));}catch(ref Exception error){caught=true;}
-                            if(!caught||values.Count!=5||values.Capacity!=capacity||(nuint)&values[0]!=front||liveOwners!=6)return 10;
+                            if(!caught||values.Count!=5||values.Capacity!=capacity||(&values[0]).reinterpret<nuint>()!=front||liveOwners!=6)return 10;
                         }
                     }
                     if(liveOwners!=0||allocated!=released)return 11;

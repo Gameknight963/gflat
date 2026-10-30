@@ -38,8 +38,8 @@ public class AlignmentTests
             int main() {
                 Outer[2] items;
                 if (alignof(Wide) != 16 || alignof(Outer) != 16) return 1;
-                if ((nuint)&items[0].value - (nuint)&items[0] != (nuint)16) return 2;
-                if ((nuint)&items[1] - (nuint)&items[0] != (nuint)sizeof(Outer)) return 3;
+                if ((&items[0].value).reinterpret<nuint>() - (&items[0]).reinterpret<nuint>() != (nuint)16) return 2;
+                if ((&items[1]).reinterpret<nuint>() - (&items[0]).reinterpret<nuint>() != (nuint)sizeof(Outer)) return 3;
                 if (A != 8 || Measure<short>() != 2 || alignof(Small) != 2) return 4;
                 int[alignof(double)] buffer;
                 if (sizeof(buffer) != 32 || alignof(buffer) != 4) return 5;

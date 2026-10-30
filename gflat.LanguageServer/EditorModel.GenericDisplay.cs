@@ -13,6 +13,7 @@ public sealed partial class EditorModel
         ClassDeclaration type => type.GenericParameters,
         StructDeclaration type => type.GenericParameters,
         InterfaceDeclaration type => type.GenericParameters,
+        ExtensionDeclaration block => block.GenericParameters,
         _ => []
     }).Select(parameter => parameter.Name).ToHashSet();
 

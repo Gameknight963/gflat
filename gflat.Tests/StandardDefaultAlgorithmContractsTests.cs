@@ -29,10 +29,10 @@ public sealed class StandardDefaultAlgorithmContractsTests
         }
         body.Append("""
             {ulong[5] bits=[9221120237041090561ul,0ul,9223372036854775808ul,18442240474082181120ul,9218868437227405312ul];
-             double[5] data;for(nuint i=0;i<5;i++)data[i]=*((double*)&bits[i]);Span<double> values=new(data,5);
+             double[5] data;for(nuint i=0;i<5;i++)data[i]=(bits[i]).reinterpret<double>();Span<double> values=new(data,5);
              if(MinIndex(values.AsImmutable())!=0||MaxIndex(values.AsImmutable())!=4)return 2;
              Span<double> zero=values.Slice(1,2);if(MinIndex(zero.AsImmutable())!=0||MaxIndex(zero.AsImmutable())!=0)return 3;
-             ulong otherBits=18444492273895866370ul;double otherNaN=*((double*)&otherBits);double[2] other=[otherNaN,-0.0];double[2] first=[data[0],0.0];
+             ulong otherBits=18444492273895866370ul;double otherNaN=(otherBits).reinterpret<double>();double[2] other=[otherNaN,-0.0];double[2] first=[data[0],0.0];
              Span<double> left=new(first,2);Span<double> right=new(other,2);if(SequenceCompare(left.AsImmutable(),right.AsImmutable())!=0)return 4;}
             """);
         Run(Allocator+"int main(){int before=attempts;deny=true;"+body+"deny=false;if(attempts!=before||allocated!=released)return 5;return 0;}",optimization);
@@ -51,7 +51,7 @@ public sealed class StandardDefaultAlgorithmContractsTests
             body.Append(Block(a,b,checks));
         }
         body.Append("""
-            {ulong aBits=9221120237041090561ul;ulong bBits=18444492273895866370ul;double aNaN=*((double*)&aBits);double bNaN=*((double*)&bBits);
+            {ulong aBits=9221120237041090561ul;ulong bBits=18444492273895866370ul;double aNaN=(aBits).reinterpret<double>();double bNaN=(bBits).reinterpret<double>();
              double[4] a=[aNaN,-0.0,3.0,bNaN];double[4] b=[bNaN,0.0,3.0,aNaN];Span<double> first=new(a,4);Span<double> second=new(b,4);
              if(!SequenceEqual(first.AsImmutable(),second.AsImmutable())||IndexOf(first.AsImmutable(),&bNaN)!=0||LastIndexOf(first.AsImmutable(),&bNaN)!=3||!Contains(first.AsImmutable(),&bNaN))return 2;
              double zero=0.0;double missing=-2.0;if(IndexOf(first.AsImmutable(),&zero)!=1||LastIndexOf(first.AsImmutable(),&zero)!=1||Contains(first.AsImmutable(),&missing)||IndexOf(first.AsImmutable(),&missing)!=4)return 3;}
@@ -67,7 +67,7 @@ public sealed class StandardDefaultAlgorithmContractsTests
             int main(){
                 {Vector<Owner> a=new();Vector<Owner> b=new();a.Reserve(4);b.Reserve(4);int[4] keys=[2,5,5,1];
                  for(int i=0;i<4;i++){a.Add(new Owner(i,keys[(nuint)i]));int key=keys[(nuint)i];if(i==1)key=9;b.Add(new Owner(i+10,key));}
-                 nuint[8] tokens;for(nuint i=0;i<4;i++){tokens[i]=(nuint)a[i].Token.Data;tokens[i+4]=(nuint)b[i].Token.Data;}
+                 nuint[8] tokens;for(nuint i=0;i<4;i++){tokens[i]=(a[i].Token.Data).reinterpret<nuint>();tokens[i+4]=(b[i].Token.Data).reinterpret<nuint>();}
                  int before=attempts;deny=true;calls=0;if(MinIndex(a.AsSpan().AsImmutable())!=3||calls!=3)return 1;
                  calls=0;if(MaxIndex(a.AsSpan().AsImmutable())!=1||calls!=3)return 2;
                  calls=0;if(SequenceCompare(a.AsSpan().AsImmutable(),b.AsSpan().AsImmutable())!=-4||calls!=2)return 3;
@@ -79,7 +79,7 @@ public sealed class StandardDefaultAlgorithmContractsTests
                     try{if(mode==0)result=(int)MinIndex(a.AsSpan().AsImmutable());else if(mode==1)result=(int)MaxIndex(a.AsSpan().AsImmutable());else result=SequenceCompare(a.AsSpan().AsImmutable(),b.AsSpan().AsImmutable());}
                     catch(ref Exception error){if(error.GetCode()!=77||!CString::Equals(error.GetMessage(),"original comparison"))return 8;caught=true;}fail=false;
                     if(!caught||calls!=1||result!=99||made-dead!=8)return 9;
-                    for(nuint i=0;i<4;i++)if(a[i].Id!=(int)i||a[i].Key!=keys[i]||(nuint)a[i].Token.Data!=tokens[i]||b[i].Id!=(int)i+10||(nuint)b[i].Token.Data!=tokens[i+4])return 10;
+                    for(nuint i=0;i<4;i++)if(a[i].Id!=(int)i||a[i].Key!=keys[i]||(a[i].Token.Data).reinterpret<nuint>()!=tokens[i]||b[i].Id!=(int)i+10||(b[i].Token.Data).reinterpret<nuint>()!=tokens[i+4])return 10;
                  }
                 }if(made!=dead||allocated!=released)return 11;return 0;
             }
@@ -93,7 +93,7 @@ public sealed class StandardDefaultAlgorithmContractsTests
             int main(){
                 {Vector<Owner> a=new();Vector<Owner> b=new();a.Reserve(4);b.Reserve(4);int[4] keys=[1,2,2,4];
                  for(int i=0;i<4;i++){a.Add(new Owner(i,keys[(nuint)i]));int key=keys[(nuint)i];if(i==2)key=9;b.Add(new Owner(i+10,key));}Owner key=new(99,2);
-                 nuint[8] tokens;for(nuint i=0;i<4;i++){tokens[i]=(nuint)a[i].Token.Data;tokens[i+4]=(nuint)b[i].Token.Data;}nuint keyToken=(nuint)key.Token.Data;
+                 nuint[8] tokens;for(nuint i=0;i<4;i++){tokens[i]=(a[i].Token.Data).reinterpret<nuint>();tokens[i+4]=(b[i].Token.Data).reinterpret<nuint>();}nuint keyToken=(key.Token.Data).reinterpret<nuint>();
                  int before=attempts;deny=true;calls=0;if(IndexOf(a.AsSpan().AsImmutable(),&key)!=1||calls!=2||trace[0]!=0||trace[1]!=1)return 1;
                  calls=0;if(LastIndexOf(a.AsSpan().AsImmutable(),&key)!=2||calls!=2||trace[0]!=3||trace[1]!=2)return 2;
                  calls=0;if(!Contains(a.AsSpan().AsImmutable(),&key)||calls!=2)return 3;
@@ -105,8 +105,8 @@ public sealed class StandardDefaultAlgorithmContractsTests
                  for(int mode=0;mode<4;mode++){bool caught=false;fail=true;calls=0;int result=99;
                     try{if(mode==0)result=(int)IndexOf(a.AsSpan().AsImmutable(),&key);else if(mode==1)result=(int)LastIndexOf(a.AsSpan().AsImmutable(),&key);else if(mode==2){if(Contains(a.AsSpan().AsImmutable(),&key))result=1;}else{if(SequenceEqual(a.AsSpan().AsImmutable(),b.AsSpan().AsImmutable()))result=1;}}
                     catch(ref Exception error){if(error.GetCode()!=77||!CString::Equals(error.GetMessage(),"original comparison"))return 9;caught=true;}fail=false;
-                    if(!caught||calls!=1||result!=99||made-dead!=9||key.Id!=99||key.Key!=2||(nuint)key.Token.Data!=keyToken)return 10;
-                    for(nuint i=0;i<4;i++)if(a[i].Id!=(int)i||a[i].Key!=keys[i]||(nuint)a[i].Token.Data!=tokens[i]||b[i].Id!=(int)i+10||(nuint)b[i].Token.Data!=tokens[i+4])return 11;
+                    if(!caught||calls!=1||result!=99||made-dead!=9||key.Id!=99||key.Key!=2||(key.Token.Data).reinterpret<nuint>()!=keyToken)return 10;
+                    for(nuint i=0;i<4;i++)if(a[i].Id!=(int)i||a[i].Key!=keys[i]||(a[i].Token.Data).reinterpret<nuint>()!=tokens[i]||b[i].Id!=(int)i+10||(b[i].Token.Data).reinterpret<nuint>()!=tokens[i+4])return 11;
                  }
                 }if(made!=dead||allocated!=released)return 12;return 0;
             }

@@ -14,8 +14,8 @@ public sealed class GenericOverloadEditorTests
                 public static Word Pick(Word value)=>value;
                 public static T Pick<T>(T value)=>value;
             }
-            public Word Touch(this ref Word value,bool tag)=>value;
-            public T Touch<T>(this ref T value,bool tag)=>value;
+            extension Word{public Word Touch(bool tag)=>(*this);}
+            extension<T> T{public T Touch(bool tag)=>(*this);}
         }
         """;
 
@@ -40,7 +40,7 @@ public sealed class GenericOverloadEditorTests
         var (model,_,caller,library)=Analyze(program,Library);
         int use=program.IndexOf(name,StringComparison.Ordinal);
         string hover=Hover(model,caller,use);
-        Assert.Contains(generic?$"{name}<long>":name+"(",hover);
+        Assert.Contains(generic&&context!="extension"?$"{name}<long>":name+"(",hover);
         Assert.Contains(generic?"long ":"Word ",hover);
         Assert.DoesNotContain("T value",hover);
         if(context!="extension")Assert.Contains(generic?"long value":"Word value",hover);
@@ -48,7 +48,7 @@ public sealed class GenericOverloadEditorTests
             Assert.Contains("bool tag",hover);
             Assert.DoesNotContain("this ref",hover);
         }
-        int declaration=Library.IndexOf(generic?name+"<T>":name+"(",StringComparison.Ordinal);
+        int declaration=context=="extension" ? Library.IndexOf(name+"(",Library.IndexOf(generic?"extension<T>":"extension Word",StringComparison.Ordinal),StringComparison.Ordinal) : Library.IndexOf(generic?name+"<T>":name+"(",StringComparison.Ordinal);
         AssertDefinition(model,caller,use,library,declaration);
 
         int argumentOffset=program.IndexOf('(',use)+1;
@@ -59,9 +59,9 @@ public sealed class GenericOverloadEditorTests
         Assert.Equal(onlyGenericReceiver?1:2,signatures.GetArrayLength());
         Assert.Equal(0,help.GetProperty("activeParameter").GetInt32());
         string selected=signatures[help.GetProperty("activeSignature").GetInt32()].GetProperty("label").GetString()!;
-        Assert.Contains(generic?$"{name}<long>":name+"(",selected);
+        Assert.Contains(generic&&context!="extension"?$"{name}<long>":name+"(",selected);
         Assert.Contains(generic?"long ":"Word ",selected);
-        Assert.Contains(signatures.EnumerateArray(),item=>item.GetProperty("label").GetString()!.Contains(name+"<",StringComparison.Ordinal));
+        if(context!="extension")Assert.Contains(signatures.EnumerateArray(),item=>item.GetProperty("label").GetString()!.Contains(name+"<",StringComparison.Ordinal));
         if(!onlyGenericReceiver)
             Assert.Contains(signatures.EnumerateArray(),item=>item.GetProperty("label").GetString()!.Contains(name+"(",StringComparison.Ordinal));
 

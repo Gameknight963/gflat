@@ -51,10 +51,10 @@ public sealed class TeeWriterTests
             }
             int main(){
                 int[8] events;int used=0;Sink first=new(1,events,&used);Sink second=new(2,events,&used);
-                TeeWriter tee=new(&first,&second);tee.Write("abc",3);tee.Write((readonly(char)*)1,0);
+                TeeWriter tee=new(&first,&second);tee.Write("abc",3);tee.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                 if(used!=4||first.Calls!=2||second.Calls!=2||first.Length!=3||second.Length!=3)return 1;
                 for(int i=0;i<4;i++)if(events[i]!=(i%2)+1)return 2;
-                TeeWriter twice=new(&first,&first);twice.Write("hi",2);twice.Write((readonly(char)*)1,0);
+                TeeWriter twice=new(&first,&first);twice.Write("hi",2);twice.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                 if(used!=8||first.Calls!=6||first.Length!=7||second.Calls!=2)return 3;
                 for(int i=4;i<8;i++)if(events[i]!=1)return 4;
                 return 0;
@@ -92,7 +92,7 @@ public sealed class TeeWriterTests
                 for(nuint i=0;i<6;i++)if(a[i]!="ABCABC"[i])return 6;
                 for(nuint i=0;i<4;i++)if(b[i]!="AABC"[i])return 7;
                 second.Fail=true;
-                try{tee.Write((readonly(char)*)1,0);}catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"second failed"))return 8;caught++;}
+                try{tee.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"second failed"))return 8;caught++;}
                 if(caught!=3||first.Length!=6||second.Length!=4)return 9;
                 second.Fail=false;tee.Write("Z",1);
                 if(first.Length!=7||second.Length!=5||a[6]!='Z'||b[4]!='Z')return 10;

@@ -88,12 +88,12 @@ public sealed class ByteReaderTests
                 public void Write(readonly(char)* input,nuint count){Calls++;if(Fail){Count++;throw new IOException("Sink failure");}Count+=count;}
             }
             int main(){
-                Source empty=new(0);ReadExactly(&empty,(char*)1,0);if(empty.Calls!=1||empty.Position!=0)return 1;
+                Source empty=new(0);ReadExactly(&empty,((nuint)1).reinterpret<char*>(),0);if(empty.Calls!=1||empty.Position!=0)return 1;
                 Source closed=new(1);bool caught=false;
-                try{ReadExactly(&closed,(char*)1,0);}catch(ref IOException error){caught=true;}
+                try{ReadExactly(&closed,((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){caught=true;}
                 if(!caught||closed.Calls!=1)return 2;
                 Source invalidZero=new(4);caught=false;
-                try{ReadExactly(&invalidZero,(char*)1,0);}catch(ref IOException error){caught=true;}
+                try{ReadExactly(&invalidZero,((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){caught=true;}
                 if(!caught||invalidZero.Calls!=1)return 11;
                 char[7] bytes;for(nuint i=0;i<7;i++)bytes[i]='?';Source shortInput=new(0);caught=false;
                 try{ReadExactly(&shortInput,&bytes[1],5);}catch(ref EndOfStreamException error){caught=true;}
@@ -105,7 +105,7 @@ public sealed class ByteReaderTests
                 try{ReadExactly(&invalid,bytes,3);}catch(ref IOException error){caught=true;}
                 if(!caught||invalid.Calls!=1)return 5;
                 Source noRead=new(0);caught=false;
-                try{CopyTo(&noRead,&untouched,(char*)1,0);}catch(ref IOException error){caught=true;}
+                try{CopyTo(&noRead,&untouched,((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){caught=true;}
                 if(!caught||noRead.Calls!=0||untouched.Calls!=0)return 6;
                 Source failure=new(3);Sink beforeError=new(false);caught=false;
                 try{CopyTo(&failure,&beforeError,&bytes[1],2);}catch(ref IOException error){caught=true;}
@@ -148,9 +148,9 @@ public sealed class ByteReaderTests
                     if(CopyTo(input,&decoder,&scratch[1],7)!=514)return 1;
                     decoder.Complete();if(!file.IsOpen||sink.Length!=257||output[0]!='?'||output[258]!='\0'||output[259]!='?'||scratch[0]!='!'||scratch[8]!='!')return 2;
                     char[257] expected=[VALUES];for(nuint i=0;i<257;i++)if(output[i+1]!=expected[i])return 3;
-                    ReadExactly(input,(char*)1,0);if(!file.IsOpen)return 4;
+                    ReadExactly(input,((nuint)1).reinterpret<char*>(),0);if(!file.IsOpen)return 4;
                     if(attempts!=0)return 6;file.Close();bool caught=false;
-                    try{ReadExactly(input,(char*)1,0);}catch(ref IOException error){caught=true;}
+                    try{ReadExactly(input,((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){caught=true;}
                     if(!caught||file.IsOpen)return 5;
                     return 0;
                 }

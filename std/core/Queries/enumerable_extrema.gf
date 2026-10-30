@@ -1,36 +1,60 @@
 using std::Collections;
 namespace std::Queries;
 
-public T Min<T, S, E>(this Enumerable<T, S, E> source,
+public T Min<T, S, E>(Enumerable<T, S, E> source,
     int(immutable(T)*, immutable(T)*)* compare)
+=> source.Min(compare);
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    E iterator = source.GetEnumerator();
-    if (!iterator.MoveNext()) throw new Exception("Sequence is empty");
-    T best = iterator.Current;
-    while (iterator.MoveNext())
+    public T Min(int(immutable(T)*, immutable(T)*)* compare)
     {
-        T current = iterator.Current;
-        if (compare(&current, &best) < 0) best = move current;
+        E iterator = (*this).GetEnumerator();
+        if (!iterator.MoveNext()) throw new Exception("Sequence is empty");
+        T best = iterator.Current;
+        while (iterator.MoveNext())
+        {
+            T current = iterator.Current;
+            if (compare(&current, &best) < 0) best = move current;
+        }
+        return move best;
     }
-    return move best;
 }
 
-public T Min<T : IComparable<T>, S, E>(this Enumerable<T, S, E> source)
-    => std::Queries::Min<T, S, E>(move source, Comparer<T>::Compare);
+public T Min<T : IComparable<T>, S, E>(Enumerable<T, S, E> source)
+    => source.Min();
 
-public T Max<T, S, E>(this Enumerable<T, S, E> source,
-    int(immutable(T)*, immutable(T)*)* compare)
+extension<T : IComparable<T>, S, E> Enumerable<T, S, E>
 {
-    E iterator = source.GetEnumerator();
-    if (!iterator.MoveNext()) throw new Exception("Sequence is empty");
-    T best = iterator.Current;
-    while (iterator.MoveNext())
-    {
-        T current = iterator.Current;
-        if (compare(&current, &best) > 0) best = move current;
-    }
-    return move best;
+    public T Min()
+    => this.Min( Comparer<T>::Compare);
 }
 
-public T Max<T : IComparable<T>, S, E>(this Enumerable<T, S, E> source)
-    => std::Queries::Max<T, S, E>(move source, Comparer<T>::Compare);
+public T Max<T, S, E>(Enumerable<T, S, E> source,
+    int(immutable(T)*, immutable(T)*)* compare)
+=> source.Max(compare);
+
+extension<T, S, E> Enumerable<T, S, E>
+{
+    public T Max(int(immutable(T)*, immutable(T)*)* compare)
+    {
+        E iterator = (*this).GetEnumerator();
+        if (!iterator.MoveNext()) throw new Exception("Sequence is empty");
+        T best = iterator.Current;
+        while (iterator.MoveNext())
+        {
+            T current = iterator.Current;
+            if (compare(&current, &best) > 0) best = move current;
+        }
+        return move best;
+    }
+}
+
+public T Max<T : IComparable<T>, S, E>(Enumerable<T, S, E> source)
+    => source.Max();
+
+extension<T : IComparable<T>, S, E> Enumerable<T, S, E>
+{
+    public T Max()
+    => this.Max( Comparer<T>::Compare);
+}

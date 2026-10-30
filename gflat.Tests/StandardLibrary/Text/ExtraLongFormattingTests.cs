@@ -43,7 +43,7 @@ public sealed class ExtraLongFormattingTests
                          for(nuint i=written+1;i<43;i++)if(output[i]!='Z')return 6;}
                     }
                 }
-                if(std::Text::IntegerFormatting::TryFormat((extralong)0,(char*)1,0,ref written)||written!=0)return 7;
+                if(std::Text::IntegerFormatting::TryFormat((extralong)0,((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 7;
                 return 0;
             }
             """;

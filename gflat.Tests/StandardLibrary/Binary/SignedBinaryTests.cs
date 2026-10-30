@@ -62,7 +62,7 @@ public class SignedBinaryTests
             string type = (width, signed) switch { (2, true) => "short", (2, false) => "ushort", (4, true) => "int", (4, false) => "uint", (8, true) => "long", _ => "ulong" };
             string suffix = $"{(signed ? "Int" : "UInt")}{width * 8}{(little ? "Little" : "Big")}Endian";
             // All-ones yields -1 or the unsigned maximum in either byte order.
-            program.Append($"{{{type} value=({type})0; byte* bytes=(byte*)&value;");
+            program.Append($"{{{type} value=({type})0; byte* bytes=(&value).reinterpret<byte*>();");
             program.Append($"for(int i=0;i<{width};i++)bytes[i]=(byte)255;");
             program.Append($"if(!BinaryPrimitives::TryRead{suffix}(bytes,{width},ref value) || value!=({type})-1l)return 1;}}");
         }

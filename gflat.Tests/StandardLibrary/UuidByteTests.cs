@@ -78,18 +78,18 @@ public sealed class UuidByteTests
                 Uuid value=new(1ul,2ul);
                 for(nuint count=0;count<=20;count++){
                     if(count==16)continue;value=new(1ul,2ul);int requests=attempts;deny=true;
-                    if(Uuid::TryFromBytes((readonly(byte)*)1,count,&value)||!value.IsNil||attempts!=requests)return 2;
+                    if(Uuid::TryFromBytes(((nuint)1).reinterpret<readonly(byte)*>(),count,&value)||!value.IsNil||attempts!=requests)return 2;
                     deny=false;value=new(1ul,2ul);bool caught=false;
-                    try{value=Uuid::FromBytes((readonly(byte)*)1,count);}catch(ref Exception error){caught=true;}
+                    try{value=Uuid::FromBytes(((nuint)1).reinterpret<readonly(byte)*>(),count);}catch(ref Exception error){caught=true;}
                     if(!caught||value.High!=1ul||value.Low!=2ul)return 3;
                 }
                 value=new(1ul,2ul);int requests=attempts;deny=true;
-                if(Uuid::TryFromBytes((readonly(byte)*)1,(nuint)0-1,&value)||!value.IsNil)return 4;
+                if(Uuid::TryFromBytes(((nuint)1).reinterpret<readonly(byte)*>(),(nuint)0-1,&value)||!value.IsNil)return 4;
                 for(nuint capacity=0;capacity<16;capacity++){
-                    nuint written=99;if(value.TryWriteBytes((byte*)1,capacity,ref written)||written!=0)return 5;
+                    nuint written=99;if(value.TryWriteBytes(((nuint)1).reinterpret<byte*>(),capacity,ref written)||written!=0)return 5;
                 }
                 for(nuint offset=0;offset<=32;offset+=4)for(nuint resultIndex=0;resultIndex<3;resultIndex++)for(int valid=0;valid<2;valid++){
-                    Uuid[4] aligned;byte* bytes=(byte*)&aligned[0];for(nuint i=0;i<64;i++)bytes[i]=(byte)90;
+                    Uuid[4] aligned;byte* bytes=(&aligned[0]).reinterpret<byte*>();for(nuint i=0;i<64;i++)bytes[i]=(byte)90;
                     for(nuint i=0;i<16;i++)bytes[offset+i]=(byte)(i*17);
                     byte[64] before;for(nuint i=0;i<64;i++)before[i]=bytes[i];
                     nuint count=15;if(valid!=0)count=16;
@@ -100,7 +100,7 @@ public sealed class UuidByteTests
                     for(nuint i=0;i<64;i++)if((i<resultIndex*16||i>=resultIndex*16+16)&&bytes[i]!=before[i])return 9;
                 }
                 for(nuint offset=0;offset<=32;offset+=4)for(nuint capacity=0;capacity<=17;capacity++){
-                    Uuid[4] aligned;byte* bytes=(byte*)&aligned[0];for(nuint i=0;i<64;i++)bytes[i]=(byte)90;
+                    Uuid[4] aligned;byte* bytes=(&aligned[0]).reinterpret<byte*>();for(nuint i=0;i<64;i++)bytes[i]=(byte)90;
                     aligned[1]=new Uuid(0x0011223344556677ul,0x8899aabbccddeefful);
                     byte[64] before;for(nuint i=0;i<64;i++)before[i]=bytes[i];nuint written=99;
                     immutable(Uuid)* view=&aligned[1];bool success=view.TryWriteBytes(bytes+offset,capacity,ref written);

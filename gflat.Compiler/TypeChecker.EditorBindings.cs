@@ -25,6 +25,7 @@ public partial class TypeChecker
             ClassDeclaration type => type.GenericParameters,
             StructDeclaration type => type.GenericParameters,
             InterfaceDeclaration type => type.GenericParameters,
+            ExtensionDeclaration block => block.GenericParameters,
             _ => null
         };
         int index = parameters?.FindIndex(parameter => parameter.Name == name) ?? -1;

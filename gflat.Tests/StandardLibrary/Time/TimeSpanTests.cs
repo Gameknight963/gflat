@@ -64,9 +64,9 @@ public sealed class TimeSpanTests
                                 for(nuint i=written+1;i<28;i++)if(output[i]!='!')return 11;}
                         }
                         TimeSpan[4] aligned;aligned[0]=same;nuint count=0;
-                        if(!aligned[0].TryFormat((char*)&aligned[0],32,ref count)||count!=(nuint)(byte)length)return 12;
-                        for(nuint i=0;i<count;i++)if(((char*)&aligned[0])[i]!=expected[i])return 13;
-                        nuint written=99;if(value.TryFormat((char*)1,0,ref written)||written!=0||value.Ticks!=ticks)return 14;
+                        if(!aligned[0].TryFormat((&aligned[0]).reinterpret<char*>(),32,ref count)||count!=(nuint)(byte)length)return 12;
+                        for(nuint i=0;i<count;i++)if(((&aligned[0]).reinterpret<char*>())[i]!=expected[i])return 13;
+                        nuint written=99;if(value.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0||value.Ticks!=ticks)return 14;
                         previous=same;samples++;
                     }
                     TimeSpan zero=new();if(zero.Ticks!=0l||samples!={{ticks.Count}})return 15;return 0;

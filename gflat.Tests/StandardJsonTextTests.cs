@@ -47,7 +47,7 @@ public sealed class StandardJsonTextTests
             for(int i=0;i<bytes.Length;i++)code.AppendLine($"input[{i}]=(char){bytes[i]};");
             code.AppendLine($"try{{JsonText::Minify(input,{bytes.Length},&sink);return 1;}}catch(ref JsonParseException error){{if(error.Offset>{bytes.Length})return 2;}}if(sink.Calls!=0)return 3;");
         }
-        code.AppendLine("try{JsonText::Minify((readonly(char)*)1,0,&sink);return 4;}catch(ref JsonParseException error){if(error.Offset!=0)return 5;}return sink.Calls;}");
+        code.AppendLine("try{JsonText::Minify(((nuint)1).reinterpret<readonly(char)*>(),0,&sink);return 4;}catch(ref JsonParseException error){if(error.Offset!=0)return 5;}return sink.Calls;}");
         Run(code.ToString(),optimization);
     }
 

@@ -55,7 +55,7 @@ public sealed class ExtraLongHexFormattingTests
                     }
                 }
                 if(cases!={{caseCount}}||cursor!={{oracleBytes}})return 9;
-                if(std::Text::IntegerFormatting::TryFormatHex((extralong)0,(char*)1,0,ref written)||written!=0)return 7;
+                if(std::Text::IntegerFormatting::TryFormatHex((extralong)0,((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 7;
                 if(std::Text::IntegerFormatting::TryFormatHex((extralong)-1,output,43,ref written,(nuint)0-(nuint)1)||written!=0)return 8;
                 return 0;
             }

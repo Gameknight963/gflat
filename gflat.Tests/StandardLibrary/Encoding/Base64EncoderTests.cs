@@ -97,10 +97,10 @@ public sealed class Base64EncoderTests
                         if(encodedSize<0||encodedSize>32768)return 4;
                         if(fread((void*)(char*)expected,1,(nuint)encodedSize,stream)!=(nuint)encodedSize)return 5;
                         Sink sink=new(output);Base64Encoder writer=new(&sink);nuint position=0;
-                        writer.Write((readonly(char)*)1,0);
+                        writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         for(int i=0;i<count;i++){
                             writer.Write((readonly(char)*)input+position,(nuint)chunks[i]);position+=(nuint)chunks[i];
-                            writer.Write((readonly(char)*)1,0);
+                            writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         }
                         // Padding must be deferred, and no input pointer can survive Write.
                         for(nuint i=0;i<sink.Count;i++)if(output[i]=='=')return 6;
@@ -142,7 +142,7 @@ public sealed class Base64EncoderTests
                 catch{return false;}
                 if(caught!=1||sink.Count!=budget)return false;
                 int calls=sink.Calls;sink.Budget=999;
-                try{writer.Write((readonly(char)*)1,0);}catch(Exception* error){caught++;}
+                try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(Exception* error){caught++;}
                 try{writer.Write("later",5);}catch(Exception* error){caught++;}
                 try{writer.Complete();}catch(Exception* error){caught++;}
                 Base64Encoder copy=writer;
@@ -177,7 +177,7 @@ public sealed class Base64EncoderTests
                     readonly(char)* original="abc";moved.Write(original+carry,3-carry);moved.Complete();
                     if(sink.Count!=4||output[0]!='Y'||output[1]!='W'||output[2]!='J'||output[3]!='j')return 1;
                     Base64Encoder complete=moved;int calls=sink.Calls;complete.Complete();
-                    int caught=0;try{complete.Write((readonly(char)*)1,0);}catch(Exception* error){caught++;}
+                    int caught=0;try{complete.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(Exception* error){caught++;}
                     try{moved.Write("x",1);}catch(Exception* error){caught++;}
                     if(caught!=2||sink.Calls!=calls)return 2;
                     // Original writer still has a pending byte; its destruction must do nothing.
@@ -187,9 +187,9 @@ public sealed class Base64EncoderTests
                 if(sink.Count!=4)return 4;
                 sink.Write("!",1);if(sink.Count!=5||output[4]!='!')return 5;
                 Base64Encoder empty=new(&sink);int calls=sink.Calls;
-                empty.Write((readonly(char)*)1,0);empty.Complete();empty.Complete();
+                empty.Write(((nuint)1).reinterpret<readonly(char)*>(),0);empty.Complete();empty.Complete();
                 if(sink.Calls!=calls)return 6;
-                try{empty.Write((readonly(char)*)1,0);return 7;}catch(Exception* error){}
+                try{empty.Write(((nuint)1).reinterpret<readonly(char)*>(),0);return 7;}catch(Exception* error){}
                 if(sink.Calls!=calls)return 8;
                 }
                 return 0;

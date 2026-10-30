@@ -39,7 +39,7 @@ extern void free(void* ptr);
 namespace Memory { public replace void*? Allocate(nuint size)
 {
     byte* raw = (byte*)malloc(size + 8UL);
-    ulong* header = (ulong*)raw;
+    ulong* header = raw.reinterpret<ulong*>();
     *header = 12345UL;
     return (void*)(raw + 8UL);
 } }
@@ -47,7 +47,7 @@ namespace Memory { public replace void*? Allocate(nuint size)
 namespace Memory { public replace void Free(void* ptr) nothrow
 {
     byte* raw = (byte*)ptr - 8UL;
-    ulong* header = (ulong*)raw;
+    ulong* header = raw.reinterpret<ulong*>();
     if (*header == 12345UL)
     {
         *header = 0UL;
@@ -68,8 +68,8 @@ int main()
     p.y = 20;
     int sum = p.x + p.y;
 
-    byte* raw = (byte*)p - 8UL;
-    ulong* header = (ulong*)raw;
+    byte* raw = p.reinterpret<byte*>() - 8UL;
+    ulong* header = raw.reinterpret<ulong*>();
     if (*header != 12345UL)
     {
         return 0;
@@ -233,7 +233,7 @@ int main()
             string code = @"
 namespace Memory { public replace void*? Allocate(nuint size)
 {
-    return (void*)1;
+    return ((nuint)1).reinterpret<void*>();
 } }
 
 namespace Memory { public replace void Free(int notAPointer)

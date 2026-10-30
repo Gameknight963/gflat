@@ -68,7 +68,7 @@ public sealed class TimeOfDayArithmeticTests
                     // Only returned result and output are inspected after deliberate overwrite.
                     for(nuint offset=0;offset<8;offset+=4){
                         TimeOfDay aliased=TimeOfDay::FromTicks(start);
-                        int* output=(int*)((char*)&aliased+offset);
+                        int* output=((&aliased).reinterpret<char*>()+offset).reinterpret<int*>();
                         TimeOfDay shifted=aliased.Add(interval,ref *output);
                         if(shifted.Ticks!=expected||*output!=wantedDays)return 2;
                     }

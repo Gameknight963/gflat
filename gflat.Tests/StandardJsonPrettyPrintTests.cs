@@ -103,7 +103,7 @@ public sealed class StandardJsonPrettyPrintTests
                     bool caught=false;try{JsonText::PrettyPrint((readonly(char)*)&blob[(nuint)rows[row]],(nuint)rows[row+1],&sink);}catch(ref JsonParseException error){if(error.Offset>(nuint)rows[row+1])return 1;caught=true;}
                     if(!caught||sink.Calls!=0||allocated!=released)return 2;
                 }
-                bool caught=false;try{JsonText::PrettyPrint((readonly(char)*)1,0,&sink);}catch(ref JsonParseException error){if(error.Offset!=0)return 3;caught=true;}if(!caught||sink.Calls!=0)return 4;
+                bool caught=false;try{JsonText::PrettyPrint(((nuint)1).reinterpret<readonly(char)*>(),0,&sink);}catch(ref JsonParseException error){if(error.Offset!=0)return 3;caught=true;}if(!caught||sink.Calls!=0)return 4;
                 nuint maximum=(nuint)0-(nuint)1;nuint[2] widths=[maximum,maximum/2+1];
                 for(nuint i=0;i<2;i++){
                     caught=false;try{JsonText::PrettyPrint("[[0]]",5,&sink,widths[i]);}catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"JSON indentation length overflow"))return 5;caught=true;}

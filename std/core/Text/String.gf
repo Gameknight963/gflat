@@ -235,7 +235,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (count == 0) return start;
         if (count > length - start) return NotFound;
         nuint remaining = length - start;
-        nuint found = ByteSearch::IndexOf((readonly(byte)*)(data + start), remaining, (readonly(byte)*)text, count);
+        nuint found = ByteSearch::IndexOf(((data + start)).reinterpret<readonly(byte)*>(), remaining, (text).reinterpret<readonly(byte)*>(), count);
         if (found == remaining) return NotFound;
         return start + found;
     }
@@ -262,7 +262,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     {
         if (count == 0) return length;
         if (count > length) return NotFound;
-        nuint found = ByteSearch::LastIndexOf((readonly(byte)*)data, length, (readonly(byte)*)text, count);
+        nuint found = ByteSearch::LastIndexOf((data).reinterpret<readonly(byte)*>(), length, (text).reinterpret<readonly(byte)*>(), count);
         if (found == length) return NotFound;
         return found;
     }
@@ -279,7 +279,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     {
         if (start > length) throw new Exception("String search start out of range");
         nuint remaining = length - start;
-        nuint found = ByteSearch::IndexOfAny((readonly(byte)*)(data + start), remaining, (readonly(byte)*)values, count);
+        nuint found = ByteSearch::IndexOfAny(((data + start)).reinterpret<readonly(byte)*>(), remaining, (values).reinterpret<readonly(byte)*>(), count);
         if (found == remaining) return NotFound;
         return start + found;
     }
@@ -293,7 +293,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
 
     public immutable nuint LastIndexOfAny(readonly(char)* values, nuint count) nothrow
     {
-        nuint found = ByteSearch::LastIndexOfAny((readonly(byte)*)data, length, (readonly(byte)*)values, count);
+        nuint found = ByteSearch::LastIndexOfAny((data).reinterpret<readonly(byte)*>(), length, (values).reinterpret<readonly(byte)*>(), count);
         if (found == length) return NotFound;
         return found;
     }

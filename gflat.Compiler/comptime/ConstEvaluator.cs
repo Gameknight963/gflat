@@ -64,6 +64,8 @@ namespace gflat.comptime
             {
                 if (target == null) node.Accept(this);
                 else _currentValue = EvaluateValueForTarget(node, target);
+                if (_currentValue != null && ContainsTransientAddress(_currentValue))
+                    throw new ConstEvalException("A borrowed compile-time address cannot escape into runtime storage", node.Line);
                 result = _currentValue;
                 return result != null;
             }
@@ -460,6 +462,7 @@ namespace gflat.comptime
                 return;
             }
 
+            if (TryBorrowScalar(node)) return;
             node.Operand.Accept(this);
             ConstValue operand = _currentValue!;
 
@@ -481,6 +484,11 @@ namespace gflat.comptime
                     throw new ConstEvalException($"Cannot take address of non-struct/class '{operand}' at compile time", node.Line);
 
                 case TokenKind.Star:
+                    if (operand is ConstValue.BorrowedReference borrowed)
+                    {
+                        _currentValue = borrowed.Read();
+                        return;
+                    }
                     if (operand is ConstValue.ArrayPointer arrayPointer)
                     {
                         if (arrayPointer.Target.Elements.Count == 0) throw new ConstEvalException("Cannot dereference an empty constant array", node.Line);
@@ -541,6 +549,8 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             node.Object.Accept(this);
             ConstValue obj = _currentValue!;
+
+            if (obj is ConstValue.BorrowedReference borrowed) obj = borrowed.Read();
 
             if (obj is ConstValue.Pointer ptrVal)
             {
@@ -638,13 +648,14 @@ namespace gflat.comptime
         public void Visit(CastExpression node)
         {
             CheckSteps(node.Line);
+            if (TryEvaluateExplicitConversionCast(node)) return;
             ConstValue val = EvaluateValueForTarget(node.Operand, node.TargetType);
 
             TypeExpression resolved = NumericType(node.TargetType);
             if (val is ConstValue.Boolean && resolved is NamedTypeExpression { Name: "bool" } ||
                 val is ConstValue.Integer { Value: 0 } && resolved is
                     (PointerTypeExpression { IsNullable: true } or FunctionPointerTypeExpression { IsNullable: true } or ManagedTypeExpression { IsNullable: true }) ||
-                val is (ConstValue.Pointer or ConstValue.ArrayPointer) && resolved is PointerTypeExpression &&
+                val is (ConstValue.Pointer or ConstValue.ArrayPointer or ConstValue.BorrowedReference) && resolved is PointerTypeExpression &&
                     TypeChecker.TypesMatchPublic(_context.ResolveAlias(_context.GetType(node.Operand)), resolved))
             {
                 _currentValue = val;
@@ -873,6 +884,7 @@ namespace gflat.comptime
 
         public void Visit(CallExpression node)
         {
+            if (TryEvaluateReinterpretCall(node)) return;
             if (_context is TypeChecker extensionChecker && extensionChecker.GetExtensionCall(node) is { } extensionCall)
             {
                 extensionCall.Accept(this);

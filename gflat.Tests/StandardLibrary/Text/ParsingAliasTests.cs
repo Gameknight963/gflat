@@ -14,7 +14,7 @@ public class ParsingAliasTests
         {
             source.Append($$"""
                 { {{type}}[2] storage=[({{type}})0,({{type}})0];
-                  char* input=(char*)&storage[0]; input[0]='7'; input[1]='\0';
+                  char* input=(&storage[0]).reinterpret<char*>(); input[0]='7'; input[1]='\0';
                   if(!TryParse{{suffix}}(input,1,&storage[0]) || storage[0]!=({{type}})7) return 1;
                   input[0]='8'; input[1]='\0';
                   if(!TryParse{{suffix}}(input,&storage[0]) || storage[0]!=({{type}})8) return 2;
@@ -24,7 +24,7 @@ public class ParsingAliasTests
                 """);
         }
         source.Append("""
-            int[4] storage=[0,0,0,0]; char* input=(char*)&storage[0];
+            int[4] storage=[0,0,0,0]; char* input=(&storage[0]).reinterpret<char*>();
             for(nuint i=0;i<11;i++) input[i]="-2147483648"[i];
             if(!TryParseInt(input,11,&storage[0]) || storage[0]!=-2147483647-1) return 4;
             return 0;}

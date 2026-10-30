@@ -12,7 +12,7 @@ public sealed class EditorSnapshotIntegrityTests
     public void GenericCallEditorQueriesPreserveEveryAnalyzedSourceTypeSpan(bool extension)
     {
         string text=extension
-            ? "struct Box<T>{public T Value;}T Read<T>(this ref Box<T> box)=>box.Value;int Use(Box<int>* box)=>(*box).Read();"
+            ? "struct Box<T>{public T Value;}extension<T> Box<T>{public T Read()=>(*this).Value;}int Use(Box<int>* box)=>(*box).Read();"
             : "T Echo<T>(T value)=>value;int Read()=>Echo<int>(1);";
         string name=extension?"Read":"Echo";
         string call=extension?"Read()":"Echo<int>(1)";

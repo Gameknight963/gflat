@@ -15,10 +15,10 @@ public sealed class ForeachProtocolTests
 
     [Theory]
     [InlineData("struct Source { public Iterator GetEnumerator() => new Iterator(); }", "Source source = new Source();", "source")]
-    [InlineData("struct Source {} Iterator GetEnumerator(this ref Source source) => new Iterator();", "Source source = new Source();", "source")]
-    [InlineData("struct Source {} Iterator GetEnumerator(this ref Source source) => new Iterator();", "Source source = new Source(); Source* p = &source;", "p")]
-    [InlineData("struct Source {} Iterator GetEnumerator(this ref immutable(Source) source) => new Iterator();", "immutable(Source) source = new Source();", "source")]
-    [InlineData("struct Source {} Iterator GetEnumerator(this ref Source source) => new Iterator();", "", "new Source()")]
+    [InlineData("struct Source {} Iterator GetEnumerator(ref Source source) => new Iterator();\nextension Source { public Iterator GetEnumerator() => new Iterator(); }", "Source source = new Source();", "source")]
+    [InlineData("struct Source {} Iterator GetEnumerator(ref Source source) => new Iterator();\nextension Source { public Iterator GetEnumerator() => new Iterator(); }", "Source source = new Source(); Source* p = &source;", "p")]
+    [InlineData("struct Source {} Iterator GetEnumerator(ref immutable(Source) source) => new Iterator();\nextension Source { public immutable Iterator GetEnumerator() => new Iterator(); }", "immutable(Source) source = new Source();", "source")]
+    [InlineData("struct Source {} Iterator GetEnumerator(ref Source source) => new Iterator();\nextension Source { public Iterator GetEnumerator() => new Iterator(); }", "", "new Source()")]
     public void CurrentPropertiesWorkWithOrdinaryAndExtensionFactories(string source, string locals, string collection)
     {
         var result = CompilerTestHelper.Run(Iterator + source + " int main() { " + locals + " int sum = 39; foreach (int item in " + collection + ") { sum += item; } return sum; }");

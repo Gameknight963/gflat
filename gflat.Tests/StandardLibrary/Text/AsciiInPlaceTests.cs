@@ -39,7 +39,7 @@ public sealed class AsciiInPlaceTests
                 // A readonly pointer slot still permits changing mutable pointed bytes.
                 readonly(char*) fixedPointer=&part[1];std::Text::Ascii::ToUpper(fixedPointer,1);
                 if(part[1]!='A')return 10;
-                std::Text::Ascii::ToLower((char*)1,0);std::Text::Ascii::ToUpper((char*)1,0);
+                std::Text::Ascii::ToLower(((nuint)1).reinterpret<char*>(),0);std::Text::Ascii::ToUpper(((nuint)1).reinterpret<char*>(),0);
                 std::Text::Ascii::ToLower(&part[1],0);std::Text::Ascii::ToUpper(&part[7],0);
                 if(part[1]!='A'||part[7]!='?')return 11;return 0;
             }

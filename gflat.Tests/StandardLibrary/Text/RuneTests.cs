@@ -64,7 +64,7 @@ public sealed class RuneTests
                     }
                     if(map.Count!={{scalars.Length}}||set.Count!={{scalars.Length}})return 7;
                     Rune zero=new();String nul=zero.ToString();if(nul.Length!=1||nul[0]!='\0'||nul.Data[1]!='\0')return 8;
-                    byte[6] input=[(byte)65,(byte)0,(byte)240,(byte)159,(byte)152,(byte)128];Utf8Scalars decoded=new((char*)&input[0],6);
+                    byte[6] input=[(byte)65,(byte)0,(byte)240,(byte)159,(byte)152,(byte)128];Utf8Scalars decoded=new((&input[0]).reinterpret<char*>(),6);
                     uint[3] expectedScalars=[65u,0u,128512u];nuint seen=0;
                     foreach(Rune value in decoded.AsEnumerable().Select(&Wrap)){
                         if(seen>=3||value.Value!=expectedScalars[seen])return 9;seen++;

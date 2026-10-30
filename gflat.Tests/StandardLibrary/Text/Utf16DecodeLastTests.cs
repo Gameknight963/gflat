@@ -77,7 +77,7 @@ public sealed class Utf16DecodeLastTests
                 nuint consumed = 0;
                 {{checks}}
                 if (length != (nuint)0) return 3;
-                if (std::Text::Utf16::TryDecodeLast((readonly(ushort)*)1, 0, &scalar, &consumed)) return 4;
+                if (std::Text::Utf16::TryDecodeLast(((nuint)1).reinterpret<readonly(ushort)*>(), 0, &scalar, &consumed)) return 4;
                 if (scalar != 0u || consumed != (nuint)0) return 5;
                 return 0;
             }
@@ -98,7 +98,7 @@ public sealed class Utf16DecodeLastTests
             checks.AppendLine($$"""
                 {
                     uint[3] storage = [165u, 0u, 165u];
-                    ushort* input = (ushort*)&storage[1];
+                    ushort* input = (&storage[1]).reinterpret<ushort*>();
                     {{initialize}}
                     nuint consumed = 99;
                     if (!std::Text::Utf16::TryDecodeLast(input, {{units.Length}}, &storage[1], &consumed)) return 1;
@@ -107,7 +107,7 @@ public sealed class Utf16DecodeLastTests
                 }
                 {
                     nuint[3] storage = [165, 0, 165];
-                    ushort* input = (ushort*)&storage[1];
+                    ushort* input = (&storage[1]).reinterpret<ushort*>();
                     {{initialize}}
                     uint scalar = 99u;
                     if (!std::Text::Utf16::TryDecodeLast(input, {{units.Length}}, &scalar, &storage[1])) return 4;
@@ -120,14 +120,14 @@ public sealed class Utf16DecodeLastTests
             int main(){
                 {{checks}}
                 uint[3] scalarStorage = [165u, 0u, 165u];
-                ushort* input = (ushort*)&scalarStorage[1];
+                ushort* input = (&scalarStorage[1]).reinterpret<ushort*>();
                 input[0] = (ushort)65; input[1] = (ushort)0xdc00;
                 nuint consumed = 99;
                 if (std::Text::Utf16::TryDecodeLast(input, 2, &scalarStorage[1], &consumed)) return 7;
                 if (scalarStorage[1] != 0u || consumed != (nuint)0) return 8;
                 if (scalarStorage[0] != 165u || scalarStorage[2] != 165u) return 9;
                 nuint[3] countStorage = [165, 0, 165];
-                input = (ushort*)&countStorage[1];
+                input = (&countStorage[1]).reinterpret<ushort*>();
                 input[0] = (ushort)0xd800; input[1] = (ushort)0xd800;
                 uint scalar = 99u;
                 if (std::Text::Utf16::TryDecodeLast(input, 2, &scalar, &countStorage[1])) return 10;

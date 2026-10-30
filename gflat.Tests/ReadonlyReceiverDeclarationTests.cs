@@ -48,7 +48,7 @@ public sealed class ReadonlyReceiverDeclarationTests
     [InlineData("class Entry{public static readonly(int) Read()=>42;}")]
     [InlineData("struct Entry{public static readonly(int) Read()=>42;}")]
     [InlineData("static class Entry{public static readonly(int) Read()=>42;}")]
-    [InlineData("int Read(this ref readonly(int) value)=>value;")]
+    [InlineData("int Read(ref readonly(int) value)=>value;\nextension int { public readonly int Read() =>(*this); }")]
     [InlineData("readonly(int) Value=>42;")]
     [InlineData("class Entry{public static readonly(int) Value{get{return 42;}}}")]
     [InlineData("namespace Lib{public weak readonly(int) Read()=>1;}public replace readonly(int) Lib::Read()=>42;")]

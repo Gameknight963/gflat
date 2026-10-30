@@ -100,9 +100,9 @@ public sealed class SpanChunksTests
                 nuint maximum=(nuint)0-(nuint)1;
                 cursor=one.Chunks(maximum).GetEnumerator();if(!cursor.MoveNext()||cursor.Current.Length!=1||cursor.Current[0]!=42||cursor.MoveNext())return 3;
                 // Probe cursor metadata only; no fabricated extent is dereferenced.
-                SpanChunks<int>::Enumerator huge=new((int*)1,maximum,maximum);
+                SpanChunks<int>::Enumerator huge=new(((nuint)1).reinterpret<int*>(),maximum,maximum);
                 if(!huge.MoveNext()||huge.MoveNext())return 4;
-                SpanChunks<int>::Enumerator tail=new((int*)1,maximum,maximum-1);
+                SpanChunks<int>::Enumerator tail=new(((nuint)1).reinterpret<int*>(),maximum,maximum-1);
                 if(!tail.MoveNext()||!tail.MoveNext()||tail.MoveNext())return 5;
                 if(errors!=7)return 6;return 0;
             }

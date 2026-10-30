@@ -5,9 +5,7 @@ namespace gflat;
 
 public partial class TypeChecker
 {
-    public enum ExtensionReceiverAdaptation { Exact, RawPointerPointee }
     public sealed record ExtensionMethodCandidate(MethodDeclaration Definition,
-        ExtensionReceiverAdaptation Adaptation, bool IsReferenceReceiver,
         IReadOnlyDictionary<string, TypeExpression> GenericBindings);
 
     private sealed record ExtensionRegistration(MethodDeclaration Definition, NamespaceScope Scope);
@@ -53,6 +51,9 @@ public partial class TypeChecker
                 else if (member is InterfaceDeclaration iface) Walk(iface.Members, scope, false);
                 else
                 {
+                    if (member is MethodDeclaration reserved && ExtensionMemberName(reserved) == "reinterpret" &&
+                        (!namespaceMembers || reserved.ExtensionReceiverType != null))
+                        throw new TypeCheckException("'reinterpret' is a reserved intrinsic member and cannot be declared or overloaded", reserved.Span);
                     var parameters = member switch {
                         MethodDeclaration m => m.Parameters, ConstructorDeclaration c => c.Parameters,
                         ExternDeclaration e => e.Parameters, OperatorDeclaration o => o.Parameters, _ => null };
@@ -70,6 +71,12 @@ public partial class TypeChecker
                 throw new TypeCheckException("Only the first parameter can be an extension receiver", member.Span);
             if (parameters[0].DefaultValue != null || parameters[0].IsConst)
                 throw new TypeCheckException("An extension receiver cannot have a default or be const", parameters[0].Span);
+            if (method.ExtensionReceiverType == null)
+                throw new TypeCheckException("Use an extension block; parameter-modifier extensions were removed", member.Span);
+            var target = ExtensionFormalType(method, method.ExtensionReceiverType);
+            if (target is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression or FunctionPointerTypeExpression ||
+                target is NamedTypeExpression { Name: "void" or "null" })
+                throw new TypeCheckException("Extension blocks target the underlying object type, never a pointer or reference type", method.ExtensionReceiverType.Span);
             extensions.Add(new(method, scope));
         }
     }
@@ -92,6 +99,9 @@ public partial class TypeChecker
         IReadOnlyList<TypeExpression>? explicitTypeArguments = null)
     {
         if (extensions.Count == 0) return [];
+        var knownReceiver = KnownExtensionType(receiverType);
+        if (knownReceiver == null) return [];
+        receiverType = knownReceiver;
         var visible = new HashSet<NamespaceScope>();
         for (var scope = ExtensionNamespace(namespaceName); scope != null; scope = scope.Parent) visible.Add(scope);
         foreach (string name in usingNamespaces)
@@ -103,36 +113,28 @@ public partial class TypeChecker
             if (scope != null) visible.Add(scope);
         }
         var result = new List<ExtensionMethodCandidate>();
-        foreach (var entry in extensions.Where(e => visible.Contains(e.Scope) && (memberName == null || e.Definition.Name == memberName)))
+        foreach (var entry in extensions.Where(e => visible.Contains(e.Scope) && (memberName == null || ExtensionMemberName(e.Definition) == memberName)))
         {
-            TryPreview(entry.Definition, receiverType, receiverIsStorage, receiverIsReadOnly, ExtensionReceiverAdaptation.Exact);
-            if (receiverType is PointerTypeExpression { IsNullable: false } pointer)
-                TryPreview(entry.Definition, pointer.Inner, true, pointer.IsReadOnly || pointer.Inner.IsReadOnlyValue,
-                    ExtensionReceiverAdaptation.RawPointerPointee);
+            if (receiverType is PointerTypeExpression { IsNullable: true } or ManagedTypeExpression { IsNullable: true }) continue;
+            var borrowedPointer = (PointerTypeExpression)ExtensionObjectPointer(receiverType, receiverIsReadOnly);
+            if (!IsExtensionObjectType(borrowedPointer.Inner)) continue;
+            TryPreview(entry.Definition, borrowedPointer);
         }
         return result;
 
-        void TryPreview(MethodDeclaration method, TypeExpression source, bool storage, bool readOnly,
-            ExtensionReceiverAdaptation adaptation)
+        void TryPreview(MethodDeclaration method, TypeExpression source)
         {
             if (explicitTypeArguments is { Count: > 0 } &&
-                (!method.IsGeneric || method.GenericParameters.Count != explicitTypeArguments.Count)) return;
+                (!method.IsGeneric || method.GenericParameters.Count - method.ExtensionBlockParameterCount != explicitTypeArguments.Count)) return;
             var formal = ExtensionFormalType(method, method.Parameters[0].Type);
-            bool reference = formal is ReferenceTypeExpression;
-            if (reference && !storage) return;
-            if (reference && adaptation == ExtensionReceiverAdaptation.Exact && receiverStorageType != null)
-                source = receiverStorageType.WithQualifiersFrom(source);
-            if (readOnly) source = TypeQualifiers.ReadOnly(source);
-            if (reference) source = new ReferenceTypeExpression(source, source.Line);
             var bindings = new Dictionary<string, TypeExpression>();
             if (method.IsGeneric)
             {
                 var names = method.GenericParameters.Select(parameter => parameter.Name).ToHashSet();
+                if (!InferCallableBindings(formal, source, names, bindings, signaturePreview: true)) return;
                 if (explicitTypeArguments is { Count: > 0 })
-                {
-                    foreach (var pair in method.GenericParameters.Zip(explicitTypeArguments)) bindings[pair.First.Name] = pair.Second;
-                }
-                else if (!InferCallableBindings(formal, source, names, bindings, signaturePreview: true)) return;
+                    foreach (var pair in method.GenericParameters.Skip(method.ExtensionBlockParameterCount).Zip(explicitTypeArguments))
+                        bindings[pair.First.Name] = pair.Second;
                 // An unbound receiver cannot be offered honestly. Other parameters may infer remaining T's.
                 var substituted = SubstituteExtensionType(formal, bindings);
                 if (HasUnboundExtensionType(substituted, names)) return;
@@ -151,7 +153,7 @@ public partial class TypeChecker
             var knownSource = KnownExtensionType(OverloadArgumentType(source));
             if (knownSource != null &&
                 (GetDeclaredParameterView(knownSource)?.IsOpen == true && TypesMatchPublic(formal, knownSource) ||
-                 IsAssignable(formal, knownSource))) result.Add(new(method, adaptation, reference, bindings));
+                 IsAssignable(formal, knownSource))) result.Add(new(method, bindings));
         }
     }
 
@@ -332,6 +334,15 @@ public partial class TypeChecker
                 pair.Value.Name == named.Name &&
                 pair.Value.TypeArguments.Count == named.TypeArguments.Count &&
                 pair.Value.TypeArguments.Zip(named.TypeArguments).All(p => TypesMatchPublic(p.First, p.Second)));
+            // An editor can also supply a declaration-bound open parameter.
+            // Keep that nominal signature symbolic; do not manufacture its
+            // layout or instantiate a body merely to preview a member.
+            if (known.Key == null && HasDeclaredParameter(named) &&
+                (_genericStructs.ContainsKey(named.Name) || _genericClasses.ContainsKey(named.Name) ||
+                 _symbols.GenericInterfaces.ContainsKey(named.Name)) &&
+                named.TypeArguments.All(argument => argument is not NamedTypeExpression { TypeArguments.Count: > 0 } &&
+                    KnownExtensionType(argument) != null))
+                return named;
             // The nominal specialization is shared, but the requested use may
             // carry a different declared-parameter view than its first use.
             return known.Key == null ? null : NamedTypeExpression.Resolved(known.Key, type.Line)
@@ -397,7 +408,7 @@ public partial class TypeChecker
     private bool TryCheckExtensionCall(CallExpression call)
     {
         if (call.Callee is not MemberAccessExpression { IsArrow: false } member || extensions.Count == 0 ||
-            !extensions.Any(e => e.Definition.Name == member.Member)) return false;
+            !extensions.Any(e => ExtensionMemberName(e.Definition) == member.Member)) return false;
         if (ResolveNamespace(member.Object) != null || ResolveEnum(member.Object) != null) return false;
         if (member.Object is IdentifierExpression id && !TryLookupVariable(id.Name, out _) &&
             (GetClass(id.Name) != null || GetStruct(id.Name) != null || IsInterface(id.Name))) return false;
@@ -408,34 +419,22 @@ public partial class TypeChecker
         var candidates = GetVisibleExtensions(_currentNamespacePath, CurrentUsings, receiverType,
             IsReferenceStorage(member.Object) && !IsPropertyValueStorage(member.Object) && !IsManagedStorage(member.Object),
             IsExpressionReadOnly(member.Object), member.Member, GetExtensionReceiverStorageType(member.Object), explicitTypes).ToList();
-        if (candidates.Any(c => c.Adaptation == ExtensionReceiverAdaptation.Exact))
-            candidates.RemoveAll(c => c.Adaptation != ExtensionReceiverAdaptation.Exact);
         if (candidates.Count == 0) return false;
-        // Receiver shape is selected before checking later arguments. Mixing ref and value
-        // receivers would have different evaluation effects, so diagnose rather than guess.
-        if (candidates.Select(c => c.IsReferenceReceiver).Distinct().Count() > 1)
-            throw new TypeCheckException($"Extension receiver for '{member.Member}' is ambiguous", member.Span);
         AstNode receiver = member.Object;
-        if (candidates[0].Adaptation == ExtensionReceiverAdaptation.RawPointerPointee)
+        // This is an internal instance borrow, not a user address escape.
+        // Use the existing temporary-address cleanup for value receivers.
+        if (!TryCreateInterfaceViewReceiver(receiver, out receiver))
         {
-            receiver = new UnaryExpression(receiver, TokenKind.Star, true, receiver.Line) { Span = receiver.Span };
-            var pointee = ((PointerTypeExpression)receiverType).Inner;
-            if (((PointerTypeExpression)receiverType).IsReadOnly) pointee = TypeQualifiers.ReadOnly(pointee);
-            RecordType(receiver, pointee);
+            var pointer = ExtensionObjectPointer(receiverType, IsExpressionReadOnly(receiver));
+            receiver = receiverType is PointerTypeExpression or ManagedTypeExpression
+                ? new CastExpression(pointer, receiver, receiver.Line) { Span = receiver.Span }
+                : new UnaryExpression(receiver, TokenKind.Ampersand, true, receiver.Line) { Span = receiver.Span };
+            RecordType(receiver, pointer);
         }
-        if (candidates[0].IsReferenceReceiver)
-        {
-            var storageType = GetExtensionReceiverStorageType(receiver) ?? GetType(receiver);
-            if (IsExpressionImmutable(receiver)) storageType = TypeQualifiers.Immutable(storageType);
-            else if (IsExpressionReadOnly(receiver)) storageType = TypeQualifiers.ReadOnly(storageType);
-            if (NullableLocal(receiver) is { } escaped) { nullableEscaped.Add(escaped); NullableWrite(escaped); }
-            receiver = new UnaryExpression(receiver, TokenKind.Ref, true, receiver.Line) { Span = receiver.Span };
-            RecordType(receiver, new ReferenceTypeExpression(storageType, receiver.Line));
-        }
-        else if (!IsFreshValue(receiver) && RequiresCopy(GetType(receiver))) InvalidateNullableEscapes();
         foreach (var argument in call.Arguments) CheckNullableArgument(argument);
         var lowered = new CallExpression(new IdentifierExpression(member.Member, member.Line) { Span = member.Span },
             new[] { receiver }.Concat(call.Arguments).ToList(), call.Line, new List<TypeExpression>(call.TypeArguments)) { Span = call.Span };
+        lowered.TypeArguments.Clear();
         var bindings = candidates.ToDictionary(candidate => candidate.Definition, candidate => candidate.GenericBindings);
         var selection = SelectCallableOverload(candidates.Select(candidate => candidate.Definition), lowered,
             member.Member, bindings);

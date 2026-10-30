@@ -96,12 +96,12 @@ public sealed class Base64DecoderTests
                         int decodedSize=ReadInt(stream);if(decodedSize<0||decodedSize>16385)return 4;
                         if(fread((void*)(char*)expected,1,(nuint)decodedSize,stream)!=(nuint)decodedSize)return 5;
                         Sink sink=new(output);Base64Decoder decoder=new(&sink);nuint position=0;
-                        decoder.Write((readonly(char)*)1,0);
+                        decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         for(int i=0;i<count;i++){
                             decoder.Write((readonly(char)*)input+position,(nuint)chunks[i]);
                             // Every consumed chunk may be reused immediately, even before a quartet completes.
                             for(nuint j=0;j<(nuint)chunks[i];j++)input[position+j]='?';
-                            position+=(nuint)chunks[i];decoder.Write((readonly(char)*)1,0);
+                            position+=(nuint)chunks[i];decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         }
                         int calls=sink.Calls;decoder.Complete();decoder.Complete();
                         if(sink.Calls!=calls||sink.Count!=(nuint)decodedSize)return 6;
@@ -140,7 +140,7 @@ public sealed class Base64DecoderTests
                 try{decoder.Write(input,split);decoder.Write(input+split,length-split);decoder.Complete();}
                 catch(Exception* error){caught++;}
                 if(caught!=1)return false;int calls=sink.Calls;nuint count=sink.Count;
-                try{decoder.Write((readonly(char)*)1,0);}catch(Exception* error){caught++;}
+                try{decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(Exception* error){caught++;}
                 try{decoder.Write("AAAA",4);}catch(Exception* error){caught++;}
                 try{decoder.Complete();}catch(Exception* error){caught++;}
                 Base64Decoder copy=decoder;
@@ -183,7 +183,7 @@ public sealed class Base64DecoderTests
                 catch{return false;}
                 if(caught!=1||sink.Count!=budget)return false;
                 int calls=sink.Calls;sink.Budget=999;
-                try{decoder.Write((readonly(char)*)1,0);}catch(Exception* error){caught++;}
+                try{decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(Exception* error){caught++;}
                 try{decoder.Complete();}catch(Exception* error){caught++;}
                 return caught==3&&sink.Calls==calls&&sink.Count==budget;
             }
@@ -216,7 +216,7 @@ public sealed class Base64DecoderTests
                         moved.Write(original+carry,4-carry);moved.Complete();
                         if(sink.Count!=3||output[0]!='a'||output[1]!='b'||output[2]!='c')return 1;
                         Base64Decoder complete=moved;int calls=sink.Calls;complete.Complete();
-                        try{complete.Write((readonly(char)*)1,0);return 2;}catch(Exception* error){}
+                        try{complete.Write(((nuint)1).reinterpret<readonly(char)*>(),0);return 2;}catch(Exception* error){}
                         if(sink.Calls!=calls)return 3;
                     }
                     if(sink.Count!=3)return 4;
@@ -224,10 +224,10 @@ public sealed class Base64DecoderTests
                     if(sink.Count!=3)return 5;sink.Write("!",1);
                     if(sink.Count!=4||output[3]!='!')return 6;
                     Base64Decoder padded=new(&sink);padded.Write("YQ==",4);
-                    padded.Write((readonly(char)*)1,0);padded.Complete();padded.Complete();
+                    padded.Write(((nuint)1).reinterpret<readonly(char)*>(),0);padded.Complete();padded.Complete();
                     if(sink.Count!=5||output[4]!='a')return 7;
                     Base64Decoder empty=new(&sink);int calls=sink.Calls;
-                    empty.Write((readonly(char)*)1,0);empty.Complete();empty.Complete();
+                    empty.Write(((nuint)1).reinterpret<readonly(char)*>(),0);empty.Complete();empty.Complete();
                     if(sink.Calls!=calls)return 8;
                 }
                 return 0;

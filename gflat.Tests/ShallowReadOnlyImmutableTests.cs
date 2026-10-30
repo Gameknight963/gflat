@@ -110,7 +110,7 @@ public sealed class ShallowReadOnlyImmutableTests
     [Fact]
     public void ManagedViewsKeepTheSameShallowAndDeepBoundaries()
     {
-        const string runtime="alias GC=Collector;static class Collector{public static void* Allocate(nuint bytes,nuint alignment)=>(void*)1;public static void ReferenceAdded(void* slot)nothrow{}public static void ReferenceRemoved(void* slot)nothrow{}}";
+        const string runtime="alias GC=Collector;static class Collector{public static void* Allocate(nuint bytes,nuint alignment)=>((nuint)1).reinterpret<void*>();public static void ReferenceAdded(void* slot)nothrow{}public static void ReferenceRemoved(void* slot)nothrow{}}";
         Check(runtime+Preamble+"void Test(readonly(Box)^ value){value.target.Change();value.data[0]=42;}");
         Assert.Throws<TypeCheckException>(()=>Check(runtime+Preamble+"void Test(immutable(Box)^ value){value.target.Change();}"));
         Assert.Throws<TypeCheckException>(()=>Check(runtime+Preamble+"void Test(immutable(Box)^ value){readonly(Box)^ escaped=(readonly(Box)^)value;}"));

@@ -61,7 +61,7 @@ public sealed class ForeachGarbageCollectionTests
             return 0;
         }
         """.Replace("FACTORY", extension ? "" : "public Iterator^ GetEnumerator() { GC::Collect(); return new^ Iterator(value); }")
-            .Replace("EXTENSION", extension ? "Iterator^ GetEnumerator(this Source^ source) { GC::Collect(); return new^ Iterator(source.value); }" : ""));
+            .Replace("EXTENSION", extension ? "Iterator^ GetEnumerator(Source^ source) { GC::Collect(); return new^ Iterator(source.value); }\nextension Source { public Iterator^ GetEnumerator() { GC::Collect(); return new^ Iterator(this.value); } }" : ""));
 
     [Theory]
     [InlineData(false)]

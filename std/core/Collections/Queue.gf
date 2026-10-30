@@ -93,8 +93,8 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     public bool TryDequeue(ref T result)
     {
         if (count == 0) return false;
-        nuint start = (nuint)data!;
-        nuint output = (nuint)&result;
+        nuint start = (data!).reinterpret<nuint>();
+        nuint output = (&result).reinterpret<nuint>();
         nuint stride = (nuint)sizeof(T);
         if (stride == 0) stride = 1;
         if (output >= start && output - start < capacity * stride)

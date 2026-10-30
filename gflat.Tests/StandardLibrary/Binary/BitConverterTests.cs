@@ -32,15 +32,15 @@ public class BitConverterTests
                 ulong[{{doubleReference.Length}}] expectedDoubles = [{{string.Join(",", doubleReference.Select(bits => bits + "ul"))}}];
                 for (int i = 0; i < {{floats.Length}}; i++) {
                     float decoded = BitConverter::UInt32BitsToFloat(singles[i]);
-                    if (*((uint*)&decoded) != expectedSingles[i]) return 1;
-                    float reference = *((float*)&singles[i]);
+                    if ((decoded).reinterpret<uint>() != expectedSingles[i]) return 1;
+                    float reference = (singles[i]).reinterpret<float>();
                     if (BitConverter::FloatToUInt32Bits(reference) != expectedSingles[i]) return 2;
                     if (BitConverter::FloatToUInt32Bits(decoded) != singles[i]) return 3;
                 }
                 for (int i = 0; i < {{doubles.Length}}; i++) {
                     double decoded = BitConverter::UInt64BitsToDouble(doubles[i]);
-                    if (*((ulong*)&decoded) != expectedDoubles[i]) return 4;
-                    double reference = *((double*)&doubles[i]);
+                    if ((decoded).reinterpret<ulong>() != expectedDoubles[i]) return 4;
+                    double reference = (doubles[i]).reinterpret<double>();
                     if (BitConverter::DoubleToUInt64Bits(reference) != expectedDoubles[i]) return 5;
                     if (BitConverter::DoubleToUInt64Bits(decoded) != doubles[i]) return 6;
                 }

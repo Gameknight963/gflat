@@ -90,7 +90,7 @@ public sealed class PathChangeExtensionTests
         =>Run("""
             using std::Text; using std::IO; using std::Memory;
             int main() {
-                Span<readonly(char)> empty=new((readonly(char)*)1,0);
+                Span<readonly(char)> empty=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 Span<readonly(char)> suffix=new("txt",3);
                 String result=Paths::ChangeExtension(empty,suffix,PathStyle::Unix);
                 if(!result.IsEmpty)return 1;
@@ -98,10 +98,10 @@ public sealed class PathChangeExtensionTests
                 result=Paths::ChangeExtension(path,empty,PathStyle::Unix);
                 if(!result.Equals("name"))return 2;
                 // No-filename input never inspects replacement bytes.
-                suffix=new((readonly(char)*)1,(nuint)0-1);
+                suffix=new(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-1);
                 path=new("C:",2);result=Paths::ChangeExtension(path,suffix,PathStyle::Windows);
                 if(!result.Equals("C:"))return 3;
-                result=Paths::ChangeExtension("dir/",(readonly(char)*)1,PathStyle::Unix);
+                result=Paths::ChangeExtension("dir/",((nuint)1).reinterpret<readonly(char)*>(),PathStyle::Unix);
                 if(!result.Equals("dir/"))return 4;
                 String destination=s"kept";readonly(char)* original=destination.Data;
                 path=new("a",1);nuint maximum=(nuint)0-1;int caught=0;

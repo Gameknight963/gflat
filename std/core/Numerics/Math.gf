@@ -242,46 +242,46 @@ public static class Math
     public static bool IsNaN(float value) nothrow => value != value;
     public static bool IsFinite(float value) nothrow
     {
-        uint bits = *((uint*)&value);
+        uint bits = value.reinterpret<uint>();
         return (bits & (uint)2139095040) != (uint)2139095040;
     }
     public static float Abs(float value) nothrow
     {
-        uint bits = *((uint*)&value) & (uint)2147483647;
-        return *((float*)&bits);
+        uint bits = value.reinterpret<uint>() & (uint)2147483647;
+        return bits.reinterpret<float>();
     }
 
     public static float CopySign(float magnitude, float sign) nothrow
     {
-        uint bits = (*((uint*)&magnitude) & 2147483647u) | (*((uint*)&sign) & 2147483648u);
-        return *((float*)&bits);
+        uint bits = (magnitude.reinterpret<uint>() & 2147483647u) | (sign.reinterpret<uint>() & 2147483648u);
+        return bits.reinterpret<float>();
     }
 
     public static float BitIncrement(float value) nothrow
     {
-        uint bits = *((uint*)&value);
+        uint bits = value.reinterpret<uint>();
         uint magnitude = bits & 0x7fffffffu;
         if (magnitude > 0x7f800000u || bits == 0x7f800000u) return value;
         if (magnitude == 0u) bits = 1u;
         else if ((bits & 0x80000000u) != 0u) bits--;
         else bits++;
-        return *((float*)&bits);
+        return bits.reinterpret<float>();
     }
 
     public static float BitDecrement(float value) nothrow
     {
-        uint bits = *((uint*)&value);
+        uint bits = value.reinterpret<uint>();
         uint magnitude = bits & 0x7fffffffu;
         if (magnitude > 0x7f800000u || bits == 0xff800000u) return value;
         if (magnitude == 0u) bits = 0x80000001u;
         else if ((bits & 0x80000000u) != 0u) bits++;
         else bits--;
-        return *((float*)&bits);
+        return bits.reinterpret<float>();
     }
 
     public static float Truncate(float value) nothrow
     {
-        uint bits = *((uint*)&value);
+        uint bits = value.reinterpret<uint>();
         int exponent = (int)((bits >> 23) & 255u) - 127;
         if (exponent >= 23) return value;
         if (exponent < 0) bits = bits & 2147483648u;
@@ -290,7 +290,7 @@ public static class Math
             uint fraction = (1u << (23 - exponent)) - 1u;
             bits = bits & (fraction ^ 4294967295u);
         }
-        return *((float*)&bits);
+        return bits.reinterpret<float>();
     }
 
     public static float Floor(float value) nothrow
@@ -309,16 +309,16 @@ public static class Math
 
     public static float Round(float value) nothrow
     {
-        uint bits = *((uint*)&value);
+        uint bits = value.reinterpret<uint>();
         int exponent = (int)((bits >> 23) & 255u) - 127;
         if (exponent >= 23) return value;
         uint sign = bits & 2147483648u;
-        if (exponent < -1) return *((float*)&sign);
+        if (exponent < -1) return sign.reinterpret<float>();
         if (exponent == -1)
         {
             // Exactly +/-0.5 ties with the even integer zero.
             if ((bits & 8388607u) != 0u) sign = sign | 1065353216u;
-            return *((float*)&sign);
+            return sign.reinterpret<float>();
         }
         int shift = 23 - exponent;
         uint unit = 1u << shift;
@@ -329,7 +329,7 @@ public static class Math
         uint half = unit >> 1;
         if (discarded > half || (discarded == half && ((significand >> shift) & 1u) != 0u))
             truncated += unit;
-        return *((float*)&truncated);
+        return truncated.reinterpret<float>();
     }
 
     public static float Min(float a, float b) nothrow
@@ -339,8 +339,8 @@ public static class Math
         if (a < b) return a;
         if (a == b)
         {
-            uint bits = *((uint*)&a) | *((uint*)&b);
-            return *((float*)&bits);
+            uint bits = a.reinterpret<uint>() | b.reinterpret<uint>();
+            return bits.reinterpret<float>();
         }
         return b;
     }
@@ -352,8 +352,8 @@ public static class Math
         if (a > b) return a;
         if (a == b)
         {
-            uint bits = *((uint*)&a) & *((uint*)&b);
-            return *((float*)&bits);
+            uint bits = a.reinterpret<uint>() & b.reinterpret<uint>();
+            return bits.reinterpret<float>();
         }
         return b;
     }
@@ -364,46 +364,46 @@ public static class Math
     public static bool IsNaN(double value) nothrow => value != value;
     public static bool IsFinite(double value) nothrow
     {
-        ulong bits = *((ulong*)&value);
+        ulong bits = value.reinterpret<ulong>();
         return (bits & 9218868437227405312ul) != 9218868437227405312ul;
     }
     public static double Abs(double value) nothrow
     {
-        ulong bits = *((ulong*)&value) & 9223372036854775807ul;
-        return *((double*)&bits);
+        ulong bits = value.reinterpret<ulong>() & 9223372036854775807ul;
+        return bits.reinterpret<double>();
     }
 
     public static double CopySign(double magnitude, double sign) nothrow
     {
-        ulong bits = (*((ulong*)&magnitude) & 9223372036854775807ul) | (*((ulong*)&sign) & 9223372036854775808ul);
-        return *((double*)&bits);
+        ulong bits = (magnitude.reinterpret<ulong>() & 9223372036854775807ul) | (sign.reinterpret<ulong>() & 9223372036854775808ul);
+        return bits.reinterpret<double>();
     }
 
     public static double BitIncrement(double value) nothrow
     {
-        ulong bits = *((ulong*)&value);
+        ulong bits = value.reinterpret<ulong>();
         ulong magnitude = bits & 0x7ffffffffffffffful;
         if (magnitude > 0x7ff0000000000000ul || bits == 0x7ff0000000000000ul) return value;
         if (magnitude == 0ul) bits = 1ul;
         else if ((bits & 0x8000000000000000ul) != 0ul) bits--;
         else bits++;
-        return *((double*)&bits);
+        return bits.reinterpret<double>();
     }
 
     public static double BitDecrement(double value) nothrow
     {
-        ulong bits = *((ulong*)&value);
+        ulong bits = value.reinterpret<ulong>();
         ulong magnitude = bits & 0x7ffffffffffffffful;
         if (magnitude > 0x7ff0000000000000ul || bits == 0xfff0000000000000ul) return value;
         if (magnitude == 0ul) bits = 0x8000000000000001ul;
         else if ((bits & 0x8000000000000000ul) != 0ul) bits++;
         else bits--;
-        return *((double*)&bits);
+        return bits.reinterpret<double>();
     }
 
     public static double Truncate(double value) nothrow
     {
-        ulong bits = *((ulong*)&value);
+        ulong bits = value.reinterpret<ulong>();
         int exponent = (int)((bits >> 52) & 2047ul) - 1023;
         if (exponent >= 52) return value;
         if (exponent < 0) bits = bits & 9223372036854775808ul;
@@ -412,7 +412,7 @@ public static class Math
             ulong fraction = (1ul << (52 - exponent)) - 1ul;
             bits = bits & (fraction ^ 18446744073709551615ul);
         }
-        return *((double*)&bits);
+        return bits.reinterpret<double>();
     }
 
     public static double Floor(double value) nothrow
@@ -431,15 +431,15 @@ public static class Math
 
     public static double Round(double value) nothrow
     {
-        ulong bits = *((ulong*)&value);
+        ulong bits = value.reinterpret<ulong>();
         int exponent = (int)((bits >> 52) & 2047ul) - 1023;
         if (exponent >= 52) return value;
         ulong sign = bits & 9223372036854775808ul;
-        if (exponent < -1) return *((double*)&sign);
+        if (exponent < -1) return sign.reinterpret<double>();
         if (exponent == -1)
         {
             if ((bits & 4503599627370495ul) != 0ul) sign = sign | 4607182418800017408ul;
-            return *((double*)&sign);
+            return sign.reinterpret<double>();
         }
         int shift = 52 - exponent;
         ulong unit = 1ul << shift;
@@ -450,7 +450,7 @@ public static class Math
         ulong half = unit >> 1;
         if (discarded > half || (discarded == half && ((significand >> shift) & 1ul) != 0ul))
             truncated += unit;
-        return *((double*)&truncated);
+        return truncated.reinterpret<double>();
     }
 
     public static double Min(double a, double b) nothrow
@@ -460,8 +460,8 @@ public static class Math
         if (a < b) return a;
         if (a == b)
         {
-            ulong bits = *((ulong*)&a) | *((ulong*)&b);
-            return *((double*)&bits);
+            ulong bits = a.reinterpret<ulong>() | b.reinterpret<ulong>();
+            return bits.reinterpret<double>();
         }
         return b;
     }
@@ -473,8 +473,8 @@ public static class Math
         if (a > b) return a;
         if (a == b)
         {
-            ulong bits = *((ulong*)&a) & *((ulong*)&b);
-            return *((double*)&bits);
+            ulong bits = a.reinterpret<ulong>() & b.reinterpret<ulong>();
+            return bits.reinterpret<double>();
         }
         return b;
     }

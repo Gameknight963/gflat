@@ -10,7 +10,7 @@ public sealed class ExtensionEditorTests
         int offset = marked.IndexOf('|');
         var source = new SourceFile(Path.GetFullPath("extension-main.gf"), marked.Remove(offset, 1));
         var extra = new SourceFile(Path.GetFullPath("extension-library.gf"), library);
-        var snapshot = new AnalysisSnapshot([source, extra]);
+        var snapshot = new AnalysisSnapshot([source, extra],new(){NoStdLib=true});
         return (new EditorModel(snapshot, [source, extra]), source.Path, offset, source);
     }
 
@@ -21,7 +21,7 @@ public sealed class ExtensionEditorTests
     [Fact]
     public void DotCompletionFiltersExtensionsByUsingAndReceiverType()
     {
-        const string library = "namespace Extras; int Double(this int value) => value * 2; int Wrong(this char* text) => 0;";
+        const string library = "namespace Extras; extension int{public int Double()=> (*this) * 2;} extension char{public int Wrong()=> 0;}";
         var (model, path, offset, _) = Analyze("using Extras; int main() { int n = 2; n.|; return 0; }", library);
         Assert.Contains("Double", Labels(model.Completion(path, offset)));
         Assert.DoesNotContain("Wrong", Labels(model.Completion(path, offset)));
@@ -32,7 +32,7 @@ public sealed class ExtensionEditorTests
     [Fact]
     public void DotCallsHaveBoundHoverNavigationAndSignatureHelp()
     {
-        const string library = "namespace Extras; int Add(this int value, int amount = 2) => value + amount;";
+        const string library = "namespace Extras; extension int{public int Add(int amount = 2)=> (*this) + amount;}";
         var (model, path, offset, source) = Analyze("using Extras; int main() { int n = 40; return n.Ad|d(); }", library);
         var hover = Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString();
         Assert.Contains("int Extras::Add(int amount = 2)", hover);
@@ -50,16 +50,16 @@ public sealed class ExtensionEditorTests
     public void FreeCallsKeepTheExplicitReceiverInTheirSignature()
     {
         var (model, path, offset, source) = Analyze("using Extras; int main() { return Extras::Ad|d(40, 2); }",
-            "namespace Extras; int Add(this int value, int amount) => value + amount;");
-        Assert.Contains("this int value", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
+            "namespace Extras; int Add(int value,int amount)=>value+amount; extension int{public int Add(int amount)=> (*this) + amount;}");
+        Assert.Contains("int value", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
         var signature = Json(model.SignatureHelp(path, source.Text.LastIndexOf("Add(", StringComparison.Ordinal) + 7));
         Assert.Equal(2, signature.GetProperty("signatures")[0].GetProperty("parameters").GetArrayLength());
     }
 
     [Fact]
-    public void RefExtensionsRequireStorageAndHonorReadonly()
+    public void BorrowedExtensionsSupportTemporaryAndHonorReadonly()
     {
-        const string library = "namespace Extras; void Bump(this ref int value) { value++; } int Read(this ref readonly(int) value) => value;";
+        const string library = "namespace Extras; extension int{public void Bump(){ (*this)++; }} extension int{public readonly int Read()=> (*this);}";
         var (mutable, mp, mo, _) = Analyze("using Extras; void F() { int n = 1; n.|; }", library);
         Assert.Contains("Bump", Labels(mutable.Completion(mp, mo)));
         Assert.Contains("Read", Labels(mutable.Completion(mp, mo)));
@@ -67,26 +67,26 @@ public sealed class ExtensionEditorTests
         Assert.DoesNotContain("Bump", Labels(readOnly.Completion(rp, ro)));
         Assert.Contains("Read", Labels(readOnly.Completion(rp, ro)));
         var (temporary, tp, to, _) = Analyze("using Extras; int Value() => 1; void F() { Value().|; }", library);
-        Assert.DoesNotContain("Bump", Labels(temporary.Completion(tp, to)));
-        Assert.DoesNotContain("Read", Labels(temporary.Completion(tp, to)));
+        Assert.Contains("Bump", Labels(temporary.Completion(tp, to)));
+        Assert.Contains("Read", Labels(temporary.Completion(tp, to)));
     }
 
     [Fact]
     public void GenericExtensionsDisplayInferredTypesAndNavigateToTheirDefinition()
     {
-        const string library = "namespace Extras; T Identity<T>(this T value) => value;";
+        const string library = "namespace Extras; extension<T> T{public T Identity()=> (*this);}";
         var (model, path, offset, _) = Analyze("using Extras; int main() { int n = 42; return n.Iden|tity(); }", library);
-        Assert.Contains("int Extras::Identity<int>()", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("int Extras::Identity()", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("extension-library.gf", Json(model.Definition(path, offset)).ToString());
         var (completion, cp, co, _) = Analyze("using Extras; int main() { int n = 42; n.|; return 0; }", library);
         var item = Json(completion.Completion(cp, co)).GetProperty("items").EnumerateArray().Single(item => item.GetProperty("label").GetString() == "Identity");
-        Assert.Contains("int Extras::Identity<int>()", item.GetProperty("detail").GetString());
+        Assert.Contains("int Extras::Identity()", item.GetProperty("detail").GetString());
     }
 
     [Fact]
     public void NonCallablePropertiesAndExtensionMethodsBothAppear()
     {
-        const string library = "namespace Extras; int Count(this ref immutable(Box) box) => box.Count;";
+        const string library = "namespace Extras; extension Box{public immutable int Count()=> (*this).Count;}";
         var (model, path, offset, _) = Analyze("using Extras; struct Box { public int Count => 42; } int main() { Box b = new Box(); b.|; return 0; }", library);
         var items = Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray()
             .Where(item => item.GetProperty("label").GetString() == "Count").ToArray();
@@ -98,7 +98,7 @@ public sealed class ExtensionEditorTests
     [Fact]
     public void LiteralReceiversHaveCompletionAndNavigation()
     {
-        const string library = "namespace Extras; int Bytes(this immutable(char*) text) => 3;";
+        const string library = "namespace Extras; extension char{public immutable int Bytes()=> 3;}";
         var (model, path, offset, _) = Analyze("using Extras; int main() => \"abc\".By|tes();", library);
         Assert.NotNull(model.Hover(path, offset));
         Assert.Contains("extension-library.gf", Json(model.Definition(path, offset)).ToString());
@@ -107,17 +107,17 @@ public sealed class ExtensionEditorTests
     }
 
     [Fact]
-    public void GuardedNullableRefReceiversKeepTheirDeclaredSlotType()
+    public void GuardedNullablePointersExposeUnderlyingObjectExtensions()
     {
-        const string library = "namespace Extras; void Clear(this ref int*? slot) { slot = null; }";
+        const string library = "namespace Extras; extension int{public int Inspect()=>*this;}";
         var (model, path, offset, _) = Analyze("using Extras; void F(int*? p) { if (p == null) return; p.|; }", library);
-        Assert.Contains("Clear", Labels(model.Completion(path, offset)));
+        Assert.Contains("Inspect", Labels(model.Completion(path, offset)));
     }
 
     [Fact]
     public void PointerPointeeCompletionsPreserveReadonly()
     {
-        const string library = "namespace Extras; void Bump(this ref Box box) { box.value++; } int Read(this ref immutable(Box) box) => box.value;";
+        const string library = "namespace Extras; extension Box{public void Bump(){ (*this).value++; }} extension Box{public immutable int Read()=> (*this).value;}";
         const string box = "struct Box { public int value; } ";
         var (model, path, offset, _) = Analyze("using Extras; " + box + "void F(Box* p) { p.|; }", library);
         Assert.Contains("Bump", Labels(model.Completion(path, offset)));
@@ -134,8 +134,8 @@ public sealed class ExtensionEditorTests
             using Extras;
             struct Box<T> { public T value; public Box(T n) { value = n; } }
             int main() { Box<int> box = new Box<int>(42); return box.Ge|t(); }
-            """, "namespace Extras; T Get<T>(this ref immutable(Box<T>) box) => box.value;");
-        Assert.Contains("int Extras::Get<int>()", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
+            """, "namespace Extras; extension<T> Box<T>{public immutable T Get()=> (*this).value;}");
+        Assert.Contains("int Extras::Get()", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
         Assert.NotNull(model.Definition(path, offset));
     }
 
@@ -143,7 +143,7 @@ public sealed class ExtensionEditorTests
     public void BoundSignaturesPreserveSourceAliases()
     {
         var (model, path, offset, _) = Analyze("using Extras; int main() { int n = 1; n.Po|inter(); return 0; }",
-            "namespace Extras { alias Handle = void*?; Handle Pointer(this int value) => null; }");
+            "namespace Extras { alias Handle = void*?; extension int{public Handle Pointer()=> null;} }");
         string hover = Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString()!;
         Assert.Contains("Handle Extras::Pointer()", hover);
         Assert.DoesNotContain("void*", hover);
@@ -155,7 +155,7 @@ public sealed class ExtensionEditorTests
         var (model, path, offset, _) = Analyze("using Extras; void F() { int n = 1; n.|; }", """
             namespace Extras;
             int Broken(int n, this int value) => value;
-            int Double(this int value) => value * 2;
+            extension int{public int Double()=> (*this) * 2;}
             """);
         Assert.Contains("Double", Labels(model.Completion(path, offset)));
     }
@@ -164,7 +164,7 @@ public sealed class ExtensionEditorTests
     public void SignatureHelpCountsVisibleArgumentsAndIgnoresNestedCommas()
     {
         var (model, path, offset, _) = Analyze("using Extras; int Pair(int a, int b) => a + b; int main() { int n = 1; return n.Sum(Pair(1, 2), |3); }",
-            "namespace Extras; int Sum(this int receiver, int first, int second) => receiver + first + second;");
+            "namespace Extras; extension int{public int Sum(int first, int second)=> (*this) + first + second;}");
         var signature = Json(model.SignatureHelp(path, offset));
         Assert.Equal(1, signature.GetProperty("activeParameter").GetInt32());
         Assert.Equal(2, signature.GetProperty("signatures")[0].GetProperty("parameters").GetArrayLength());
@@ -175,7 +175,7 @@ public sealed class ExtensionEditorTests
     public void ExtensionCallsAreClassifiedAsMethods()
     {
         var (model, path, _, source) = Analyze("using Extras; int main() { int n = 1; return n.Do|uble(); }",
-            "namespace Extras; int Double(this int value) => value * 2;");
+            "namespace Extras; extension int{public int Double()=> (*this) * 2;}");
         int column = 0;
         var classifications = new Dictionary<int, string>();
         var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(value => value.GetInt32()).ToArray();
@@ -192,7 +192,7 @@ public sealed class ExtensionEditorTests
     public void ConstrainedGenericCompletionsRequireACompatibleReceiver()
     {
         const string declarations = "interface I { int Get(); } struct Box : I { public int Get() => 1; } ";
-        const string library = "namespace Extras; T Identity<T : I>(this T value) => Missing();";
+        const string library = "namespace Extras; extension<T : I> T{public T Identity()=> Missing();}";
         var (allowed, ap, ao, _) = Analyze("using Extras; " + declarations + "void F() { Box b = new Box(); b.|; }", library);
         Assert.Contains("Identity", Labels(allowed.Completion(ap, ao)));
         var (rejected, rp, ro, _) = Analyze("using Extras; " + declarations + "void F() { int n = 1; n.|; }", library);
@@ -203,7 +203,7 @@ public sealed class ExtensionEditorTests
     public void CallableInstanceMembersKeepCompletionAndNavigationPriority()
     {
         const string declaration = "struct Box { public int Read() => 42; } ";
-        const string library = "namespace Extras; int Read(this ref immutable(Box) value) => 1;";
+        const string library = "namespace Extras; extension Box{public immutable int Read()=> 1;}";
         var (model, path, offset, _) = Analyze("using Extras; " + declaration + "int main() { Box box = new Box(); return box.Re|ad(); }", library);
         Assert.Contains("extension-main.gf", Json(model.Definition(path, offset)).ToString());
         Assert.Contains("Box.Read", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());

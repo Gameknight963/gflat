@@ -96,7 +96,7 @@ public sealed class BigIntegerParsingTests
                         // Zero-length counted input must not be dereferenced.
                         int before=allocated;BigInteger target=new(777);int owned=allocated-before;
                         int freedBefore=released;int attemptsBefore=attempts;deny=true;
-                        if(BigInteger::TryParse((readonly(char)*)1,0,ref target))return 2;
+                        if(BigInteger::TryParse(((nuint)1).reinterpret<readonly(char)*>(),0,ref target))return 2;
                         deny=false;if(target.Sign!=0||attempts!=attemptsBefore||released-freedBefore!=owned)return 3;
                         readonly(char)* zeros="-000000000000000000000000000000000000000000000000000000000000";
                         nuint zeroCount=0;while(zeros[zeroCount]!='\0')zeroCount++;

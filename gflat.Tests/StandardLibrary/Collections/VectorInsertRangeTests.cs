@@ -133,7 +133,7 @@ public sealed class VectorInsertRangeTests
                     try{values.InsertRange(1,values.AsImmutable());return 1;}catch(ref BadAllocException error){}
                     deny=false;
                     if(values.Count!=3||values.Capacity!=capacity||values.AsImmutable().Data!=address||copies!=before)return 2;
-                    Span<immutable(Owner)> invalid=new((immutable(Owner)*)1,1);
+                    Span<immutable(Owner)> invalid=new(((nuint)1).reinterpret<immutable(Owner)*>(),1);
                     try{values.InsertRange(4,invalid);return 3;}catch(ref Exception error){}
                     Span<immutable(Owner)> empty=new();
                     try{values.InsertRange(4,empty);return 4;}catch(ref Exception error){}

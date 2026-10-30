@@ -160,7 +160,7 @@ public sealed class StableSortTests
                     comparisons=0;denyAfter=0;
                     StableSort<Owner>(empty,Compare);StableSort<Owner>(one,Compare);denyAfter=-1;
                     if(comparisons!=0||single.Id!=0)return 4;
-                    Span<Owner> huge=new((Owner*)1,(nuint)0-(nuint)1);
+                    Span<Owner> huge=new(((nuint)1).reinterpret<Owner*>(),(nuint)0-(nuint)1);
                     int before=allocations-releases;
                     try{StableSort<Owner>(huge,Compare);return 5;}catch(ref Exception error){}
                     if(comparisons!=0||allocations-releases!=before)return 6;

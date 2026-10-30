@@ -189,7 +189,7 @@ public sealed class WindowsTcpClientTests
             char tail='\0';if(client.Read(&tail,1)!=0||!client.IsOpen)return 4;
             bool caught=false;try{client.ReadExactly(&tail,1);}catch(ref EndOfStreamException error){caught=true;}
             if(!caught||!client.IsOpen)return 5;
-            client.Write((readonly(char)*)1,0);if(client.Read((char*)1,0)!=0)return 6;
+            client.Write(((nuint)1).reinterpret<readonly(char)*>(),0);if(client.Read(((nuint)1).reinterpret<char*>(),0)!=0)return 6;
             client.Close();client.Close();if(client.IsOpen)return 7;return 0;
         }
         int Two(IpEndpoint endpoint){

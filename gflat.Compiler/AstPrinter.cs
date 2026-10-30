@@ -67,6 +67,12 @@ namespace gflat
             Indented(() => { node.Target.Accept(this); node.Contract?.Accept(this); foreach (var member in node.Members) member.Accept(this); });
         }
 
+        public void Visit(ExtensionDeclaration node)
+        {
+            Print("Extension");
+            Indented(() => { node.Target.Accept(this); foreach (var member in node.Members) member.Accept(this); });
+        }
+
         public void Visit(FieldDeclaration node)
         {
             Print($"Field: {node.Accessibility} {node.Name}");

@@ -54,13 +54,13 @@ public sealed class BinaryCursorSeekTests
                     for (nuint i = 0; i < 257; i++) if (bytes[i] != (byte)(i * 13 + 7)) return 5;
                 }
                 BinaryBufferReader emptyRead = new(); BinaryBufferWriter emptyWrite = new();
-                BinaryBufferReader fakeRead = new((readonly(byte)*)1, 0);
-                BinaryBufferWriter fakeWrite = new((byte*)1, 0);
+                BinaryBufferReader fakeRead = new(((nuint)1).reinterpret<readonly(byte)*>(), 0);
+                BinaryBufferWriter fakeWrite = new(((nuint)1).reinterpret<byte*>(), 0);
                 nuint maximum = (nuint)0 - (nuint)1;
                 if (!emptyRead.TrySeek(0) || !emptyWrite.TrySeek(0) || !fakeRead.TrySeek(0) || !fakeWrite.TrySeek(0)) return 6;
                 if (emptyRead.TrySeek(1) || emptyWrite.TrySeek(maximum) || fakeRead.TrySeek(maximum) || fakeWrite.TrySeek(1)) return 7;
                 if (emptyRead.Position != 0 || emptyWrite.Position != 0 || fakeRead.Position != 0 || fakeWrite.Position != 0) return 8;
-                if (emptyRead.Data != null || emptyWrite.Data != null || fakeRead.Data != (readonly(byte)*)1 || fakeWrite.Data != (byte*)1) return 9;
+                if (emptyRead.Data != null || emptyWrite.Data != null || fakeRead.Data != ((nuint)1).reinterpret<readonly(byte)*>() || fakeWrite.Data != ((nuint)1).reinterpret<byte*>()) return 9;
                 return 0;
             }
             """, optimization);

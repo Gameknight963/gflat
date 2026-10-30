@@ -55,11 +55,11 @@ public sealed class ExtremaTests
                 }
                 ulong[{{bits.Count}}] bits=[{{string.Join(',',bits.Select(value=>value+"ul"))}}];
                 int[{{floatRows.Count}}] floatRows=[{{string.Join(',',floatRows)}}];ulong[{{expectedBits.Count}}] expected=[{{string.Join(',',expectedBits.Select(value=>value+"ul"))}}];
-                double[{{bits.Count}}] values;for(nuint i=0;i<{{bits.Count}};i++)values[i]=*((double*)&bits[i]);
+                double[{{bits.Count}}] values;for(nuint i=0;i<{{bits.Count}};i++)values[i]=(bits[i]).reinterpret<double>();
                 int before=attempts;deny=true;
                 for(nuint row=0;row<{{floatRows.Count}};row+=2){
                     Span<double> view=new(&values[(nuint)floatRows[row]],(nuint)floatRows[row+1]);double low=view.AsEnumerable().Min();double high=view.AsEnumerable().Max();
-                    if(*((ulong*)&low)!=expected[row]||*((ulong*)&high)!=expected[row+1])return 6;
+                    if((low).reinterpret<ulong>()!=expected[row]||(high).reinterpret<ulong>()!=expected[row+1])return 6;
                 }
                 deny=false;if(attempts!=before)return 7;return 0;
             }

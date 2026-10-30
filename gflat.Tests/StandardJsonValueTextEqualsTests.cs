@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 
 namespace gflat.Tests;
@@ -34,9 +34,9 @@ public sealed class StandardJsonValueTextEqualsTests
                 if(after!=before)return 2;
                 char[6] overlap=['"','n','a','m','e','"'];
                 if(!std::Json::JsonString::ValueTextEquals(overlap,6,&overlap[1],4))return 3;
-                if(!std::Json::JsonString::ValueTextEquals("\"\"",2,(readonly(char)*)1,0))return 4;
-                if(std::Json::JsonString::ValueTextEquals((readonly(char)*)1,0,(readonly(char)*)1,100))return 5;
-                if(std::Json::JsonString::ValueTextEquals((readonly(char)*)1,1,(readonly(char)*)1,100))return 6;
+                if(!std::Json::JsonString::ValueTextEquals("\"\"",2,((nuint)1).reinterpret<readonly(char)*>(),0))return 4;
+                if(std::Json::JsonString::ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<readonly(char)*>(),100))return 5;
+                if(std::Json::JsonString::ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),1,((nuint)1).reinterpret<readonly(char)*>(),100))return 6;
                 return 0;
             }
             """;
@@ -77,12 +77,12 @@ public sealed class StandardJsonValueTextEqualsTests
             int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* storage) nothrow{free(storage);}}
             int main(){
-                JsonReader unread=new((readonly(char)*)1,100);
-                if(unread.ValueTextEquals((readonly(char)*)1,100))return 1;
+                JsonReader unread=new(((nuint)1).reinterpret<readonly(char)*>(),100);
+                if(unread.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100))return 1;
                 readonly(char)* input="{\"na\\u006de\":\"a\\u0000b\",\"x\":42}";
                 nuint length=0;while(input[length]!='\0')length++;
                 JsonReader reader=new(input,length);
-                if(!reader.Read()||reader.ValueTextEquals((readonly(char)*)1,100))return 2;
+                if(!reader.Read()||reader.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100))return 2;
                 int before=allocations;
                 reader.Read();
                 readonly(JsonReader)* shallow=&reader;immutable(JsonReader)* deep=&reader;
@@ -90,13 +90,13 @@ public sealed class StandardJsonValueTextEqualsTests
                 if(reader.ValueTextEquals("Name",4)||reader.ValueTextEquals("nam",3))return 4;
                 reader.Read();if(!reader.ValueTextEquals("a\0b",3)||reader.ValueTextEquals("a",1))return 5;
                 reader.Read();if(!reader.ValueTextEquals("x",1))return 6;
-                reader.Read();if(reader.ValueTextEquals((readonly(char)*)1,100))return 7;
-                while(reader.Read())if(reader.ValueTextEquals((readonly(char)*)1,100))return 8;
-                if(reader.ValueTextEquals((readonly(char)*)1,100)||allocations!=before)return 9;
-                reader.Reset();if(reader.ValueTextEquals((readonly(char)*)1,100))return 10;
+                reader.Read();if(reader.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100))return 7;
+                while(reader.Read())if(reader.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100))return 8;
+                if(reader.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100)||allocations!=before)return 9;
+                reader.Reset();if(reader.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100))return 10;
                 JsonReader failed=new("?",1);
                 try{failed.Read();return 11;}catch(ref JsonParseException error){}
-                if(failed.ValueTextEquals((readonly(char)*)1,100))return 12;
+                if(failed.ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),100))return 12;
                 return 0;
             }
             """;

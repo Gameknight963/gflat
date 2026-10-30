@@ -42,7 +42,7 @@ public struct HMACSHA512
     {
         byte[64] inner = running.GetHash();
         SHA512 outer = outerSeed;
-        outer.TryAppend((readonly(char)*)(byte*)inner, 64);
+        outer.TryAppend(((byte*)inner).reinterpret<readonly(char)*>(), 64);
         return outer.GetHash();
     }
 }

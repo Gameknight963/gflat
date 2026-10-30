@@ -1,7 +1,7 @@
 # Borrowed file lines
 
 The optional `libc/IO/FileLineSequence.gf` source adds `FileLineSequence` and
-the `Lines(this File*)` extension. It uses `IO/File.gf`, `IO/FileLines.gf`,
+the borrowed `File.Lines()` extension. It uses `IO/File.gf`, `IO/FileLines.gf`,
 `String`, and the existing core sequence/query types.
 
 ```csharp

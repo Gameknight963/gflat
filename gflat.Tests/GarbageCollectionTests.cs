@@ -364,7 +364,7 @@ public sealed class GarbageCollectionTests
     [InlineData("void ReferenceAdded(void* slot) {}")]
     public void InvalidCollectorInfrastructureHookIsDiagnosed(string hook)
     {
-        string source = "static class Broken : std::IGarbageCollector { public static void* Allocate(nuint bytes, nuint alignment) => (void*)1; public static void ReferenceRemoved(void* slot) nothrow {} public static nuint Collect() => 0; public static " + hook + " } alias GC = Broken; int main() => 0;";
+        string source = "static class Broken : std::IGarbageCollector { public static void* Allocate(nuint bytes, nuint alignment) => ((nuint)1).reinterpret<void*>(); public static void ReferenceRemoved(void* slot) nothrow {} public static nuint Collect() => 0; public static " + hook + " } alias GC = Broken; int main() => 0;";
         var error = Assert.Throws<CompileExceptions.TypeCheckException>(() => Compiler.Check(source));
         Assert.Contains("ReferenceAdded", error.Message);
     }

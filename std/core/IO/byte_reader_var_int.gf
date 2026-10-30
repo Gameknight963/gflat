@@ -7,7 +7,7 @@ private nuint ReadVarIntBytes(IByteReader* input, byte* bytes, nuint maximum)
 {
     for (nuint index = 0; index < maximum; index++)
     {
-        ReadExactly(input, (char*)bytes + index, 1);
+        ReadExactly(input, bytes.reinterpret<char*>() + index, 1);
         if (bytes[index] < (byte)128) return index + 1;
     }
     return maximum;
@@ -15,7 +15,7 @@ private nuint ReadVarIntBytes(IByteReader* input, byte* bytes, nuint maximum)
 
 /// Reads one canonical unsigned base-128 UInt32, borrowing the source.
 /// Makes at most five one-byte reads, with no prefetch. EOF or errors may consume a prefix.
-public uint ReadVarUInt32(this IByteReader* input)
+public uint ReadVarUInt32(IByteReader* input)
 {
     byte[5] bytes;
     nuint count = ReadVarIntBytes(input, bytes, 5);
@@ -26,9 +26,15 @@ public uint ReadVarUInt32(this IByteReader* input)
     return value;
 }
 
+extension IByteReader
+{
+    public uint ReadVarUInt32()
+    => std::IO::ReadVarUInt32(this);
+}
+
 /// Reads one canonical unsigned base-128 UInt64, borrowing the source.
 /// Makes at most ten one-byte reads, with no prefetch. EOF or errors may consume a prefix.
-public ulong ReadVarUInt64(this IByteReader* input)
+public ulong ReadVarUInt64(IByteReader* input)
 {
     byte[10] bytes;
     nuint count = ReadVarIntBytes(input, bytes, 10);
@@ -39,10 +45,28 @@ public ulong ReadVarUInt64(this IByteReader* input)
     return value;
 }
 
+extension IByteReader
+{
+    public ulong ReadVarUInt64()
+    => std::IO::ReadVarUInt64(this);
+}
+
 /// Decodes a canonical UInt32 varint using ZigZag, not signed LEB128 or protobuf int32.
-public int ReadZigZagInt32(this IByteReader* input)
+public int ReadZigZagInt32(IByteReader* input)
     => VarInt::ZigZagDecode(ReadVarUInt32(input));
 
+extension IByteReader
+{
+    public int ReadZigZagInt32()
+    => std::IO::ReadZigZagInt32(this);
+}
+
 /// Decodes a canonical UInt64 varint using ZigZag, not signed LEB128 or protobuf int64.
-public long ReadZigZagInt64(this IByteReader* input)
+public long ReadZigZagInt64(IByteReader* input)
     => VarInt::ZigZagDecode(ReadVarUInt64(input));
+
+extension IByteReader
+{
+    public long ReadZigZagInt64()
+    => std::IO::ReadZigZagInt64(this);
+}

@@ -129,9 +129,9 @@ public sealed class Utf16Tests
         Run("""
             int main() nothrow {
                 ulong[4] aligned;
-                ushort* units = (ushort*)aligned;
-                uint* scalar = (uint*)&aligned[0];
-                nuint* count = (nuint*)&aligned[1];
+                ushort* units = ((ulong*)aligned).reinterpret<ushort*>();
+                uint* scalar = (&aligned[0]).reinterpret<uint*>();
+                nuint* count = (&aligned[1]).reinterpret<nuint*>();
                 nuint consumed = 99; uint decoded = 99u;
                 units[0] = (ushort)0xd83d; units[1] = (ushort)0xde00;
                 if (!std::Text::Utf16::TryDecode(units, 2, scalar, &consumed) || *scalar != 0x1f600u || consumed != 2) return 1;

@@ -75,7 +75,7 @@ public sealed class AsciiSubstringSearchTests
         Run($$"""
             using std::Text;
             int main() nothrow {
-                readonly(char)* nowhere = (readonly(char)*)1; nuint maximum = (nuint)0 - (nuint)1;
+                readonly(char)* nowhere = ((nuint)1).reinterpret<readonly(char)*>(); nuint maximum = (nuint)0 - (nuint)1;
                 if (Ascii::IndexOfIgnoreCase(nowhere, 0, nowhere, 0) != 0 || Ascii::LastIndexOfIgnoreCase(nowhere, 0, nowhere, 0) != 0) return 1;
                 if (Ascii::IndexOfIgnoreCase(nowhere, maximum, nowhere, 0) != 0 || Ascii::LastIndexOfIgnoreCase(nowhere, maximum, nowhere, 0) != maximum) return 2;
                 if (Ascii::IndexOfIgnoreCase(nowhere, 0, nowhere, maximum) != 0 || Ascii::LastIndexOfIgnoreCase(nowhere, 0, nowhere, maximum) != 0) return 3;

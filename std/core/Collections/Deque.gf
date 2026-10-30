@@ -138,8 +138,8 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
     // unused ring slots, before transferring an owner or changing position.
     private void CheckRemovalOutput(T* output)
     {
-        nuint start = (nuint)data!;
-        nuint address = (nuint)output;
+        nuint start = (data!).reinterpret<nuint>();
+        nuint address = (output).reinterpret<nuint>();
         nuint stride = (nuint)sizeof(T);
         if (stride == 0) stride = 1;
         if (address >= start && address - start < capacity * stride)

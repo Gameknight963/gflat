@@ -56,11 +56,11 @@ public sealed class StandardDefaultSearchTests
                 }
                 {
                     nuint count=(nuint)ReadByte(packet,ref at);double[9] data;
-                    for(nuint i=0;i<count;i++){ulong bits=ReadULong(packet,ref at);data[i]=*((double*)&bits);}
+                    for(nuint i=0;i<count;i++){ulong bits=ReadULong(packet,ref at);data[i]=(bits).reinterpret<double>();}
                     Span<double> values=new(data,count);if(!IsSorted(values.AsImmutable()))return 2;
                     int countKeys=ReadByte(packet,ref at);
                     for(int row=0;row<countKeys;row++){
-                        ulong bits=ReadULong(packet,ref at);double key=*((double*)&bits);
+                        ulong bits=ReadULong(packet,ref at);double key=(bits).reinterpret<double>();
                         nuint lower=(nuint)ReadByte(packet,ref at);nuint upper=(nuint)ReadByte(packet,ref at);nuint match=(nuint)ReadByte(packet,ref at);
                         if(LowerBound(values.AsImmutable(),&key)!=lower||UpperBound(values.AsImmutable(),&key)!=upper||BinarySearch(values.AsImmutable(),&key)!=match)return 3;
                     }
@@ -89,8 +89,8 @@ public sealed class StandardDefaultSearchTests
                 {
                     Vector<Owner> values=new();values.Reserve(5);int[5] keys=[1,2,2,4,7];
                     for(int i=0;i<5;i++)values.Add(new Owner(i,keys[(nuint)i]));Owner key=new(99,2);
-                    nuint[5] addresses;nuint[5] tokens;for(nuint i=0;i<5;i++){addresses[i]=(nuint)&values[i];tokens[i]=(nuint)values[i].Token.Data;}
-                    nuint keyAddress=(nuint)&key;nuint keyToken=(nuint)key.Token.Data;
+                    nuint[5] addresses;nuint[5] tokens;for(nuint i=0;i<5;i++){addresses[i]=(&values[i]).reinterpret<nuint>();tokens[i]=(values[i].Token.Data).reinterpret<nuint>();}
+                    nuint keyAddress=(&key).reinterpret<nuint>();nuint keyToken=(key.Token.Data).reinterpret<nuint>();
                     int before=attempts;int live=allocated-released;deny=true;
                     if(LowerBound(values.AsImmutable(),&key)!=1||UpperBound(values.AsImmutable(),&key)!=3||BinarySearch(values.AsImmutable(),&key)!=1)return 1;
                     comparisons=0;if(!IsSorted(values.AsImmutable())||comparisons!=4)return 2;
@@ -102,8 +102,8 @@ public sealed class StandardDefaultSearchTests
                         try{if(which==0)index=LowerBound(values.AsImmutable(),&key);else if(which==1)index=UpperBound(values.AsImmutable(),&key);else if(which==2)index=BinarySearch(values.AsImmutable(),&key);else sorted=IsSorted(values.AsImmutable());}
                         catch(ref Exception error){if(error.GetCode()!=77||!CString::Equals(error.GetMessage(),"original comparison"))return 5;caught=true;}fail=false;
                         if(!caught||comparisons!=1||index!=99||sorted||values.Count!=5||made!=6||dead!=0||allocated-released!=live)return 6;
-                        for(nuint i=0;i<5;i++)if((nuint)&values[i]!=addresses[i]||(nuint)values[i].Token.Data!=tokens[i]||values[i].Id!=(int)i||values[i].Key!=keys[i])return 7;
-                        if((nuint)&key!=keyAddress||(nuint)key.Token.Data!=keyToken||key.Id!=99||key.Key!=2)return 8;
+                        for(nuint i=0;i<5;i++)if((&values[i]).reinterpret<nuint>()!=addresses[i]||(values[i].Token.Data).reinterpret<nuint>()!=tokens[i]||values[i].Id!=(int)i||values[i].Key!=keys[i])return 7;
+                        if((&key).reinterpret<nuint>()!=keyAddress||(key.Token.Data).reinterpret<nuint>()!=keyToken||key.Id!=99||key.Key!=2)return 8;
                     }
                     if(BinarySearch(values.AsImmutable(),&key)!=1)return 9;
                 }

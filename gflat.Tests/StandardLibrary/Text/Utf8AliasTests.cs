@@ -19,14 +19,14 @@ public class Utf8AliasTests
             return $$"""
                 {
                     // Aligned scalar output overlaps the bytes being decoded.
-                    uint storage = 0u; char* input = (char*)&storage;
+                    uint storage = 0u; char* input = (&storage).reinterpret<char*>();
                     {{fill}}
                     nuint consumed = 99;
                     if (!std::Text::Utf8::TryDecode(input, {{count}}, &storage, &consumed) || storage != {{value}}u || consumed != (nuint){{count}}) return 1;
                 }
                 {
                     // Aligned count output overlaps input, independently of scalar.
-                    nuint[4] storage; char* input = (char*)&storage[0];
+                    nuint[4] storage; char* input = (&storage[0]).reinterpret<char*>();
                     {{fill}}
                     uint scalar = 99u;
                     if (!std::Text::Utf8::TryDecode(input, {{count}}, &scalar, &storage[0]) || scalar != {{value}}u || storage[0] != (nuint){{count}}) return 2;
@@ -36,11 +36,11 @@ public class Utf8AliasTests
         Run($$"""
             int main() {
                 {{cases}}
-                uint storage = 0u; char* input = (char*)&storage;
+                uint storage = 0u; char* input = (&storage).reinterpret<char*>();
                 input[0]=(char)0xe0; input[1]=(char)0x80; input[2]=(char)0x80;
                 nuint consumed = 99;
                 if (std::Text::Utf8::TryDecode(input,3,&storage,&consumed) || storage != 0u || consumed != (nuint)0) return 3;
-                nuint other = 0; input=(char*)&other;
+                nuint other = 0; input=(&other).reinterpret<char*>();
                 input[0]=(char)0xf0; input[1]=(char)0x90;
                 uint scalar = 99u;
                 if (std::Text::Utf8::TryDecode(input,2,&scalar,&other) || scalar != 0u || other != (nuint)0) return 4;
@@ -56,7 +56,7 @@ public class Utf8AliasTests
         => Run("""
             int main() {
                 nuint[4] storage;
-                char* text=(char*)&storage[0];
+                char* text=(&storage[0]).reinterpret<char*>();
                 text[0]='A'; text[1]=(char)0; text[2]=(char)0xe2; text[3]=(char)0x82; text[4]=(char)0xac;
                 text[5]=(char)0xf0; text[6]=(char)0x9f; text[7]=(char)0x98; text[8]=(char)0x80;
                 if (!std::Text::Utf8::TryCount(text,9,&storage[0]) || storage[0]!=(nuint)4) return 1;

@@ -11,6 +11,7 @@ namespace gflat
         void Visit(StructDeclaration node);
         void Visit(InterfaceDeclaration node);
         void Visit(PrimitiveImplementationDeclaration node) { }
+        void Visit(ExtensionDeclaration node) { foreach (var member in node.Members) member.Accept(this); }
         void Visit(FieldDeclaration node);
         void Visit(PropertyDeclaration node) { }
         void Visit(MethodDeclaration node);

@@ -19,8 +19,8 @@ public sealed class ExtensionAliasConstraintEditorTests
             }
             weak alias Selected:IProvider=Answer;
             struct Handler<P>{}
-            int Visible<P:IProvider>(this Handler<P> value)=>P::Read();
-            int Hidden<P:IExtra>(this Handler<P> value)=>P::Extra();
+            extension<P:IProvider> Handler<P>{public int Visible()=>P::Read();}
+            extension<P:IExtra> Handler<P>{public int Hidden()=>P::Extra();}
             int main(){
                 {{(cached ? "Handler<Answer> first=new Handler<Answer>();first.Hidden();" : "")}}
                 Handler<Selected> value=new Handler<Selected>();

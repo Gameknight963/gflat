@@ -71,23 +71,23 @@ public sealed class StandardDefaultOrderingTests
             int main(){int[8] stable=[3,5,1,4,7,0,2,6];
                 for(int which=0;which<2;which++){
                     {
-                        Vector<Owner> values=Make();nuint[8] tokens;for(nuint i=0;i<8;i++)tokens[i]=(nuint)values[i].Token.Data;
+                        Vector<Owner> values=Make();nuint[8] tokens;for(nuint i=0;i<8;i++)tokens[i]=(values[i].Token.Data).reinterpret<nuint>();
                         int before=attempts;int live=allocated-released;comparisons=0;
                         if(which==0){deny=true;Sort(values.AsSpan());deny=false;if(attempts!=before)return 1;}
                         else{StableSort(values.AsSpan());if(attempts-before!=2)return 2;}
                         if(made-dead!=8||values.Count!=8||allocated-released!=live)return 3;
                         bool[8] seen;for(nuint i=0;i<8;i++)seen[i]=false;
-                        for(nuint i=0;i<8;i++){int id=values[i].Id;if(id<0||id>=8||seen[(nuint)id]||(nuint)values[i].Token.Data!=tokens[(nuint)id])return 4;seen[(nuint)id]=true;if(i!=0&&values[i-1].Key>values[i].Key)return 5;if(which==1&&id!=stable[i])return 6;}
+                        for(nuint i=0;i<8;i++){int id=values[i].Id;if(id<0||id>=8||seen[(nuint)id]||(values[i].Token.Data).reinterpret<nuint>()!=tokens[(nuint)id])return 4;seen[(nuint)id]=true;if(i!=0&&values[i-1].Key>values[i].Key)return 5;if(which==1&&id!=stable[i])return 6;}
                     }
                     if(made!=dead||allocated!=released)return 7;
                     {
-                        Vector<Owner> values=Make();nuint[8] tokens;for(nuint i=0;i<8;i++)tokens[i]=(nuint)values[i].Token.Data;
+                        Vector<Owner> values=Make();nuint[8] tokens;for(nuint i=0;i<8;i++)tokens[i]=(values[i].Token.Data).reinterpret<nuint>();
                         int live=allocated-released;comparisons=0;failAt=4;bool caught=false;
                         try{if(which==0)Sort(values.AsSpan());else StableSort(values.AsSpan());}
                         catch(ref Exception error){if(error.GetCode()!=77||!CString::Equals(error.GetMessage(),"original comparison"))return 8;caught=true;}failAt=0;
                         if(!caught||values.Count!=8||made-dead!=8||allocated-released!=live)return 9;
                         bool[8] seen;for(nuint i=0;i<8;i++)seen[i]=false;
-                        for(nuint i=0;i<8;i++){int id=values[i].Id;if(id<0||id>=8||seen[(nuint)id]||(nuint)values[i].Token.Data!=tokens[(nuint)id])return 10;seen[(nuint)id]=true;if(which==1&&id!=(int)i)return 11;}
+                        for(nuint i=0;i<8;i++){int id=values[i].Id;if(id<0||id>=8||seen[(nuint)id]||(values[i].Token.Data).reinterpret<nuint>()!=tokens[(nuint)id])return 10;seen[(nuint)id]=true;if(which==1&&id!=(int)i)return 11;}
                         if(which==0)Sort(values.AsSpan());else StableSort(values.AsSpan());
                         for(nuint i=1;i<8;i++)if(values[i-1].Key>values[i].Key)return 12;
                     }
@@ -104,16 +104,16 @@ public sealed class StandardDefaultOrderingTests
             {
                 {{word}}[{{input.Length}}] raw=[{{Values(input)}}];{{word}}[{{input.Length}}] expected=[{{Values(expected)}}];
                 {{scalar}}[{{input.Length}}] values;{{scalar}}[{{input.Length}}] stable;
-                for(nuint i=0;i<{{input.Length}};i++){values[i]=*(({{scalar}}*)&raw[i]);stable[i]=values[i];}
+                for(nuint i=0;i<{{input.Length}};i++){values[i]=(raw[i]).reinterpret<{{scalar}}>();stable[i]=values[i];}
                 Span<{{scalar}}> first=new(values,{{input.Length}});Span<{{scalar}}> second=new(stable,{{input.Length}});
                 int before=attempts;deny=true;Sort(first);deny=false;if(attempts!=before)return {{code}};
                 before=attempts;StableSort(second);if(attempts-before!=2)return {{code+1}};
                 bool[{{input.Length}}] seen;for(nuint i=0;i<{{input.Length}};i++)seen[i]=false;
                 for(nuint i=0;i<{{input.Length}};i++){
-                    {{scalar}} wanted=*(({{scalar}}*)&expected[i]);
+                    {{scalar}} wanted=(expected[i]).reinterpret<{{scalar}}>();
                     if(wanted!=wanted){if(values[i]==values[i])return {{code+2}};}else if(values[i]!=wanted)return {{code+3}};
-                    if(*(({{word}}*)&stable[i])!=expected[i])return {{code+4}};
-                    {{word}} actual=*(({{word}}*)&values[i]);bool found=false;
+                    if((stable[i]).reinterpret<{{word}}>()!=expected[i])return {{code+4}};
+                    {{word}} actual=(values[i]).reinterpret<{{word}}>();bool found=false;
                     for(nuint j=0;j<{{input.Length}};j++)if(!seen[j]&&raw[j]==actual){seen[j]=true;found=true;break;}
                     if(!found)return {{code+5}};
                 }

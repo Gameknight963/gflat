@@ -165,7 +165,9 @@ The optional `std/core/Json/json_string_writer.gf` adapter adds:
 
 ```csharp
 using std::Json;
-void WriteJsonString(this ITextWriter* output, readonly(char)* input, nuint length);
+extension ITextWriter {
+    public void WriteJsonString(readonly(char)* input, nuint length);
+}
 ```
 
 Include it alongside `Json/JsonString.gf` and `Text/utf8.gf`. For example:

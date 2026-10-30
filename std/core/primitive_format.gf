@@ -18,23 +18,95 @@ namespace detail
     }
 }
 
-void Format(this ulong value, ITextWriter* output) { detail::IntegerText(value, false, output); }
-void Format(this long value, ITextWriter* output)
+void Format(ulong value, ITextWriter* output) => value.Format(output);
+
+extension ulong
 {
-    if (value < 0l) detail::IntegerText(0ul - (ulong)value, true, output);
-    else detail::IntegerText((ulong)value, false, output);
+    public void Format(ITextWriter* output)
+    { detail::IntegerText((*this), false, output); }
 }
-void Format(this int value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(this uint value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(this short value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(this ushort value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(this sbyte value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(this byte value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(this nint value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(this nuint value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(this bool value, ITextWriter* output)
+void Format(long value, ITextWriter* output)
+=> value.Format(output);
+
+extension long
 {
-    if (value) output.Write("true", 4);
-    else output.Write("false", 5);
+    public void Format(ITextWriter* output)
+    {
+        if ((*this) < 0l) detail::IntegerText(0ul - (ulong)(*this), true, output);
+        else detail::IntegerText((ulong)(*this), false, output);
+    }
 }
-void Format(this char value, ITextWriter* output) { output.Write(&value, 1); }
+void Format(int value, ITextWriter* output) => value.Format(output);
+
+extension int
+{
+    public void Format(ITextWriter* output)
+    { std::Format((long)(*this), output); }
+}
+void Format(uint value, ITextWriter* output) => value.Format(output);
+
+extension uint
+{
+    public void Format(ITextWriter* output)
+    { std::Format((ulong)(*this), output); }
+}
+void Format(short value, ITextWriter* output) => value.Format(output);
+
+extension short
+{
+    public void Format(ITextWriter* output)
+    { std::Format((long)(*this), output); }
+}
+void Format(ushort value, ITextWriter* output) => value.Format(output);
+
+extension ushort
+{
+    public void Format(ITextWriter* output)
+    { std::Format((ulong)(*this), output); }
+}
+void Format(sbyte value, ITextWriter* output) => value.Format(output);
+
+extension sbyte
+{
+    public void Format(ITextWriter* output)
+    { std::Format((long)(*this), output); }
+}
+void Format(byte value, ITextWriter* output) => value.Format(output);
+
+extension byte
+{
+    public void Format(ITextWriter* output)
+    { std::Format((ulong)(*this), output); }
+}
+void Format(nint value, ITextWriter* output) => value.Format(output);
+
+extension nint
+{
+    public void Format(ITextWriter* output)
+    { std::Format((long)(*this), output); }
+}
+void Format(nuint value, ITextWriter* output) => value.Format(output);
+
+extension nuint
+{
+    public void Format(ITextWriter* output)
+    { std::Format((ulong)(*this), output); }
+}
+void Format(bool value, ITextWriter* output)
+=> value.Format(output);
+
+extension bool
+{
+    public void Format(ITextWriter* output)
+    {
+        if ((*this)) output.Write("true", 4);
+        else output.Write("false", 5);
+    }
+}
+void Format(char value, ITextWriter* output) => value.Format(output);
+
+extension char
+{
+    public void Format(ITextWriter* output)
+    { output.Write(&(*this), 1); }
+}

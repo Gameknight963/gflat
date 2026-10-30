@@ -87,7 +87,7 @@ public sealed class NthElementTests
                 for(nuint i=0;i<2;i++)if(signedValues[i]>0)return 15;
                 for(nuint i=3;i<5;i++)if(signedValues[i]<0)return 16;
                 Span<int> empty=new();int oldCalls=calls;NthElement<int>(empty,0,Never);
-                Span<int> unread=new((int*)4096,16);NthElement<int>(unread,16,Never);
+                Span<int> unread=new(((nuint)4096).reinterpret<int*>(),16);NthElement<int>(unread,16,Never);
                 bool caught=false;try{NthElement<int>(unread,17,Never);}catch(ref Exception error){if(error.GetCode()!=3)return 11;caught=true;}
                 if(!caught||calls!=oldCalls)return 12;
                 int[1] one=[7];Span<int> singleton=new(one,1);NthElement<int>(singleton,0,Never);

@@ -3,25 +3,49 @@ using std::Memory;
 namespace std::Text;
 
 // Counted byte comparisons over borrowed text; no terminator is read from text.
-bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix, nuint count)
+bool StartsWith(Span<readonly(char)> text, readonly(char)* prefix, nuint count)
+=> text.StartsWith(prefix, count);
+
+extension Span<readonly(char)>
 {
-    if (count > text.Length) return false;
-    for (nuint i = 0; i < count; i++)
-        if (text[i] != prefix[i]) return false;
-    return true;
+    public bool StartsWith(readonly(char)* prefix, nuint count)
+    {
+        if (count > (*this).Length) return false;
+        for (nuint i = 0; i < count; i++)
+            if ((*this)[i] != prefix[i]) return false;
+        return true;
+    }
 }
 
-bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix)
-    => text.StartsWith(prefix, CString::Length(prefix));
+bool StartsWith(Span<readonly(char)> text, readonly(char)* prefix)
+    => text.StartsWith(prefix);
 
-bool EndsWith(this Span<readonly(char)> text, readonly(char)* suffix, nuint count)
+extension Span<readonly(char)>
 {
-    if (count > text.Length) return false;
-    nuint start = text.Length - count;
-    for (nuint i = 0; i < count; i++)
-        if (text[start + i] != suffix[i]) return false;
-    return true;
+    public bool StartsWith(readonly(char)* prefix)
+    => (*this).StartsWith(prefix, CString::Length(prefix));
 }
 
-bool EndsWith(this Span<readonly(char)> text, readonly(char)* suffix)
-    => text.EndsWith(suffix, CString::Length(suffix));
+bool EndsWith(Span<readonly(char)> text, readonly(char)* suffix, nuint count)
+=> text.EndsWith(suffix, count);
+
+extension Span<readonly(char)>
+{
+    public bool EndsWith(readonly(char)* suffix, nuint count)
+    {
+        if (count > (*this).Length) return false;
+        nuint start = (*this).Length - count;
+        for (nuint i = 0; i < count; i++)
+            if ((*this)[start + i] != suffix[i]) return false;
+        return true;
+    }
+}
+
+bool EndsWith(Span<readonly(char)> text, readonly(char)* suffix)
+    => text.EndsWith(suffix);
+
+extension Span<readonly(char)>
+{
+    public bool EndsWith(readonly(char)* suffix)
+    => (*this).EndsWith(suffix, CString::Length(suffix));
+}

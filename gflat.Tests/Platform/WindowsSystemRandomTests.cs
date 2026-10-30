@@ -10,7 +10,7 @@ public sealed class WindowsSystemRandomTests
         private int BCryptGenRandom(void*? algorithm, byte* output, uint count, uint flags) nothrow
         {
             Probe::Calls++;
-            if (algorithm != null || flags != 2u || count != Probe::Expected || (nuint)output != Probe::Address)
+            if (algorithm != null || flags != 2u || count != Probe::Expected || (output).reinterpret<nuint>() != Probe::Address)
                 Probe::BadArguments = true;
             if (Probe::Write) {
                 if (Probe::Status != 0) { if (count != 0u) output[0] = (byte)17; }
@@ -39,17 +39,17 @@ public sealed class WindowsSystemRandomTests
                 public static bool BadArguments;
             }
             int main() nothrow {
-                if (!Windows::SystemRandom::TryFill((byte*)1, 0) || Probe::Calls != 0) return 1;
+                if (!Windows::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), 0) || Probe::Calls != 0) return 1;
                 if (sizeof(nint) != 8) {
-                    if (Windows::SystemRandom::TryFill((byte*)1, 1) || Probe::Calls != 0) return 2;
+                    if (Windows::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), 1) || Probe::Calls != 0) return 2;
                     return 0;
                 }
-                if (Windows::SystemRandom::TryFill((byte*)1, (nuint)4294967296ul) || Probe::Calls != 0) return 3;
+                if (Windows::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), (nuint)4294967296ul) || Probe::Calls != 0) return 3;
                 Probe::Expected = 4294967295u; Probe::Address = 1;
-                if (!Windows::SystemRandom::TryFill((byte*)1, (nuint)4294967295ul) || Probe::Calls != 1) return 4;
+                if (!Windows::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), (nuint)4294967295ul) || Probe::Calls != 1) return 4;
                 if (Probe::BadArguments) return 5;
                 byte[8] storage; for (nuint i = 0; i < 8; i++) storage[i] = (byte)165;
-                Probe::Expected = 6u; Probe::Address = (nuint)&storage[1]; Probe::Write = true;
+                Probe::Expected = 6u; Probe::Address = (&storage[1]).reinterpret<nuint>(); Probe::Write = true;
                 if (!Windows::SystemRandom::TryFill(&storage[1], 6) || Probe::Calls != 2) return 6;
                 for (nuint i = 0; i < 6; i++) if (storage[i + 1] != (byte)(i + 3)) return 7;
                 if (storage[0] != (byte)165 || storage[7] != (byte)165 || Probe::BadArguments) return 8;
@@ -127,8 +127,8 @@ public sealed class WindowsSystemRandomTests
                     if (storage[0] != (byte)165) return 2;
                     for (nuint i = count + 1; i < 4098; i++) if (storage[i] != (byte)165) return 3;
                 }
-                if (!Windows::SystemRandom::TryFill((byte*)1, 0)) return 4;
-                if (Windows::SystemRandom::TryFill((byte*)1, (nuint)4294967296ul)) return 5;
+                if (!Windows::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), 0)) return 4;
+                if (Windows::SystemRandom::TryFill(((nuint)1).reinterpret<byte*>(), (nuint)4294967296ul)) return 5;
                 return 0;
             }
             """;

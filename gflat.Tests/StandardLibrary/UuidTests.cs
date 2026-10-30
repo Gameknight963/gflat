@@ -104,11 +104,11 @@ public sealed class UuidTests
             text[35]='\0';if(Uuid::TryParse(text,36,&value)||!value.IsNil)return 7;
             for(nuint count=0;count<50;count++){
                 if(count==36)continue;value=new Uuid(1ul,2ul);
-                if(Uuid::TryParse((readonly(char)*)1,count,&value)||!value.IsNil)return 8;
+                if(Uuid::TryParse(((nuint)1).reinterpret<readonly(char)*>(),count,&value)||!value.IsNil)return 8;
             }
             char[37] unterminated;for(nuint i=0;i<37;i++)unterminated[i]='f';
             if(Uuid::TryParse(unterminated,&value)||!value.IsNil)return 9;
-            Uuid[3] aligned;char* storage=(char*)&aligned[0];
+            Uuid[3] aligned;char* storage=(&aligned[0]).reinterpret<char*>();
             for(nuint i=0;i<36;i++)storage[i]=spelling[i];
             if(!Uuid::TryParse(storage,36,&aligned[0])||aligned[0].High!=0x0011223344556677ul||aligned[0].Low!=0x8899aabbccddeefful)return 10;
             nuint written=0;if(!aligned[0].TryFormat(storage,36,ref written)||written!=36)return 11;
@@ -119,7 +119,7 @@ public sealed class UuidTests
                 written=91;if(value.TryFormat(output,capacity,ref written)||written!=0)return 14;
                 for(nuint i=0;i<36;i++)if(output[i]!='!')return 15;
             }
-            written=91;if(value.TryFormat((char*)1,0,ref written)||written!=0)return 16;
+            written=91;if(value.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 16;
             return 0;}
             """);Run(code.ToString(),optimization);
     }

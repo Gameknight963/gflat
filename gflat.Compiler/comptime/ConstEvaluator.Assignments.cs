@@ -58,6 +58,7 @@ public partial class ConstEvaluator
             Dictionary<string, ConstValue> Fields()
             {
                 ConstValue value = receiver();
+                if (value is ConstValue.BorrowedReference borrowed) value = borrowed.Read();
                 if (value is ConstValue.Pointer pointer) value = pointer.Target;
                 return value switch
                 {
@@ -72,6 +73,28 @@ public partial class ConstEvaluator
                 var fields = Fields();
                 fields[member.Member] = OverwriteValueStorage(fields.GetValueOrDefault(member.Member), value, _context.GetType(target));
             });
+        }
+        if (target is UnaryExpression { Operator: TokenKind.Star } dereference)
+        {
+            dereference.Operand.Accept(this);
+            if (_currentValue is ConstValue.BorrowedReference borrowed)
+                return new(borrowed.Read, borrowed.Write);
+            if (_currentValue is ConstValue.Pointer pointer)
+                return new(() => pointer.Target, value => OverwriteValueStorage(pointer.Target, value, _context.GetType(target)));
+            throw new ConstEvalException("Cannot assign through this pointer at compile time", target.Line);
+        }
+        if (target is IndexExpression index)
+        {
+            index.Target.Accept(this);
+            ConstValue array = _currentValue!;
+            if (array is ConstValue.ArrayPointer pointer) array = pointer.Target;
+            index.Index.Accept(this);
+            if (array is not ConstValue.Array elements ||
+                !ConstValue.TryIntegerValue(_currentValue!, out var position) || position < 0 || position >= elements.Elements.Count)
+                throw new ConstEvalException("Array assignment index is outside constant storage", target.Line);
+            int offset = (int)position;
+            return new(() => elements.Elements[offset], value => elements.Elements[offset] =
+                OverwriteValueStorage(elements.Elements[offset], value, _context.GetType(target)));
         }
         throw new ConstEvalException("Invalid assignment target at compile time", target.Line);
     }

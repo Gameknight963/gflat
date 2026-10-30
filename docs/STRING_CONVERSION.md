@@ -23,7 +23,7 @@ int main()
 ```
 
 The generic extension is
-String ToString<T : IFormattable>(this ref immutable(T) value).
+`extension<T : IFormattable> T { public immutable String ToString(); }`.
 It borrows an existing value and calls its immutable Format once with the result
 String as the writer. No source copy is required, so noncopyable formatter values
 can use it. Named mutable values can be borrowed through the immutable view;
@@ -31,21 +31,17 @@ this does not freeze other aliases. Callbacks must obey their ordinary formattin
 and lifetime contracts. No new IStringConvertable implementation is added to the
 source type merely because an extension is available.
 
-A ref receiver follows the language's existing storage restrictions, including
-its restriction on managed storage. Locals, ref parameters, and valid borrowed
-or ref-returned storage can supply the receiver. A temporary/value property does
-not acquire storage merely to call this extension. For example, retain a
-DateTime::Parse(...) result in a local before calling its extension ToString().
-Instance ToString methods still take priority. String, Rune and BigInteger keep
-their existing instance behavior, including their normal temporary-call support.
+Extension methods borrow locals, references, and managed pointees. Temporary
+receivers remain alive through the call, so DateTime::Parse(...).ToString()
+does not require an intermediate local. Instance ToString methods still take
+priority. No receiver copy or ownership transfer is introduced by member syntax.
 
-Primitive by-value extensions cover byte, sbyte, short, ushort, int, uint, long,
+Primitive extensions cover byte, sbyte, short, ushort, int, uint, long,
 ulong, nint, nuint, bool and char. Their existing Format policies apply: decimal
 integers, lowercase true/false, and one counted byte for char. A NUL character
 therefore produces a String of Length 1 containing NUL; it is not an empty String.
 The separate extralong extension uses ExtraLongFormatting's full-width decimal
-format. Primitive receivers are copied values, so primitive temporaries are not
-restricted by the generic ref-receiver storage rule.
+format. Primitive receivers are borrowed, including temporary values.
 
 Float and double conversions live alongside libc formatting. They use the
 existing snprintf policy, including the application's C locale and current

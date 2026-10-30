@@ -76,16 +76,16 @@ public sealed class BinaryCursor128Tests
                     if(writer.TryWriteExtraLongLittleEndian((extralong)-1)
                         ||writer.TryWriteExtraLongBigEndian((extralong)-1)||writer.Position!=1) return 2;
                     for(nuint i=0;i<20;i++) if(bytes[i]!=(byte)165) return 3;
-                    BinaryBufferReader reader=new((readonly(byte)*)1,count);
+                    BinaryBufferReader reader=new(((nuint)1).reinterpret<readonly(byte)*>(),count);
                     extralong value=(extralong)99;
                     if(reader.TryReadExtraLongLittleEndian(ref value)||value!=(extralong)0||reader.Position!=0) return 4;
                     value=(extralong)99;
                     if(reader.TryReadExtraLongBigEndian(ref value)||value!=(extralong)0||reader.Position!=0) return 5;
-                    writer=new((byte*)1,count);
+                    writer=new(((nuint)1).reinterpret<byte*>(),count);
                     if(writer.TryWriteExtraLongLittleEndian(value)||writer.TryWriteExtraLongBigEndian(value)) return 6;
                 }
                 extralong[3] aligned;
-                byte* raw=(byte*)&aligned[0];
+                byte* raw=(&aligned[0]).reinterpret<byte*>();
                 extralong expected=((extralong)81985529216486895ul<<64)|(extralong)18364758544493064720ul;
                 for(int order=0;order<2;order++) for(nuint offset=0;offset<32;offset++) {
                     BinaryBufferWriter writer=new(raw+offset,16);

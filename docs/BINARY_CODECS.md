@@ -125,8 +125,8 @@ uppercase = true)` and `Decode(text, count)` conveniences. Decoded strings retai
 embedded zeros and report malformed input through an exception.
 
 The optional `std/core/Encoding/hex_writer.gf` adapter adds
-`WriteHex(this ITextWriter* output, readonly(char)* data, nuint count,
-bool uppercase = true)`. It writes two digits per input byte with no prefix,
+`WriteHex(readonly(char)* data, nuint count,
+bool uppercase = true)`. The method borrows its ITextWriter receiver. It writes two digits per input byte with no prefix,
 separator, whitespace, newline, or terminator. Uppercase is the default, matching
 `Hex::TryEncode` and `HexText::Encode`; pass `false` for lowercase.
 

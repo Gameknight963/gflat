@@ -136,8 +136,8 @@ struct SortedMap<K, V>
         nuint index = this.LowerBound(key);
         if (!this.Matches(index, key)) return false;
         Span<Entry> entries = storage.AsSpan();
-        nuint start = (nuint)entries.Data!;
-        nuint address = (nuint)&output;
+        nuint start = (entries.Data!).reinterpret<nuint>();
+        nuint address = (&output).reinterpret<nuint>();
         nuint stride = (nuint)sizeof(Entry);
         if (stride == 0) stride = 1;
         nuint bytes = storage.Capacity * stride;

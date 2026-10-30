@@ -183,8 +183,8 @@ struct HashMap<K : IHashable, V>
     {
         nuint slot = this.Locate(key, key.GetHashCode());
         if (slot == capacity) return false;
-        nuint start = (nuint)entries!;
-        nuint address = (nuint)&output;
+        nuint start = (entries!).reinterpret<nuint>();
+        nuint address = (&output).reinterpret<nuint>();
         nuint stride = (nuint)sizeof(Entry);
         if (stride == 0) stride = 1;
         if (address >= start && address - start < capacity * (stride + 1))
@@ -212,7 +212,7 @@ struct HashMap<K : IHashable, V>
     // Internal bucket mutation: never uses an enumerator over the changing map.
     internal void IntersectKeysWith(immutable(HashMap<K, V>)* other)
     {
-        if (count == 0 || (nuint)this == (nuint)other) return;
+        if (count == 0 || (this).reinterpret<nuint>() == (other).reinterpret<nuint>()) return;
         if (other.Count == 0) { this.Clear(); return; }
         for (nuint slot = 0; slot < capacity; slot++)
         {

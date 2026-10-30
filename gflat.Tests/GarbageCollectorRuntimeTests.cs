@@ -158,7 +158,7 @@ public sealed class GarbageCollectorRuntimeTests
     public void BookkeepingCacheDoesNotRetainAnUnboundedRegistrationBurst() => Succeeds("""
         void** roots = (void**)Memory::Allocate((nuint)512 * (nuint)sizeof(void*))!;
         for (int i = 0; i < 512; i++) {
-            roots[i] = (void*)1;
+            roots[i] = ((nuint)1).reinterpret<void*>();
             Collector::ReferenceAdded(&roots[i]);
         }
         nuint before = AllocationProbe::Frees;

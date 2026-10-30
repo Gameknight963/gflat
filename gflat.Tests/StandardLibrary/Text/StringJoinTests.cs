@@ -59,14 +59,14 @@ public sealed class StringJoinTests
     public void AliasesEmptySingletonOverflowAndAllocationFailurePreserveInputs(int optimization)
         => Run(Prelude+"""
             int main(){
-                {Span<immutable(String)> empty=new();String joined=empty.Join((readonly(char)*)1,(nuint)0-(nuint)1);
-                 String cempty=empty.Join((readonly(char)*)1);if(!joined.IsEmpty||!cempty.IsEmpty||allocations!=0)return 1;}
+                {Span<immutable(String)> empty=new();String joined=empty.Join(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1);
+                 String cempty=empty.Join(((nuint)1).reinterpret<readonly(char)*>());if(!joined.IsEmpty||!cempty.IsEmpty||allocations!=0)return 1;}
                 {Vector<String> fields=new();fields.Add(s"one");
                  readonly(char)* original=fields[0].Data;int before=allocations;
-                 {String one=fields.AsImmutable().Join((readonly(char)*)1,(nuint)0-(nuint)1);
+                 {String one=fields.AsImmutable().Join(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1);
                   if(one.Data==original||!CString::Equals(one.Data,"one")||allocations!=before+1)return 2;
                   one[0]='X';if(fields[0][0]!='o')return 3;}
-                 {String one=fields.AsImmutable().Join((readonly(char)*)1);if(!CString::Equals(one.Data,"one"))return 4;}
+                 {String one=fields.AsImmutable().Join(((nuint)1).reinterpret<readonly(char)*>());if(!CString::Equals(one.Data,"one"))return 4;}
                  fields.Add(s"two");fields.Add(s"three");
                  readonly(char)* separator=fields[1].Data;
                  {String joined=fields.AsImmutable().Join(separator+1,2);if(!CString::Equals(joined.Data,"onewotwowothree"))return 5;}
@@ -75,7 +75,7 @@ public sealed class StringJoinTests
                  deny=false;
                  if(!CString::Equals(destination.Data,"unchanged")||fields.Count!=3||fields[0].Data!=original)return 7;
                  if(!CString::Equals(fields[1].Data,"two")||!CString::Equals(fields[2].Data,"three"))return 8;
-                 try{fields.AsImmutable().Join((readonly(char)*)1,(nuint)0-(nuint)1);return 9;}
+                 try{fields.AsImmutable().Join(((nuint)1).reinterpret<readonly(char)*>(),(nuint)0-(nuint)1);return 9;}
                  catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"Joined String length overflow"))return 10;}
                  if(!CString::Equals(destination.Data,"unchanged")||fields[0].Data!=original)return 11;}
                 if(allocations!=releases)return 12;return 0;

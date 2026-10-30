@@ -40,7 +40,7 @@ public sealed class BufferedReaderTests
                     {
                         BufferedReader reader=new(&source,capacity);
                         if(reader.Capacity!=capacity||reader.BufferedCount!=0||allocations!=allocated+1||source.Reads!=0)return 1;
-                        if(reader.Read((char*)1,0)!=0||source.ZeroReads!=1||source.Reads!=0)return 2;nuint zeroExpected=1;
+                        if(reader.Read(((nuint)1).reinterpret<char*>(),0)!=0||source.ZeroReads!=1||source.Reads!=0)return 2;nuint zeroExpected=1;
                         char[270] output;for(nuint i=0;i<270;i++)output[i]='?';nuint position=0;
                         while(true){
                             nuint received=reader.Read(&output[1]+position,requests[r]);
@@ -48,14 +48,14 @@ public sealed class BufferedReaderTests
                             if(received==0)break;position+=received;if(position>count)return 4;
                             if(position==received){
                                 nuint buffered=reader.BufferedCount;nuint physical=source.Position;nuint calls=source.Reads;zeroExpected++;
-                                if(reader.Read((char*)1,0)!=0||reader.BufferedCount!=buffered||source.Position!=physical||source.Reads!=calls||source.ZeroReads!=zeroExpected)return 12;
+                                if(reader.Read(((nuint)1).reinterpret<char*>(),0)!=0||reader.BufferedCount!=buffered||source.Position!=physical||source.Reads!=calls||source.ZeroReads!=zeroExpected)return 12;
                             }
                         }
                         if(position!=count||source.Position!=count||output[0]!='?'||output[count+1]!='?')return 5;
                         for(nuint i=0;i<count;i++)if(output[i+1]!=expected[i])return 6;
                         nuint block=capacity;if(block>chunks[b])block=chunks[b];nuint expectedCalls=count/block;if(count%block!=0)expectedCalls++;
                         if(source.Reads!=expectedCalls+1||source.Maximum!=capacity||reader.BufferedCount!=0)return 7;
-                        zeroExpected++;if(reader.Read((char*)1,0)!=0||source.ZeroReads!=zeroExpected||source.Reads!=expectedCalls+1)return 8;
+                        zeroExpected++;if(reader.Read(((nuint)1).reinterpret<char*>(),0)!=0||source.ZeroReads!=zeroExpected||source.Reads!=expectedCalls+1)return 8;
                         if(reader.Read(&output[1],1)!=0||source.Reads!=expectedCalls+2)return 9;
                         if(allocations!=allocated+1||releases!=freed)return 10;
                     }
@@ -94,11 +94,11 @@ public sealed class BufferedReaderTests
                     input.Mode=mode;
                     if(mode<=2){if(reader.Read(&output[1],3)!=3||input.Reads!=1||reader.BufferedCount!=0)return 24;}
                     caught=false;
-                    try{if(mode<=2)reader.Read(&output[1],1);else reader.Read((char*)1,0);}
+                    try{if(mode<=2)reader.Read(&output[1],1);else reader.Read(((nuint)1).reinterpret<char*>(),0);}
                     catch(ref IOException error){caught=true;if((mode==1||mode==4)&&error.GetCode()!=81)return 25;}
                     if(!caught||output[0]!='Q'||output[5]!='R')return 26;
                     nuint reads=input.Reads;nuint zero=input.ZeroReads;nuint position=input.Position;
-                    int rejected=0;try{reader.Read(&output[1],1);}catch{rejected++;}try{reader.Read((char*)1,0);}catch{rejected++;}
+                    int rejected=0;try{reader.Read(&output[1],1);}catch{rejected++;}try{reader.Read(((nuint)1).reinterpret<char*>(),0);}catch{rejected++;}
                     if(rejected!=2||input.Reads!=reads||input.ZeroReads!=zero||input.Position!=position)return 27;
                     if(mode==1&&(input.Position!=5||input.Reads!=2))return 28;
                     if(mode==2&&(input.Position!=4||input.Reads!=2))return 29;

@@ -183,7 +183,7 @@ public sealed class StandardMapRemoveOutputTests
                     if(madeEmpty!=deadEmpty||madeKeys!=deadKeys||allocated!=released)return 5;return 0;
                 }
                 """,sorted).Replace("$FLAGS$",flags).Replace("$LAST_ENDPOINT$",sorted?
-                    "if((nuint)last!=(nuint)backing!+backingBytes)return 6;":""),optimization);
+                    "if(last.reinterpret<nuint>()!=(backing!).reinterpret<nuint>()+backingBytes)return 6;":""),optimization);
         }
     }
 

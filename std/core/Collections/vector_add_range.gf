@@ -3,7 +3,7 @@ namespace std::Collections;
 
 // Kept outside Vector<T>: only calls to this copying operation instantiate its
 // copy requirement. A vector of noncopyable values can still use its own methods.
-public void AddRange<T>(this ref Vector<T> target, Span<immutable(T)> source)
+public void AddRange<T>(ref Vector<T> target, Span<immutable(T)> source)
 {
     nuint length = source.Length;
     if (length == 0) return;
@@ -23,8 +23,8 @@ public void AddRange<T>(this ref Vector<T> target, Span<immutable(T)> source)
     if (originalCount != 0)
     {
         Span<immutable(T)> original = target.AsImmutable();
-        nuint beginning = (nuint)original.Data!;
-        nuint address = (nuint)source.Data!;
+        nuint beginning = (original.Data!).reinterpret<nuint>();
+        nuint address = (source.Data!).reinterpret<nuint>();
         if (address >= beginning)
         {
             nuint difference = address - beginning;
@@ -50,4 +50,10 @@ public void AddRange<T>(this ref Vector<T> target, Span<immutable(T)> source)
     }
     if (aliasesTarget) source = target.AsImmutable().Slice(offset, length);
     for (nuint i = 0; i < length; i++) target.Add(source[i]);
+}
+
+extension<T> Vector<T>
+{
+    public void AddRange(Span<immutable(T)> source)
+    => std::Collections::AddRange<T>(ref *this, source);
 }

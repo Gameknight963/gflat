@@ -48,8 +48,8 @@ public sealed class StreamBinaryTests
             ulong low = (ulong)(scalar.Bits & ulong.MaxValue);
             ulong high = (ulong)(scalar.Bits >> 64);
             string assertion = scalar.Suffix switch {
-                "Float" => $"if(*((uint*)&value)!={low}u)return 11;",
-                "Double" => $"if(*((ulong*)&value)!={low}ul)return 12;",
+                "Float" => $"if((value).reinterpret<uint>()!={low}u)return 11;",
+                "Double" => $"if((value).reinterpret<ulong>()!={low}ul)return 12;",
                 "ExtraLong" => $"if((ulong)value!={low}ul||(ulong)(value>>64)!={high}ul)return 13;",
                 _ => $"if(value!=({scalar.Type}){low}ul)return 14;"
             };

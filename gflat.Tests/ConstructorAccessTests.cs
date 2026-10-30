@@ -6,7 +6,7 @@ public sealed class ConstructorAccessTests
 {
     public static IEnumerable<object[]> InaccessibleCreationCases()
     {
-        string[] creations = ["Secret value=new Secret(1);", "Secret* value=new* Secret(1);", "Secret^ value=new^ Secret(1);", "Secret value=new(1);", "Secret* value=new(1);", "Secret^ value=new(1);", "Secret* storage=(Secret*)1;new* Secret(1) at storage;"];
+        string[] creations = ["Secret value=new Secret(1);", "Secret* value=new* Secret(1);", "Secret^ value=new^ Secret(1);", "Secret value=new(1);", "Secret* value=new(1);", "Secret^ value=new(1);", "Secret* storage=((nuint)1).reinterpret<Secret*>();new* Secret(1) at storage;"];
         foreach(string kind in new[]{"class","struct"})
             foreach(string creation in creations)
                 yield return [kind,creation];

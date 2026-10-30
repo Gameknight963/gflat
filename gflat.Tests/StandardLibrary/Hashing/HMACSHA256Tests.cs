@@ -98,7 +98,7 @@ public sealed class HMACSHA256Tests
                         nuint offset=0;
                         for(nuint part=0;part<parts;part++){
                             nuint amount=(nuint)chunks[part];if(amount>count-offset)return 2;
-                            if(!hash.TryAppend((readonly(char)*)data+offset,amount)||!hash.TryAppend((readonly(char)*)1,0))return 3;
+                            if(!hash.TryAppend((readonly(char)*)data+offset,amount)||!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0))return 3;
                             for(nuint i=0;i<amount;i++)data[offset+i]='!';offset+=amount;
                         }
                         if(offset!=count)return 4;
@@ -145,18 +145,18 @@ public sealed class HMACSHA256Tests
     public void ImpossibleAppendIsRejectedBeforeReadingAndPreservesMessage(int optimization)
         => Run(DenyAllocation+"""
             int main(){
-                HMACSHA256 hash=new((readonly(char)*)1,0);
+                HMACSHA256 hash=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 byte[32] before=hash.GetHash();
                 if(sizeof(nuint)==8){
-                    if(hash.TryAppend((readonly(char)*)1,(nuint)2305843009213693888ul))return 1;
+                    if(hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693888ul))return 1;
                     byte[32] after=hash.GetHash();for(nuint i=0;i<32;i++)if(before[i]!=after[i])return 2;
                 }
                 if(!hash.TryAppend("abc",3))return 3;byte[32] prefix=hash.GetHash();
                 if(sizeof(nuint)==8){
-                    if(hash.TryAppend((readonly(char)*)1,(nuint)2305843009213693885ul))return 4;
+                    if(hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693885ul))return 4;
                     byte[32] after=hash.GetHash();for(nuint i=0;i<32;i++)if(prefix[i]!=after[i])return 5;
                 }
-                if(!hash.TryAppend((readonly(char)*)1,0)||!hash.TryAppend("d",1)||attempts!=0)return 6;
+                if(!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!hash.TryAppend("d",1)||attempts!=0)return 6;
                 return 0;
             }
             """,optimization);
@@ -169,9 +169,9 @@ public sealed class HMACSHA256Tests
             using std; using std::IO; using std::Hashing;
             int main(){
                 if(sizeof(nuint)!=8)return 0;
-                try{HMACSHA256 invalid=new((readonly(char)*)1,(nuint)2305843009213693952ul);return 1;}
+                try{HMACSHA256 invalid=new(((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693952ul);return 1;}
                 catch(Exception* error){}
-                HMACSHA256 valid=new((readonly(char)*)1,0);valid.TryAppend("x",1);
+                HMACSHA256 valid=new(((nuint)1).reinterpret<readonly(char)*>(),0);valid.TryAppend("x",1);
                 byte[32] hash=valid.GetHash();return 0;
             }
             """,optimization);

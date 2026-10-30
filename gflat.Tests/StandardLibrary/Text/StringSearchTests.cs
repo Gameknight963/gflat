@@ -59,13 +59,13 @@ public sealed class StringSearchTests
                 if (text.IndexOf(pattern, 2048) != 63488 || text.LastIndexOf(pattern, 2048) != 63488) return 2;
                 if (text.IndexOf(pattern, 2048, 63488) != 63488 || text.IndexOf(pattern, 2048, 63489) != String::NotFound) return 3;
                 if (text.IndexOf(text.Data + 63488, 2048) != 63488 || text.LastIndexOf(text.Data + 63488, 2048) != 63488) return 4;
-                if (text.IndexOf((readonly(char)*)1, 0, 65536) != 65536 || text.LastIndexOf((readonly(char)*)1, 0) != 65536) return 5;
+                if (text.IndexOf(((nuint)1).reinterpret<readonly(char)*>(), 0, 65536) != 65536 || text.LastIndexOf(((nuint)1).reinterpret<readonly(char)*>(), 0) != 65536) return 5;
                 nuint maximum = (nuint)0 - (nuint)1;
-                if (text.IndexOf((readonly(char)*)1, maximum) != String::NotFound || text.LastIndexOf((readonly(char)*)1, maximum) != String::NotFound) return 6;
+                if (text.IndexOf(((nuint)1).reinterpret<readonly(char)*>(), maximum) != String::NotFound || text.LastIndexOf(((nuint)1).reinterpret<readonly(char)*>(), maximum) != String::NotFound) return 6;
                 if (text.Data[65536] != '\0' || allocations != allocated) return 7;
                 String empty = new();
-                if (empty.IndexOf((readonly(char)*)1, 0) != 0 || empty.LastIndexOf((readonly(char)*)1, 0) != 0) return 8;
-                if (empty.IndexOf((readonly(char)*)1, 1) != String::NotFound || empty.LastIndexOf((readonly(char)*)1, 1) != String::NotFound) return 9;
+                if (empty.IndexOf(((nuint)1).reinterpret<readonly(char)*>(), 0) != 0 || empty.LastIndexOf(((nuint)1).reinterpret<readonly(char)*>(), 0) != 0) return 8;
+                if (empty.IndexOf(((nuint)1).reinterpret<readonly(char)*>(), 1) != String::NotFound || empty.LastIndexOf(((nuint)1).reinterpret<readonly(char)*>(), 1) != String::NotFound) return 9;
                 bool caught = false;
                 try { text.IndexOf(pattern, 0, 65537); } catch (ref Exception error) { caught = true; }
                 if (!caught || text.Length != 65536) return 10;

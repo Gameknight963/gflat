@@ -58,7 +58,7 @@ public sealed class IpAddressBinaryTests
                                 for(nuint i=0;i<count;i++)if(output[i+1]!=expected[i])return 7;
                                 for(nuint i=count+1;i<22;i++)if(output[i]!=90)return 8;}
                         }
-                        nuint written=9;if(value.TryWriteBytes((byte*)1,0,ref written)||written!=0)return 9;
+                        nuint written=9;if(value.TryWriteBytes(((nuint)1).reinterpret<byte*>(),0,ref written)||written!=0)return 9;
                         if(!value.Equals(&fromText))return 10;
                         for(nuint i=0;i<count;i++)expected[i]=(byte)(expected[i]+1);
                         if(!value.Equals(&fromText))return 11;
@@ -82,16 +82,16 @@ public sealed class IpAddressBinaryTests
                 for(nuint count=0;count<=33;count++){
                     if(count==4||count==16)continue;
                     IpAddress value=seed;
-                    if(IpAddress::TryFromBytes((readonly(byte)*)1,count,&value)||!value.Equals(&zero)||value.ByteCount!=4)return 1;
+                    if(IpAddress::TryFromBytes(((nuint)1).reinterpret<readonly(byte)*>(),count,&value)||!value.Equals(&zero)||value.ByteCount!=4)return 1;
                     value=seed;bool caught=false;
-                    try{value=IpAddress::FromBytes((readonly(byte)*)1,count);return 2;}
+                    try{value=IpAddress::FromBytes(((nuint)1).reinterpret<readonly(byte)*>(),count);return 2;}
                     catch(Exception* error){caught=CString::Equals(error.GetMessage(),"IP address requires 4 or 16 bytes");}
                     if(!caught||!value.Equals(&seed))return 3;
                 }
                 IpAddress value=seed;nuint maximum=(nuint)0-(nuint)1;
-                if(IpAddress::TryFromBytes((readonly(byte)*)1,maximum,&value)||!value.Equals(&zero))return 4;
+                if(IpAddress::TryFromBytes(((nuint)1).reinterpret<readonly(byte)*>(),maximum,&value)||!value.Equals(&zero))return 4;
                 value=seed;bool caught=false;
-                try{value=IpAddress::FromBytes((readonly(byte)*)1,maximum);return 5;}
+                try{value=IpAddress::FromBytes(((nuint)1).reinterpret<readonly(byte)*>(),maximum);return 5;}
                 catch(Exception* error){caught=CString::Equals(error.GetMessage(),"IP address requires 4 or 16 bytes");}
                 if(!caught||!value.Equals(&seed))return 6;return 0;
             }
@@ -109,7 +109,7 @@ public sealed class IpAddressBinaryTests
                 public replace void Free(void* value)nothrow{frees++;}
             }
             int main(){
-                IpAddress[4] backing;byte* storage=(byte*)&backing[0];nuint extent=(nuint)sizeof(IpAddress)*4;
+                IpAddress[4] backing;byte* storage=(&backing[0]).reinterpret<byte*>();nuint extent=(nuint)sizeof(IpAddress)*4;
                 if(extent<40||extent>128)return 1;byte[16] expected;
                 nuint[3] offsets;offsets[0]=0;offsets[1]=1;offsets[2]=7;
                 for(int family=0;family<2;family++){

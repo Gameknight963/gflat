@@ -42,21 +42,21 @@ public sealed class BinaryCursorBulkTests
             using std; using std::Binary;
             int main(){
                 BinaryBufferReader emptyRead=new();BinaryBufferWriter emptyWrite=new();
-                if(!emptyRead.TryReadBytes((byte*)1,0)||!emptyWrite.TryWriteBytes((readonly(byte)*)1,0))return 1;
+                if(!emptyRead.TryReadBytes(((nuint)1).reinterpret<byte*>(),0)||!emptyWrite.TryWriteBytes(((nuint)1).reinterpret<readonly(byte)*>(),0))return 1;
                 nuint maximum=(nuint)0-(nuint)1;
-                if(emptyRead.TryReadBytes((byte*)1,maximum)||emptyWrite.TryWriteBytes((readonly(byte)*)1,maximum))return 2;
+                if(emptyRead.TryReadBytes(((nuint)1).reinterpret<byte*>(),maximum)||emptyWrite.TryWriteBytes(((nuint)1).reinterpret<readonly(byte)*>(),maximum))return 2;
                 byte[6] data=[(byte)10,(byte)20,(byte)30,(byte)40,(byte)50,(byte)60];
                 BinaryBufferReader reader=new(data,6);BinaryBufferWriter writer=new(data,6);
                 if(!reader.TrySkip(4)||!writer.TrySkip(4))return 3;
-                if(reader.TryReadBytes((byte*)1,3)||writer.TryWriteBytes((readonly(byte)*)1,3))return 4;
-                if(reader.TryReadBytes((byte*)1,maximum)||writer.TryWriteBytes((readonly(byte)*)1,maximum))return 5;
+                if(reader.TryReadBytes(((nuint)1).reinterpret<byte*>(),3)||writer.TryWriteBytes(((nuint)1).reinterpret<readonly(byte)*>(),3))return 4;
+                if(reader.TryReadBytes(((nuint)1).reinterpret<byte*>(),maximum)||writer.TryWriteBytes(((nuint)1).reinterpret<readonly(byte)*>(),maximum))return 5;
                 if(reader.Position!=4||writer.Position!=4)return 6;
                 for(nuint i=0;i<6;i++)if(data[i]!=(byte)((i+1)*10))return 7;
                 BinaryBufferReader copiedRead=reader;BinaryBufferWriter copiedWrite=writer;
                 byte[2] output;if(!copiedRead.TryReadBytes(output,2)||output[0]!=(byte)50||output[1]!=(byte)60)return 8;
                 if(!copiedWrite.TryWriteBytes(output,2)||reader.Position!=4||writer.Position!=4)return 9;
                 if(copiedRead.Position!=6||copiedWrite.Position!=6)return 10;
-                if(!copiedRead.TryReadBytes((byte*)1,0)||!copiedWrite.TryWriteBytes((readonly(byte)*)1,0))return 11;
+                if(!copiedRead.TryReadBytes(((nuint)1).reinterpret<byte*>(),0)||!copiedWrite.TryWriteBytes(((nuint)1).reinterpret<readonly(byte)*>(),0))return 11;
                 reader.Reset();writer.Reset();if(reader.Position!=0||writer.Position!=0)return 12;
                 return 0;
             }

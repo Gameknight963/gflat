@@ -50,9 +50,9 @@ public class NullablePointerUseTests
     public void IntegerZeroCanStillProduceNullablePointers()
         => Assert.Equal(0, CompilerTestHelper.Run("""
             int main() {
-                int*? first = (int*?)(char)0;
-                int*? second = (int*?)(extralong)0;
-                int*? truncated = (int*?)((extralong)1 << 64);
+                int*? first = ((nuint)(char)0).reinterpret<int*?>();
+                int*? second = ((nuint)(extralong)0).reinterpret<int*?>();
+                int*? truncated = ((nuint)((extralong)1 << 64)).reinterpret<int*?>();
                 if (first == null && second == null && truncated == null) return 0;
                 return 1;
             }

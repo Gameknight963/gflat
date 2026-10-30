@@ -3,37 +3,55 @@ namespace std::Text;
 
 // Borrow the two sides of the last exact counted byte-sequence separator.
 // Output references must be distinct; receiver/separator metadata may be reused.
-bool TrySplitLastOnce(this Span<readonly(char)> text, readonly(char)* separator, nuint count,
+bool TrySplitLastOnce(Span<readonly(char)> text, readonly(char)* separator, nuint count,
     ref Span<readonly(char)> before, ref Span<readonly(char)> after)
+=> text.TrySplitLastOnce(separator, count, ref before, ref after);
+
+extension Span<readonly(char)>
 {
-    if (count == 0) return SplitLastOnceEmptyPattern(text, ref before, ref after);
-    if (count <= text.Length)
+    public bool TrySplitLastOnce(readonly(char)* separator, nuint count, ref Span<readonly(char)> before, ref Span<readonly(char)> after)
     {
-        nuint position = ByteSearch::LastIndexOf((readonly(byte)*)text.Data!, text.Length,
-            (readonly(byte)*)separator, count);
-        if (position != text.Length)
+        if (count == 0) return SplitLastOnceEmptyPattern((*this), ref before, ref after);
+        if (count <= (*this).Length)
         {
-            nuint end = position + count;
-            Span<readonly(char)> first = text.Slice(0, position);
-            Span<readonly(char)> rest = text.Slice(end, text.Length - end);
-            before = first; after = rest;
-            return true;
+            nuint position = ByteSearch::LastIndexOf(((*this).Data!).reinterpret<readonly(byte)*>(), (*this).Length,
+                separator.reinterpret<readonly(byte)*>(), count);
+            if (position != (*this).Length)
+            {
+                nuint end = position + count;
+                Span<readonly(char)> first = (*this).Slice(0, position);
+                Span<readonly(char)> rest = (*this).Slice(end, (*this).Length - end);
+                before = first; after = rest;
+                return true;
+            }
         }
+        before = new Span<readonly(char)>();
+        after = new Span<readonly(char)>();
+        return false;
     }
-    before = new Span<readonly(char)>();
-    after = new Span<readonly(char)>();
-    return false;
 }
 
-bool TrySplitLastOnce(this Span<readonly(char)> text, readonly(char)* separator,
+bool TrySplitLastOnce(Span<readonly(char)> text, readonly(char)* separator,
     ref Span<readonly(char)> before, ref Span<readonly(char)> after)
-    => text.TrySplitLastOnce(separator, CString::Length(separator), ref before, ref after);
+    => text.TrySplitLastOnce(separator, ref before, ref after);
 
-bool TrySplitLastOnce(this Span<readonly(char)> text, Span<readonly(char)> separator,
-    ref Span<readonly(char)> before, ref Span<readonly(char)> after)
+extension Span<readonly(char)>
 {
-    if (separator.IsEmpty) return SplitLastOnceEmptyPattern(text, ref before, ref after);
-    return text.TrySplitLastOnce(separator.Data!, separator.Length, ref before, ref after);
+    public bool TrySplitLastOnce(readonly(char)* separator, ref Span<readonly(char)> before, ref Span<readonly(char)> after)
+    => (*this).TrySplitLastOnce(separator, CString::Length(separator), ref before, ref after);
+}
+
+bool TrySplitLastOnce(Span<readonly(char)> text, Span<readonly(char)> separator,
+    ref Span<readonly(char)> before, ref Span<readonly(char)> after)
+=> text.TrySplitLastOnce(separator, ref before, ref after);
+
+extension Span<readonly(char)>
+{
+    public bool TrySplitLastOnce(Span<readonly(char)> separator, ref Span<readonly(char)> before, ref Span<readonly(char)> after)
+    {
+        if (separator.IsEmpty) return SplitLastOnceEmptyPattern((*this), ref before, ref after);
+        return (*this).TrySplitLastOnce(separator.Data!, separator.Length, ref before, ref after);
+    }
 }
 
 private bool SplitLastOnceEmptyPattern(Span<readonly(char)> text,

@@ -106,7 +106,7 @@ public sealed class TimeOfDayTests
                     if(!caught||value.Ticks!=123l)return 3;
                 }
                 nuint[4] impossible=[0,7,17,(nuint)0-1];
-                for(nuint row=0;row<4;row++){TimeOfDay value=TimeOfDay::FromTicks(123l);if(TimeOfDay::TryParse((readonly(char)*)1,impossible[row],&value)||value.Ticks!=0l)return 4;}
+                for(nuint row=0;row<4;row++){TimeOfDay value=TimeOfDay::FromTicks(123l);if(TimeOfDay::TryParse(((nuint)1).reinterpret<readonly(char)*>(),impossible[row],&value)||value.Ticks!=0l)return 4;}
                 int[{{bad.Count}}] parts=[{{string.Join(',',bad.Select(value=>value==int.MinValue?"(-2147483647-1)":value.ToString(CultureInfo.InvariantCulture)))}}];
                 for(nuint row=0;row<{{bad.Count}};row+=4){bool caught=false;
                     try{TimeOfDay value=new(parts[row],parts[row+1],parts[row+2],parts[row+3]);}catch(ref Exception error){caught=true;}
@@ -137,7 +137,7 @@ public sealed class TimeOfDayTests
                 int[4] lengths=[8,10,16,8];long[4] ticks=[0l,37234000000l,863999999999l,0l];
                 int requests=attempts;deny=true;
                 for(nuint sample=0;sample<4;sample++)for(nuint offset=0;offset<=16;offset+=4)for(nuint resultIndex=0;resultIndex<4;resultIndex++){
-                    TimeOfDay[8] aligned;char* bytes=(char*)&aligned[0];for(nuint i=0;i<64;i++)bytes[i]='!';
+                    TimeOfDay[8] aligned;char* bytes=(&aligned[0]).reinterpret<char*>();for(nuint i=0;i<64;i++)bytes[i]='!';
                     for(nuint i=0;i<(nuint)lengths[sample];i++)bytes[offset+i]=texts[sample][i];
                     char[64] saved;for(nuint i=0;i<64;i++)saved[i]=bytes[i];
                     bool success=TimeOfDay::TryParse(bytes+offset,(nuint)lengths[sample],&aligned[resultIndex]);
@@ -145,7 +145,7 @@ public sealed class TimeOfDayTests
                     for(nuint i=0;i<64;i++)if((i<resultIndex*8||i>=resultIndex*8+8)&&bytes[i]!=saved[i])return 3;
                 }
                 for(nuint sample=0;sample<3;sample++)for(nuint offset=0;offset<=20;offset+=4)for(nuint capacity=0;capacity<=17;capacity++){
-                    TimeOfDay[8] aligned;char* bytes=(char*)&aligned[0];for(nuint i=0;i<64;i++)bytes[i]='!';
+                    TimeOfDay[8] aligned;char* bytes=(&aligned[0]).reinterpret<char*>();for(nuint i=0;i<64;i++)bytes[i]='!';
                     aligned[2]=TimeOfDay::FromTicks(ticks[sample]);char[64] saved;for(nuint i=0;i<64;i++)saved[i]=bytes[i];
                     readonly(char)* expected=texts[sample];nuint length=(nuint)lengths[sample];if(sample==1){expected="01:02:03.4000000";length=16;}
                     nuint written=99;bool success=aligned[2].TryFormat(bytes+offset,capacity,ref written);

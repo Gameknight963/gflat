@@ -77,8 +77,8 @@ namespace std
 
         private static bool Contains(Allocation* allocation, void* address) nothrow
         {
-            nuint value = (nuint)address;
-            nuint start = (nuint)allocation.address;
+            nuint value = (address).reinterpret<nuint>();
+            nuint start = (allocation.address).reinterpret<nuint>();
             return value >= start && value - start < allocation.bytes;
         }
 
@@ -95,7 +95,7 @@ namespace std
 
         private static bool ValidRange(void* address, nuint bytes) nothrow
         {
-            nuint start = (nuint)address;
+            nuint start = (address).reinterpret<nuint>();
             nuint maximum = (nuint)0 - (nuint)1;
             return start != 0 && bytes != 0 && bytes <= maximum - start;
         }
@@ -111,8 +111,8 @@ namespace std
                 // Reject overlapping and duplicate allocations. Explicit Adopt
                 // still requires ownership of valid Memory::Allocate storage.
                 if (Contains(existing!, address) ||
-                    ((nuint)existing!.address >= (nuint)address &&
-                     (nuint)existing!.address - (nuint)address < bytes))
+                    ((existing!.address).reinterpret<nuint>() >= (address).reinterpret<nuint>() &&
+                     (existing!.address).reinterpret<nuint>() - (address).reinterpret<nuint>() < bytes))
                     throw new Exception("Allocation is already managed");
                 existing = existing!.next;
             }
@@ -139,7 +139,7 @@ namespace std
             void*? storage = global::Memory::Allocate(bytes);
             if (storage == null) { Collect(); storage = global::Memory::Allocate(bytes); }
             if (storage == null) throw new BadAllocException();
-            if ((nuint)storage % alignment != 0)
+            if ((storage).reinterpret<nuint>() % alignment != 0)
             {
                 global::Memory::Free(storage!);
                 throw new BadAllocException();
@@ -165,7 +165,7 @@ namespace std
 
         private static nuint SlotBucket(void* address, nuint capacity) nothrow
         {
-            nuint hash = (nuint)address;
+            nuint hash = (address).reinterpret<nuint>();
             hash = hash ^ (hash >> 7);
             hash = hash ^ (hash >> 17);
             return (hash >> 3) & (capacity - (nuint)1);

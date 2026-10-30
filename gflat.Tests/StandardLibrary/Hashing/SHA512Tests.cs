@@ -48,7 +48,7 @@ public sealed class SHA512Tests
                         if(fread((void*)&input[1],1,count,file!)!=count||fread((void*)&expected[0],1,64,file!)!=64)return 4;
                         char[8195] original=input;
                         std::Hashing::SHA512 whole=new();
-                        if(!whole.TryAppend((readonly(char)*)1,0)||!whole.TryAppend(&input[1],count))return 5;
+                        if(!whole.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!whole.TryAppend(&input[1],count))return 5;
                         if(!Matches(whole.GetHash(),expected)||!Matches(whole.GetHash(),expected))return 6;
                         // Try different boundaries, including one byte at a time and partial blocks.
                         for(int mode=0;mode<3;mode++){
@@ -56,7 +56,7 @@ public sealed class SHA512Tests
                             while(position<count){
                                 nuint take=1;if(mode==1)take=position%193+1;if(mode==2)take=128;
                                 if(take>count-position)take=count-position;
-                                if(!chunked.TryAppend(&input[position+1],take)||!chunked.TryAppend((readonly(char)*)1,0))return 7;
+                                if(!chunked.TryAppend(&input[position+1],take)||!chunked.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0))return 7;
                                 position+=take;
                             }
                             if(!Matches(chunked.GetHash(),expected))return 8;
@@ -103,7 +103,7 @@ public sealed class SHA512Tests
                 for(int i=0;i<1000;i++)if(!hash.TryAppend(block,1000))return 6;
                 if(!Equal(hash.GetHash(),millionExpected))return 7;
                 hash.Reset();std::Hashing::SHA512 empty=new();
-                if(!Equal(hash.GetHash(),empty.GetHash())||!hash.TryAppend((readonly(char)*)1,0))return 8;
+                if(!Equal(hash.GetHash(),empty.GetHash())||!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0))return 8;
                 return 0;
             }
             """,optimization);
@@ -136,14 +136,14 @@ public sealed class SHA512Tests
                 if(!hash.TryAppend(input,127))return 5;
                 hash.lengthLow=0xfffffffffffffffful;hash.lengthHigh=0x1ffffffffffffffful;
                 std::Hashing::SHA512 before=hash;byte[64] digest=hash.GetHash();
-                if(hash.TryAppend((readonly(char)*)1,1)||!SameState(&hash,&before)||!Same(hash.GetHash(),digest))return 6;
-                if(!hash.TryAppend((readonly(char)*)1,0)||!SameState(&hash,&before))return 7;
+                if(hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),1)||!SameState(&hash,&before)||!Same(hash.GetHash(),digest))return 6;
+                if(!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!SameState(&hash,&before))return 7;
                 // Keep pending bytes consistent with the seeded length modulo 128.
                 hash.Reset();if(!hash.TryAppend(input,126))return 8;
                 hash.lengthHigh=0x1ffffffffffffffful;hash.lengthLow=0xfffffffffffffffeul;
                 if(!hash.TryAppend(input,1)||hash.lengthLow!=0xfffffffffffffffful||hash.lengthHigh!=0x1ffffffffffffffful)return 8;
                 before=hash;
-                if(hash.TryAppend((readonly(char)*)1,2)||!SameState(&hash,&before))return 9;
+                if(hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),2)||!SameState(&hash,&before))return 9;
                 return 0;
             }
             """,optimization,exposeCounters:true);

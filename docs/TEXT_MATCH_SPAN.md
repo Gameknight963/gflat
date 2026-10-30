@@ -17,10 +17,18 @@ Both methods accept a null-terminated pattern or a pointer plus byte count:
 
 ```csharp
 using std::Memory;
-bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix);
-bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix, nuint count);
-bool EndsWith(this Span<readonly(char)> text, readonly(char)* suffix);
-bool EndsWith(this Span<readonly(char)> text, readonly(char)* suffix, nuint count);
+extension Span<readonly(char)> {
+    public readonly bool StartsWith(readonly(char)* prefix);
+}
+extension Span<readonly(char)> {
+    public readonly bool StartsWith(readonly(char)* prefix, nuint count);
+}
+extension Span<readonly(char)> {
+    public readonly bool EndsWith(readonly(char)* suffix);
+}
+extension Span<readonly(char)> {
+    public readonly bool EndsWith(readonly(char)* suffix, nuint count);
+}
 ```
 
 Only the source span's counted bytes are compared; it need not end with a null.
@@ -31,7 +39,7 @@ longer than the span returns false. Counted zero-length and longer-pattern check
 read no pattern bytes. Pointer arguments still have non-null types.
 
 Source and pattern may overlap. Neither changes, allocates, or retains a pointer.
-The receiver is a metadata copy of the borrowed span; it does not copy the source
+The receiver is borrowed; calling the method does not copy the span or source
 text or extend either buffer's lifetime. Keep both regions readable for the call.
 Mutable spans can use `text.AsReadOnly().StartsWith(...)` or `EndsWith(...)`.
 These extensions use the existing checked Span indexer and do not add a

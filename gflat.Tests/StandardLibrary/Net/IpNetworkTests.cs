@@ -51,7 +51,7 @@ public sealed class IpNetworkTests
                         for(int row=0;row<rows;row++){
                             nuint count=(nuint)FileBinary::ReadInt32LittleEndian(&input);int prefix=FileBinary::ReadInt32LittleEndian(&input);bool canonical=FileBinary::ReadInt32LittleEndian(&input)!=0;bool hasOutside=FileBinary::ReadInt32LittleEndian(&input)!=0;
                             if(count!=4&&count!=16)return 1;
-                            input.ReadExactly((char*)&raw[0],count);input.ReadExactly((char*)&network[0],count);input.ReadExactly((char*)&last[0],count);input.ReadExactly((char*)&outside[0],count);String text=ReadText(&input);
+                            input.ReadExactly((&raw[0]).reinterpret<char*>(),count);input.ReadExactly((&network[0]).reinterpret<char*>(),count);input.ReadExactly((&last[0]).reinterpret<char*>(),count);input.ReadExactly((&outside[0]).reinterpret<char*>(),count);String text=ReadText(&input);
                             IpAddress address=IpAddress::FromBytes(raw,count);IpAddress networkAddress=IpAddress::FromBytes(network,count);IpAddress final=IpAddress::FromBytes(last,count);IpAddress other=IpAddress::FromBytes(outside,count);
                             int before=attempts;deny=true;
                             IpNetwork normalized=IpNetwork::FromAddress(address,prefix);IpNetwork strict=new(networkAddress,prefix);IpNetwork parsed=new();
@@ -110,7 +110,7 @@ public sealed class IpNetworkTests
                                     if(!success){if(written!=0)return 4;for(nuint i=0;i<45;i++)if(output[i]!='Z')return 5;}
                                     else{if(written!=canonicalCString.Length||output[0]!='Z')return 6;for(nuint i=0;i<written;i++)if(output[i+1]!=canonicalCString.Data[i])return 7;for(nuint i=written+1;i<45;i++)if(output[i]!='Z')return 8;}
                                 }
-                                nuint written=99;if(terminated.TryFormat((char*)1,0,ref written)||written!=0)return 9;
+                                nuint written=99;if(terminated.TryFormat(((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 9;
                             }
                             deny=false;if(attempts!=before)return 10;
                             bool caught=false;IpNetwork result=initial;try{result=IpNetwork::Parse(text.Data,text.Length);if(!expectedCounted||!result.Equals(&counted))return 11;}
@@ -138,7 +138,7 @@ public sealed class IpNetworkTests
                 {
                     IpNetwork zero=new();IpAddress zeroAddress=zero.NetworkAddress;if(!zeroAddress.IsIpv4||zero.PrefixLength!=0)return 1;
                     IpNetwork original=IpNetwork::Parse("2001:db8::/032");IpNetwork saved=original;
-                    IpNetwork[8] backing;char* storage=(char*)&backing[0];nuint extent=(nuint)sizeof(IpNetwork)*8;if(extent<128||extent>512)return 2;
+                    IpNetwork[8] backing;char* storage=(&backing[0]).reinterpret<char*>();nuint extent=(nuint)sizeof(IpNetwork)*8;if(extent<128||extent>512)return 2;
                     nuint[3] offsets=[0,1,(nuint)sizeof(IpNetwork)-1];readonly(char)* text="2001:db8::/032";nuint count=0;while(text[count]!='\0')count++;
                     int before=attempts;deny=true;
                     for(nuint sample=0;sample<3;sample++){
@@ -153,7 +153,7 @@ public sealed class IpNetworkTests
                         if(backing[0].TryFormat(storage+offset,12,ref written)||written!=0)return 8;for(nuint i=0;i<extent;i++)if(storage[i]!=snapshot[i])return 9;
                     }
                     nuint[3] badCounts=[0,50,(nuint)0-(nuint)1];
-                    for(nuint i=0;i<3;i++){IpNetwork result=original;if(IpNetwork::TryParse((readonly(char)*)1,badCounts[i],&result)||!result.Equals(&zero))return 10;}
+                    for(nuint i=0;i<3;i++){IpNetwork result=original;if(IpNetwork::TryParse(((nuint)1).reinterpret<readonly(char)*>(),badCounts[i],&result)||!result.Equals(&zero))return 10;}
                     readonly(char)* invalid="192.0.2.1/24";nuint invalidCount=0;while(invalid[invalidCount]!='\0')invalidCount++;
                     for(nuint i=0;i<invalidCount;i++)storage[i]=invalid[i];if(IpNetwork::TryParse(storage,invalidCount,&backing[0])||!backing[0].Equals(&zero))return 11;
                     for(nuint i=0;i<invalidCount;i++)storage[i]=invalid[i];storage[invalidCount]='\0';if(IpNetwork::TryParse(storage,&backing[0])||!backing[0].Equals(&zero))return 11;

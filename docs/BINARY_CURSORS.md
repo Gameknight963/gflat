@@ -119,14 +119,30 @@ without adding that dependency to the cursor source files. Include it and
 
 ```csharp
 using std::Binary;
-bool TryWriteVarUInt32(this ref BinaryBufferWriter writer, uint value) nothrow;
-bool TryWriteVarUInt64(this ref BinaryBufferWriter writer, ulong value) nothrow;
-VarInt::Status ReadVarUInt32(this ref BinaryBufferReader reader, ref uint value) nothrow;
-VarInt::Status ReadVarUInt64(this ref BinaryBufferReader reader, ref ulong value) nothrow;
-bool TryWriteZigZagInt32(this ref BinaryBufferWriter writer, int value) nothrow;
-bool TryWriteZigZagInt64(this ref BinaryBufferWriter writer, long value) nothrow;
-VarInt::Status ReadZigZagInt32(this ref BinaryBufferReader reader, ref int value) nothrow;
-VarInt::Status ReadZigZagInt64(this ref BinaryBufferReader reader, ref long value) nothrow;
+extension BinaryBufferWriter {
+    public bool TryWriteVarUInt32(uint value) nothrow;
+}
+extension BinaryBufferWriter {
+    public bool TryWriteVarUInt64(ulong value) nothrow;
+}
+extension BinaryBufferReader {
+    public VarInt::Status ReadVarUInt32(ref uint value) nothrow;
+}
+extension BinaryBufferReader {
+    public VarInt::Status ReadVarUInt64(ref ulong value) nothrow;
+}
+extension BinaryBufferWriter {
+    public bool TryWriteZigZagInt32(int value) nothrow;
+}
+extension BinaryBufferWriter {
+    public bool TryWriteZigZagInt64(long value) nothrow;
+}
+extension BinaryBufferReader {
+    public VarInt::Status ReadZigZagInt32(ref int value) nothrow;
+}
+extension BinaryBufferReader {
+    public VarInt::Status ReadZigZagInt64(ref long value) nothrow;
+}
 ```
 
 These use canonical unsigned base-128 encoding. Writers advance only after a

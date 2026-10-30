@@ -23,7 +23,7 @@ public sealed class ConsoleStandardReaderTests
                 }
                 int main(){
                     IByteReader* input=Console::In;if(input!=Console::In)return 1;
-                    if(input.Read((char*)1,0)!=0)return 2;std::IO::ReadExactly(input,(char*)1,0);
+                    if(input.Read(((nuint)1).reinterpret<char*>(),0)!=0)return 2;std::IO::ReadExactly(input,((nuint)1).reinterpret<char*>(),0);
                     char[4] header=['?','?','?','?'];if(input.Read(&header[1],2)!=2||header[0]!='?'||header[1]!='A'||header[2]!='\0'||header[3]!='?')return 3;
                     if(Console::PeekByte()!=255||Console::PeekByte()!=255||Console::ReadByte()!=255)return 4;
                     if(std::IO::ReadUInt32BigEndian(input)!=305419896u)return 5;
@@ -92,7 +92,7 @@ public sealed class ConsoleStandardReaderTests
                     for(int attempt=0;attempt<2;attempt++){
                         bool caught=false;
                         try{input.Read(&bytes[1],1);}catch(ref EndOfStreamException error){return 32;}catch(ref IOException error){caught=true;}
-                        if(!caught||ferror(stream)==0||input.Read((char*)1,0)!=0||ferror(stream)==0)return 33;
+                        if(!caught||ferror(stream)==0||input.Read(((nuint)1).reinterpret<char*>(),0)!=0||ferror(stream)==0)return 33;
                         Console::ClearInputError();if(ferror(stream)!=0||feof(stream)!=0)return 34;
                     }
                     if(freopen({{Literal(original)}},"r",stream)==null)return 35;

@@ -800,7 +800,7 @@ namespace gflat.Tests
                     int i = 10;
                     uint u = (uint)i;
                     int* ptr = &i;
-                    nuint addr = (nuint)ptr;
+                    nuint addr = ptr.reinterpret<nuint>();
                     void* vp = (void*)ptr;
                     int* ptr2 = (int*)vp;
                     int truncated = (int)100L;

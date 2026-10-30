@@ -33,7 +33,7 @@ public sealed class StringShrinkTests
                     for(nuint i=0;i<length;i++)text[i]=(char)((i*37+length)%256);
                     text.Reserve(length+97);
                     int before=allocations;int freed=releases;
-                    watched=(nuint)text.Data;watchedReleases=0;
+                    watched=(text.Data).reinterpret<nuint>();watchedReleases=0;
                     text.ShrinkToFit();
                     if(text.Length!=length||text.Capacity!=length||lastSize!=length+1)return 1;
                     if(allocations!=before+1||releases!=freed+1||watchedReleases!=1)return 2;
@@ -63,7 +63,7 @@ public sealed class StringShrinkTests
                     text.Reserve(4096);text.Append("payload");text.Clear();
                     if(text.Capacity!=4096)return 2;
                     int before=attempts;int freed=releases;
-                    watched=(nuint)text.Data;watchedReleases=0;
+                    watched=(text.Data).reinterpret<nuint>();watchedReleases=0;
                     deny=true;text.ShrinkToFit();deny=false;
                     if(attempts!=before||releases!=freed+1||watchedReleases!=1)return 3;
                     watched=0;

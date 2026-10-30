@@ -99,7 +99,7 @@ interface IHashable
     implementation extralong
     {
         public immutable nuint GetHashCode()
-            => Hashing::Integer((ulong)Hashing::Bytes((readonly(char)*)this, (nuint)sizeof(extralong)));
+            => Hashing::Integer((ulong)Hashing::Bytes(this.reinterpret<readonly(char)*>(), (nuint)sizeof(extralong)));
     }
 
     implementation bool
@@ -116,7 +116,7 @@ interface IHashable
         public immutable nuint GetHashCode()
         {
             if (*this == 0.0f || *this != *this) return (nuint)0;
-            return Hashing::Integer((ulong)*((readonly(uint)*)this));
+            return Hashing::Integer((ulong)(*this).reinterpret<uint>());
         }
     }
 
@@ -125,7 +125,7 @@ interface IHashable
         public immutable nuint GetHashCode()
         {
             if (*this == 0.0d || *this != *this) return (nuint)0;
-            return Hashing::Integer((ulong)*((readonly(ulong)*)this));
+            return Hashing::Integer((ulong)(*this).reinterpret<ulong>());
         }
     }
 

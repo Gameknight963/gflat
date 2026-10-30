@@ -3,34 +3,70 @@ using std::Memory;
 namespace std::Text;
 
 // Trim ASCII whitespace by slicing the borrowed view, never changing its bytes.
-Span<char> TrimStart(this Span<char> text)
+Span<char> TrimStart(Span<char> text)
+=> text.TrimStart();
+
+extension Span<char>
 {
-    nuint start = 0;
-    while (start < text.Length && Ascii::IsWhiteSpace(text[start])) start++;
-    return text.Slice(start, text.Length - start);
+    public Span<char> TrimStart()
+    {
+        nuint start = 0;
+        while (start < (*this).Length && Ascii::IsWhiteSpace((*this)[start])) start++;
+        return (*this).Slice(start, (*this).Length - start);
+    }
 }
 
-Span<char> TrimEnd(this Span<char> text)
+Span<char> TrimEnd(Span<char> text)
+=> text.TrimEnd();
+
+extension Span<char>
 {
-    nuint end = text.Length;
-    while (end != 0 && Ascii::IsWhiteSpace(text[end - 1])) end--;
-    return text.Slice(0, end);
+    public Span<char> TrimEnd()
+    {
+        nuint end = (*this).Length;
+        while (end != 0 && Ascii::IsWhiteSpace((*this)[end - 1])) end--;
+        return (*this).Slice(0, end);
+    }
 }
 
-Span<char> Trim(this Span<char> text) => text.TrimEnd().TrimStart();
+Span<char> Trim(Span<char> text) => text.Trim();
 
-Span<readonly(char)> TrimStart(this Span<readonly(char)> text)
+extension Span<char>
 {
-    nuint start = 0;
-    while (start < text.Length && Ascii::IsWhiteSpace(text[start])) start++;
-    return text.Slice(start, text.Length - start);
+    public Span<char> Trim()
+    => (*this).TrimEnd().TrimStart();
 }
 
-Span<readonly(char)> TrimEnd(this Span<readonly(char)> text)
+Span<readonly(char)> TrimStart(Span<readonly(char)> text)
+=> text.TrimStart();
+
+extension Span<readonly(char)>
 {
-    nuint end = text.Length;
-    while (end != 0 && Ascii::IsWhiteSpace(text[end - 1])) end--;
-    return text.Slice(0, end);
+    public Span<readonly(char)> TrimStart()
+    {
+        nuint start = 0;
+        while (start < (*this).Length && Ascii::IsWhiteSpace((*this)[start])) start++;
+        return (*this).Slice(start, (*this).Length - start);
+    }
 }
 
-Span<readonly(char)> Trim(this Span<readonly(char)> text) => text.TrimEnd().TrimStart();
+Span<readonly(char)> TrimEnd(Span<readonly(char)> text)
+=> text.TrimEnd();
+
+extension Span<readonly(char)>
+{
+    public Span<readonly(char)> TrimEnd()
+    {
+        nuint end = (*this).Length;
+        while (end != 0 && Ascii::IsWhiteSpace((*this)[end - 1])) end--;
+        return (*this).Slice(0, end);
+    }
+}
+
+Span<readonly(char)> Trim(Span<readonly(char)> text) => text.Trim();
+
+extension Span<readonly(char)>
+{
+    public Span<readonly(char)> Trim()
+    => (*this).TrimEnd().TrimStart();
+}

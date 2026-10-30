@@ -60,10 +60,10 @@ public sealed class Base32EncoderTests
                     for(nuint mode=0;mode<9;mode++){
                         char[321] bytes;for(nuint i=0;i<length;i++)bytes[i]=(char)(Digit(input[sourceOffset+2*i])*16+Digit(input[sourceOffset+2*i+1]));
                         char[522] output;for(nuint i=0;i<522;i++)output[i]='?';Sink sink=new(&output[1]);Base32Encoder writer=new(&sink);
-                        writer.Write((readonly(char)*)1,0);nuint position=0;
+                        writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);nuint position=0;
                         while(position<length){
                             nuint count=length-position;if(count>chunks[mode])count=chunks[mode];
-                            writer.Write((readonly(char)*)bytes+position,count);position+=count;writer.Write((readonly(char)*)1,0);
+                            writer.Write((readonly(char)*)bytes+position,count);position+=count;writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         }
                         if(sink.Count!=(length/5)*8)return 1;
                         for(nuint i=0;i<sink.Count;i++)if(output[i+1]=='=')return 2;
@@ -111,7 +111,7 @@ public sealed class Base32EncoderTests
                 if(caught!=1||sink.Count!=(nuint)budget||output[0]!='?'||output[(nuint)budget+1]!='?')return false;
                 for(nuint i=0;i<(nuint)budget;i++)if(output[i+1]!=oracle[i])return false;
                 nuint calls=sink.Calls;sink.Budget=999;
-                try{writer.Write((readonly(char)*)1,0);}catch(ref Exception error){caught++;}
+                try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){caught++;}
                 try{writer.Write("later",5);}catch(ref Exception error){caught++;}
                 try{writer.Complete();}catch(ref Exception error){caught++;}
                 Base32Encoder duplicate=writer;try{duplicate.Complete();}catch(ref Exception error){caught++;}
@@ -156,7 +156,7 @@ public sealed class Base32EncoderTests
                             for(nuint i=0;i<8;i++)if(output[i+9]!=tails[(carry-1)*8+i])return 24;
                             Base32Encoder completed=moved;nuint calls=sink.Calls;completed.Complete();completed.Complete();
                             if(sink.Calls!=calls||attempts!=before)return 25;
-                            int rejected=0;try{completed.Write((readonly(char)*)1,0);}catch(ref Exception error){rejected++;}
+                            int rejected=0;try{completed.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){rejected++;}
                             if(rejected!=1||sink.Calls!=calls)return 26;
                         }
                         nuint calls=sink.Calls;{Base32Encoder abandoned=new(&sink);abandoned.Write("f",1);}

@@ -81,7 +81,7 @@ public sealed class SpanTryCopyTests
                     for (nuint i = 0; i < 8; i++)
                         if (buffer[i] != (int)ReadByte(packet, ref position)) return 2;
                 }
-                Span<immutable(int)> unreadable = new((immutable(int)*)1, 2);
+                Span<immutable(int)> unreadable = new(((nuint)1).reinterpret<immutable(int)*>(), 2);
                 Span<int> empty = new();
                 if (unreadable.TryCopyTo(empty)) return 3;
                 Span<immutable(int)> noInput = new();

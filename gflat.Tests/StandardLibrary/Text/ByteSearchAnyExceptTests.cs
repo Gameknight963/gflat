@@ -125,7 +125,7 @@ public sealed class ByteSearchAnyExceptTests
         => Run("""
             using std::Text;
             int main() nothrow {
-                readonly(byte)* invalid = (readonly(byte)*)1; nuint maximum = (nuint)0 - (nuint)1;
+                readonly(byte)* invalid = ((nuint)1).reinterpret<readonly(byte)*>(); nuint maximum = (nuint)0 - (nuint)1;
                 if (ByteSearch::IndexOfAnyExcept(invalid, 0, invalid, maximum) != 0) return 1;
                 if (ByteSearch::LastIndexOfAnyExcept(invalid, 0, invalid, maximum) != 0) return 2;
                 if (ByteSearch::IndexOfAnyExcept(invalid, maximum, invalid, 0) != 0) return 3;

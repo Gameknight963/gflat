@@ -228,8 +228,8 @@ namespace gflat.comptime
                 result = Equals(a, b);
                 return true;
             }
-            if ((left is ArrayPointer or Pointer or String && right is Integer { Value: 0 }) ||
-                (left is Integer { Value: 0 } && right is ArrayPointer or Pointer or String))
+            if ((left is ArrayPointer or Pointer or String or BorrowedReference && right is Integer { Value: 0 }) ||
+                (left is Integer { Value: 0 } && right is ArrayPointer or Pointer or String or BorrowedReference))
             {
                 result = false;
                 return true;

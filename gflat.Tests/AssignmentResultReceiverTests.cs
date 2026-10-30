@@ -20,7 +20,8 @@ public sealed class AssignmentResultReceiverTests
             }
             Value* Target(Value* value) { targets++; return value; }
             Value Make() { values++; return new Value(42); }
-            int ReadInt(this int value) => value;
+            int ReadInt(int value) => value;
+            extension int { public int ReadInt() => (*this); }
             int main() {
                 Value left = new(1);
                 Value right = new(42);
@@ -343,14 +344,14 @@ public sealed class AssignmentResultReceiverTests
                 CopyOnly[1] original = [new CopyOnly(&p)];
                 CopyOnly[1] target = [new CopyOnly(&p)];
                 if (p == null) return 0;
-                return (target = move original)[(nuint)(p = &live) & (nuint)0].Read(p.value);
+                return (target = move original)[(p = &live).reinterpret<nuint>() & (nuint)0].Read(p.value);
             }
             int Write(Item*? p) {
                 Item live = new(42);
                 CopyOnly[1] original = [new CopyOnly(&p)];
                 CopyOnly[1] target = [new CopyOnly(&p)];
                 if (p == null) return 0;
-                int observed = ((target = move original)[(nuint)(p = &live) & (nuint)0].number = p.value);
+                int observed = ((target = move original)[(p = &live).reinterpret<nuint>() & (nuint)0].number = p.value);
                 if (target[0].number != 0) return 1;
                 return observed;
             }

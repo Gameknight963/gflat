@@ -148,7 +148,7 @@ public sealed class DateTimeTests
                 if(sizeof(DateTime)>16)return 20;
                 DateTime specimen=DateTime::Parse("2000-02-29T12:34:56.1234567");long ticks=specimen.Ticks;
                 for(nuint offset=0;offset<=32;offset+=8)for(nuint capacity=0;capacity<=28;capacity++){
-                    DateTime[16] storage;char* bytes=(char*)&storage[0];for(nuint i=0;i<(nuint)sizeof(DateTime)*16;i++)bytes[i]='!';storage[2]=specimen;
+                    DateTime[16] storage;char* bytes=(&storage[0]).reinterpret<char*>();for(nuint i=0;i<(nuint)sizeof(DateTime)*16;i++)bytes[i]='!';storage[2]=specimen;
                     char[256] saved;for(nuint i=0;i<(nuint)sizeof(DateTime)*16;i++)saved[i]=bytes[i];nuint written=99;int before=attempts;deny=true;
                     bool success=storage[2].TryFormat(bytes+offset,capacity,ref written);deny=false;
                     if(success!=(capacity>=27)||attempts!=before)return 8;
@@ -158,7 +158,7 @@ public sealed class DateTimeTests
                     }
                     }
                 }
-                DateTime[16] parsedStorage;char* borrowed=(char*)&parsedStorage[0];
+                DateTime[16] parsedStorage;char* borrowed=(&parsedStorage[0]).reinterpret<char*>();
                 for(nuint i=0;i<27;i++)borrowed[i]="2000-02-29T12:34:56.1234567"[i];
                 if(!DateTime::TryParse(borrowed,27,&parsedStorage[0])||parsedStorage[0].Ticks!=ticks)return 14;
                 Writer writer=new();int before=attempts;deny=true;specimen.Format(&writer);deny=false;

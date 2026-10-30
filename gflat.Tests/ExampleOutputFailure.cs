@@ -44,7 +44,7 @@ internal static class ExampleOutputFailure
                 bool BreakOutput(void* stream){
                     // Keep the CRT descriptor valid to avoid its invalid-parameter
                     // handler; only the underlying OS handle becomes unwritable.
-                    return CloseHandle((void*)_get_osfhandle(_fileno(stream)))!=0;
+                    return CloseHandle((_get_osfhandle(_fileno(stream))).reinterpret<void*>())!=0;
                 }
                 """ : """
                 bool BreakOutput(void* stream)=>freopen("/dev/full","wb",stream)!=null;

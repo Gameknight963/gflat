@@ -72,8 +72,8 @@ public sealed class MathTests
     {
         Run($$"""
             using std; using std::Numerics;
-            {{type}} FromBits({{bitsType}} bits) => *(({{type}}*)&bits);
-            {{bitsType}} Bits({{type}} value) => *(({{bitsType}}*)&value);
+            {{type}} FromBits({{bitsType}} bits) => (bits).reinterpret<{{type}}>();
+            {{bitsType}} Bits({{type}} value) => (value).reinterpret<{{bitsType}}>();
             int main() {
                 {{type}} negativeZero = FromBits({{negativeZeroBits}});
                 {{type}} positiveZero = ({{type}})0;

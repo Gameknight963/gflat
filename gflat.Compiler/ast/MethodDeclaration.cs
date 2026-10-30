@@ -15,6 +15,10 @@ namespace gflat.ast
         public string? PropertyName { get; set; }
         public string? StaticConstructorName { get; set; }
         public bool IsRefReturn { get; set; }
+        public bool IsExplicitConversion { get; set; }
+        public TypeExpression? ExtensionReceiverType { get; set; }
+        public string? ExtensionMemberName { get; set; }
+        public int ExtensionBlockParameterCount { get; set; }
         public bool IsPropertyInitializer { get; set; }
         public TypeExpression ReturnType { get; set; }
         public List<Parameter> Parameters { get; }

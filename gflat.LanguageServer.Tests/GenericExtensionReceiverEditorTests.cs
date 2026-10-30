@@ -32,7 +32,7 @@ public sealed class GenericExtensionReceiverEditorTests
 
     private static void AssertExtensionCall(bool checkedPath,string clientParameter,string receiverArgument,string declarations="",bool resolved=true,string libraryNamespace="")
     {
-        string text=declarations+"struct Box<T>{public T Value;}void Second<T>(this ref Box<T> target){}void First<"+clientParameter+">(this ref Box<"+receiverArgument+"> target){target.Second();}void Use(Box<int>* target){(*target).Second();}void Force(Box<"+receiverArgument.Replace(clientParameter,"int",StringComparison.Ordinal)+">* target){}";
+        string text=declarations+"struct Box<T>{public T Value;}extension<T> Box<T>{public void Second(){}}extension<"+clientParameter+"> Box<"+receiverArgument+">{public void First(){(*this).Second();}}void Use(Box<int>* target){(*target).Second();}void Force(Box<"+receiverArgument.Replace(clientParameter,"int",StringComparison.Ordinal)+">* target){}";
         if(libraryNamespace.Length>0)text="namespace "+libraryNamespace+"{"+text+"}";
         var source=new SourceFile(Path.GetFullPath("generic-extension-receiver.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true});
@@ -72,14 +72,14 @@ public sealed class GenericExtensionReceiverEditorTests
         }
         Assert.Empty(changes);
         Assert.Equal("method",classifications.GetValueOrDefault(use));
-        string expected="void "+(libraryNamespace.Length==0?"":libraryNamespace+"::")+"Second<"+(checkedPath?"int":receiverArgument)+">()";
+        string expected="void "+(libraryNamespace.Length==0?"":libraryNamespace+"::")+"Second()";
         Assert.Contains(expected,hover.GetProperty("contents").GetProperty("value").GetString());
         Assert.DoesNotContain("$",hover.ToString());
         var item=Assert.Single(completion.GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="Second");
         Assert.Contains(expected,item.GetProperty("detail").GetString());
         var selected=Assert.Single(signature.GetProperty("signatures").EnumerateArray());
         Assert.Contains(expected,selected.GetProperty("label").GetString());
-        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf("Second<T>",StringComparison.Ordinal),"Second".Length))),
+        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf("Second()",StringComparison.Ordinal),"Second".Length))),
             Assert.IsType<Location>(definition));
         Assert.Empty(changes);
 
@@ -98,7 +98,7 @@ public sealed class GenericExtensionReceiverEditorTests
     [InlineData(true,true)]
     public void OpenNominalReceiversKeepReadonlyAndStorageEligibility(bool temporary,bool namespaced)
     {
-        string text="struct Box<T>{public int Marker;}void Mutable<T>(this ref Box<T> target){}int Safe<T>(this ref readonly(Box<T>) target)=>target.Marker;void Inspect<U>(this ref readonly(Box<U>) target){int value=target.Marker;}void Temporary<U>(){int value=new Box<U>().Marker;}";
+        string text="struct Box<T>{public int Marker;}extension<T> Box<T>{public void Mutable(){}}extension<T> Box<T>{public readonly int Safe()=>(*this).Marker;}extension<U> Box<U>{public readonly void Inspect(){int value=(*this).Marker;}}void Temporary<U>(){int value=new Box<U>().Marker;}";
         if(namespaced)text="namespace Library{"+text+"}";
         var source=new SourceFile(Path.GetFullPath("generic-extension-eligibility.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true});
@@ -107,20 +107,19 @@ public sealed class GenericExtensionReceiverEditorTests
             .Where(type=>type.Span.Source?.Id==source.Id).ToArray();
         var spans=types.Select(type=>type.Span).ToArray();
         var model=new EditorModel(snapshot,[source]);
-        int use=temporary?text.LastIndexOf(".Marker",StringComparison.Ordinal)+1:text.IndexOf("int value=target.Marker",StringComparison.Ordinal)+"int value=target.".Length;
+        int use=temporary?text.LastIndexOf(".Marker",StringComparison.Ordinal)+1:text.IndexOf("int value=(*this).Marker",StringComparison.Ordinal)+"int value=(*this).".Length;
         var names=Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray()
             .Select(item=>item.GetProperty("label").GetString()).ToArray();
         Assert.Contains("Marker",names);
-        Assert.DoesNotContain("Mutable",names);
-        if(temporary)Assert.DoesNotContain("Safe",names);
-        else Assert.Contains("Safe",names);
+        if(temporary)Assert.Contains("Mutable",names);else Assert.DoesNotContain("Mutable",names);
+        Assert.Contains("Safe",names);
         Assert.Equal(spans,types.Select(type=>type.Span));
     }
 
     [Fact]
     public void NamespacedNominalReceiverPreservesDeclaredParameterCapabilities()
     {
-        const string text="namespace Library{interface IProvider{static int Read();}interface IExtra{static int Extra();}struct Handler<P>{}int Visible<P:IProvider>(this Handler<P> target)=>P::Read();int Hidden<P:IExtra>(this Handler<P> target)=>P::Extra();int Inspect<U:IProvider>(this ref Handler<U> target)=>target.Visible();}";
+        const string text="namespace Library{interface IProvider{static int Read();}interface IExtra{static int Extra();}struct Handler<P>{}extension<P:IProvider> Handler<P>{public int Visible()=>P::Read();}extension<P:IExtra> Handler<P>{public int Hidden()=>P::Extra();}extension<U:IProvider> Handler<U>{public int Inspect()=>(*this).Visible();}}";
         var source=new SourceFile(Path.GetFullPath("namespaced-extension-capabilities.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,diagnostic=>diagnostic.Severity==DiagnosticSeverity.Error);
@@ -129,18 +128,18 @@ public sealed class GenericExtensionReceiverEditorTests
         var model=new EditorModel(snapshot,[source]);
         int use=text.LastIndexOf("Visible()",StringComparison.Ordinal);
         string hover=Json(model.Hover(source.Path,use)).GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("int Library::Visible<U>()",hover);Assert.DoesNotContain("$",hover);
+        Assert.Contains("int Library::Visible()",hover);Assert.DoesNotContain("$",hover);
         var names=Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray().Select(item=>item.GetProperty("label").GetString()).ToArray();
         Assert.Contains("Visible",names);Assert.DoesNotContain("Hidden",names);
-        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf("Visible<P:",StringComparison.Ordinal),"Visible".Length))),Assert.IsType<Location>(model.Definition(source.Path,use)));
+        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf("Visible()",StringComparison.Ordinal),"Visible".Length))),Assert.IsType<Location>(model.Definition(source.Path,use)));
         Assert.Equal(spans,types.Select(type=>type.Span));
     }
 
     [Fact]
     public void RootTypeParameterDoesNotBecomeANominalReceiverWithTheSameName()
     {
-        const string library="namespace Library{interface IProtocol{int Marker{get;}}struct Box<T>{public int Marker;}struct Other<T>{public int Marker;}void Second<T>(this ref Box<T> target){}}";
-        string text=library+"namespace Library{int Inspect<Box:IProtocol>(this ref Box target)=>target.Marker;}";
+        const string library="namespace Library{interface IProtocol{int Marker{get;}}struct Box<T>{public int Marker;}struct Other<T>{public int Marker;}extension<T> Box<T>{public void Second(){}}}";
+        string text=library+"namespace Library{extension<Box:IProtocol> Box{public int Inspect()=>(*this).Marker;}}";
         var source=new SourceFile(Path.GetFullPath("namespaced-extension-shadow.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,diagnostic=>diagnostic.Severity==DiagnosticSeverity.Error);
@@ -156,7 +155,7 @@ public sealed class GenericExtensionReceiverEditorTests
     [Fact]
     public void NamespacedCheckedAliasReceiverPreservesItsExposedCapabilities()
     {
-        const string text="namespace Library{interface IProvider{static int Read();}interface IExtra{static int Extra();}static class Answer:IProvider,IExtra{public static int Read()=>42;public static int Extra()=>7;}weak alias Selected:IProvider=Answer;struct Handler<P>{}int Visible<P:IProvider>(this Handler<P> target)=>P::Read();int Hidden<P:IExtra>(this Handler<P> target)=>P::Extra();int Cached(Handler<Answer> target)=>target.Hidden();int Inspect(Handler<Selected> target)=>target.Visible();}";
+        const string text="namespace Library{interface IProvider{static int Read();}interface IExtra{static int Extra();}static class Answer:IProvider,IExtra{public static int Read()=>42;public static int Extra()=>7;}weak alias Selected:IProvider=Answer;struct Handler<P>{}extension<P:IProvider> Handler<P>{public int Visible()=>P::Read();}extension<P:IExtra> Handler<P>{public int Hidden()=>P::Extra();}int Cached(Handler<Answer> target)=>target.Hidden();int Inspect(Handler<Selected> target)=>target.Visible();}";
         var source=new SourceFile(Path.GetFullPath("namespaced-alias-capabilities.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,diagnostic=>diagnostic.Severity==DiagnosticSeverity.Error);
@@ -167,8 +166,8 @@ public sealed class GenericExtensionReceiverEditorTests
         var names=Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray().Select(item=>item.GetProperty("label").GetString()).ToArray();
         Assert.Contains("Visible",names);Assert.DoesNotContain("Hidden",names);
         string hover=Json(model.Hover(source.Path,use)).GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("Library::Visible<Answer>()",hover);Assert.DoesNotContain("$",hover);
-        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf("Visible<P:",StringComparison.Ordinal),"Visible".Length))),Assert.IsType<Location>(model.Definition(source.Path,use)));
+        Assert.Contains("Library::Visible()",hover);Assert.DoesNotContain("$",hover);
+        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf("Visible()",StringComparison.Ordinal),"Visible".Length))),Assert.IsType<Location>(model.Definition(source.Path,use)));
         Assert.Equal(spans,types.Select(type=>type.Span));
     }
 

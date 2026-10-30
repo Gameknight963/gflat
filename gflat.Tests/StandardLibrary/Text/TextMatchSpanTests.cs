@@ -56,11 +56,11 @@ public sealed class TextMatchSpanTests
                 Span<char> mutable=new(bytes,7);Span<readonly(char)> text=mutable.AsReadOnly().Slice(1,3);
                 if(!text.StartsWith(&bytes[1],2)||!text.EndsWith(&bytes[2],2))return 1;
                 if(text.StartsWith(&bytes[2],2)||text.EndsWith(&bytes[1],2))return 2;
-                if(!text.StartsWith((readonly(char)*)1,0)||!text.EndsWith((readonly(char)*)1,0))return 3;
-                if(text.StartsWith((readonly(char)*)1,4)||text.EndsWith((readonly(char)*)1,4))return 4;
+                if(!text.StartsWith(((nuint)1).reinterpret<readonly(char)*>(),0)||!text.EndsWith(((nuint)1).reinterpret<readonly(char)*>(),0))return 3;
+                if(text.StartsWith(((nuint)1).reinterpret<readonly(char)*>(),4)||text.EndsWith(((nuint)1).reinterpret<readonly(char)*>(),4))return 4;
                 Span<readonly(char)> empty=new();
-                if(!empty.StartsWith((readonly(char)*)1,0)||!empty.EndsWith((readonly(char)*)1,0))return 5;
-                if(empty.StartsWith((readonly(char)*)1,1)||empty.EndsWith((readonly(char)*)1,1))return 6;
+                if(!empty.StartsWith(((nuint)1).reinterpret<readonly(char)*>(),0)||!empty.EndsWith(((nuint)1).reinterpret<readonly(char)*>(),0))return 5;
+                if(empty.StartsWith(((nuint)1).reinterpret<readonly(char)*>(),1)||empty.EndsWith(((nuint)1).reinterpret<readonly(char)*>(),1))return 6;
                 if(!text.StartsWith(&bytes[1])||!text.EndsWith("x"))return 7;
                 if(bytes[0]!='!'||bytes[1]!=(char)255||bytes[2]!='\0'||bytes[3]!='x'||bytes[4]!='?'||bytes[5]!=(char)128||bytes[6]!='!')return 8;
                 if(allocations!=0)return 9;return 0;

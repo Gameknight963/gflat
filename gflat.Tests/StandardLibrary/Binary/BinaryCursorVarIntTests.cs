@@ -89,7 +89,7 @@ public sealed class BinaryCursorVarIntTests
                 if(empty.ReadVarUInt32(ref small)!=VarInt::Status::NeedMore||small!=42u||empty.Position!=0)return 1;
                 if(empty.ReadVarUInt64(ref big)!=VarInt::Status::NeedMore||big!=43ul||empty.Position!=0)return 2;
                 if(writer.TryWriteVarUInt32(0u)||writer.TryWriteVarUInt64(0ul)||writer.Position!=0)return 3;
-                BinaryBufferReader inaccessible=new((readonly(byte)*)1,0);BinaryBufferWriter noStorage=new((byte*)1,0);
+                BinaryBufferReader inaccessible=new(((nuint)1).reinterpret<readonly(byte)*>(),0);BinaryBufferWriter noStorage=new(((nuint)1).reinterpret<byte*>(),0);
                 if(inaccessible.ReadVarUInt32(ref small)!=VarInt::Status::NeedMore||inaccessible.ReadVarUInt64(ref big)!=VarInt::Status::NeedMore)return 4;
                 if(noStorage.TryWriteVarUInt32(1u)||noStorage.TryWriteVarUInt64(1ul))return 5;
                 byte[11] invalid;invalid[0]=(byte)99;invalid[1]=(byte)128;invalid[2]=(byte)0;
@@ -101,12 +101,12 @@ public sealed class BinaryCursorVarIntTests
                 if(overflow32.ReadVarUInt32(ref small)!=VarInt::Status::Invalid||small!=42u||overflow32.Position!=1)return 8;
                 invalid[5]=(byte)255;invalid[10]=(byte)2;BinaryBufferReader overflow64=new(invalid,11);overflow64.TrySkip(1);
                 if(overflow64.ReadVarUInt64(ref big)!=VarInt::Status::Invalid||big!=43ul||overflow64.Position!=1)return 9;
-                uint[3] aligned;byte* bytes=(byte*)&aligned[0];for(nuint i=0;i<12;i++)bytes[i]=(byte)0;
+                uint[3] aligned;byte* bytes=(&aligned[0]).reinterpret<byte*>();for(nuint i=0;i<12;i++)bytes[i]=(byte)0;
                 bytes[0]=(byte)172;bytes[1]=(byte)2;BinaryBufferReader input=new(bytes,2);
                 if(input.ReadVarUInt32(ref aligned[0])!=VarInt::Status::Done||aligned[0]!=300u||input.Position!=2)return 10;
                 bytes[0]=(byte)128;bytes[1]=(byte)0;uint before=aligned[0];input.Reset();
                 if(input.ReadVarUInt32(ref aligned[0])!=VarInt::Status::Invalid||aligned[0]!=before||input.Position!=0)return 11;
-                ulong[2] aligned64;byte* bytes64=(byte*)&aligned64[0];for(nuint i=0;i<16;i++)bytes64[i]=(byte)0;
+                ulong[2] aligned64;byte* bytes64=(&aligned64[0]).reinterpret<byte*>();for(nuint i=0;i<16;i++)bytes64[i]=(byte)0;
                 for(nuint i=0;i<9;i++)bytes64[i]=(byte)255;bytes64[9]=(byte)1;
                 BinaryBufferReader wide=new(bytes64,10);
                 if(wide.ReadVarUInt64(ref aligned64[0])!=VarInt::Status::Done||aligned64[0]!=18446744073709551615ul||wide.Position!=10)return 12;

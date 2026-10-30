@@ -32,16 +32,16 @@ public sealed class CountingWriterTests
         => Run(DenyAllocation+"""
             bool Exercise() nothrow {
                 CountingWriter writer=new();nuint maximum=(nuint)0-(nuint)1;
-                if(writer.Length!=0||!writer.TryWrite((readonly(char)*)1,0))return false;
-                for(nuint i=1;i<=1000;i++)if(!writer.TryWrite((readonly(char)*)1,i))return false;
+                if(writer.Length!=0||!writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),0))return false;
+                for(nuint i=1;i<=1000;i++)if(!writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),i))return false;
                 if(writer.Length!=500500)return false;
                 CountingWriter copy=writer;writer.Clear();
                 if(writer.Length!=0||copy.Length!=500500)return false;
-                if(!writer.TryWrite((readonly(char)*)1,maximum-3))return false;
-                if(writer.TryWrite((readonly(char)*)1,4)||writer.Length!=maximum-3)return false;
-                if(!writer.TryWrite((readonly(char)*)1,3)||writer.Length!=maximum)return false;
-                if(writer.TryWrite((readonly(char)*)1,1)||!writer.TryWrite((readonly(char)*)1,0)||writer.Length!=maximum)return false;
-                writer.Clear();if(!writer.TryWrite((readonly(char)*)1,maximum)||writer.Length!=maximum)return false;
+                if(!writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),maximum-3))return false;
+                if(writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),4)||writer.Length!=maximum-3)return false;
+                if(!writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),3)||writer.Length!=maximum)return false;
+                if(writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),1)||!writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),0)||writer.Length!=maximum)return false;
+                writer.Clear();if(!writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),maximum)||writer.Length!=maximum)return false;
                 copy.Clear();if(copy.Length!=0||writer.Length!=maximum)return false;
                 CountingWriter moved=move copy;
                 return moved.Length==0&&writer.Length==maximum;
@@ -57,15 +57,15 @@ public sealed class CountingWriterTests
             using std; using std::Text; using std::IO; using std::Encoding;
             int main(){
                 CountingWriter writer=new();nuint maximum=(nuint)0-(nuint)1;
-                writer.Write((readonly(char)*)1,maximum-1);int caught=0;
-                try{writer.Write((readonly(char)*)1,2);}catch(Exception* error){caught++;}
+                writer.Write(((nuint)1).reinterpret<readonly(char)*>(),maximum-1);int caught=0;
+                try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),2);}catch(Exception* error){caught++;}
                 if(caught!=1||writer.Length!=maximum-1)return 1;
-                writer.Write((readonly(char)*)1,1);
+                writer.Write(((nuint)1).reinterpret<readonly(char)*>(),1);
                 if(writer.Length!=maximum)return 2;
-                try{writer.Write((readonly(char)*)1,1);}catch(Exception* error){caught++;}
+                try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),1);}catch(Exception* error){caught++;}
                 if(caught!=2||writer.Length!=maximum)return 3;
-                writer.Write((readonly(char)*)1,0);writer.Clear();
-                ITextWriter* output=&writer;output.Write((readonly(char)*)1,123);
+                writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);writer.Clear();
+                ITextWriter* output=&writer;output.Write(((nuint)1).reinterpret<readonly(char)*>(),123);
                 if(writer.Length!=123)return 4;return 0;
             }
             """,optimization);
@@ -77,7 +77,7 @@ public sealed class CountingWriterTests
             using std; using std::Text; using std::IO; using std::Encoding;
             bool Inspect(nuint count) nothrow {
                 CountingWriter writer=new();
-                bool accepted=writer.TryWrite((readonly(char)*)1,count);
+                bool accepted=writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),count);
                 writer.Clear();return accepted&&writer.Length==0;
             }
             int main()=>0;

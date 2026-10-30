@@ -2074,6 +2074,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
+            ExpandExtensionBlocks(node);
             BindQualifiedDeclarations(node);
             SelectAliasBindings(node);
             ExpandProperties(node);
@@ -2097,6 +2098,7 @@ namespace gflat
             RegisterPrimitiveImplementations();
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
+            ValidateExplicitConversionDeclarations();
             ValidateAllocatorPair();
             ValidateUnhandledExceptionHook();
             RegisterStaticStorage(node);
@@ -3022,10 +3024,12 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidatePropertyAccessor(node);
             ValidateStaticConstructor(node);
+            ValidateReinterpretDeclaration(node);
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
             BindMethodSignature(node);
+            ValidateExplicitConversionDeclaration(node);
             ValidateEntryPoint(node);
             ValidateParameterDefaults(node, node.Parameters);
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
@@ -4431,8 +4435,9 @@ namespace gflat
         public void Visit(CallExpression node)
         {
             if (precheckedForeachCalls.Remove(node)) return;
-            using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (TryCheckReinterpretCall(node)) return;
+            using var nullableCall = NullableCall();
             if (TryCheckLlvmCall(node)) return;
             if (TryCheckPrimitiveInterfaceCall(node)) return;
             if (TryCheckExtensionCall(node)) return;
@@ -4796,6 +4801,7 @@ namespace gflat
             if (method == null)
                 throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
 
+            if (method.IsExplicitConversion) funcName = "explicit operator " + DisplayTypeName(method.ReturnType);
             RecordAliasCallTarget(node, method);
             if (method.IsGeneric)
             {
@@ -5124,7 +5130,7 @@ namespace gflat
             }
 
             if (!_structs.TryGetValue(named.Name, out StructInfo? info))
-                throw new TypeCheckException($"'{named.Name}' is not a struct or class", node.Line);
+                throw new TypeCheckException($"Type '{DisplayTypeName(objType)}' has no applicable field or method '{node.Member}'", node.Span);
 
             int idx = info.FieldIndex(node.Member);
             if (idx >= 0)
@@ -5888,6 +5894,7 @@ namespace gflat
                 BindTargetTypedCreation(creation, targetType);
                 sourceType = ResolveAlias(GetType(creation));
             }
+            if (TryCheckInterfaceViewCast(node, sourceType, targetType)) return;
             ValidateTypeUsage(targetType, node.Line);
             ValidateArrayValueShape(targetType, node.Line);
 
@@ -5901,6 +5908,7 @@ namespace gflat
             }
             if (!IsValidCast(sourceType, targetType))
             {
+                if (TryCheckExplicitConversionCast(node, sourceType, targetType)) return;
                 throw new TypeCheckException($"Cannot cast '{DisplayTypeName(sourceType)}' to '{DisplayTypeName(targetType)}'", node.Line);
             }
             if (!ValidateCopyUse(node.Operand, targetType))
@@ -5919,12 +5927,11 @@ namespace gflat
                 (ResolveAlias(nativeSource.Inner) is not NamedTypeExpression nativeSourceInner || !IsInterface(nativeSourceInner)) &&
                 (ResolveAlias(rawTarget.Inner) is not NamedTypeExpression rawInner || !IsInterface(rawInner)))
             {
-                GetCollectorBinding(rawTarget);
-                return true;
+                return IsSemanticRawToManagedCast(nativeSource, rawTarget);
             }
             if (src is ManagedTypeExpression rawSource && dst is PointerTypeExpression nativeTarget &&
                 (ResolveAlias(nativeTarget.Inner) is not NamedTypeExpression nativeTargetInner || !IsInterface(nativeTargetInner)) &&
-                (ResolveAlias(rawSource.Inner) is not NamedTypeExpression rawSourceInner || !IsInterface(rawSourceInner))) return true;
+                (ResolveAlias(rawSource.Inner) is not NamedTypeExpression rawSourceInner || !IsInterface(rawSourceInner))) return IsSemanticManagedToRawCast(rawSource, nativeTarget);
             if (src.IsImmutableValue && !dst.IsImmutableValue && !CanCopyReadOnlyValue(src))
                 return false;
             if (src is ManagedTypeExpression { IsReadOnly: true } && dst is ManagedTypeExpression { IsReadOnly: false } ||
@@ -6011,9 +6018,9 @@ namespace gflat
             }
 
             // Pointer to pointer
-            if (src is PointerTypeExpression && dst is PointerTypeExpression)
+            if (src is PointerTypeExpression sourcePointer && dst is PointerTypeExpression targetPointer)
             {
-                return true;
+                return IsSemanticRawPointerCast(sourcePointer, targetPointer);
             }
 
             // Managed to managed
@@ -6030,35 +6037,35 @@ namespace gflat
             }
 
             // Function pointer to function pointer or void*
-            if (src is FunctionPointerTypeExpression && dst is FunctionPointerTypeExpression)
+            if (src is FunctionPointerTypeExpression sourceFunction && dst is FunctionPointerTypeExpression targetFunction)
             {
-                return true;
+                return IsSemanticFunctionPointerCast(sourceFunction, targetFunction);
             }
             if (src is FunctionPointerTypeExpression && dst is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } })
             {
-                return true;
+                return false;
             }
             if (src is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } } && dst is FunctionPointerTypeExpression)
             {
-                return true;
+                return false;
             }
 
             // Pointer to integer (e.g. nint, nuint, long, ulong, int, uint)
             if ((src is PointerTypeExpression || src is FunctionPointerTypeExpression) && IsInteger(dst))
             {
-                return true;
+                return false;
             }
 
             // Integer to pointer (e.g. (void*)addr, (int*)0)
             if (IsInteger(src) && (dst is PointerTypeExpression || dst is FunctionPointerTypeExpression))
             {
-                return true;
+                return false;
             }
 
             // Array to pointer decay (e.g. (char*)arr)
             if (src is ArrayTypeExpression arr && dst is PointerTypeExpression ptr)
             {
-                return IsValidCast(arr.ElementType, ptr.Inner);
+                return IsSemanticRawPointerCast(new PointerTypeExpression(arr.ElementType, false, arr.Line), ptr);
             }
 
             return false;

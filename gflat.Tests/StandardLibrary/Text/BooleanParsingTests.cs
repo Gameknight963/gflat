@@ -87,7 +87,7 @@ public sealed class BooleanParsingTests
             bool Probe(char* text, nuint count, bool* result) nothrow => TryParseBool(text, count, result);
             int main() {
                 ulong[1] storage = [0ul];
-                char* text = (char*)&storage[0]; bool* result = (bool*)&storage[0];
+                char* text = (&storage[0]).reinterpret<char*>(); bool* result = (&storage[0]).reinterpret<bool*>();
                 for (nuint i = 0; i < 5; i++) text[i] = "TrUe"[i];
                 if (!Probe(text, 4, result) || !*result) return 1;
                 for (nuint i = 0; i < 6; i++) text[i] = "fAlSe"[i];
@@ -95,9 +95,9 @@ public sealed class BooleanParsingTests
                 for (nuint i = 0; i < 6; i++) text[i] = "falsX"[i];
                 if (Probe(text, 5, result) || *result) return 3;
                 *result = true;
-                if (TryParseBool((readonly(char)*)1, 0, result) || *result) return 4;
+                if (TryParseBool(((nuint)1).reinterpret<readonly(char)*>(), 0, result) || *result) return 4;
                 *result = true;
-                if (TryParseBool((readonly(char)*)1, (nuint)0 - (nuint)1, result) || *result) return 5;
+                if (TryParseBool(((nuint)1).reinterpret<readonly(char)*>(), (nuint)0 - (nuint)1, result) || *result) return 5;
                 return 0;
             }
             """, optimization);

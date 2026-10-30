@@ -32,8 +32,8 @@ public static class HKDFSHA256
         if ((ulong)infoCount > MaximumMessageBytes - overhead) return false;
         if (infoCount != 0)
         {
-            nuint destination = (nuint)output;
-            nuint source = (nuint)info;
+            nuint destination = (output).reinterpret<nuint>();
+            nuint source = (info).reinterpret<nuint>();
             if (destination >= source)
             {
                 if (destination - source < infoCount) return false;
@@ -50,7 +50,7 @@ public static class HKDFSHA256
         {
             hash.Reset();
             // Preflight accounts for all message pieces, so these appends fit.
-            if (number != 1) hash.TryAppend((readonly(char)*)(byte*)previous, 32);
+            if (number != 1) hash.TryAppend(((byte*)previous).reinterpret<readonly(char)*>(), 32);
             hash.TryAppend(info, infoCount);
             char counter = (char)number;
             hash.TryAppend(&counter, 1);

@@ -73,17 +73,17 @@ public class PseudoRandomTests
             int main() {
                 PseudoRandom low = new({{zeroSeed}}ul);
                 float minimum = low.NextFloat();
-                if (minimum != 0.0f || *((uint*)&minimum) != 0u) return 1;
+                if (minimum != 0.0f || (minimum).reinterpret<uint>() != 0u) return 1;
                 PseudoRandom high = new({{upperSeed}}ul);
                 float maximum = high.NextFloat();
                 if (maximum != 0.999999940395355224609375f || maximum >= 1.0f) return 2;
                 PseudoRandom doubleLow = new({{zeroSeed}}ul);
                 double doubleMinimum = doubleLow.NextDouble();
-                if (*((ulong*)&doubleMinimum) != 0ul) return 6;
+                if ((doubleMinimum).reinterpret<ulong>() != 0ul) return 6;
                 PseudoRandom doubleHigh = new({{upperSeed}}ul);
                 double doubleMaximum = doubleHigh.NextDouble();
                 // The largest permitted result is exactly 1 - 2^-53.
-                if (*((ulong*)&doubleMaximum) != 0x3feffffffffffffful) return 7;
+                if ((doubleMaximum).reinterpret<ulong>() != 0x3feffffffffffffful) return 7;
                 // Both float and double draws consume exactly one complete word.
                 if (low.NextULong() != doubleLow.NextULong()) return 8;
                 if (high.NextULong() != doubleHigh.NextULong()) return 9;

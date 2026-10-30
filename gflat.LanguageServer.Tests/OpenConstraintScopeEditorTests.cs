@@ -11,7 +11,7 @@ public sealed class OpenConstraintScopeEditorTests
         const string text="""
             interface IAllowed{}
             interface IHidden{}
-            int Secret<T:IHidden>(this ref T value)=>7;
+            extension<T:IHidden> T{public int Secret()=>7;}
             int Borrow<T:IAllowed>(ref T value){alias IAllowed=IHidden;return value.Secret();}
             int main()=>0;
             """;

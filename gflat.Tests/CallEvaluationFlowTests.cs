@@ -73,7 +73,8 @@ public sealed class CallEvaluationFlowTests
             Box Create(){putchar(67);return new Box();}
             int First(){putchar(65);return 20;}
             int Second(){putchar(66);return 22;}
-            int Read(this Box value,int first,int second)=>first+second;
+            int Read(Box value,int first,int second)=>first+second;
+            extension Box { public int Read(int first, int second) =>first+second; }
             int main()=>Create().Read(First(),Second());
             """);
         Assert.Equal(42, result.ExitCode);

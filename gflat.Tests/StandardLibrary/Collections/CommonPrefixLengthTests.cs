@@ -46,7 +46,7 @@ public sealed class CommonPrefixLengthTests
         }
         Run(Allocator + $$"""
             int calls = 0; bool decades = false;
-            immutable(int)* leftOrigin = (immutable(int)*)1; immutable(int)* rightOrigin = (immutable(int)*)1;
+            immutable(int)* leftOrigin = ((nuint)1).reinterpret<immutable(int)*>(); immutable(int)* rightOrigin = ((nuint)1).reinterpret<immutable(int)*>();
             bool Equal(immutable(int)* left, immutable(int)* right) {
                 if (left != leftOrigin + calls || right != rightOrigin + calls) throw new Exception("wrong address order", 99);
                 calls++; if (decades) return *left / 10 == *right / 10; return *left == *right;
@@ -85,7 +85,7 @@ public sealed class CommonPrefixLengthTests
     public void EmptyAliasAndOverlappingSubspansRespectShortCircuitAndOriginalExceptions(int optimization)
         => Run(Allocator + """
             int calls = 0; int failAt = -1;
-            immutable(int)* leftOrigin = (immutable(int)*)1; immutable(int)* rightOrigin = (immutable(int)*)1;
+            immutable(int)* leftOrigin = ((nuint)1).reinterpret<immutable(int)*>(); immutable(int)* rightOrigin = ((nuint)1).reinterpret<immutable(int)*>();
             bool Equal(immutable(int)* left, immutable(int)* right) {
                 if (left != leftOrigin + calls || right != rightOrigin + calls) throw new Exception("wrong address order", 99);
                 int index = calls; calls++; if (index == failAt) throw new Exception("original equality", 77);
@@ -93,7 +93,7 @@ public sealed class CommonPrefixLengthTests
             }
             bool Unexpected(immutable(int)* left, immutable(int)* right) { throw new Exception("empty read", 99); }
             int main() {
-                Span<immutable(int)> empty = new((immutable(int)*)1, 0);
+                Span<immutable(int)> empty = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                 Span<immutable(int)> defaultEmpty = new();
                 int[6] data = [10, 10, 10, 20, 20, 30]; Span<int> values = new(data, 6);
                 int baseline = attempts; deny = true;
@@ -119,7 +119,7 @@ public sealed class CommonPrefixLengthTests
     public void NoncopyableOwnersKeepTheirIdentityStorageAndDestructionCounts(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner {
                 public int Id; public String Token;
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
@@ -135,7 +135,7 @@ public sealed class CommonPrefixLengthTests
                     Vector<Owner> owners = new(); owners.Reserve(4);
                     for (int id = 0; id < 4; id++) owners.Add(new Owner(id));
                     origin = &owners[0]; nuint[4] tokens;
-                    for (nuint i = 0; i < 4; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 4; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     int baseline = attempts; int live = allocated - released; deny = true;
                     if (CommonPrefixLength<Owner>(owners.AsImmutable(), owners.AsImmutable(), Equal) != 4 || calls != 4) return 1;
                     deny = false; if (attempts != baseline) return 2;
@@ -146,7 +146,7 @@ public sealed class CommonPrefixLengthTests
                         if (!caught || result != 99 || calls != failure + 1) return 3;
                         if (made != 4 || dead != 0 || owners.Count != 4 || allocated - released != live) return 4;
                         for (nuint i = 0; i < 4; i++)
-                            if (&owners[i] != origin + i || owners[i].Id != (int)i || (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 5;
+                            if (&owners[i] != origin + i || owners[i].Id != (int)i || (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 5;
                     }
                 }
                 if (made != 4 || dead != 4 || allocated != released) return 6; return 0;
@@ -164,13 +164,13 @@ public sealed class CommonPrefixLengthTests
                     String[4] right = [s"a\0b", s"", s"TAIL", s"same"];
                     Span<String> a = new(left, 4); Span<String> b = new(right, 4);
                     nuint[4] leftData; nuint[4] rightData;
-                    for (nuint i = 0; i < 4; i++) { leftData[i] = (nuint)left[i].Data; rightData[i] = (nuint)right[i].Data; }
+                    for (nuint i = 0; i < 4; i++) { leftData[i] = (left[i].Data).reinterpret<nuint>(); rightData[i] = (right[i].Data).reinterpret<nuint>(); }
                     int baseline = attempts; int live = allocated - released; deny = true;
                     if (CommonPrefixLength<String>(a.AsImmutable(), b.AsImmutable()) != 2) return 1;
                     if (CommonPrefixLength<String>(a.Slice(0, 2).AsImmutable(), b.AsImmutable()) != 2) return 2;
                     if (CommonPrefixLength<String>(a.AsImmutable(), a.AsImmutable()) != 4) return 3;
                     if (attempts != baseline || allocated - released != live) return 4;
-                    for (nuint i = 0; i < 4; i++) if ((nuint)left[i].Data != leftData[i] || (nuint)right[i].Data != rightData[i]) return 5;
+                    for (nuint i = 0; i < 4; i++) if ((left[i].Data).reinterpret<nuint>() != leftData[i] || (right[i].Data).reinterpret<nuint>() != rightData[i]) return 5;
                     deny = false;
                     right[0] = s"a";
                     baseline = attempts; deny = true;

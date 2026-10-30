@@ -90,8 +90,8 @@ public sealed class CopySignTests
                             for(nuint j=0;j<{{signs.Length}};j++){
                                 {{integer}} b=signs[j];
                                 {{integer}} expected=(a&{{mask-1}}{{suffix}})|(b&mask);
-                                {{type}} value=Math::CopySign(*(({{type}}*)&a),*(({{type}}*)&b));
-                                if(*(({{integer}}*)&value)!=expected)return 1;
+                                {{type}} value=Math::CopySign((a).reinterpret<{{type}}>(),(b).reinterpret<{{type}}>());
+                                if((value).reinterpret<{{integer}}>()!=expected)return 1;
                             }
                         }
                     }
@@ -100,8 +100,8 @@ public sealed class CopySignTests
                         {{integer}} a=({{integer}})Next(ref state);
                         {{integer}} b=({{integer}})Next(ref state);
                         {{integer}} expected=(a&{{mask-1}}{{suffix}})|(b&mask);
-                        {{type}} value=Math::CopySign(*(({{type}}*)&a),*(({{type}}*)&b));
-                        if(*(({{integer}}*)&value)!=expected)return 2;
+                        {{type}} value=Math::CopySign((a).reinterpret<{{type}}>(),(b).reinterpret<{{type}}>());
+                        if((value).reinterpret<{{integer}}>()!=expected)return 2;
                     }
                     if(state!={{finalState}}ul)return 3;
                 }

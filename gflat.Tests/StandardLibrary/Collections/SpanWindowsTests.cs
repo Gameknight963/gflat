@@ -108,9 +108,9 @@ public sealed class SpanWindowsTests
                 try{tooWide.Current;}catch{errors++;}
                 nuint maximum=(nuint)0-(nuint)1;
                 // Exercise only cursor arithmetic: this metadata is never dereferenced.
-                SpanWindows<int>::Enumerator large=new((int*)1,maximum,1,maximum-1);
+                SpanWindows<int>::Enumerator large=new(((nuint)1).reinterpret<int*>(),maximum,1,maximum-1);
                 if(!large.MoveNext()||!large.MoveNext()||large.MoveNext())return 4;
-                SpanWindows<int>::Enumerator hugeWidth=new((int*)1,maximum,maximum,maximum);
+                SpanWindows<int>::Enumerator hugeWidth=new(((nuint)1).reinterpret<int*>(),maximum,maximum,maximum);
                 if(!hugeWidth.MoveNext()||hugeWidth.MoveNext())return 5;
                 if(errors!=7)return 6;return 0;
             }

@@ -61,8 +61,8 @@ public sealed class CStringTests
                     }
                 }
                 nuint length=99;
-                if(CString::TryGetLength((readonly(char)*)1,0,ref length)||length!=0)return 6;
-                nuint resultStorage=0;char* bytes=(char*)&resultStorage;
+                if(CString::TryGetLength(((nuint)1).reinterpret<readonly(char)*>(),0,ref length)||length!=0)return 6;
+                nuint resultStorage=0;char* bytes=(&resultStorage).reinterpret<char*>();
                 bytes[0]='a';bytes[1]='b';bytes[2]='c';bytes[3]='\0';
                 if(!CString::TryGetLength(bytes,4,ref resultStorage)||resultStorage!=3)return 7;
                 for(nuint i=0;i<(nuint)sizeof(nuint);i++)bytes[i]='z';

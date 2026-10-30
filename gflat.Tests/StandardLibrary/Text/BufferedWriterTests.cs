@@ -22,14 +22,14 @@ public sealed class BufferedWriterTests
                 for(nuint c=0;c<4;c++)for(nuint n=0;n<11;n++)for(nuint split=0;split<=lengths[n];split++){
                     nuint capacity=capacities[c];nuint count=lengths[n];char[64] bytes;char[10] scratch;nuint[64] sizes;
                     for(nuint i=0;i<10;i++)scratch[i]='?';
-                    Sink sink=new(bytes,sizes);char* storage=&scratch[1];if(capacity==0)storage=(char*)1;
+                    Sink sink=new(bytes,sizes);char* storage=&scratch[1];if(capacity==0)storage=((nuint)1).reinterpret<char*>();
                     BufferedWriter writer=new(&sink,storage,capacity);
-                    writer.Flush();writer.Write((readonly(char)*)1,0);
+                    writer.Flush();writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                     if(sink.Calls!=0)return 1;
                     writer.Write(input,split);writer.Write((readonly(char)*)input+split,count-split);
                     nuint before=count;if(capacity!=0)before=(count/capacity)*capacity;
                     if(sink.Length!=before)return 2;
-                    writer.Flush();nuint calls=sink.Calls;writer.Flush();writer.Write((readonly(char)*)1,0);
+                    writer.Flush();nuint calls=sink.Calls;writer.Flush();writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                     if(sink.Length!=count||sink.Calls!=calls)return 3;
                     for(nuint i=0;i<count;i++)if(bytes[i]!=input[i]||input[i]!=(char)(i*29))return 4;
                     if(capacity==0){
@@ -118,8 +118,8 @@ public sealed class BufferedWriterTests
                     if(caught!=1||sink.Length!=accepted||sink.Calls!=failCall)return 2;
                     for(nuint i=0;i<accepted;i++)if(bytes[i]!=(char)('A'+i))return 3;
                     int calls=sink.Calls;sink.FailCall=0;
-                    try{writer.Write((readonly(char)*)1,0);}catch{caught++;}
-                    try{writer.Write((readonly(char)*)1,100);}catch{caught++;}
+                    try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch{caught++;}
+                    try{writer.Write(((nuint)1).reinterpret<readonly(char)*>(),100);}catch{caught++;}
                     try{writer.Flush();}catch{caught++;}
                     if(caught!=4||sink.Calls!=calls||sink.Length!=accepted)return 4;
                 }

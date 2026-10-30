@@ -105,7 +105,7 @@ public partial class TypeChecker
                 {
                     string key = family.Any(m => m.IsGeneric) ? GenericOverloadKey(method) : OverloadKey(method);
                     if (keys.TryGetValue(key, out var first))
-                        DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
+                        DuplicateDeclaration(first, method, $"Overloads of '{ExtensionMemberName(method)}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
                     keys[key] = method;
                 });
             }
@@ -123,7 +123,8 @@ public partial class TypeChecker
                         ownerNames.Add(s.Name); Walk(s.Members, scope + s.Name + "."); break;
                     case InterfaceDeclaration i: Walk(i.Members, scope + i.Name + "."); break;
                     case MethodDeclaration m when m.StringLiteralPrefix == null:
-                        string key = scope + m.Name;
+                        string key = scope + (m.ExtensionReceiverType != null
+                            ? "$extension-family$" + ExtensionMemberName(m) : m.Name);
                         if (!groups.TryGetValue(key, out var group)) groups[key] = group = new();
                         group.Add(m);
                         break;

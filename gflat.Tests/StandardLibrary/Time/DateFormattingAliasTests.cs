@@ -19,7 +19,7 @@ public sealed class DateFormattingAliasTests
                         // Destination offsets exercise both directions of overlap.
                         for(nuint offset=0;offset<=5;offset++){
                             for(nuint capacity=0;capacity<=11;capacity++){
-                                Date[5] aligned;char* bytes=(char*)&aligned[0];
+                                Date[5] aligned;char* bytes=(&aligned[0]).reinterpret<char*>();
                                 for(nuint i=0;i<20;i++)bytes[i]='!';
                                 aligned[1]=Date::FromDayNumber(numbers[sample]);
                                 char[20] before;for(nuint i=0;i<20;i++)before[i]=bytes[i];

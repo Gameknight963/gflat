@@ -43,4 +43,10 @@ public struct FileLineSequence : IEnumerable<String, FileLineSequence::Enumerato
     }
 }
 
-public FileLineSequence Lines(this File* input) => new FileLineSequence(input);
+public FileLineSequence Lines(File* input) => new FileLineSequence(input);
+
+extension File
+{
+    public FileLineSequence Lines()
+    => std::IO::Lines(this);
+}

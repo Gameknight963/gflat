@@ -2,30 +2,42 @@ using std::Collections;
 namespace std::Queries;
 
 // HashMap additionally requires the matching IEquatable<K> contract.
-public HashMap<K, T> ToHashMap<T, K : IHashable, S, E>(this Enumerable<T, S, E> source, K(T)* keySelector)
+public HashMap<K, T> ToHashMap<T, K : IHashable, S, E>(Enumerable<T, S, E> source, K(T)* keySelector)
+=> source.ToHashMap<K>(keySelector);
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    HashMap<K, T> result = new();
-    E iterator = source.GetEnumerator();
-    while (iterator.MoveNext())
+    public HashMap<K, T> ToHashMap<K : IHashable>(K(T)* keySelector)
     {
-        T current = iterator.Current;
-        K key = keySelector(current);
-        result.Add(move key, move current);
+        HashMap<K, T> result = new();
+        E iterator = (*this).GetEnumerator();
+        while (iterator.MoveNext())
+        {
+            T current = iterator.Current;
+            K key = keySelector(current);
+            result.Add(move key, move current);
+        }
+        return move result;
     }
-    return move result;
 }
 
-public HashMap<K, V> ToHashMap<T, K : IHashable, V, S, E>(this Enumerable<T, S, E> source,
+public HashMap<K, V> ToHashMap<T, K : IHashable, V, S, E>(Enumerable<T, S, E> source,
     K(T)* keySelector, V(T)* valueSelector)
+=> source.ToHashMap<K, V>(keySelector, valueSelector);
+
+extension<T, S, E> Enumerable<T, S, E>
 {
-    HashMap<K, V> result = new();
-    E iterator = source.GetEnumerator();
-    while (iterator.MoveNext())
+    public HashMap<K, V> ToHashMap<K : IHashable, V>(K(T)* keySelector, V(T)* valueSelector)
     {
-        T current = iterator.Current;
-        K key = keySelector(current);
-        V value = valueSelector(current);
-        result.Add(move key, move value);
+        HashMap<K, V> result = new();
+        E iterator = (*this).GetEnumerator();
+        while (iterator.MoveNext())
+        {
+            T current = iterator.Current;
+            K key = keySelector(current);
+            V value = valueSelector(current);
+            result.Add(move key, move value);
+        }
+        return move result;
     }
-    return move result;
 }

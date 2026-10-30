@@ -21,7 +21,8 @@ public sealed class DeclaredExtensionPrecedenceTests
             }
             struct Plain:IValue { public immutable int Read()=>43; }
             weak alias Selected:IValue=Hidden;
-            int Identify<T:IValue>(this ref immutable(T) value)=>value.Read();
+            int Identify<T:IValue>(ref immutable(T) value)=>value.Read();
+            extension<T:IValue> T { public immutable int Identify() =>(*this).Read(); }
             int Forward<T:IValue>(ref immutable(T) value)=>value.Identify();
             int Duck<T>(ref immutable(T) value)=>value.Identify();
             int main(){
@@ -53,7 +54,8 @@ public sealed class DeclaredExtensionPrecedenceTests
             class Derived:Base {
             """ + member + """
             }
-            int Identify<T:Base>(this ref immutable(T) value)=>value.Read();
+            int Identify<T:Base>(ref immutable(T) value)=>value.Read();
+            extension<T:Base> T { public immutable int Identify() =>(*this).Read(); }
             int Forward<T:Base>(ref immutable(T) value)=>value.Identify();
             weak alias Selected:Base=Derived;
             int main(){
@@ -77,7 +79,8 @@ public sealed class DeclaredExtensionPrecedenceTests
         var result=CompilerTestHelper.Run("""
             interface IValue { immutable int Identify(); }
             struct Value:IValue { public immutable int Identify()=>7; }
-            int Identify<T:IValue>(this ref immutable(T) value)=>42;
+            int Identify<T:IValue>(ref immutable(T) value)=>42;
+            extension<T:IValue> T { public immutable int Identify() =>42; }
             int Forward<T:IValue>(ref immutable(T) value)=>value.Identify();
             int main(){Value value=new();if(Forward(ref value)!=7)return 1;return 0;}
             """,optimization);
@@ -116,7 +119,8 @@ public sealed class DeclaredExtensionPrecedenceTests
         string source="""
             interface IValue { static int Identify(); }
             struct Value:IValue { public static int Identify()=>7; }
-            int Identify<T:IValue>(this ref immutable(T) value)=>42;
+            int Identify<T:IValue>(ref immutable(T) value)=>42;
+            extension<T:IValue> T { public immutable int Identify() =>42; }
             int Forward<T:IValue>(ref immutable(T) value)=>value.Identify();
             int main(){Value value=new();return
             """ + " " + (constrained ? "Forward(ref value);}" : "value.Identify();}");
@@ -130,7 +134,8 @@ public sealed class DeclaredExtensionPrecedenceTests
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check("""
             interface IValue { immutable int Identify(int argument); }
             struct Value:IValue { public immutable int Identify(int argument)=>argument; }
-            int Identify<T:IValue>(this ref immutable(T) value)=>42;
+            int Identify<T:IValue>(ref immutable(T) value)=>42;
+            extension<T:IValue> T { public immutable int Identify() =>42; }
             int Forward<T:IValue>(ref immutable(T) value)=>value.Identify();
             int main(){Value value=new();return Forward(ref value);}
             """,options:new(){NoStdLib=true}));

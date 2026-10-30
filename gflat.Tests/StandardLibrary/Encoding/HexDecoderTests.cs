@@ -88,12 +88,12 @@ public sealed class HexDecoderTests
                         int wanted=FileBinary::ReadInt32LittleEndian(&fixture);
                         fixture.ReadExactly(expected,(nuint)wanted);
                         output[0]='!';output[(nuint)wanted+1]='!';Sink sink=new(&output[1]);HexDecoder decoder=new(&sink);
-                        decoder.Write((readonly(char)*)1,0);nuint position=0;
+                        decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);nuint position=0;
                         for(int chunk=0;chunk<count;chunk++){
                             decoder.Write((readonly(char)*)text+position,(nuint)chunks[chunk]);
                             for(nuint i=0;i<(nuint)chunks[chunk];i++)text[position+i]='?';
                             HexDecoder copied=decoder;decoder=move copied;
-                            position+=(nuint)chunks[chunk];decoder.Write((readonly(char)*)1,0);
+                            position+=(nuint)chunks[chunk];decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);
                         }
                         int calls=sink.Calls;decoder.Complete();decoder.Complete();
                         if(sink.Count!=(nuint)wanted||sink.Calls!=calls||output[0]!='!'||output[(nuint)wanted+1]!='!')return 2;
@@ -131,7 +131,7 @@ public sealed class HexDecoderTests
                 }
                 bool Rejected(ref HexDecoder decoder,ref Sink sink){
                     int calls=sink.Calls;int count=sink.Count;int caught=0;
-                    try{decoder.Write((readonly(char)*)1,0);}catch(ref Exception error){caught++;}
+                    try{decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){caught++;}
                     try{decoder.Write("00",2);}catch(ref Exception error){caught++;}
                     try{decoder.Complete();}catch(ref Exception error){caught++;}
                     HexDecoder copy=decoder;try{copy.Complete();}catch(ref Exception error){caught++;}
@@ -148,14 +148,14 @@ public sealed class HexDecoderTests
                             if(caught||sink.Count!=1||sink.Last!=wanted)return 2;
                         }
                     }
-                    Sink sink=new();HexDecoder empty=new(&sink);empty.Write((readonly(char)*)1,0);empty.Complete();empty.Complete();
+                    Sink sink=new();HexDecoder empty=new(&sink);empty.Write(((nuint)1).reinterpret<readonly(char)*>(),0);empty.Complete();empty.Complete();
                     if(sink.Calls!=0)return 3;
-                    try{empty.Write((readonly(char)*)1,0);return 4;}catch(ref Exception error){}
+                    try{empty.Write(((nuint)1).reinterpret<readonly(char)*>(),0);return 4;}catch(ref Exception error){}
                     empty.Complete();
                     for(int mode=0;mode<3;mode++){
                         Sink failedSink=new();HexDecoder failed=new(&failedSink);
                         try{
-                            if(mode==0){failed.Write("f",1);failed.Write((readonly(char)*)1,0);failed.Complete();}
+                            if(mode==0){failed.Write("f",1);failed.Write(((nuint)1).reinterpret<readonly(char)*>(),0);failed.Complete();}
                             if(mode==1){failed.Write("g",1);failed.Write("0",1);}
                             if(mode==2){char[516] text;for(nuint i=0;i<514;i++)text[i]='0';text[514]='g';text[515]='0';failed.Write(text,516);}
                             return 5;
@@ -199,7 +199,7 @@ public sealed class HexDecoderTests
                     catch{return 2;}
                     if(!caught||sink.Count!=budgets[sample])return 3;
                     int calls=sink.Calls;int count=sink.Count;sink.Budget=10000;int rejected=0;
-                    try{decoder.Write((readonly(char)*)1,0);}catch(ref Exception error){rejected++;}
+                    try{decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);}catch(ref Exception error){rejected++;}
                     try{decoder.Complete();}catch(ref Exception error){rejected++;}
                     HexDecoder copy=decoder;try{copy.Write("00",2);}catch(ref Exception error){rejected++;}
                     if(rejected!=3||sink.Calls!=calls||sink.Count!=count)return 4;

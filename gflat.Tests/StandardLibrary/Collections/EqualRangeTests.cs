@@ -37,7 +37,7 @@ public sealed class EqualRangeTests
                 packet.AddRange(input);
             }
         Run(Allocator + $$"""
-            int calls = 0; immutable(int)* wantedKey = (immutable(int)*)1;
+            int calls = 0; immutable(int)* wantedKey = ((nuint)1).reinterpret<immutable(int)*>();
             int Compare(immutable(int)* left, immutable(int)* right) {
                 if (right != wantedKey) throw new Exception("key was not borrowed");
                 calls++; if (*left < *right) return -1; if (*left > *right) return 1; return 0;
@@ -100,8 +100,8 @@ public sealed class EqualRangeTests
         => Run(Allocator + """
             int Unexpected(immutable(int)* left, immutable(int)* right) { throw new Exception("empty comparison"); }
             int main() {
-                Span<immutable(int)> empty = new(); Span<immutable(int)> unreadable = new((immutable(int)*)1, 0);
-                immutable(int)* key = (immutable(int)*)1; int baseline = attempts; deny = true;
+                Span<immutable(int)> empty = new(); Span<immutable(int)> unreadable = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
+                immutable(int)* key = ((nuint)1).reinterpret<immutable(int)*>(); int baseline = attempts; deny = true;
                 var first = EqualRange<int>(empty, key, Unexpected); var second = EqualRange<int>(unreadable, key, Unexpected);
                 var third = EqualRange<int>(unreadable, key);
                 if (first.Length != 0 || second.Length != 0 || third.Length != 0 || first.Data != null || second.Data != null || third.Data != null) return 1;
@@ -115,7 +115,7 @@ public sealed class EqualRangeTests
     public void NoncopyableOwnersAndAliasedKeysAreBorrowedAndEveryComparisonFailurePreservesOutput(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1; immutable(Owner)* wantedKey = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>(); immutable(Owner)* wantedKey = ((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner : IComparable<Owner> {
                 public int Id; public int Key; public String Token;
                 public Owner(int id, int key) { Id = id; Key = key; Token = s"owner"; made++; }
@@ -135,8 +135,8 @@ public sealed class EqualRangeTests
                     Vector<Owner> owners = new(); owners.Reserve(7); int[7] keys = [1, 2, 2, 2, 4, 7, 9];
                     for (int id = 0; id < 7; id++) owners.Add(new Owner(id, keys[(nuint)id]));
                     Owner key = new(99, 2); origin = &owners[0]; nuint[7] tokens;
-                    for (nuint i = 0; i < 7; i++) tokens[i] = (nuint)owners[i].Token.Data;
-                    nuint keyToken = (nuint)key.Token.Data; nuint capacity = owners.Capacity; int live = allocated - released;
+                    for (nuint i = 0; i < 7; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
+                    nuint keyToken = (key.Token.Data).reinterpret<nuint>(); nuint capacity = owners.Capacity; int live = allocated - released;
                     for (int mode = 0; mode < 4; mode++) {
                         wantedKey = &key; if (mode >= 2) wantedKey = &owners[2]; calls = 0; failAt = -1;
                         int baseline = attempts; deny = true;
@@ -156,8 +156,8 @@ public sealed class EqualRangeTests
                             if (!caught || calls != failure + 1 || result.Data != origin + 6 || result.Length != 1) return 3;
                             if (owners.Count != 7 || owners.Capacity != capacity || made != 8 || dead != 0 || allocated - released != live) return 4;
                             for (nuint i = 0; i < 7; i++)
-                                if (&owners[i] != origin + i || owners[i].Id != (int)i || owners[i].Key != keys[i] || (nuint)owners[i].Token.Data != tokens[i]) return 5;
-                            if (key.Id != 99 || key.Key != 2 || (nuint)key.Token.Data != keyToken) return 6;
+                                if (&owners[i] != origin + i || owners[i].Id != (int)i || owners[i].Key != keys[i] || (owners[i].Token.Data).reinterpret<nuint>() != tokens[i]) return 5;
+                            if (key.Id != 99 || key.Key != 2 || (key.Token.Data).reinterpret<nuint>() != keyToken) return 6;
                         }
                     }
                 }

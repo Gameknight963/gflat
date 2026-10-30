@@ -56,7 +56,7 @@ public sealed class StringLastIndexTests
             int main() {
                 String empty=new();immutable(String)* none=&empty;
                 if(none.LastIndexOf('a')!=String::NotFound||none.LastIndexOf("")!=0)return 1;
-                if(none.LastIndexOf((readonly(char)*)1,0)!=0||none.LastIndexOf((readonly(char)*)1,1)!=String::NotFound)return 2;
+                if(none.LastIndexOf(((nuint)1).reinterpret<readonly(char)*>(),0)!=0||none.LastIndexOf(((nuint)1).reinterpret<readonly(char)*>(),1)!=String::NotFound)return 2;
                 char[256] bytes;for(int i=0;i<256;i++)bytes[i]=(char)i;
                 String text=String::From(bytes,256);immutable(String)* view=&text;
                 for(nuint i=0;i<256;i++)if(view.LastIndexOf((char)i)!=i)return 3;

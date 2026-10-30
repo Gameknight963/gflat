@@ -143,7 +143,7 @@ public sealed class PermutationTests
                 if (offset != {{{hex.Length}}}) return 5;
                 int before = calls;
                 Span<int> empty = new();
-                Span<int> unread = new((int*)4096, 1);
+                Span<int> unread = new(((nuint)4096).reinterpret<int*>(), 1);
                 if (NextPermutation<int>(empty, Never) || PreviousPermutation<int>(empty, Never)) return 6;
                 if (NextPermutation<int>(unread, Never) || PreviousPermutation<int>(unread, Never)
                     || calls != before) return 7;

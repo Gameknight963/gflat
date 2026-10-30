@@ -1,4 +1,4 @@
-﻿namespace gflat.Tests.Std.Text;
+namespace gflat.Tests.Std.Text;
 
 public sealed class BufferWriterTryTests
 {
@@ -30,7 +30,7 @@ public sealed class BufferWriterTryTests
                 if (!writer.TryWrite("A\0B", 3) || writer.Length != 3 || writer.Remaining != 6) return 1;
                 for (nuint i = 0; i < 12; i++) before[i] = storage[i];
                 if (writer.TryWrite("1234567", 7) || writer.TryWrite("1234567")) return 2;
-                if (writer.TryWrite((readonly(char)*)1, (nuint)0 - 1)) return 3;
+                if (writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(), (nuint)0 - 1)) return 3;
                 for (nuint i = 0; i < 12; i++) if (storage[i] != before[i]) return 4;
                 if (writer.Length != 3 || writer.Remaining != 6) return 5;
                 if (!writer.TryWrite("cdefgh") || writer.Length != 9 || writer.Remaining != 0) return 6;

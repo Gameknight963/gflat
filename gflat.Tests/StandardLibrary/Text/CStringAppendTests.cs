@@ -55,9 +55,9 @@ public sealed class CStringAppendTests
         const string program="""
             using std; using std::Text;
             int main(){
-                if(CString::TryAppend((readonly(char)*)1,(char*)1,0))return 1;
+                if(CString::TryAppend(((nuint)1).reinterpret<readonly(char)*>(),((nuint)1).reinterpret<char*>(),0))return 1;
                 char[3] none=['a','b','c'];
-                if(CString::TryAppend((readonly(char)*)1,none,3)||none[0]!='a'||none[2]!='c')return 2;
+                if(CString::TryAppend(((nuint)1).reinterpret<readonly(char)*>(),none,3)||none[0]!='a'||none[2]!='c')return 2;
                 char[5] output=['a','\0','!','!','!'];char[2] shortInput=['b','c'];
                 if(CString::TryAppend(shortInput,output,3)||output[1]!='\0'||output[2]!='!'||output[4]!='!')return 3;
                 if(!CString::TryAppend("",output,2)||output[0]!='a'||output[1]!='\0'||output[2]!='!')return 4;

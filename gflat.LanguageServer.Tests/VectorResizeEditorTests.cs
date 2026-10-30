@@ -37,7 +37,7 @@ public sealed class VectorResizeEditorTests
         else Assert.DoesNotContain("fill",hover);
         Assert.DoesNotContain('$',hover);
 
-        string declaration = "public void Resize<T>(this ref Vector<T> target, nuint count" + (withFill ? ", T fill)" : ")");
+        string declaration = "public void Resize(nuint count" + (withFill ? ", T fill)" : ")");
         int declarationOffset = library.Text.IndexOf(declaration,StringComparison.Ordinal);
         Assert.True(declarationOffset>=0);
         int nameOffset = declarationOffset+"public void ".Length;

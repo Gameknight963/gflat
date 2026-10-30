@@ -33,7 +33,7 @@ public sealed class CountIfTests
             packet.AddRange(sample);
         }
         Run(Allocator + $$"""
-            int calls = 0; immutable(int)* origin = (immutable(int)*)1;
+            int calls = 0; immutable(int)* origin = ((nuint)1).reinterpret<immutable(int)*>();
             bool Positive(immutable(int)* value) {
                 if (value != origin + calls) throw new Exception("wrong callback order", 99);
                 calls++; return *value > 0;
@@ -65,7 +65,7 @@ public sealed class CountIfTests
             bool Positive(immutable(int)* value) { calls++; return *value > 0; }
             int main() {
                 Span<immutable(int)> empty = new();
-                Span<immutable(int)> unreadable = new((immutable(int)*)1, 0);
+                Span<immutable(int)> unreadable = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
                 int[1] data = [5]; Span<int> singleton = new(data, 1);
                 int baseline = attempts; deny = true;
                 if (CountIf<int>(empty, Unexpected) != 0 || CountIf<int>(unreadable, Unexpected) != 0 || calls != 0) return 1;
@@ -82,7 +82,7 @@ public sealed class CountIfTests
     public void NoncopyableOwnersAreBorrowedWithoutAllocationAndExceptionsPreserveInput(int optimization)
         => Run(Allocator + """
             int made = 0; int dead = 0; int calls = 0; int failAt = -1;
-            immutable(Owner)* origin = (immutable(Owner)*)1;
+            immutable(Owner)* origin = ((nuint)1).reinterpret<immutable(Owner)*>();
             struct Owner {
                 public int Id; public String Token;
                 public Owner(int id) { Id = id; Token = s"owner"; made++; }
@@ -99,7 +99,7 @@ public sealed class CountIfTests
                     Vector<Owner> owners = new(); owners.Reserve(7);
                     for (int id = 0; id < 7; id++) owners.Add(new Owner(id));
                     origin = &owners[0]; nuint[7] tokens;
-                    for (nuint i = 0; i < 7; i++) tokens[i] = (nuint)owners[i].Token.Data;
+                    for (nuint i = 0; i < 7; i++) tokens[i] = (owners[i].Token.Data).reinterpret<nuint>();
                     int live = allocated - released; nuint capacity = owners.Capacity;
                     int baseline = attempts; deny = true;
                     if (CountIf<Owner>(owners.AsImmutable(), Even) != 4 || calls != 7) return 1;
@@ -114,7 +114,7 @@ public sealed class CountIfTests
                         if (made != 7 || dead != 0 || owners.Count != 7 || owners.Capacity != capacity || allocated - released != live) return 4;
                         for (nuint i = 0; i < 7; i++)
                             if (&owners[i] != origin + i || owners[i].Id != (int)i ||
-                                (nuint)owners[i].Token.Data != tokens[i] || owners[i].Token.Length != 5) return 5;
+                                (owners[i].Token.Data).reinterpret<nuint>() != tokens[i] || owners[i].Token.Length != 5) return 5;
                     }
                 }
                 if (made != 7 || dead != 7 || allocated != released) return 6; return 0;

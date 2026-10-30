@@ -44,7 +44,7 @@ public sealed class Binary128Tests
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;
                     byte[32] row;byte[64] output;byte[64] before;extralong[4] aligned;
-                    byte* raw=(byte*)&aligned[0];
+                    byte* raw=(&aligned[0]).reinterpret<byte*>();
                     while(true){
                         nuint read=fread((void*)&row[0],1,32,file!);if(read==0)break;if(read!=32)return 2;
                         extralong expected=(extralong)0;
@@ -105,8 +105,8 @@ public sealed class Binary128Tests
             Run(directory, """
                 using std; using std::Binary;
                 int main(){
-                    readonly(byte)* unreadable=(readonly(byte)*)1;byte* unwritable=(byte*)1;
-                    extralong value=(extralong)99;extralong[4] aligned;byte* raw=(byte*)&aligned[0];
+                    readonly(byte)* unreadable=((nuint)1).reinterpret<readonly(byte)*>();byte* unwritable=((nuint)1).reinterpret<byte*>();
+                    extralong value=(extralong)99;extralong[4] aligned;byte* raw=(&aligned[0]).reinterpret<byte*>();
                     for(nuint count=0;count<16;count++){
                         value=(extralong)99;
                         if(BinaryPrimitives::TryReadExtraLongLittleEndian(unreadable,count,ref value)||value!=(extralong)0)return 1;

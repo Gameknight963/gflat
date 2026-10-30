@@ -1,86 +1,158 @@
 using std::Text;
 namespace std::Text;
 
-public String ToString(this byte value)
+public String ToString(byte value)
+=> value.ToString();
+
+extension byte
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this sbyte value)
+public String ToString(sbyte value)
+=> value.ToString();
+
+extension sbyte
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this short value)
+public String ToString(short value)
+=> value.ToString();
+
+extension short
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this ushort value)
+public String ToString(ushort value)
+=> value.ToString();
+
+extension ushort
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this int value)
+public String ToString(int value)
+=> value.ToString();
+
+extension int
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this uint value)
+public String ToString(uint value)
+=> value.ToString();
+
+extension uint
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this long value)
+public String ToString(long value)
+=> value.ToString();
+
+extension long
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this ulong value)
+public String ToString(ulong value)
+=> value.ToString();
+
+extension ulong
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this nint value)
+public String ToString(nint value)
+=> value.ToString();
+
+extension nint
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this nuint value)
+public String ToString(nuint value)
+=> value.ToString();
+
+extension nuint
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this bool value)
+public String ToString(bool value)
+=> value.ToString();
+
+extension bool
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }
 
-public String ToString(this char value)
+public String ToString(char value)
+=> value.ToString();
+
+extension char
 {
-    String result = new();
-    std::Format(value, &result);
-    return move result;
+    public String ToString()
+    {
+        String result = new();
+        std::Format((*this), &result);
+        return move result;
+    }
 }

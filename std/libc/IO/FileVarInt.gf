@@ -46,6 +46,6 @@ public static class FileVarInt
         byte[10] bytes;
         nuint written = 0;
         VarInt::TryWriteUInt64(bytes, 10, value, ref written);
-        output.Write((char*)(byte*)bytes, written);
+        output.Write(((byte*)bytes).reinterpret<char*>(), written);
     }
 }

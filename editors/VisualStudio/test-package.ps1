@@ -360,6 +360,13 @@ int SmokeCore() {
     global::std::Binary::BinaryBufferReader memoryReader = new(memoryInput, 2);
     IByteReader* memoryBytes = &memoryReader;
     if (memoryBytes.ReadUInt16BigEndian() != (ushort)0x4142 || memoryReader.Position != 2) return 9041;
+    memoryReader.Reset();
+    char[9] pipelineBase32Payload; BufferWriter pipelineBase32Sink = new(pipelineBase32Payload, 9);
+    Base32Encoder pipelineBase32 = new(&pipelineBase32Sink); char[1] pipelineBase32Scratch;
+    if (memoryBytes.CopyTo(&pipelineBase32, pipelineBase32Scratch, 1) != 2 || pipelineBase32Sink.Length != 0) return 9042;
+    pipelineBase32.Complete();
+    if (pipelineBase32Sink.Length != 8 || pipelineBase32Payload[8] != '\0') return 9043;
+    for (nuint i = 0; i < 8; i++) if (pipelineBase32Payload[i] != "IFBA===="[i]) return 9044;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

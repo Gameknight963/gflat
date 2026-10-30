@@ -79,6 +79,7 @@ implementation lives in `libc`.
 | Buffered input | `BufferedReader` with owned or caller-provided scratch, `PeekByte` | [Read-ahead, cursor lifetime and ownership](../docs/BUFFERED_READER.md) |
 | Bounded input | `LimitedReader` | [Read one payload without consuming its tail](core/IO/LIMITED_READER.md) |
 | Byte lines | Borrowed writer, reusable `String`, and owning `ReadLine` helpers | [Counted lines from any byte source](../docs/BYTE_READERS.md#read-counted-lines-from-any-byte-source) |
+| Byte iteration | Borrowed `ByteSequence`, `EnumerateBytes`, and optional queries | [Deferred single-pass byte iteration](../docs/BYTE_READERS.md#enumerate-bytes-without-owning-the-source) |
 | Stream varints | `ReadVarUInt32/64`, `ReadZigZagInt32/64`, and matching writer extensions | [Borrowed stream varints](../docs/STREAM_VARINT.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`TrySplitLastOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md), [multi-byte delimiters](../docs/TEXT_SPLIT_PATTERN.md) |
 | Borrowed byte-set splitting | `TextPartsAny`, String/Span `SplitAny` | [Copied delimiter sets and borrowed parts](../docs/TEXT_PARTS_ANY.md) |

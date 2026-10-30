@@ -46,6 +46,64 @@ Failure can leave consumed input, a modified output-buffer prefix, or already-wr
 chunks. There is no rollback or automatic draining. A reader can fail after consuming
 an unknown prefix, so callers cannot infer consumed bytes from an exception alone.
 
+## Enumerate bytes without owning the source
+
+`EnumerateBytes(input)` (or `input.EnumerateBytes()`) returns a `ByteSequence`.
+The factory and `GetEnumerator()` perform no reads. Each successful `MoveNext()`
+consumes one byte; `Current` returns that byte without further input. EOF ends that
+iterator permanently. `Current` throws `IOException` before the first successful
+advance, after EOF, or after a failed advance.
+
+```csharp
+using Standard::Binary;
+using Standard::IO;
+using Standard::Queries;
+
+bool Even(byte value) => value % (byte)2 == (byte)0;
+
+int main()
+{
+    byte[8] bytes = [0, 1, 2, 3, 4, 5, 6, 7];
+    BinaryBufferReader source = new(bytes, 8);
+    char[4] scratch;
+    BufferedReader input = new(&source, scratch, 4);
+
+    ByteSequence view = EnumerateBytes(&input);
+    ByteSequence::Enumerator iterator = view.GetEnumerator();
+    if (source.Position != 0 || input.BufferedCount != 0) return 1;
+    if (!iterator.MoveNext() || iterator.Current != (byte)0) return 2;
+
+    // Continue the same cursor: matches 2 and 4, stopping immediately after 4.
+    if (view.AsEnumerable().Where(Even).Take(2).Count() != 2) return 3;
+    if (ReadByte(&input) != 5) return 4;
+    if (view.AsEnumerable().Take(0).Count() != 0) return 5;
+    if (ReadByte(&input) != 6) return 6;
+    return 0;
+}
+```
+
+The iterator and query above share the same borrowed cursor: neither restarts the
+input. `Take(0)` reads nothing, and `Take(2)` stops without probing the byte after
+the second match. A filter may consume nonmatching bytes first. Direct foreach is
+also supported: `foreach (byte value in view) { /* consume value */ }`.
+
+Keep the concrete reader, its backing bytes, and any caller scratch alive and
+unmoved; keep an owning source such as File open. Sequence and iterator copies
+share that source cursor, although each iterator retains its own Current value.
+A second enumeration continues from the current source position. The sequence
+adds no buffer, read-ahead, closing, or ownership. A source such as BufferedReader
+can itself read ahead; consume the next logical byte through that same adapter,
+as above, rather than reading its underlying source directly.
+
+Source exceptions propagate unchanged, and malformed read counts raise IOException.
+A failed advance invalidates Current but does not roll back consumed input. A later
+MoveNext retries the source at its current position; an underlying poisoned reader
+can still reject that retry. Successful byte enumeration allocates no buffer.
+
+Basic foreach uses `ByteSequence.gf` and `byte_reader_enumerate_bytes.gf` without
+the query library. The optional `AsEnumerable()` extension is separately defined
+in `byte_sequence_queries.gf`; import `Standard::Queries` to use query operators.
+
 ## Read counted lines from any byte source
 
 `TryReadLine(output)` appends one line to an `ITextWriter` without clearing it.

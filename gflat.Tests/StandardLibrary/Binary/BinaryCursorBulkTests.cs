@@ -64,7 +64,7 @@ public sealed class BinaryCursorBulkTests
 
     private static void Run(string code,int optimization)
     {
-        var sources=new[]{"Binary/BinaryPrimitives.gf","Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf"}
+        var sources=new[]{"Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf",code)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});

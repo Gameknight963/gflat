@@ -108,7 +108,7 @@ public sealed class BinaryCursor128Tests
 
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = new[] { "Binary/BinaryPrimitives.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf" }
+        SourceFile[] sources = new[] { "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });

@@ -4,6 +4,8 @@
 caller-owned bytes. They do not own storage, allocate, or directly call libc. All
 constructors, properties, and methods are `nothrow`. Include their respective
 source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/bytes.gf`.
+The reader also requires the interface definition `core/IO/IByteReader.gf`; defining
+the cursor itself does not require the throwing IO helpers or exception runtime.
 
 ```csharp
 using std; using std::Binary;
@@ -236,3 +238,24 @@ if (reader.TryPeekSlice(8, ref header))
     // Validate tag and length, then explicitly reader.TrySkip(8) when accepted.
 }
 ```
+
+## Shared counted-reader consumers
+
+`BinaryBufferReader` also implements `std::IO::IByteReader`. Its ordinary `Read(char*,
+nuint)` method is `nothrow`: it consumes at most the remaining bytes, returns a short
+prefix if needed, and returns zero at EOF. A zero request does not access input or
+output storage or change position. Unlike the overlap-permitting `TryReadBytes`, this
+method requires output to be disjoint from reader state and its entire captured input.
+`TryReadBytes` retains its existing all-or-none behavior and overlap permission.
+
+A borrowed `IByteReader* input = &reader` lets the same [binary scalar IO](BINARY_IO.md)
+or [stream varint](STREAM_VARINT.md) consumer accept an in-memory cursor, File, or
+TcpClient. That advances this specific cursor; copies still have independent positions.
+Keep the cursor and its backing storage alive and stable throughout those calls.
+
+The existing cursor `ReadVarUInt32(ref value)` / `ReadVarUInt64(ref value)` extensions
+return `VarInt::Status` and preserve position/value on `NeedMore` or `Invalid`.
+The consuming `IByteReader*` operations `ReadVarUInt32()` / `ReadVarUInt64()` instead
+return values or throw after possible prefix consumption. Select the contract that
+fits the parser; neither operation replaces the other. Stream helper dependencies
+are needed only when those helpers are used, not merely to define this cursor.

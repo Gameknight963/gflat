@@ -197,7 +197,7 @@ public sealed class BinaryCursorZigZagTests
         """;
     private static string Emit(string program)
     {
-        string[] names=["Binary/BinaryPrimitives.gf","Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"];
+        string[] names=["Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("signed-cursor.gf",program));
         return Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});

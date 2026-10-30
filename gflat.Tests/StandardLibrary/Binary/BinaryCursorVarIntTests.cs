@@ -131,7 +131,7 @@ public sealed class BinaryCursorVarIntTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        => new[]{"Binary/BinaryPrimitives.gf","Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"}
+        => new[]{"Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("cursor-varint.gf",code));
     private static void Run(string program,int optimization)

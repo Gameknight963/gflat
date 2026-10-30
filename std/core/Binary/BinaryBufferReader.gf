@@ -1,7 +1,8 @@
+using std::IO;
 namespace std::Binary;
 
 // Borrows counted bytes. Copies retain independent positions over the same storage.
-public struct BinaryBufferReader
+public struct BinaryBufferReader : IByteReader
 {
     private readonly(byte)*? data;
     private nuint length;
@@ -30,6 +31,18 @@ public struct BinaryBufferReader
         position += count; return true;
     }
 
+    /// Consumes up to count bytes, returning a short prefix or zero at EOF.
+    /// Zero requests and empty cursors do not dereference either storage pointer.
+    /// Output must be disjoint from this reader and its entire captured input.
+    public nuint Read(char* output, nuint count) nothrow
+    {
+        nuint take = length - position;
+        if (take > count) take = count;
+        if (take == 0) return 0;
+        global::Memory::Move((void*)output, (readonly(void)*)(data! + position), take);
+        position += take;
+        return take;
+    }
     // Overlap with the borrowed input bytes is permitted.
     public bool TryReadBytes(byte* output, nuint count) nothrow
     {

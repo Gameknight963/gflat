@@ -72,6 +72,7 @@ implementation lives in `libc`.
 | Byte measurement | `CountingWriter` | [Count writer output without storing it](../docs/COUNTING_WRITER.md) |
 | Shared output | `TeeWriter` | [Forward one stream to two borrowed writers](../docs/TEXT_WRITERS.md#send-one-stream-to-two-writers) |
 | Buffered output | `BufferedWriter` | [Coalesce writes with caller-owned scratch](../docs/TEXT_WRITERS.md#buffer-small-writes-before-forwarding) |
+| Bounded output | `LimitedWriter` | [Cap bytes forwarded to a borrowed writer](../docs/LIMITED_WRITER.md) |
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](../docs/LINE_PREFIX_WRITER.md) |
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Byte readers | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](../docs/BYTE_READERS.md) |

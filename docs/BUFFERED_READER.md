@@ -1,11 +1,23 @@
 # Explicit buffered input
 
-`Standard::IO::BufferedReader` implements `IByteReader`, owns a fixed-size `Vector<char>`
-read-ahead buffer and borrows an underlying source. Its constructor accepts
-`IByteReader* source, nuint capacity = 4096`. Capacity zero throws `IOException`
-before allocating the buffer. Successful construction initializes every buffer byte
-and requires one buffer allocation. Allocator failure propagates normally; the source
-has not been read and partial construction cleans up initialized owned fields.
+`Standard::IO::BufferedReader` implements `IByteReader` and borrows an underlying
+source cursor. Choose its buffer when constructing it:
+
+- `BufferedReader(input, capacity = 4096)` owns a fixed-size `Vector<char>` buffer.
+  Successful construction initializes every buffer byte and makes one buffer
+  allocation. Allocator failure leaves the source unread and cleans up initialized
+  owned fields.
+- `BufferedReader(input, storage, capacity)` borrows a caller-provided writable
+  region of at least capacity bytes. It allocates no buffer and does not initialize
+  the region. Keep those bytes alive, unmoved, and reserved for this adapter until
+  it is destroyed. They must not overlap the reader, source state, retained input,
+  or output buffers passed to Read.
+
+Both overloads reject zero capacity with `IOException` before reading source input
+or accessing scratch. Throwing that error uses normal exception runtime storage;
+it is separate from buffer allocation. The existing constructor and default
+capacity retain their behavior.
+
 
 Use it when small reads, such as [stream varints](STREAM_VARINT.md), would otherwise
 make many underlying source calls. Read-ahead is explicit: wrapping a source permits
@@ -16,7 +28,7 @@ No global cache or prefetch thread is involved.
 
 - Pending buffered bytes are copied up to the requested count and returned immediately.
   That call does not also refill, even if it returns a short positive result.
-- With no pending bytes, a positive request makes one source `Read` into the owned
+- With no pending bytes, a positive request makes one source `Read` into its
   buffer, requesting its full capacity. It then returns at most the requested count.
   It performs no direct large-read bypass or second refill in the same call.
 - A positive read returning zero means that refill observed EOF. EOF is not cached:
@@ -55,7 +67,8 @@ provides lookahead without requiring provider pushback.
 
 ## Ownership, moves and cursor exclusivity
 
-The owned Vector field is noncopyable under existing value rules. Consequently the
+The Vector owner field remains noncopyable under existing value rules, including
+when that field is empty in borrowed-buffer mode. Consequently the
 adapter cannot be implicitly copied into a local, argument or field. Explicit move
 transfers the buffer and unread cursor state; no buffer pointer points into the
 adapter itself. Reinitialize a moved local before using it again. Existing pointers
@@ -67,10 +80,15 @@ Do not directly read, seek, clear, move or close the underlying source while usi
 this buffered cursor, or install another independently consuming adapter over it.
 The compiler does not prove every external alias obeys this rule.
 
-Destruction frees only the owned buffer. It never closes, flushes or rewinds the
+Destruction frees an owned buffer only; caller scratch is never freed. It never closes, flushes or rewinds the
 source. Unread prefetched bytes are abandoned when the adapter is destroyed; the
 underlying cursor has already advanced past them. There is no pushback or rollback.
-The output buffer passed to `Read` must not overlap adapter or source state or the
+Do not reuse or modify caller scratch while the adapter may hold unread bytes.
+Moving inline scratch, reallocating its buffer, or freeing it invalidates the borrow.
+A heap allocation can keep its address through an ownership move, but its new owner
+must still outlive the adapter's use.
+
+The output buffer passed to `Read` must not overlap scratch, adapter/source state or the
 source's retained backing storage. Output pointers are borrowed for the call only.
 
 If an underlying call throws or reports more bytes than requested, the adapter
@@ -100,7 +118,8 @@ int main(int argc, char** argv)
     {
         File source = File::OpenRead(argv[1]);
         {
-            BufferedReader buffered = new(&source, 4096);
+            char[4096] scratch;
+            BufferedReader buffered = new(&source, scratch, 4096);
             if (buffered.PeekByte() != 3 || buffered.PeekByte() != 3) return 5;
             IByteReader* input = &buffered;
             uint length = input.ReadVarUInt32();
@@ -128,5 +147,6 @@ APIs. Manual source selections must include the normal Vector/Span/query-interfa
 Memory/BadAllocException and Exception dependencies. No buffer elements are accessed
 outside initialized Vector count; reserve alone is not treated as initialized storage.
 The normal standard-library source glob includes these dependencies. Construction
-uses the selected Memory allocator; no GC, native IO implementation or compiler hook
+uses the selected Memory allocator in owned mode; borrowed mode retains the same
+source dependencies but makes no buffer allocation. No GC, native IO implementation or compiler hook
 is added by the adapter.

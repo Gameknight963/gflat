@@ -2,13 +2,15 @@ using Standard::Collections;
 using Standard::Memory;
 namespace Standard::IO;
 
-/// Owns a fixed read-ahead buffer and borrows one source cursor without closing it.
+/// Buffers reads in owned or borrowed scratch and borrows one source cursor without closing it.
 /// All consuming access to that cursor must pass through this adapter while it is used.
-/// Move transfers unread bytes; the noncopyable Vector field prevents cursor copies.
+/// Move transfers the cursor and storage reference; the Vector owner field prevents copies.
 public struct BufferedReader : IByteReader
 {
     private IByteReader* source;
     private Vector<char> buffer;
+    private char*? scratch;
+    private nuint capacity;
     private nuint start;
     private nuint end;
     private bool failed;
@@ -19,21 +21,42 @@ public struct BufferedReader : IByteReader
     {
         source = input;
         buffer = new Vector<char>();
+        scratch = null;
+        this.capacity = capacity;
         start = 0;
         end = 0;
         failed = false;
         if (capacity == 0) throw new IOException("Buffered reader capacity must not be zero");
         buffer.Reserve(capacity);
         for (nuint index = 0; index < capacity; index++) buffer.Add('\0');
+        Span<char> storage = buffer.AsSpan();
+        scratch = storage.Data!;
+    }
+
+    /// Borrows caller scratch without allocating or initializing its bytes.
+    /// Zero capacity rejects before accessing storage; errors use normal exception storage.
+    /// Keep scratch alive, unmoved and disjoint from reader/source state and their retained input.
+    /// No scratch bytes are freed on destruction; this cursor remains noncopyable.
+    public BufferedReader(IByteReader* input, char* storage, nuint capacity)
+    {
+        source = input;
+        buffer = new Vector<char>();
+        scratch = null;
+        this.capacity = capacity;
+        start = 0;
+        end = 0;
+        failed = false;
+        if (capacity == 0) throw new IOException("Buffered reader capacity must not be zero");
+        scratch = storage;
     }
 
     public nuint BufferedCount { immutable get nothrow => end - start; }
-    public nuint Capacity { immutable get nothrow => buffer.Count; }
+    public nuint Capacity { immutable get nothrow => capacity; }
 
     /// Returns a buffered prefix or performs one source refill, allowing short results.
     /// Zero count validates the source without consuming buffered bytes or dereferencing data.
     /// Source errors or over-reporting latch failure; later reads and peeks reject without source calls.
-    /// Caller output must be writable and disjoint from this adapter and its source state.
+    /// Caller output must be writable and disjoint from this adapter, scratch and source state.
     public nuint Read(char* data, nuint count)
     {
         if (count == 0)
@@ -46,11 +69,9 @@ public struct BufferedReader : IByteReader
             return 0;
         }
         if (!EnsureBuffered()) return 0;
-        Span<char> storage = buffer.AsSpan();
-        char* scratch = storage.Data!;
         nuint take = end - start;
         if (take > count) take = count;
-        for (nuint index = 0; index < take; index++) data[index] = scratch[start + index];
+        for (nuint index = 0; index < take; index++) data[index] = scratch![start + index];
         start += take;
         return take;
     }
@@ -61,18 +82,16 @@ public struct BufferedReader : IByteReader
     public int PeekByte()
     {
         if (!EnsureBuffered()) return -1;
-        Span<char> storage = buffer.AsSpan();
-        return (int)(byte)storage[start];
+        return (int)(byte)scratch![start];
     }
 
     private bool EnsureBuffered()
     {
         if (failed) throw new IOException("Buffered reader cannot continue after input failure");
         if (start != end) return true;
-        Span<char> storage = buffer.AsSpan();
         failed = true;
-        nuint read = source.Read(storage.Data!, buffer.Count);
-        if (read > buffer.Count)
+        nuint read = source.Read(scratch!, capacity);
+        if (read > capacity)
             throw new IOException("Byte reader returned more than requested");
         start = 0;
         end = read;

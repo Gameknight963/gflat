@@ -76,7 +76,7 @@ implementation lives in `libc`.
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Byte readers | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](../docs/BYTE_READERS.md) |
 | Binary scalar IO | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Borrowed binary IO](../docs/BINARY_IO.md) |
-| Buffered input | `BufferedReader`, non-consuming `PeekByte` | [Read-ahead, cursor lifetime and ownership](../docs/BUFFERED_READER.md) |
+| Buffered input | `BufferedReader` with owned or caller-provided scratch, `PeekByte` | [Read-ahead, cursor lifetime and ownership](../docs/BUFFERED_READER.md) |
 | Bounded input | `LimitedReader` | [Read one payload without consuming its tail](core/IO/LIMITED_READER.md) |
 | Byte lines | Borrowed writer, reusable `String`, and owning `ReadLine` helpers | [Counted lines from any byte source](../docs/BYTE_READERS.md#read-counted-lines-from-any-byte-source) |
 | Stream varints | `ReadVarUInt32/64`, `ReadZigZagInt32/64`, and matching writer extensions | [Borrowed stream varints](../docs/STREAM_VARINT.md) |

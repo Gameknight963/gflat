@@ -332,6 +332,12 @@ int SmokeCore() {
     char[4] bytePayload; BufferWriter byteSink = new(bytePayload, 4); char[1] byteScratch;
     if (byteInput.CopyTo(&byteSink, byteScratch, 1) != 3 || byteSink.Length != 3
         || bytePayload[0] != 'C' || bytePayload[2] != 'E' || bytePayload[3] != '\0') return 9035;
+    SmokeByteReader binarySource = new(); IByteReader* binaryInput = &binarySource;
+    if (binaryInput.ReadUInt16BigEndian() != (ushort)0x4142) return 9036;
+    char[3] binaryPayload; BufferWriter binarySink = new(binaryPayload, 3);
+    ITextWriter* binaryOutput = &binarySink; binaryOutput.WriteUInt16LittleEndian((ushort)0x4142);
+    if (binarySink.Length != 2 || binaryPayload[0] != 'B' || binaryPayload[1] != 'A'
+        || binaryPayload[2] != '\0') return 9037;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

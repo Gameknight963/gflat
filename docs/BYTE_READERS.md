@@ -21,6 +21,11 @@ Import `Standard::IO` for these extensions on `IByteReader*`:
 - `ReadExactly(data, count)` loops through short reads and throws `EndOfStreamException`
   if EOF arrives before `count`. A zero-byte operation calls the source once to preserve
   its state validation. Reader exceptions propagate unchanged.
+- `SkipExactly(count)` discards exactly that many bytes through bounded reads,
+  using 4096 bytes of stack scratch. It works without seeking, preserves the same
+  zero-count validation, and throws `EndOfStreamException` on early EOF. Requests
+  never extend beyond the remaining count. A buffered source may read ahead;
+  continue consuming through that same adapter to retain its unread bytes.
 - `CopyTo(output, scratch, capacity)` rejects empty scratch, reads until EOF, and sends
   each counted chunk to `ITextWriter*`. It returns the number of bytes sent. A source
   reporting more bytes than requested or a total count overflow throws `IOException`
@@ -76,3 +81,6 @@ With the optional Windows network project referenced, the same `DecodeHexFrom` a
 `&client` for an open `Windows::TcpClient`. For a TCP stream, its peer must end sending
 for EOF-based copying to finish. A persistent connection carrying multiple messages
 needs a separate bounded framing protocol; `CopyTo` does not know message boundaries.
+[LimitedReader](../Standard/core/IO/LIMITED_READER.md) exposes one payload as a
+bounded source. To discard its unread allowance explicitly, call
+`frame.SkipExactly(frame.Remaining)`; early EOF still reports a truncated payload.

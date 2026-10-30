@@ -348,6 +348,14 @@ int SmokeCore() {
         || varPayload[2] != (char)172 || varPayload[3] != (char)2
         || varPayload[4] != (char)171 || varPayload[5] != (char)2
         || varPayload[6] != (char)171 || varPayload[7] != (char)2 || varPayload[8] != '\0') return 9039;
+    SmokeByteReader bufferedSource = new();
+    BufferedReader buffered = new(&bufferedSource, 4);
+    IByteReader* bufferedInput = &buffered;
+    char[6] bufferedPayload;
+    bufferedInput.ReadExactly(bufferedPayload, 5);
+    if (buffered.Capacity != 4 || buffered.BufferedCount != 0
+        || bufferedPayload[0] != 'A' || bufferedPayload[4] != 'E'
+        || bufferedInput.Read(bufferedPayload, 1) != 0) return 9040;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

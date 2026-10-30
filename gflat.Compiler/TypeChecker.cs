@@ -5128,7 +5128,7 @@ namespace gflat
                     return CompleteMethodGroup(mEntry.Method);
                 }
 
-                throw new TypeCheckException($"Class '{DisplayName(named.Name)}' has no field or method '{node.Member}'", node.Line);
+                throw new TypeCheckException($"Class '{DisplayTypeName(objType)}' has no field or method '{node.Member}'", node.Line);
             }
 
             if (!_structs.TryGetValue(named.Name, out StructInfo? info))
@@ -5151,7 +5151,7 @@ namespace gflat
                 return CompleteMethodGroup(method);
             }
 
-            throw new TypeCheckException($"'{DisplayName(named.Name)}' has no field or method '{node.Member}'", node.Line);
+            throw new TypeCheckException($"'{DisplayTypeName(objType)}' has no field or method '{node.Member}'", node.Line);
         }
 
         public void Visit(InterpolatedStringExpression node)

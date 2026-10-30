@@ -338,6 +338,16 @@ int SmokeCore() {
     ITextWriter* binaryOutput = &binarySink; binaryOutput.WriteUInt16LittleEndian((ushort)0x4142);
     if (binarySink.Length != 2 || binaryPayload[0] != 'B' || binaryPayload[1] != 'A'
         || binaryPayload[2] != '\0') return 9037;
+    SmokeByteReader varSource = new(); IByteReader* varInput = &varSource;
+    if (varInput.ReadVarUInt32() != 65u || varInput.ReadVarUInt64() != 66ul
+        || varInput.ReadZigZagInt32() != -34 || varInput.ReadZigZagInt64() != 34l) return 9038;
+    char[9] varPayload; BufferWriter varSink = new(varPayload, 9); ITextWriter* varOutput = &varSink;
+    varOutput.WriteVarUInt32(300u); varOutput.WriteVarUInt64(300ul);
+    varOutput.WriteZigZagInt32(-150); varOutput.WriteZigZagInt64(-150l);
+    if (varSink.Length != 8 || varPayload[0] != (char)172 || varPayload[1] != (char)2
+        || varPayload[2] != (char)172 || varPayload[3] != (char)2
+        || varPayload[4] != (char)171 || varPayload[5] != (char)2
+        || varPayload[6] != (char)171 || varPayload[7] != (char)2 || varPayload[8] != '\0') return 9039;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

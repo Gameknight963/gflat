@@ -62,6 +62,34 @@ Call `Console::Flush()` before reporting successful output from a command-line
 tool. Normal process exit also attempts to flush libc streams, but a failure
 there cannot change a success code the program has already returned.
 
+`Console/standard_readers.gf` adds the read-only `Console::In` property, exposing a
+stable borrowed process-lifetime `std::IO::IByteReader*`. The getter is `nothrow`,
+performs no input or application allocation, and never transfers stream ownership.
+Never delete, explicitly destroy or close this pointer. Its stateless adapter
+forwards every call to the existing `Console::Read`; no FILE pointer, buffer,
+EOF/error state or stream mode is cached or changed. A pointer obtained before
+ordinary CRT redirection still uses the current stdin on its next read.
+
+With `using std::IO`, the shared `ReadExactly` and `CopyTo` extensions accept
+`Console::In`, as do the borrowed binary scalar and stream-varint consumers.
+Input shares its cursor with direct `Console::Read`, `ReadByte`, `PeekByte` and
+line APIs. When adding an explicit `BufferedReader`, keep subsequent consuming
+reads through that buffered cursor rather than bypassing its prefetched data.
+
+These are bytes delivered by stdin's **current host mode**, not a binary-mode
+promise: Windows text mode normally translates CRLF to LF and treats Ctrl+Z as
+EOF, including redirected stdin. The adapter adds no decoding, line processing
+or terminator. `fread` may block until a requested count is filled or EOF/error
+occurs. Zero count consumes nothing and does not dereference the output pointer;
+input failures can leave a consumed or modified prefix. The adapter propagates
+errors unchanged and performs no retry, EOF caching or automatic error clearing.
+Existing `Console::ClearInputError` semantics remain available to callers.
+
+For explicit source selection, add `Console/standard_readers.gf` and
+`core/IO/IByteReader.gf` alongside `Console/Console.gf` and its existing IO/Exception
+runtime dependencies. Include the shared helper sources only when using those
+helpers; the property itself does not require them. Ordinary std builds include
+these sources automatically. `Console.gf` remains independently selectable.
 The standard-stream accessor bridge in `Runtime/Stdio.cpp` exposes stdin, stdout,
 and stderr because these are C macros rather than portable external variables.
 The actual writer behavior remains gflat code.

@@ -140,7 +140,7 @@ public sealed class ConsoleLineWriterTests
         Assert.True(result.ExitCode==0,result.StandardError);return executable;
     }
 
-    private static async Task Run(string executable,byte[] input,string[] arguments)
+    internal static async Task Run(string executable,byte[] input,string[] arguments)
     {
         using var process=new Process{StartInfo=new ProcessStartInfo(executable){
             UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,

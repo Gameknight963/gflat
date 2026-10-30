@@ -13,6 +13,7 @@
   <Project Path="csv-column/csv-column.gfproj" />
   <Project Path="csv-sum/csv-sum.gfproj" />
   <Project Path="csv-to-json/csv-to-json.gfproj" />
+  <Project Path="distinct-lines/distinct-lines.gfproj" />
   <Project Path="file-compare/file-compare.gfproj" />
   <Project Path="hello/hello.gfproj" />
   <Project Path="hexdump/hexdump.gfproj" />

@@ -9,8 +9,13 @@ public sealed partial class EditorModel
     private string? SourceTypeNamespace(TypeExpression type, string path, int offset)
     {
         string qualifier = DisplayType(type.WithoutValueProtection());
-        bool globalQualifier = qualifier.StartsWith("global::", StringComparison.Ordinal);
-        if (globalQualifier) qualifier = qualifier[8..];
+        // Source syntax keeps the root anchor in Namespace, while display names
+        // intentionally omit that marker. Preserve it before lexical fallback.
+        TypeExpression root = type.WithoutValueProtection();
+        while (root is NestedTypeExpression nested) root = nested.Parent.WithoutValueProtection();
+        bool displayedGlobal = qualifier.StartsWith("global::", StringComparison.Ordinal);
+        bool globalQualifier = displayedGlobal || root is NamedTypeExpression { Namespace: "global" };
+        if (displayedGlobal) qualifier = qualifier[8..];
         string head = qualifier.Split("::")[0];
         if (!globalQualifier && Visible(path, offset, head).Any(symbol =>
             symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration)) return null;

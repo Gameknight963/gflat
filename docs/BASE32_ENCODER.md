@@ -4,6 +4,8 @@
 one borrowed synchronous sink. It reuses the existing uppercase padded
 [Base32 codec](BASE32.md). It adds no whitespace, line wrapping, BOM or newline.
 
+[Base32Decoder](BASE32_DECODER.md) performs strict decoding through the same writer contract.
+
 ## Copy counted input through an encoder
 
 This complete program writes a binary file as Base32 without materializing the full

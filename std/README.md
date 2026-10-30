@@ -137,7 +137,7 @@ implementation lives in `libc`.
 | ASCII bytes | `Ascii` classification, comparison, case conversion, and case-insensitive hashing | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`; owning `Base64Text`, `Base64UrlText`, `HexText` helpers and writer `WriteHex` | [Caller-buffer, owning, and writer codecs](../docs/BINARY_CODECS.md) |
 | Padded Base32 | `Base32`, `Base32Text` | [Strict canonical caller-buffer codecs and owning results](../docs/BASE32.md) |
-| Streaming Base32 | `Base32Encoder` | [Padded uppercase output through a borrowed writer](../docs/BASE32_ENCODER.md) |
+| Streaming Base32 | `Base32Encoder`, `Base32Decoder` | [Encoding](../docs/BASE32_ENCODER.md), [strict decoding](../docs/BASE32_DECODER.md) through borrowed writers |
 | Streaming Base64 | `Base64Encoder`, `Base64Decoder` | [Encoding](../docs/BASE64_ENCODER.md), [strict decoding](../docs/BASE64_DECODER.md) through borrowed writers |
 | Streaming hexadecimal | `HexDecoder` | [Strict decoding](../docs/HEX_DECODER.md) through a borrowed writer |
 | JSON strings | `JsonString`, `JsonStringText`, writer `WriteJsonString` | [Strict UTF-8 buffer codecs and owning String conveniences](../docs/JSON_STRING.md) |

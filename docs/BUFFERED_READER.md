@@ -35,6 +35,24 @@ for a one-byte consumer. File already has libc buffering; this adapter is not an
 unconditional performance improvement for File. TCP `recv` can return a short
 available prefix, which the adapter accepts normally.
 
+## Peek without consuming
+
+`PeekByte()` returns the next byte as an int from 0 through 255, or -1 when a refill
+reports EOF. Byte 255 is data. Pending bytes are returned without another source
+read; repeated peeks return the same byte and leave BufferedCount unchanged.
+The next ReadByte, ReadExactly, or Read through this same adapter starts with that
+peeked byte.
+
+An empty buffer can refill to its configured capacity, so peeking may block and
+advance the underlying source's physical cursor. It does not advance this adapter's
+logical cursor or allocate another buffer. Continue through the same BufferedReader
+instead of bypassing its retained suffix. EOF is not cached permanently.
+
+PeekByte observes the existing failure latch before returning cached input. An error
+or malformed count recorded by Read(data, 0) therefore also blocks later peeks.
+The operation is on BufferedReader rather than IByteReader: the retained buffer
+provides lookahead without requiring provider pushback.
+
 ## Ownership, moves and cursor exclusivity
 
 The owned Vector field is noncopyable under existing value rules. Consequently the
@@ -56,7 +74,7 @@ The output buffer passed to `Read` must not overlap adapter or source state or t
 source's retained backing storage. Output pointers are borrowed for the call only.
 
 If an underlying call throws or reports more bytes than requested, the adapter
-latches failure. Further reads throw `IOException` without touching the source,
+latches failure. Further reads and peeks throw `IOException` without touching the source,
 including zero-count reads. Underlying exceptions propagate unchanged and may have
 consumed an unknown prefix; recovery cannot be reconstructed from counters. Pending
 properties remain inspectable, but there is no reset/retry guarantee.
@@ -83,12 +101,14 @@ int main(int argc, char** argv)
         File source = File::OpenRead(argv[1]);
         {
             BufferedReader buffered = new(&source, 4096);
+            if (buffered.PeekByte() != 3 || buffered.PeekByte() != 3) return 5;
             IByteReader* input = &buffered;
             uint length = input.ReadVarUInt32();
             if (length != 3u) return 3;
             char[3] body;
             input.ReadExactly(body, 3);
             if (body[0] != 'a' || body[1] != 'b' || body[2] != 'c') return 4;
+            if (buffered.PeekByte() != -1) return 6;
         }
         source.Close();
     }

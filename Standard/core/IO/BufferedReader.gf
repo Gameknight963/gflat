@@ -32,36 +32,51 @@ public struct BufferedReader : IByteReader
 
     /// Returns a buffered prefix or performs one source refill, allowing short results.
     /// Zero count validates the source without consuming buffered bytes or dereferencing data.
-    /// Source errors or over-reporting latch failure; later reads reject without source calls.
+    /// Source errors or over-reporting latch failure; later reads and peeks reject without source calls.
     /// Caller output must be writable and disjoint from this adapter and its source state.
     public nuint Read(char* data, nuint count)
     {
-        if (failed) throw new IOException("Buffered reader cannot continue after input failure");
         if (count == 0)
         {
+            if (failed) throw new IOException("Buffered reader cannot continue after input failure");
             failed = true;
             if (source.Read(data, 0) != 0)
                 throw new IOException("Byte reader returned more than requested");
             failed = false;
             return 0;
         }
+        if (!EnsureBuffered()) return 0;
         Span<char> storage = buffer.AsSpan();
         char* scratch = storage.Data!;
-        if (start == end)
-        {
-            failed = true;
-            nuint read = source.Read(scratch, buffer.Count);
-            if (read > buffer.Count)
-                throw new IOException("Byte reader returned more than requested");
-            start = 0;
-            end = read;
-            failed = false;
-            if (read == 0) return 0;
-        }
         nuint take = end - start;
         if (take > count) take = count;
         for (nuint index = 0; index < take; index++) data[index] = scratch[start + index];
         start += take;
         return take;
+    }
+
+    /// Returns the next byte from 0 through 255, or -1 when a refill reports EOF.
+    /// Does not consume buffered input. Empty buffers may read ahead through the source.
+    /// Keep using this same adapter to consume the peeked byte and retained suffix.
+    public int PeekByte()
+    {
+        if (!EnsureBuffered()) return -1;
+        Span<char> storage = buffer.AsSpan();
+        return (int)(byte)storage[start];
+    }
+
+    private bool EnsureBuffered()
+    {
+        if (failed) throw new IOException("Buffered reader cannot continue after input failure");
+        if (start != end) return true;
+        Span<char> storage = buffer.AsSpan();
+        failed = true;
+        nuint read = source.Read(storage.Data!, buffer.Count);
+        if (read > buffer.Count)
+            throw new IOException("Byte reader returned more than requested");
+        start = 0;
+        end = read;
+        failed = false;
+        return read != 0;
     }
 }

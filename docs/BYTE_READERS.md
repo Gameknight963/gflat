@@ -165,6 +165,79 @@ available in `Standard/core/IO/byte_reader_lines.gf`; the optional String overlo
 are in `byte_reader_string_lines.gf`.
 
 
+## Enumerate lines without owning the source
+
+`input.EnumerateLines()` creates a deferred `LineSequence` over any `IByteReader`.
+It follows `TryReadLine`: LF and CRLF are removed, empty terminated lines are
+yielded, and a final nonempty unterminated line is yielded. Bare CR, embedded
+zeros and high bytes remain counted contents. A trailing LF does not invent an
+extra empty line.
+
+```csharp
+using Standard::Binary;
+using Standard::IO;
+using Standard::Text;
+using Standard::Queries;
+using Standard::Collections;
+
+int main()
+{
+    byte[16] bytes = [65, 13, 10, 66, 0, 67, 10, 108, 97, 115, 116, 10, 84, 65, 73, 76];
+    BinaryBufferReader source = new(bytes, 16);
+    char[8] scratch;
+    BufferedReader input = new(&source, scratch, 8);
+
+    LineSequence lines = input.EnumerateLines();
+    {
+        // This iterator reuses its current String; observations do not copy it.
+        LineSequence::Enumerator iterator = lines.GetEnumerator();
+        if (!iterator.MoveNext() || iterator.Current.Length != 1 || iterator.Current[0] != 'A') return 1;
+        String saved = iterator.Current; // An independent owning copy.
+        if (!iterator.MoveNext() || iterator.Current.Length != 3 || iterator.Current[1] != '\0') return 2;
+        if (saved[0] != 'A') return 3;
+    }
+
+    // A new enumeration continues the same cursor. Take stops after this line;
+    // the unread tail remains available through the same buffered reader.
+    Vector<String> next = lines.AsEnumerable().Take(1).ToVector();
+    if (next.Count != 1 || !next[0].Equals("last")) return 4;
+    if (input.ReadByte() != (int)'T') return 5;
+    String tail = input.ReadLine();
+    if (!tail.Equals("AIL")) return 6;
+    return 0;
+}
+```
+
+Creating the sequence or iterator does not read input or allocate a line buffer.
+Each iterator owns one String and reuses its capacity between lines. Its
+`ref immutable(String) Current` is available after successful MoveNext; it is
+invalid before the first line, after EOF, and after an exception. A Current borrow
+ends when MoveNext is called or the iterator is moved or destroyed. Use a normal
+`String saved = iterator.Current` copy to retain independent contents.
+`foreach (String line in lines)` likewise produces owning value copies.
+
+The sequence borrows the source; it never closes, rewinds or owns it. Keep the
+concrete reader alive, open and unmoved. Sequence copies and new iterators share
+its cursor; avoid interleaving consumption when whole-line boundaries matter.
+Copying an iterator copies its current String into an independent owning snapshot
+and shares the source cursor. Subsequent advancement of one copy does not replace
+the other's current contents, but it consumes input that either could next read.
+The parser consumes no byte beyond LF. A BufferedReader can prefetch, so retain
+that same buffered reader to consume any remaining bytes, as above.
+
+EOF is final for an individual iterator; further MoveNext calls do not read.
+Source and String growth exceptions propagate unchanged and invalidate Current.
+A later MoveNext retries from the source's then-current position and clears the
+internal line first. Partially consumed input is not replayed or drained; a
+partially collected prefix from the failed attempt is not yielded. Sources such
+as BufferedReader retain their own error-latching policy.
+
+`AsEnumerable()` is a separate optional query adapter in
+`Standard/core/IO/line_sequence_queries.gf`. Queries that retain String values
+make independent copies; a zero-allocation query chain is not promised.
+Take(0) performs no reads. Early breaks and exceptions release the iterator's
+String normally and leave the reader open at its consumed cursor.
+
 ## Decode file or network input through the same consumer
 
 The existing strict `HexDecoder` is an `ITextWriter`. It accepts arbitrary chunk splits

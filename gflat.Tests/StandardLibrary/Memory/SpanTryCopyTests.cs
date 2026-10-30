@@ -178,4 +178,110 @@ public sealed class SpanTryCopyTests
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(noncopyable)));
         Assert.Contains("Assignment requires a copyable value, a fresh value, or 'move value'", error.Message);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ImmutableDescriptorsCopyIntoSeparateInitializedScalarAndStringDestinations(int optimization)
+    {
+        const string program = """
+            using Standard;
+            using Standard::Text;
+            using Standard::Memory;
+            using Standard::Queries;
+            using Standard::Collections;
+            extern void*? malloc(nuint count);
+            extern void free(void* storage);
+            int attempts = 0;
+            int allocated = 0;
+            int released = 0;
+            namespace Memory
+            {
+                public replace void*? Allocate(nuint count)
+                {
+                    attempts++;
+                    void*? result = malloc(count);
+                    if (result != null) allocated++;
+                    return result;
+                }
+                public replace void Free(void* storage) nothrow { released++; free(storage); }
+            }
+            bool Expected(int* output)
+            {
+                return output[0] == 91 && output[1] == 3 && output[2] == 5
+                    && output[3] == 8 && output[4] == 92;
+            }
+            int main()
+            {
+                int[3] data = [3, 5, 8];
+                int[5] output = [91, 0, 0, 0, 92];
+                Span<immutable(int)> source = new(data, 3);
+                immutable(Span<immutable(int)>) header = source;
+                immutable(Span<immutable(int)>)* observer = &source;
+                Span<int> destination = new(&output[1], 3);
+
+                header.CopyTo(destination);
+                if (!Expected(output)) return 30;
+                for (nuint index = 1; index < 4; index++) output[index] = 0;
+                if (!header.TryCopyTo(destination) || !Expected(output)) return 31;
+                for (nuint index = 1; index < 4; index++) output[index] = 0;
+                observer.CopyTo(destination);
+                if (!Expected(output)) return 32;
+                for (nuint index = 1; index < 4; index++) output[index] = 0;
+                if (!observer.TryCopyTo(destination) || !Expected(output) || attempts != 0) return 33;
+
+                Span<int> shortOutput = destination.Slice(0, 2);
+                for (nuint index = 1; index < 4; index++) output[index] = 70 + (int)index;
+                if (observer.TryCopyTo(shortOutput) || attempts != 0) return 34;
+                for (nuint index = 1; index < 4; index++) if (output[index] != 70 + (int)index) return 45;
+                bool caught = false;
+                try { header.CopyTo(shortOutput); }
+                catch (ref Exception error) { caught = true; }
+                if (!caught || output[0] != 91 || output[4] != 92 || data[0] != 3 || data[1] != 5 || data[2] != 8) return 35;
+                for (nuint index = 1; index < 4; index++) if (output[index] != 70 + (int)index) return 46;
+
+                Span<immutable(int)> empty = new(((nuint)1).reinterpret<immutable(int)*>(), 0);
+                immutable(Span<immutable(int)>)* emptyObserver = &empty;
+                Span<int> noOutput = new();
+                int before = attempts;
+                emptyObserver.CopyTo(noOutput);
+                if (!emptyObserver.TryCopyTo(noOutput) || attempts != before) return 36;
+
+                {
+                    Vector<String> originals = new();
+                    originals.Reserve(2);
+                    originals.Add(s"a\0b");
+                    originals.Add(s"tail");
+                    Vector<String> first = new();
+                    first.Add(s"old first");
+                    first.Add(s"old second");
+                    Vector<String> second = new();
+                    second.Add(s"replace me");
+                    second.Add(s"replace me too");
+                    readonly(char)* originalFirst = originals[0].Data;
+                    readonly(char)* originalSecond = originals[1].Data;
+                    immutable(Span<immutable(String)>) owners = originals.AsImmutable();
+                    immutable(Span<immutable(String)>)* borrowedOwners = &owners;
+                    owners.CopyTo(first.AsSpan());
+                    if (!borrowedOwners.TryCopyTo(second.AsSpan())) return 37;
+                    if (first.Count != 2 || second.Count != 2 || originals.Count != 2) return 38;
+                    if (first[0].Length != 3 || second[0].Length != 3 || first[0][1] != '\0' || second[0][1] != '\0') return 39;
+                    if (first[1].Length != 4 || second[1].Length != 4 || first[1][3] != 'l' || second[1][3] != 'l') return 40;
+                    for (nuint index = 0; index < 2; index++)
+                    {
+                        if (first[index].Data == originals[index].Data || second[index].Data == originals[index].Data
+                            || first[index].Data == second[index].Data) return 41;
+                    }
+                    first[0][0] = 'X';
+                    second[1][0] = 'T';
+                    if (originals[0][0] != 'a' || originals[1][0] != 't' || second[0][0] != 'a' || first[1][0] != 't') return 42;
+                    if (originals[0].Data != originalFirst || originals[1].Data != originalSecond) return 43;
+                }
+                if (allocated != released) return 44;
+                return 0;
+            }
+            """;
+        string ir = Compiler.Emit(Sources(program));
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
 }

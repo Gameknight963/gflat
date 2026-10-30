@@ -15,6 +15,9 @@ sources and sinks without reading ahead.
 [BufferedReader](../../docs/BUFFERED_READER.md) owns explicit read-ahead storage while borrowing
 one source cursor. Keep prefix, payload and subsequent reads on that cursor.
 
+[Base32Encoder](../../docs/BASE32_ENCODER.md) streams counted binary chunks to a borrowed writer,
+with final padding emitted by explicit `Complete()`.
+
 Lazy collection queries and their ownership rules are documented in
 [Collections](Queries/README.md). The runnable example is
 [`examples/queries`](../../examples/queries/main.gf).

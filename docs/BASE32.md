@@ -1,5 +1,8 @@
 # Padded Base32
 
+For chunked input, [Base32Encoder](BASE32_ENCODER.md) streams through `ITextWriter`
+without materializing the whole input or output.
+
 `std::Encoding::Base32` implements standard padded Base32 with uppercase `A–Z` and `2–7`.
 It follows [RFC 4648 sections 3 and 6](https://www.rfc-editor.org/rfc/rfc4648.html#section-6).
 It adds no whitespace, line breaks, or terminator. Lowercase, aliases such as

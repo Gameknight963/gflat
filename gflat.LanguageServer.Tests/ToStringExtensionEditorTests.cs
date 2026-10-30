@@ -8,7 +8,7 @@ public sealed class ToStringExtensionEditorTests
     [Fact]
     public void PrimitiveBorrowedAndInstanceConversionsNavigateToTheirSelectedDeclarations()
     {
-        const string text = "using Standard; using Standard::Text;struct Label:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\"label\",5);}}String Borrow<T:IFormattable>(ref immutable(T) borrowed)=>borrowed.ToString();void Probe(){int number=42;String first=number.ToString();Label label=new();String second=label.ToString();String original=s\"x\";String third=original.ToString();String fourth=Borrow(ref original);}";
+        const string text = "using Standard; using Standard::Text;struct Label:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\"label\",5);}}String Borrow<T:IFormattable>(ref immutable(T) borrowed)=>borrowed.ToString();void Probe(){immutable(int) number=42;String first=number.ToString();Label label=new();String second=label.ToString();String original=s\"x\";String third=original.ToString();String fourth=Borrow(ref original);}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("to-string-editor.gf"), text);
@@ -17,21 +17,30 @@ public sealed class ToStringExtensionEditorTests
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, files);
         foreach (var row in new[] {
-            (Receiver: "number", File: "primitive_string.gf", Declaration: "public String ToString()"),
-            (Receiver: "label", File: "formattable_string.gf", Declaration: "public immutable String ToString("),
-            (Receiver: "borrowed", File: "formattable_string.gf", Declaration: "public immutable String ToString("),
-            (Receiver: "original", File: "String.gf", Declaration: "public immutable String ToString()") })
+            (Receiver: "number", File: "primitive_string.gf", ExtensionReceiver: "int"),
+            (Receiver: "label", File: "formattable_string.gf", ExtensionReceiver: "T"),
+            (Receiver: "borrowed", File: "formattable_string.gf", ExtensionReceiver: "T"),
+            (Receiver: "original", File: "String.gf", ExtensionReceiver: (string?)null) })
         {
             int use = text.IndexOf(row.Receiver + ".ToString", StringComparison.Ordinal) + row.Receiver.Length + 1;
             var library = files.Single(file => Path.GetFileName(file.Path) == row.File);
-            int start = row.Receiver == "number" ? library.Text.IndexOf("extension int", StringComparison.Ordinal) : 0;
-            int declaration = library.Text.IndexOf(row.Declaration, start, StringComparison.Ordinal) + row.Declaration.IndexOf("ToString", StringComparison.Ordinal);
+            int declaration;
+            if (row.ExtensionReceiver != null)
+                declaration = EditorSourceDeclarations.ExtensionMethod(library, "ToString", 0, row.ExtensionReceiver);
+            else
+            {
+                const string instanceSignature = "public immutable String ToString()";
+                int start = library.Text.IndexOf(instanceSignature, StringComparison.Ordinal);
+                Assert.True(start >= 0, "String's instance ToString declaration was not found.");
+                declaration = start + instanceSignature.IndexOf("ToString", StringComparison.Ordinal);
+            }
             var expected = model.Definition(library.Path, declaration);
             Assert.NotNull(expected);
             Assert.Equal(expected, model.Definition(source.Path, use));
             string hover = Json(model.Hover(source.Path, use)).GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains("String", hover);
             Assert.Contains("ToString", hover);
+            Assert.Contains("immutable", hover);
             Assert.DoesNotContain('$', hover);
             var help = Json(model.SignatureHelp(source.Path, use + "ToString(".Length));
             var signature = help.GetProperty("signatures")[help.GetProperty("activeSignature").GetInt32()];

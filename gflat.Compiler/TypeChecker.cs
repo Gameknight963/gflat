@@ -1709,7 +1709,8 @@ namespace gflat
             return false;
         }
 
-        public static bool TypesMatchPublic(TypeExpression a, TypeExpression b, SymbolTable? symbols = null)
+        // Inferred literals require exact dimensions; other callers may match unsized views.
+        public static bool TypesMatchPublic(TypeExpression a, TypeExpression b, SymbolTable? symbols = null, bool exactArraySizes = false)
         {
             if (IsError(a) || IsError(b))
             {
@@ -1726,25 +1727,26 @@ namespace gflat
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is ReferenceTypeExpression ra && b is ReferenceTypeExpression rb)
-                return TypesMatchPublic(ra.Inner, rb.Inner, symbols);
+                return TypesMatchPublic(ra.Inner, rb.Inner, symbols, exactArraySizes);
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
-                return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatchPublic(pa.Inner, pb.Inner, symbols);
+                return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatchPublic(pa.Inner, pb.Inner, symbols, exactArraySizes);
             if (a is ManagedTypeExpression ma && b is ManagedTypeExpression mb)
                 return ma.IsNullable == mb.IsNullable && ma.IsReadOnly == mb.IsReadOnly &&
-                    (ma.Collector == null && mb.Collector == null || ma.Collector != null && mb.Collector != null && TypesMatchPublic(ma.Collector, mb.Collector, symbols)) && TypesMatchPublic(ma.Inner, mb.Inner, symbols);
+                    (ma.Collector == null && mb.Collector == null || ma.Collector != null && mb.Collector != null && TypesMatchPublic(ma.Collector, mb.Collector, symbols, exactArraySizes)) && TypesMatchPublic(ma.Inner, mb.Inner, symbols, exactArraySizes);
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
-                return TypesMatchPublic(aa.ElementType, ab.ElementType, symbols) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
+                return TypesMatchPublic(aa.ElementType, ab.ElementType, symbols, exactArraySizes) &&
+                    (aa.Size == ab.Size || !exactArraySizes && (aa.Size == null || ab.Size == null));
             if (a is FunctionPointerTypeExpression fa && b is FunctionPointerTypeExpression fb)
             {
                 if (fa.IsSignature != fb.IsSignature || fa.IsManaged != fb.IsManaged || fa.IsNullable != fb.IsNullable)
                     return false;
-                if (!TypesMatchPublic(fa.ReturnType, fb.ReturnType, symbols))
+                if (!TypesMatchPublic(fa.ReturnType, fb.ReturnType, symbols, exactArraySizes))
                     return false;
                 if (fa.ParameterTypes.Count != fb.ParameterTypes.Count)
                     return false;
                 for (int i = 0; i < fa.ParameterTypes.Count; i++)
                 {
-                    if (!TypesMatchPublic(fa.ParameterTypes[i], fb.ParameterTypes[i], symbols))
+                    if (!TypesMatchPublic(fa.ParameterTypes[i], fb.ParameterTypes[i], symbols, exactArraySizes))
                         return false;
                 }
                 return true;
@@ -5526,7 +5528,7 @@ namespace gflat
                     continue;
                 }
                 elementType ??= type;
-                if (!NeedsCreationTarget(node) && TypeName(elementType) != TypeName(type))
+                if (!NeedsCreationTarget(node) && !TypesMatchPublic(elementType, type, _symbols, exactArraySizes: true))
                     throw new TypeCheckException("Array literal elements must have matching types and dimensions", element.Line);
                 if (!ValidateCopyUse(element, type))
                     throw new TypeCheckException("Array literals cannot copy destructor-bearing elements; use fresh values", element.Line);

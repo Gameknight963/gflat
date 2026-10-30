@@ -1,6 +1,9 @@
 #requires -PSEdition Desktop
 # The installed Visual Studio SDK checks require Windows PowerShell/.NET Framework.
-param([string]$Package = (Join-Path $PSScriptRoot 'bin/Release/net472/gflat.VisualStudio.vsix'))
+param(
+    [string]$Package = (Join-Path $PSScriptRoot 'bin/Release/net472/gflat.VisualStudio.vsix'),
+    [switch]$NoRestore
+)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -100,7 +103,9 @@ try {
         $env:GFLAT_HOVER_CATALOG = $catalog
         $env:GFLAT_HOVER_CAPTURE = $capture
     }
-    dotnet test (Join-Path $repoRoot 'gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj')
+    $editorTestArguments = @('test', (Join-Path $repoRoot 'gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj'), '-m:1', '-nodeReuse:false')
+    if ($NoRestore) { $editorTestArguments += '--no-restore' }
+    dotnet @editorTestArguments
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
@@ -367,12 +372,12 @@ int SmokeCore() {
     pipelineBase32.Complete();
     if (pipelineBase32Sink.Length != 8 || pipelineBase32Payload[8] != '\0') return 9043;
     for (nuint i = 0; i < 8; i++) if (pipelineBase32Payload[i] != "IFBA===="[i]) return 9044;
-    BinaryBufferReader pipelineEncodedSource = new((readonly(byte)*)pipelineBase32Payload, 8);
+    BinaryBufferReader pipelineEncodedSource = new((&pipelineBase32Payload[0]).reinterpret<readonly(byte)*>(), 8);
     IByteReader* pipelineEncodedInput = &pipelineEncodedSource;
     char[3] pipelineDecodedPayload; BufferWriter pipelineDecodedSink = new(pipelineDecodedPayload, 3);
     Base32Decoder pipelineDecoder = new(&pipelineDecodedSink);
     if (pipelineEncodedInput.CopyTo(&pipelineDecoder, pipelineBase32Scratch, 1) != 8 || pipelineDecodedSink.Length != 2) return 9045;
-    pipelineDecoder.Write((readonly(char)*)1, 0); pipelineDecoder.Complete(); pipelineDecoder.Complete();
+    pipelineDecoder.Write(((nuint)1).reinterpret<readonly(char)*>(), 0); pipelineDecoder.Complete(); pipelineDecoder.Complete();
     if (pipelineDecodedPayload[0] != 'A' || pipelineDecodedPayload[1] != 'B' || pipelineDecodedPayload[2] != '\0') return 9046;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
@@ -852,7 +857,7 @@ int SmokeHashesAndViews() {
         byte[32] batchDigest = batchHash.GetHash();
         if (batchDigest[0] != (byte)0xba || batchDigest[31] != (byte)0xad) return 128;
         char[64] batchHashHex; nuint batchHashWritten = 0;
-        if (!Hex::TryEncode((readonly(char)*)batchHash.GetHash(), 32,
+        if (!Hex::TryEncode((&batchDigest[0]).reinterpret<readonly(char)*>(), 32,
             batchHashHex, 64, ref batchHashWritten, false)) return 129;
         if (batchHashWritten != 64 || batchHashHex[0] != 'b' || batchHashHex[1] != 'a'
             || batchHashHex[62] != 'a' || batchHashHex[63] != 'd') return 130;

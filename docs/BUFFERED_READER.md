@@ -19,8 +19,9 @@ it is separate from buffer allocation. The existing constructor and default
 capacity retain their behavior.
 
 
-Use it when small reads, such as [stream varints](STREAM_VARINT.md), would otherwise
-make many underlying source calls. Read-ahead is explicit: wrapping a source permits
+Use it when small reads, such as [stream varints](STREAM_VARINT.md) or
+[counted lines](BYTE_READERS.md#read-counted-lines-from-any-byte-source), would
+otherwise make many underlying source calls. Read-ahead is explicit: wrapping a source permits
 a refill of the entire configured capacity even when the consumer requested one byte.
 No global cache or prefetch thread is involved.
 

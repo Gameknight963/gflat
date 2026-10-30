@@ -32,6 +32,7 @@ launch page sets arguments and working directory; see [debugging projects](../do
 - [tail](tail/README.md): print the last lines of a file.
 - [sample-lines](sample-lines/README.md): sample file lines without replacement.
 - [sort-lines](sort-lines/README.md): sort stdin lines in ordinal byte order.
+- [distinct-lines](distinct-lines/README.md): keep the first occurrence of each counted stdin line.
 - [stamp-lines](stamp-lines/README.md): prefix piped lines with UTC timestamps.
 - [word-count](word-count/README.md): count case-insensitive ASCII words in a file.
 - [number-stats](number-stats/README.md): stream integer counts, exact sums, and extrema.

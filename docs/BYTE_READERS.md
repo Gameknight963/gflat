@@ -14,6 +14,11 @@ their ownership. Keep each concrete value alive, unmoved and open for every call
 through its borrowed interface pointer. The interface does not add closing, seeking,
 length or ownership semantics.
 
+Use [BufferedReader](BUFFERED_READER.md) to coalesce small reads, or
+[LimitedReader](../Standard/core/IO/LIMITED_READER.md) to bound a payload.
+Deferred [byte enumeration](#enumerate-bytes-without-owning-the-source) and
+[line enumeration](#enumerate-lines-without-owning-the-source) use this same protocol.
+
 ## Helpers
 
 Import `Standard::IO` for these extensions on `IByteReader*`:
@@ -237,6 +242,10 @@ as BufferedReader retain their own error-latching policy.
 make independent copies; a zero-allocation query chain is not promised.
 Take(0) performs no reads. Early breaks and exceptions release the iterator's
 String normally and leave the reader open at its consumed cursor.
+
+The [distinct-lines tool](../examples/distinct-lines/README.md) combines a
+caller-buffered stdin reader, LineSequence and HashSet<String> to preserve the
+first occurrence of each counted line without copying duplicate keys into the set.
 
 ## Decode file or network input through the same consumer
 

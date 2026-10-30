@@ -4,6 +4,10 @@ The optional `libc/IO/FileLineSequence.gf` source adds `FileLineSequence` and
 the borrowed `File.Lines()` extension. It uses `IO/File.gf`, `IO/FileLines.gf`,
 `String`, and the existing core sequence/query types.
 
+For any IByteReader source, including BufferedReader, use
+[LineSequence and EnumerateLines](BYTE_READERS.md#enumerate-lines-without-owning-the-source).
+They provide the same reusable-current-line pattern without depending on File.
+
 ```csharp
 using Standard::Text;
 using Standard; using Standard::IO; using Standard::Queries; using Standard::Collections;

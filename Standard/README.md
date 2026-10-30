@@ -74,7 +74,7 @@ implementation lives in `libc`.
 | Buffered output | `BufferedWriter` | [Coalesce writes with caller-owned scratch](../docs/TEXT_WRITERS.md#buffer-small-writes-before-forwarding) |
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](../docs/LINE_PREFIX_WRITER.md) |
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
-| Byte readers | `IByteReader`, borrowed `ReadExactly`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](../docs/BYTE_READERS.md) |
+| Byte readers | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](../docs/BYTE_READERS.md) |
 | Binary scalar IO | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Borrowed binary IO](../docs/BINARY_IO.md) |
 | Buffered input | `BufferedReader` | [Read-ahead, cursor lifetime and ownership](../docs/BUFFERED_READER.md) |
 | Bounded input | `LimitedReader` | [Read one payload without consuming its tail](core/IO/LIMITED_READER.md) |

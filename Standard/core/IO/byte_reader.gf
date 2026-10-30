@@ -1,5 +1,24 @@
 namespace Standard::IO;
 
+/// Returns one byte from 0 through 255, or -1 when the source reports EOF.
+/// Performs one positive one-byte read; malformed counts raise IOException.
+/// Source exceptions propagate unchanged and may leave consumed input.
+/// Borrows input for this call; does not allocate a buffer, close, or rewind it.
+public int ReadByte(IByteReader* input)
+{
+    char value = '\0';
+    nuint received = input.Read(&value, 1);
+    if (received > 1) throw new IOException("Byte reader returned more than requested");
+    if (received == 0) return -1;
+    return (int)(byte)value;
+}
+
+extension IByteReader
+{
+    public int ReadByte()
+    => Standard::IO::ReadByte(this);
+}
+
 /// Reads through short results until count bytes are stored, or throws on early EOF.
 /// Earlier input and buffer writes remain on failure. Zero count still validates the source.
 /// Borrows input and writable data for this call; they must remain alive and disjoint.

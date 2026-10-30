@@ -18,6 +18,9 @@ length or ownership semantics.
 
 Import `Standard::IO` for these extensions on `IByteReader*`:
 
+- `ReadByte()` returns one byte as an int from 0 through 255, or -1 at EOF.
+  It makes one positive one-byte read, rejects over-reported counts, and propagates
+  source errors unchanged. Byte 255 is data and is never confused with EOF.
 - `ReadExactly(data, count)` loops through short reads and throws `EndOfStreamException`
   if EOF arrives before `count`. A zero-byte operation calls the source once to preserve
   its state validation. Reader exceptions propagate unchanged.

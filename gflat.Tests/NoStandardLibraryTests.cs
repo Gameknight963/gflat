@@ -9,6 +9,34 @@ public class NoStandardLibraryTests
     private static readonly CompilationOptions Bare = new() { NoStdLib = true };
 
     [Fact]
+    public void AllCoreSourcesCheckWithOnlyExplicitHostMemoryContracts()
+    {
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard", "core"),
+                "*.gf", SearchOption.AllDirectories)
+            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
+        Assert.NotEmpty(sources);
+        Compiler.Check(sources.Append(new SourceFile("core-host.gf", """
+            using Standard::Collections;
+            using Standard::Memory;
+            using Standard::Text;
+            namespace Memory {
+                private extern void*? HostAllocate(nuint count);
+                private extern void HostFree(void* storage);
+                public void*? Allocate(nuint count) => HostAllocate(count);
+                public void Free(void* storage) nothrow { HostFree(storage); }
+            }
+            int main() {
+                Vector<int> values = new();
+                values.Add(42);
+                Span<int> view = values.AsSpan();
+                String text = view[0].ToString();
+                if (text.Length != 2) return 1;
+                return 0;
+            }
+            """)), options: new() { NoStdLib = true, NoBuiltins = true });
+    }
+
+    [Fact]
     public void CheckingDoesNotInjectAnyLibrarySources()
     {
         var (unit, _) = Compiler.Check("class Attribute {} class Exception {} int main() => 0;", options: Bare);

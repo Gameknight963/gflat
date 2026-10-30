@@ -5,8 +5,8 @@ the borrowed `File.Lines()` extension. It uses `IO/File.gf`, `IO/FileLines.gf`,
 `String`, and the existing core sequence/query types.
 
 ```csharp
-using std::Text;
-using std; using std::IO; using std::Queries; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::IO; using Standard::Queries; using Standard::Collections;
 
 int main()
 {

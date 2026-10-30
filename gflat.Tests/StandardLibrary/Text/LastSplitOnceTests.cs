@@ -87,7 +87,7 @@ public sealed class LastSplitOnceTests
             """, optimization);
 
     private const string Preamble = """
-        using std; using std::Text; using std::Memory;int allocations=0;
+        using Standard; using Standard::Text; using Standard::Memory;int allocations=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){allocations++;return null;}
             public replace void Free(void* pointer) nothrow{}
@@ -115,7 +115,7 @@ public sealed class LastSplitOnceTests
         string[] files = ["Memory/Span.gf", "Collections/IEnumerable.gf", "Queries/Enumerable.gf",
             "Text/CString.gf", "Text/ByteSearch.gf", "Text/text_split_last_once_span.gf", "Text/text_split_last_once_pattern_span.gf"];
         var sources = files.Select(name => new SourceFile(name,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("last-split-once.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

@@ -6,10 +6,10 @@ public class HashMapManagedLifetimeTests
     public void GrowthAndTombstoneRemovalKeepOnlyLiveManagedValuesReachable()
     {
         string[] files=["core/IHashable.gf","core/IEquatable.gf","core/Hashing/primitive_hashing.gf","core/Collections/HashMap.gf","libc/GC.gf","libc/TracingCollector.gf"];
-        var sources=files.Select(file=>new SourceFile("std/"+file,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",file))));
+        var sources=files.Select(file=>new SourceFile("Standard/"+file,
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",file))));
         var result=CompilerTestHelper.Run(sources.Append(new SourceFile("main.gf","""
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             class Node { public int Value; public Node^? Next; public Node(int n) { Value=n; } }
             void Fill(HashMap<int,Node^>* map) {
                 for(int i=0;i<32;i++) {

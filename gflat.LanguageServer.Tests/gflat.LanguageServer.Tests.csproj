@@ -12,11 +12,11 @@
     <PackageReference Include="TextMateSharp" Version="2.0.4" />
     <Content Include="../editors/VisualStudio/gflat.tmLanguage.tmTheme" Link="EditorAssets/gflat.tmLanguage.tmTheme" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../editors/shared/*.json" Link="EditorAssets/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../std/core/Text/String.gf" Link="EditorFixtures/String.gf" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../std/core/Text/ByteSearch.gf" Link="EditorFixtures/ByteSearch.gf" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../std/**/*.gf" Link="StandardLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Standard/core/Text/String.gf" Link="EditorFixtures/String.gf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Standard/core/Text/ByteSearch.gf" Link="EditorFixtures/ByteSearch.gf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Standard/**/*.gf" Link="StandardLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../libraries/platform/**/*.gf" Link="PlatformLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../std/core/IHashable.gf;../std/core/IEquatable.gf;../std/core/IComparable.gf;../std/core/Hashing/primitive_hashing.gf;../std/core/IStringConvertable.gf;../std/core/Collections/HashMap.gf;../std/core/Collections/HashSet.gf;../std/core/Collections/Queue.gf;../std/core/Collections/Stack.gf;../std/core/Collections/Vector.gf;../std/core/Memory/Span.gf;../std/core/Collections/IEnumerable.gf;../std/core/Queries/Enumerable.gf"
+    <Content Include="../Standard/core/IHashable.gf;../Standard/core/IEquatable.gf;../Standard/core/IComparable.gf;../Standard/core/Hashing/primitive_hashing.gf;../Standard/core/IStringConvertable.gf;../Standard/core/Collections/HashMap.gf;../Standard/core/Collections/HashSet.gf;../Standard/core/Collections/Queue.gf;../Standard/core/Collections/Stack.gf;../Standard/core/Collections/Vector.gf;../Standard/core/Memory/Span.gf;../Standard/core/Collections/IEnumerable.gf;../Standard/core/Queries/Enumerable.gf"
              Link="EditorFixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
     <Compile Include="../gflat.Tests/ProjectFileFixture.cs" Link="ProjectFileFixture.cs" />

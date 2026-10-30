@@ -5,14 +5,14 @@ namespace gflat.Tests.Std.Memory;
 public class SpanTests
 {
     private static SourceFile[] Sources(string program) => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/Span.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
-        .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
     private static void Run(string program) => Assert.Equal(0, CompilerTestHelper.Run(Sources(program)).ExitCode);
 
     [Fact]
     public void ViewsSlicesAndCopiesShareStorage()
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 int[4] values = [10, 20, 30, 40];
                 Span<int> span = new Span<int>(values, 4);
@@ -36,7 +36,7 @@ public class SpanTests
     [Fact]
     public void EmptyViewsAndBoundsChecksHandleMaximumIndices()
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Span<int> empty = new Span<int>();
                 Span<readonly(int)> readonlyEmpty = empty.AsImmutable();
@@ -66,7 +66,7 @@ public class SpanTests
     [Fact]
     public void ReadOnlyViewAcceptsLiteralStorageAndPreservesEmbeddedNulls()
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 immutable(Span<readonly(char)>) text = new Span<readonly(char)>("a\0b", 3);
                 if (text.Length != (nuint)3 || text[(nuint)2] != 'b') return 1;
@@ -79,7 +79,7 @@ public class SpanTests
     [Fact]
     public void PointerElementsRespectDeepReadonlyAndStructElementsCopyByValue()
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Pair { public int x; }
             int main() {
                 int value = 4;
@@ -106,7 +106,7 @@ public class SpanTests
     [Fact]
     public void ReadonlyPointerElementsCannotBecomeMutable()
         => Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 int n = 0; int*[1] pointers = [&n];
                 Span<immutable(int*)> view = new Span<immutable(int*)>(pointers, 1);
@@ -119,7 +119,7 @@ public class SpanTests
     public void BorrowingAStringDoesNotAllocateOrFreeItsStorage()
     {
         var sources = Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
@@ -141,9 +141,9 @@ public class SpanTests
                 }
                 return 0;
             }
-            """).Append(new SourceFile("String.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/String.gf"))))
-                .Append(new SourceFile("ByteSearch.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ByteSearch.gf"))))
-                .Append(new SourceFile("IStringConvertable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/IStringConvertable.gf"))));
+            """).Append(new SourceFile("String.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/String.gf"))))
+                .Append(new SourceFile("ByteSearch.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ByteSearch.gf"))))
+                .Append(new SourceFile("IStringConvertable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/IStringConvertable.gf"))));
         var result = CompilerTestHelper.Run(sources);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("ASF", result.StandardOutput);
@@ -152,7 +152,7 @@ public class SpanTests
     [Fact]
     public void IndexingDoesNotImplicitlyCopyOwningElements()
         => Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Owner { public int value; ~Owner() {} }
             int main() {
                 Owner item = new Owner();
@@ -168,5 +168,5 @@ public class SpanTests
     [InlineData("Span<readonly(int)> s = new Span<readonly(int)>(a, 1); int* p = s.Data;")]
     [InlineData("immutable(Span<int>) s = new Span<int>(a, 1); Span<int> mutable = s.Slice(0);")]
     public void ReadonlyViewsCannotBeUsedToModifyStorage(string body)
-        => Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("using std; using std::Text; using std::Memory; using std::Queries; using std::Collections; int main() { int[1] a = [1]; " + body + " return 0; }")));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections; int main() { int[1] a = [1]; " + body + " return 0; }")));
 }

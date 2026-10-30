@@ -1,6 +1,6 @@
 # Numeric IP endpoints
 
-`std::Net::IpEndpoint` holds an [IpAddress](IP_ADDRESS.md) and a `ushort` port for
+`Standard::Net::IpEndpoint` holds an [IpAddress](IP_ADDRESS.md) and a `ushort` port for
 configuration validation, canonical logs, and collection keys. It is a copyable
 fixed value with no heap ownership, retained pointers, or operating-system state.
 
@@ -8,7 +8,7 @@ For example, validate a configured upstream address before passing its value to
 the rest of an application:
 
 ```csharp
-using std; using std::Net;
+using Standard; using Standard::Net;
 
 int main()
 {

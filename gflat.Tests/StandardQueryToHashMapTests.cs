@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryToHashMapTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny){denied++;return null;}if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -159,7 +159,7 @@ public sealed class StandardQueryToHashMapTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-to-hash-map.gf",program));
     private static void Run(string program,int optimization)
     {

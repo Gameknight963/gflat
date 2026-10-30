@@ -145,7 +145,7 @@ public class PlacementConstructionTests
 
     [Theory]
     [InlineData("S*? p = null; new* S() at p!;")]
-    [InlineData("void* memory = (void*)Memory::Allocate(32); S* p = (S*)((char*)memory + 1); new* S() at p;")]
+    [InlineData("void* memory = (void*)Memory::Allocate(32); S* p = ((char*)memory + 1).reinterpret<S*>(); new* S() at p;")]
     public void NullAndMisalignedStorageTrapBeforeConstructor(string body)
     {
         var result = CompilerTestHelper.Run("extern void exit(int code); struct S { public long n; public S() { exit(77); } } int main() { " + body + " return 0; }");

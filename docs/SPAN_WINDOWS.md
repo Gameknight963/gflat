@@ -5,7 +5,7 @@ Include `core/Collections/SpanWindows.gf` alongside `Memory/Span.gf`, `IEnumerab
 The full standard library includes these sources automatically.
 
 ```csharp
-using std; using std::Memory; using std::Collections;
+using Standard; using Standard::Memory; using Standard::Collections;
 int[5] samples = [1, 3, 5, 7, 9];
 Span<int> values = new(samples, 5);
 foreach (Span<int> pair in values.Windows(2)) {
@@ -46,7 +46,7 @@ A view does not extend an owning container's lifetime or root managed storage.
 elements or allocating for view construction/enumeration. For example:
 
 ```csharp
-using std::Memory;
+using Standard::Memory;
 int Average(Span<readonly(int)> window)
     => (window[0] + window[1] + window[2]) / 3;
 

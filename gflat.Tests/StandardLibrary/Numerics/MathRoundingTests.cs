@@ -37,7 +37,7 @@ public sealed class MathRoundingTests
             string scalar = wide ? "double" : "float", integer = wide ? "ulong" : "uint";
             int recordSize = wide ? 40 : 20;
             string program = $$"""
-                using std; using std::Numerics;
+                using Standard; using Standard::Numerics;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
@@ -56,7 +56,7 @@ public sealed class MathRoundingTests
                 """;
             var sources = new[]
             {
-                new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
+                new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
                 new SourceFile("main.gf", program)
             };
             string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Text;
 public class AsciiTests
 {
     private static IEnumerable<SourceFile> Sources(string code) =>
-        [new SourceFile("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ascii.gf"))), new SourceFile("main.gf", code)];
+        [new SourceFile("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ascii.gf"))), new SourceFile("main.gf", code)];
 
     [Fact]
     public void EveryByteMatchesAsciiClassificationAndCaseRules()
@@ -29,10 +29,10 @@ public class AsciiTests
                 ["IsPrintable"] = value is >= 32 and <= 126,
             };
             foreach (var (method, result) in expected)
-                checks.Add($"if (std::Text::Ascii::{method}((char){value}) != {result.ToString().ToLowerInvariant()}) return 1;");
-            checks.Add($"if ((byte)std::Text::Ascii::ToLower((char){value}) != (byte){(upper ? value + 32 : value)}) return 2;");
-            checks.Add($"if ((byte)std::Text::Ascii::ToUpper((char){value}) != (byte){(lower ? value - 32 : value)}) return 3;");
-            checks.Add($"digit = (byte)99; if (std::Text::Ascii::TryHexValue((char){value}, &digit) != {hex.ToString().ToLowerInvariant()}) return 4;");
+                checks.Add($"if (Standard::Text::Ascii::{method}((char){value}) != {result.ToString().ToLowerInvariant()}) return 1;");
+            checks.Add($"if ((byte)Standard::Text::Ascii::ToLower((char){value}) != (byte){(upper ? value + 32 : value)}) return 2;");
+            checks.Add($"if ((byte)Standard::Text::Ascii::ToUpper((char){value}) != (byte){(lower ? value - 32 : value)}) return 3;");
+            checks.Add($"digit = (byte)99; if (Standard::Text::Ascii::TryHexValue((char){value}, &digit) != {hex.ToString().ToLowerInvariant()}) return 4;");
             int decoded = digit ? value - 48 : value is >= 65 and <= 70 ? value - 55 : value is >= 97 and <= 102 ? value - 87 : 0;
             checks.Add($"if (digit != (byte){decoded}) return 5;");
         }
@@ -42,5 +42,5 @@ public class AsciiTests
 
     [Fact]
     public void AsciiUtilitiesCompileWithoutStandardLibraryDefinitions()
-        => Compiler.Emit(Sources("int main() => (int)(byte)std::Text::Ascii::ToLower('A');"), options: new() { NoStdLib = true });
+        => Compiler.Emit(Sources("int main() => (int)(byte)Standard::Text::Ascii::ToLower('A');"), options: new() { NoStdLib = true });
 }

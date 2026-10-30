@@ -4,17 +4,17 @@ public sealed class IntegerSequenceTests
 {
     private static ExecutionResult Run(string program) => CompilerTestHelper.Run([
         new SourceFile("main.gf", program),
-        new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
-        new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Queries/Enumerable.gf"))),
-        new SourceFile("core/Queries/IntRange.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Queries", "IntRange.gf"))),
-        new SourceFile("core/Queries/FilteredIntRange.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Queries", "FilteredIntRange.gf")))
+        new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Collections/IEnumerable.gf"))),
+        new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Queries/Enumerable.gf"))),
+        new SourceFile("core/Queries/IntRange.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Queries", "IntRange.gf"))),
+        new SourceFile("core/Queries/FilteredIntRange.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Queries", "FilteredIntRange.gf")))
     ]);
 
     [Fact]
     public void ReadonlyRangesSupportQueriesWithoutMutatingTheSource()
     {
         var result = Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             bool Even(int value) => value % 2 == 0;
             int main() {
                 immutable(IntRange) source = new IntRange(0, 10);
@@ -40,7 +40,7 @@ public sealed class IntegerSequenceTests
     public void LazyPipelineIsRepeatableAndAllocatesNoMemory()
     {
         var result = Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint count);
             extern void free(void* storage);
             extern int printf(immutable(char*) text, ...);
@@ -66,7 +66,7 @@ public sealed class IntegerSequenceTests
     public void PredicateRunsOnlyWhenAndAsFarAsRequested()
     {
         var result = Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             extern int printf(immutable(char*) text, ...);
             bool Odd(int n) { printf("%d", n); return n % 2 == 1; }
             int main() {
@@ -85,7 +85,7 @@ public sealed class IntegerSequenceTests
     public void SkippingAllMatchesStillConsumesTheFilteredInput()
     {
         var result = Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             extern int printf(immutable(char*) text, ...);
             bool Seen(int n) { printf("%d", n); return true; }
             int main() {
@@ -101,7 +101,7 @@ public sealed class IntegerSequenceTests
     public void OperationOrderAndEmptySequencesArePreserved()
     {
         var result = Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 if (new IntRange(0, 10).Take(4).Where((int n) => n % 2 == 0).Sum() != 2L) return 1;
                 if (new IntRange(0, 10).Where((int n) => n % 2 == 0).Take(4).Sum() != 12L) return 2;
@@ -122,7 +122,7 @@ public sealed class IntegerSequenceTests
     public void BoundsDoNotOverflowAndSumWidensToLong()
     {
         var result = Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 if (new IntRange(2147483647, 1).Sum() != 2147483647L) return 1;
                 if (new IntRange(2147483646, 2).Sum() != 4294967293L) return 2;
@@ -147,7 +147,7 @@ public sealed class IntegerSequenceTests
     public void InvalidCountsThrow(string expression)
     {
         Assert.Equal(42, Run($$"""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 try { {{expression}}; return 1; }
                 catch (ref Exception error) { return 42; }
@@ -159,7 +159,7 @@ public sealed class IntegerSequenceTests
     public void CurrentIsValidOnlyBetweenSuccessfulMoveNextAndExhaustion()
     {
         Assert.Equal(42, Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 IntRange::Enumerator iterator = new IntRange(42, 1).GetEnumerator();
                 try { iterator.Current; return 1; } catch (ref Exception error) {}
@@ -175,7 +175,7 @@ public sealed class IntegerSequenceTests
     public void PredicateExceptionsPropagateThroughForeach()
     {
         Assert.Equal(42, Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 int total = 0;
                 try {

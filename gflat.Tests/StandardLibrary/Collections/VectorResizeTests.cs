@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class VectorResizeTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("vector-resize.gf", code));
 
@@ -60,7 +60,7 @@ public sealed class VectorResizeTests
                     if(offset!={{{hex.Length}}})return 5;
                     Vector<nuint> scratch=new();scratch.Reserve(64);
                     int before=attempts;deny=true;
-                    scratch.Resize(64,(nuint)0);scratch.Resize<nuint>(3,0);scratch.Resize(3,(nuint)9);
+                    scratch.Resize(64,(nuint)0);Standard::Collections::Resize<nuint>(ref scratch,3,0);scratch.Resize(3,(nuint)9);
                     deny=false;
                     if(attempts!=before||scratch.Count!=3||scratch[0]!=0||scratch.Capacity!=64)return 3;
                 }
@@ -70,7 +70,7 @@ public sealed class VectorResizeTests
             """, optimization);
 
         const string unique = """
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             struct Unique {
                 private int* counter;
                 public Unique(int* value){counter=value;}
@@ -152,7 +152,7 @@ public sealed class VectorResizeTests
             """, optimization);
 
     private const string Memory = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         int attempts=0;int allocations=0;int releases=0;int failAt=0;bool deny=false;
         extern void*? malloc(nuint bytes);extern void free(void* value);
         namespace Memory {

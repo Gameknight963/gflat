@@ -34,7 +34,7 @@ public sealed class FileExtraLongTests
             string outputPath = Path.Combine(directory, "output.bin");
             File.WriteAllBytes(inputPath, records);
             Run($$$"""
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 bool deny = false;
                 namespace Memory {
                     public replace void*? Allocate(nuint count) {
@@ -92,7 +92,7 @@ public sealed class FileExtraLongTests
             }
             string target = Path.Combine(directory, "output.bin");
             Run($$$"""
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 int main() {
                     readonly(char)*[16] paths = [{{{string.Join(", ", paths)}}}];
                     for (nuint count = 0; count < 16; count++) {
@@ -143,7 +143,7 @@ public sealed class FileExtraLongTests
     private static void Run(string code, int optimization)
     {
         var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("file-extra-long.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

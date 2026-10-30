@@ -24,7 +24,7 @@ public class BitConverterTests
         Assert.Equal(floats, floatReference);
         Assert.Equal(doubles, doubleReference);
         string code = $$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 uint[{{floats.Length}}] singles = [{{string.Join(",", floats.Select(bits => bits + "u"))}}];
                 uint[{{floatReference.Length}}] expectedSingles = [{{string.Join(",", floatReference.Select(bits => bits + "u"))}}];
@@ -47,7 +47,7 @@ public class BitConverterTests
                 return 0;
             }
             """;
-        SourceFile[] sources = [new("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BitConverter.gf"))), new("main.gf", code)];
+        SourceFile[] sources = [new("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))), new("main.gf", code)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "fptoui", "fptosi", "uitofp", "sitofp", " fadd ", " fmul ", " fcmp " })
             Assert.DoesNotContain(forbidden, ir);

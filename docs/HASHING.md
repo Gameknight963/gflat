@@ -1,6 +1,6 @@
 # Equality, hashing, and ordering
 
-Core provides three independent contracts in `std`:
+Core provides three independent contracts in `Standard`:
 
 - `IHashable.GetHashCode()` returns `nuint`.
 - `IEquatable<T>.Equals(immutable(T)* other)` compares borrowed values.
@@ -55,7 +55,7 @@ pointer-sized width during mixing; the result is a 32-bit hash returned as
 before combining:
 
 ```csharp
-using std;
+using Standard;
 struct Point : IHashable, IEquatable<Point> {
     public int X;
     public int Y;
@@ -63,8 +63,8 @@ struct Point : IHashable, IEquatable<Point> {
     public immutable bool Equals(immutable(Point)* other)
         => X == other.X && Y == other.Y;
     public immutable nuint GetHashCode() nothrow
-        => std::Hashing::Combine(std::Hashing::Integer((ulong)X),
-                                std::Hashing::Integer((ulong)Y));
+        => Standard::Hashing::Combine(Standard::Hashing::Integer((ulong)X),
+                                Standard::Hashing::Integer((ulong)Y));
 }
 ```
 

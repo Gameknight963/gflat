@@ -12,7 +12,7 @@ Linux kernel 3.17 or newer. Reference
 ```
 
 This project uses the ordinary Linux toolchain's libc link; no extra native
-library flag is required. It needs no std source/runtime definitions. It is
+library flag is required. It needs no Standard source/runtime definitions. It is
 separate from `Linux.gfproj`, so existing clock-only consumers do not acquire
 its source or newer glibc symbol requirement. Direct source users must target
 an ABI where `nuint` matches C `size_t`; the source does not detect the OS or

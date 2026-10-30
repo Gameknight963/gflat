@@ -8,7 +8,7 @@ public sealed class DequeIndexEditorTests
     [Fact]
     public void IndexedMutationsHaveClosedElementTypesAndNavigateToTheirPublicDeclarations()
     {
-        const string text="using std; using std::Collections;void Probe(){Deque<int> values=new();values.AddLast(1);values.Insert(0,2);int removed=values.RemoveAt(1);}";
+        const string text="using Standard; using Standard::Collections;void Probe(){Deque<int> values=new();values.AddLast(1);values.Insert(0,2);int removed=values.RemoveAt(1);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="Deque.gf");
@@ -34,7 +34,7 @@ public sealed class DequeIndexEditorTests
             Assert.Equal(row.Arity,selected.GetProperty("parameters").GetArrayLength());
             string label=selected.GetProperty("label").GetString()!;
             Assert.Contains("nuint index",label);
-            if(row.Arity==2)Assert.Contains("int value",label);else Assert.Contains("int std::Collections::Deque<int>::RemoveAt",label);
+            if(row.Arity==2)Assert.Contains("int value",label);else Assert.Contains("int Standard::Collections::Deque<int>::RemoveAt",label);
         }
     }
     private static JsonElement Json(object? value)=>JsonSerializer.SerializeToElement(value,Protocol.JsonOptions);

@@ -6,7 +6,7 @@ public sealed class StableSortTests
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/stable_sort.gf",
             "Collections/Vector.gf", "Memory/Span.gf", "Text/String.gf", "Text/ByteSearch.gf", "IStringConvertable.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
 
     private static void Run(string code, int optimization)
@@ -55,7 +55,7 @@ public sealed class StableSortTests
                 }
             }
             Run("""
-                using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 extern void* fopen(readonly(char)* path, readonly(char)* mode);
                 extern nuint fread(void* data, nuint size, nuint count, void* stream);
                 extern int fclose(void* stream);
@@ -90,7 +90,7 @@ public sealed class StableSortTests
     }
 
     private const string Owners = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int made=0;int dead=0;int budget=-1;int comparisons=0;
         int allocations=0;int releases=0;int denyAfter=-1;bool inconsistent=false;
         extern void*? malloc(nuint bytes);extern void free(void* storage);

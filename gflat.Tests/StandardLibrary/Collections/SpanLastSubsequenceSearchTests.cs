@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class SpanLastSubsequenceSearchTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocated = 0; int released = 0; bool deny = false;
         namespace Memory {
@@ -21,10 +21,10 @@ public sealed class SpanLastSubsequenceSearchTests
         string[] names = ["core/Exception.gf", "core/IEquatable.gf", "core/Collections/IEnumerable.gf",
             "core/Queries/Enumerable.gf", "core/Memory/Span.gf", "core/Collections/EqualityComparer.gf",
             "core/Collections/span_algorithms.gf", "core/Collections/default_equality.gf"];
-        var files = names.Select(name => Path.Combine(AppContext.BaseDirectory, "Std", name))
+        var files = names.Select(name => Path.Combine(AppContext.BaseDirectory, "Standard", name))
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("old-equality-subset.gf", """
-                using std; using std::Memory; using std::Collections;
+                using Standard; using Standard::Memory; using Standard::Collections;
                 namespace Memory {
                     public void*? Allocate(nuint bytes) => null;
                     public void Free(void* storage) nothrow { }
@@ -193,7 +193,7 @@ public sealed class SpanLastSubsequenceSearchTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("span-last-subsequence-search.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

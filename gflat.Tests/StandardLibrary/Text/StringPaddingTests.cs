@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringPaddingTests
 {
     private const string Counters = """
-        using std; using std::Text;
+        using Standard; using Standard::Text;
         extern void*? malloc(nuint size);
         extern void free(void* storage);
         int allocations = 0;
@@ -99,7 +99,7 @@ public sealed class StringPaddingTests
     [InlineData(2)]
     public void FailedGrowthAndImpossibleWidthLeaveStorageAndContentsUnchanged(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {
@@ -134,7 +134,7 @@ public sealed class StringPaddingTests
 
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
 
     private static void Run(string code, int optimization)

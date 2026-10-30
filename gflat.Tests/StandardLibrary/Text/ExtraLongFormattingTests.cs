@@ -35,7 +35,7 @@ public sealed class ExtraLongFormattingTests
                     nuint length = 0; while(expected[test][length] != '\0') length++;
                     for(nuint capacity = 0; capacity <= 41; capacity++) {
                         for(nuint i=0;i<43;i++) output[i]='Z'; written=99;
-                        bool success=std::Text::IntegerFormatting::TryFormat(values[test],&output[1],capacity,ref written);
+                        bool success=Standard::Text::IntegerFormatting::TryFormat(values[test],&output[1],capacity,ref written);
                         if(success != (capacity>=length))return 1;
                         if(!success){if(written!=0)return 2;for(nuint i=0;i<43;i++)if(output[i]!='Z')return 3;}
                         else{if(written!=length||output[0]!='Z')return 4;
@@ -43,11 +43,11 @@ public sealed class ExtraLongFormattingTests
                          for(nuint i=written+1;i<43;i++)if(output[i]!='Z')return 6;}
                     }
                 }
-                if(std::Text::IntegerFormatting::TryFormat((extralong)0,((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 7;
+                if(Standard::Text::IntegerFormatting::TryFormat((extralong)0,((nuint)1).reinterpret<char*>(),0,ref written)||written!=0)return 7;
                 return 0;
             }
             """;
-        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/IntegerFormatting.gf"))), new("main.gf",code)];
+        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/IntegerFormatting.gf"))), new("main.gf",code)];
         string ir = Compiler.Emit(sources, options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         Assert.DoesNotMatch(@"\b(?:sdiv|udiv|srem|urem)\s+i128\b",ir);
         foreach(string forbidden in new[]{"__divti3","__udivti3","llvm.memcpy","@malloc","@free","__gflat_eh","gflat$Memory$"}) Assert.DoesNotContain(forbidden,ir);
@@ -62,7 +62,7 @@ public sealed class ExtraLongFormattingTests
     public void WriterReceivesOneCountedWriteAndPreservesItsException(int optimization)
     {
         string code = """
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             struct Writer : ITextWriter {
                 public int Calls; public bool Fail;
                 public void Write(readonly(char)* text,nuint count) {
@@ -85,7 +85,7 @@ public sealed class ExtraLongFormattingTests
                 return 0;
             }
             """;
-        var sources = new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name == "IntegerFormatting.gf" ? "Text/IntegerFormatting.gf" : name == "ExtraLongFormatting.gf" ? "extra_long_format.gf" : name)))).Append(new SourceFile("main.gf",code));
+        var sources = new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name == "IntegerFormatting.gf" ? "Text/IntegerFormatting.gf" : name == "ExtraLongFormatting.gf" ? "extra_long_format.gf" : name)))).Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

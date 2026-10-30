@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class SpanPrefixSuffixTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         int attempts=0;bool deny=false;
         namespace Memory{
@@ -81,7 +81,7 @@ public sealed class SpanPrefixSuffixTests
     [InlineData(2)]
     public void ExactDocumentedExampleAlsoKeepsTextExtensionCallsUnambiguous(int optimization)
     {
-        string markdown=File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Guides/std/core/Collections/ALGORITHMS.md"));
+        string markdown=File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Guides/Standard/core/Collections/ALGORITHMS.md"));
         int heading=markdown.IndexOf("## Prefix and suffix matching",StringComparison.Ordinal);
         Assert.True(heading>=0);
         int fence=markdown.IndexOf("```csharp",heading,StringComparison.Ordinal);Assert.True(fence>=0);
@@ -100,14 +100,14 @@ public sealed class SpanPrefixSuffixTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("span-prefix-suffix.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Span prefix/suffix exit {result.ExitCode}: {result.StandardError}");
     }
 
     private const string Contracts = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts=0; int allocated=0; int released=0; bool deny=false;
         namespace Memory {

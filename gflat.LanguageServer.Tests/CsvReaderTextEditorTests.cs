@@ -9,7 +9,7 @@ public sealed class CsvReaderTextEditorTests
     [Fact]
     public void HasValueIsAVisibleImmutableNoThrowBooleanPropertyWithItsSourceDefinition()
     {
-        const string text="using std; using std::Text; using std::Csv;bool Observe(immutable(CsvReader)* reader) nothrow=>reader.HasValue;";
+        const string text="using Standard; using Standard::Text; using Standard::Csv;bool Observe(immutable(CsvReader)* reader) nothrow=>reader.HasValue;";
         var (model,source,files)=Analyze(text);int use=text.IndexOf("HasValue",StringComparison.Ordinal);
         Assert.Single(Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="HasValue");
         string hover=Hover(model,source,use);
@@ -23,12 +23,12 @@ public sealed class CsvReaderTextEditorTests
     [Fact]
     public void CopyValuePresentsItsQualifiedStaticReaderAndRefStringArguments()
     {
-        const string text="using std; using std::Text; using std::Csv;void Copy(immutable(CsvReader)* reader,ref String output){CsvReaderText::CopyValue(reader,ref output);}";
+        const string text="using Standard; using Standard::Text; using Standard::Csv;void Copy(immutable(CsvReader)* reader,ref String output){CsvReaderText::CopyValue(reader,ref output);}";
         var (model,source,files)=Analyze(text);int use=text.IndexOf("CopyValue",StringComparison.Ordinal);
         Assert.Single(Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="CopyValue");
         string hover=Hover(model,source,use);
         Assert.Contains("void",hover);Assert.Contains("static",hover);Assert.Contains("CopyValue",hover);Assert.Contains("CsvReader",hover);
-        Assert.Matches(@"\bref\s+(?:std::Text::)?String\s+output\b",hover);Assert.DoesNotContain('$',hover);
+        Assert.Matches(@"\bref\s+(?:Standard::Text::)?String\s+output\b",hover);Assert.DoesNotContain('$',hover);
         SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="CsvReaderText.gf");
         int declaration=library.Text.IndexOf("CopyValue(",StringComparison.Ordinal);Assert.True(declaration>=0);
         Definition(model,source,use,library,declaration);
@@ -38,7 +38,7 @@ public sealed class CsvReaderTextEditorTests
         Assert.Equal(2,signature.GetProperty("parameters").GetArrayLength());
         string label=signature.GetProperty("label").GetString()!;
         Assert.Contains("void",label);Assert.Contains("CopyValue",label);Assert.Contains("CsvReader",label);
-        Assert.Matches(@"\bref\s+(?:std::Text::)?String\s+output\b",label);Assert.DoesNotContain('$',label);
+        Assert.Matches(@"\bref\s+(?:Standard::Text::)?String\s+output\b",label);Assert.DoesNotContain('$',label);
     }
 
     private static (EditorModel Model,SourceFile Source,SourceFile[] Files) Analyze(string text)

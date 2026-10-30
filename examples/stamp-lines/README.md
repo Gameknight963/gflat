@@ -7,7 +7,7 @@ examples/stamp-lines/bin/Release/stamp-lines.exe < input.txt > stamped.txt
 
 On Linux, prefix the executable path with `./`; the default project output
 still uses `.exe`.
-Use matching compiler, std and platform libraries from this checkout: the example
+Use matching compiler, Standard and platform libraries from this checkout: the example
 requires the formatted LinePrefixWriter overload and optional SystemClock APIs.
 It takes no arguments. Redirect or pipe text into stdin; output goes to stdout.
 

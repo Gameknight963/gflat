@@ -1,12 +1,12 @@
 # Streaming hexadecimal decoding
 
-`std::Encoding::HexDecoder` implements `ITextWriter`: counted input is hexadecimal
+`Standard::Encoding::HexDecoder` implements `ITextWriter`: counted input is hexadecimal
 text and its borrowed destination receives binary bytes. It reuses `Hex::TryDecode`
 for complete pairs, accepting ASCII `0-9`, `a-f`, and `A-F`. Whitespace, separators,
 `0x` prefixes, NUL, non-ASCII bytes, and padding are rejected.
 
 ```csharp
-using std; using std::IO; using std::Encoding;
+using Standard; using Standard::IO; using Standard::Encoding;
 int main()
 {
     File input = File::OpenRead("input.hex");

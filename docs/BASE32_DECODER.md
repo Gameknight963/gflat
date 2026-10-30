@@ -1,6 +1,6 @@
 # Streaming Base32 decoding
 
-`std::Encoding::Base32Decoder` implements `ITextWriter`. It accepts counted uppercase
+`Standard::Encoding::Base32Decoder` implements `ITextWriter`. It accepts counted uppercase
 padded Base32 text, validates each complete group using the existing [Base32
 codec](BASE32.md), and sends decoded binary bytes to one borrowed synchronous
 sink. [Base32Encoder](BASE32_ENCODER.md) performs the opposite transformation.
@@ -12,8 +12,8 @@ output in a String. Use distinct input and output files: opening the output trun
 it, so the output path must not name or alias the input.
 
 ```csharp
-using std::IO;
-using std::Encoding;
+using Standard::IO;
+using Standard::Encoding;
 
 int main(int argc, char** argv)
 {

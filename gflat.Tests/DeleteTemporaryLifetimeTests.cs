@@ -60,7 +60,7 @@ public sealed class DeleteTemporaryLifetimeTests
     [InlineData(2)]
     public void ManagedReferencesInTemporaryReceiverRemainRootedThroughTargetDestruction(int optimization)
         => Run("""
-            using std;
+            using Standard;
             bool bad=false;int holders=0;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             struct Child{public int Value;public Child(){Value=0;}~Child(){GC::Collect();if(TracingCollector::ManagedCount!=1)bad=true;}}
@@ -80,7 +80,7 @@ public sealed class DeleteTemporaryLifetimeTests
     {
         var sources=new List<SourceFile>();
         if(managed)foreach(string name in new[]{"libc/GC.gf","libc/TracingCollector.gf"})
-            sources.Add(new SourceFile("std/"+name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))));
+            sources.Add(new SourceFile("Standard/"+name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))));
         sources.Add(new SourceFile("delete-temporary.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Delete temporary exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

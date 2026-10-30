@@ -1,8 +1,8 @@
 # ASCII byte utilities
 
-`core/Text/ascii.gf` provides `std::Text::Ascii` functions for the language's byte-sized
+`core/Text/ascii.gf` provides `Standard::Text::Ascii` functions for the language's byte-sized
 `char`. These functions do not interpret individual UTF-8 bytes as Unicode
-characters. They work without std, libc, allocation, or exception support.
+characters. They work without Standard, libc, allocation, or exception support.
 
 Classification functions are `IsAscii`, `IsDigit`, `IsLower`, `IsUpper`,
 `IsLetter`, `IsLetterOrDigit`, `IsHexDigit`, `IsWhiteSpace`, `IsControl`, and
@@ -26,9 +26,9 @@ embedded NULs; these operations continue past them and leave every non-letter
 byte unchanged. There is no null-terminated mutation overload.
 
 ```csharp
-using std::Text;
+using Standard::Text;
 char[4] bytes = ['A', '\0', 'z', (char)255];
-std::Text::Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
+Standard::Text::Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
 ```
 
 The caller supplies `count` writable bytes. Only that region is modified, and
@@ -39,7 +39,7 @@ and add no source dependencies. They do not perform Unicode case conversion.
 
 `TryHexValue(char input, byte* result)` recognizes one hexadecimal digit and
 writes its numerical value from 0 through 15. Invalid input returns false and
-writes zero. Use `std::Text::Utf8` to decode Unicode scalar values before applying
+writes zero. Use `Standard::Text::Utf8` to decode Unicode scalar values before applying
 any future Unicode character operations.
 
 ## Counted case-insensitive comparison
@@ -47,9 +47,9 @@ any future Unicode character operations.
 These counted operations are also `nothrow` and allocation-free:
 
 ```csharp
-using std::Text;
-bool command = std::Text::Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
-int order = std::Text::Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
+using Standard::Text;
+bool command = Standard::Text::Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
+int order = Standard::Text::Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
 ```
 
 Lengths count bytes, including embedded nulls. Buffers are borrowed and are never
@@ -72,9 +72,9 @@ when lengths differ and otherwise applies the same ASCII-only rules.
 Two-argument overloads accept C strings:
 
 ```csharp
-using std::Text;
-bool command = std::Text::Ascii::EqualsIgnoreCase(input, "help");
-int order = std::Text::Ascii::CompareIgnoreCase(left, right);
+using Standard::Text;
+bool command = Standard::Text::Ascii::EqualsIgnoreCase(input, "help");
+int order = Standard::Text::Ascii::CompareIgnoreCase(left, right);
 ```
 
 Both stop at the first null byte and use the same unsigned ASCII-only folding
@@ -97,7 +97,7 @@ which remain alive for the entire map lifetime. Keys borrowing other storage mus
 keep it alive and unchanged while stored in the map.
 
 ```cpp
-using std; using std::Text; using std::Collections;
+using Standard; using Standard::Text; using Standard::Collections;
 
 struct HeaderName : IHashable, IEquatable<HeaderName>
 {

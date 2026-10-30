@@ -9,14 +9,14 @@ public sealed class ConsoleStandardWriterTests
     private static SourceFile[] Sources(string program) => new[] {
         "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/primitive_format.gf",
         "libc/Console/Console.gf", "libc/Console/standard_writers.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
 
     [Fact]
     public void StandardWritersSeparateStreamsFormatDirectlyAndNeverAllocate()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint count) { Calls::Allocations++; return null; }
@@ -96,10 +96,10 @@ public sealed class ConsoleStandardWriterTests
                     ITextWriter* error = Console::Error;
                     if (freopen({{Literal(path)}}, "rb", __gflat_stdio_stdout()) == null) return 1;
                     output.Write("", 0);
-                    try { output.Write("x", 1); return 2; } catch (std::IO::IOException* failure) { }
+                    try { output.Write("x", 1); return 2; } catch (Standard::IO::IOException* failure) { }
                     if (freopen({{Literal(path)}}, "rb", __gflat_stdio_stderr()) == null) return 3;
                     error.Write("", 0);
-                    try { error.Write("x", 1); return 4; } catch (std::IO::IOException* failure) { }
+                    try { error.Write("x", 1); return 4; } catch (Standard::IO::IOException* failure) { }
                     return 0;
                 }
                 """));
@@ -127,7 +127,7 @@ public sealed class ConsoleStandardWriterTests
                 // unwritable. UCRT's temporary stderr buffer flush then fails.
                 if (CloseHandle((_get_osfhandle(_fileno(stream))).reinterpret<void*>()) == 0) return 1;
                 try { Console::Error.Write("not delivered", 13); return 2; }
-                catch (std::IO::IOException* failure) { }
+                catch (Standard::IO::IOException* failure) { }
                 if (ferror(stream) == 0) return 3;
                 return 0;
             }
@@ -151,8 +151,8 @@ public sealed class ConsoleStandardWriterTests
                 char[128] outputBuffer; char[128] errorBuffer;
                 // _IOLBF is 1 on the Linux libc targets exercised by CI.
                 if (setvbuf(output, outputBuffer, 1, 128) != 0 || setvbuf(error, errorBuffer, 1, 128) != 0) return 2;
-                try { Console::Write("x\n", 2); return 3; } catch (std::IO::IOException* failure) { }
-                try { Console::Error.Write("y\n", 2); return 4; } catch (std::IO::IOException* failure) { }
+                try { Console::Write("x\n", 2); return 3; } catch (Standard::IO::IOException* failure) { }
+                try { Console::Error.Write("y\n", 2); return 4; } catch (Standard::IO::IOException* failure) { }
                 fclose(output); fclose(error);
                 return 0;
             }
@@ -177,7 +177,7 @@ public sealed class ConsoleStandardWriterTests
                 if (setvbuf(stream, buffer, 0, 128) != 0) return 2;
                 Console::Error.Write("pending bytes", 13);
                 try { Console::FlushError(); fclose(stream); return 3; }
-                catch (std::IO::IOException* failure) { }
+                catch (Standard::IO::IOException* failure) { }
                 fclose(stream);
                 return 0;
             }

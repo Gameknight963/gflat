@@ -6,7 +6,7 @@ namespace gflat.LanguageServer.Tests;
 // Exercise the actual JSON Pointer source and borrowed result type.
 public sealed class JsonPointerEditorTests
 {
-    private const string Program="using std; using std::Json; using std::Memory;nuint Probe(Span<readonly(char)> document,Span<readonly(char)> pointer){Span<readonly(char)> value=new();bool found=JsonPointer::TryResolve(document,pointer,ref value);readonly(char)*? data=value.Data;return value.Length;}";
+    private const string Program="using Standard; using Standard::Json; using Standard::Memory;nuint Probe(Span<readonly(char)> document,Span<readonly(char)> pointer){Span<readonly(char)> value=new();bool found=JsonPointer::TryResolve(document,pointer,ref value);readonly(char)*? data=value.Data;return value.Length;}";
 
     [Fact]
     public void PublicResolutionSignatureAndOutputArgumentNavigateWithoutExposingPrivateSelectionHelper()
@@ -17,7 +17,7 @@ public sealed class JsonPointerEditorTests
         Assert.DoesNotContain(items.EnumerateArray(),item=>item.GetProperty("label").GetString()=="SelectChild");
         string hover=Hover(model,source,call);
         Assert.Contains("bool",hover);Assert.Contains("static",hover);Assert.Contains("TryResolve",hover);
-        Assert.Matches(@"\bref\s+(?:std::Memory::)?Span<readonly\(char\)>\s+value\b",hover);Assert.DoesNotContain('$',hover);
+        Assert.Matches(@"\bref\s+(?:Standard::Memory::)?Span<readonly\(char\)>\s+value\b",hover);Assert.DoesNotContain('$',hover);
         SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="JsonPointer.gf");
         int declaration=library.Text.IndexOf("TryResolve(",StringComparison.Ordinal);Assert.True(declaration>=0);
         Definition(model,source,call,library,declaration);
@@ -26,7 +26,7 @@ public sealed class JsonPointerEditorTests
         Assert.Equal(2,help.GetProperty("activeParameter").GetInt32());Assert.Equal(3,signature.GetProperty("parameters").GetArrayLength());
         string label=signature.GetProperty("label").GetString()!;
         Assert.Contains("bool",label);Assert.Contains("TryResolve",label);Assert.DoesNotContain('$',label);
-        Assert.Matches(@"\bref\s+(?:std::Memory::)?Span<readonly\(char\)>\s+value\b",label);
+        Assert.Matches(@"\bref\s+(?:Standard::Memory::)?Span<readonly\(char\)>\s+value\b",label);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class JsonPointerEditorTests
         Definition(model,source,type,library,declaration+"class ".Length);
         int value=Program.LastIndexOf("value.Length",StringComparison.Ordinal);
         string valueHover=Hover(model,source,value);
-        Assert.Matches(@"(?:std::Memory::)?Span<readonly\(char\)>\s+value\b",valueHover);Assert.DoesNotContain('$',valueHover);
+        Assert.Matches(@"(?:Standard::Memory::)?Span<readonly\(char\)>\s+value\b",valueHover);Assert.DoesNotContain('$',valueHover);
         var expected=model.Definition(source.Path,Program.IndexOf("value=new",StringComparison.Ordinal));Assert.NotNull(expected);
         Assert.Equal(expected,model.Definition(source.Path,value));
         int data=Program.IndexOf("Data;",StringComparison.Ordinal);

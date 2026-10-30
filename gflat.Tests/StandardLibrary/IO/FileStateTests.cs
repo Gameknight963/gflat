@@ -9,7 +9,7 @@ public sealed class FileStateTests
     private static string Compile(string directory, string program)
     {
         var files = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files));
@@ -28,7 +28,7 @@ public sealed class FileStateTests
             string path = Path.Combine(directory, "bytes.bin");
             File.WriteAllBytes(path, [65, 0, 255]);
             string exe = Compile(directory, $$"""
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});
                     if (input.EndOfFile || input.PeekByte() != 65 || input.PeekByte() != 65 || input.EndOfFile) return 1;
@@ -65,7 +65,7 @@ public sealed class FileStateTests
             string scratch = Path.Combine(directory, "scratch");
             Directory.CreateDirectory(scratch);
             string exe = Compile(directory, """
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 extern int puts(immutable(char*) text);
                 extern int fflush(void*? stream);
                 extern int getchar();

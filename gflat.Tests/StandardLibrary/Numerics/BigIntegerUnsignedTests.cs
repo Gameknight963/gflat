@@ -107,7 +107,7 @@ public sealed class BigIntegerUnsignedTests
     }
 
     private const string Counters = """
-        using std;using std::Text;using std::Numerics;
+        using Standard;using Standard::Text;using Standard::Numerics;
         extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;void*? watched=null;int watchedFrees=0;
@@ -124,7 +124,7 @@ public sealed class BigIntegerUnsignedTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("bigint-unsigned.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

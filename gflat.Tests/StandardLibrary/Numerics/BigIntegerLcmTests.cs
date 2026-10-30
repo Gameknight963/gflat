@@ -125,7 +125,7 @@ public sealed class BigIntegerLcmTests
     }
 
     private const string Counters="""
-        using std; using std::Numerics;extern void*? malloc(nuint count);extern void free(void* value);
+        using Standard; using Standard::Numerics;extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;void*? watchFirst=null;void*? watchSecond=null;void*? watchTarget=null;int watchedFrees=0;
         namespace Memory {
@@ -140,7 +140,7 @@ public sealed class BigIntegerLcmTests
         """;
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-lcm.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"BigInteger LCM exit {result.ExitCode}: {result.StandardError}");

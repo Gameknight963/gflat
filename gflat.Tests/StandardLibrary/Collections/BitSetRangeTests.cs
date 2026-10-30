@@ -12,7 +12,7 @@ public sealed class BitSetRangeTests
     {
         var random = new Random(91207);
         var source = new StringBuilder("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             extern int puts(immutable(char*) message);
             bool Matches(immutable(BitSet)* bits, readonly(uint)* words, nuint count) {
                 if (bits.CountSetBits() != count) return false;
@@ -52,7 +52,7 @@ public sealed class BitSetRangeTests
     [Fact]
     public void InvalidRangesPreserveBitsAndValidRangesNeedNoAllocationAcrossMoves()
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int allocations = 0; int releases = 0; bool failAllocation = false;
             private extern void*? malloc(nuint bytes);
             private extern void free(void* storage);
@@ -89,7 +89,7 @@ public sealed class BitSetRangeTests
     private static void Run(string program, int optimization)
     {
         var sources = new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("ranges.gf", program));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_bit_ranges_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);

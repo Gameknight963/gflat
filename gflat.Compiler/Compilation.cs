@@ -39,7 +39,7 @@ public sealed class Compilation
             unit.Members.RemoveAll(m => m is ClassDeclaration { Name: "Exception" } &&
                 StandardLibrary.IsSource(m.Span.Source?.Path, "core/Exception.gf"));
         // Legacy custom roots need not expose the standard (message, code)
-        // constructor. They can supply their own std::BadAllocException instead.
+        // constructor. They can supply their own Standard::BadAllocException instead.
         var customRoot = unit.Members.OfType<ClassDeclaration>().FirstOrDefault(c => c.Name == "Exception" &&
             !StandardLibrary.IsSource(c.Span.Source?.Path, "core/Exception.gf"));
         bool includeBadAlloc = customRoot == null || customRoot.Members.OfType<ConstructorDeclaration>()

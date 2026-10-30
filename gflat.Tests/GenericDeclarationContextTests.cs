@@ -8,10 +8,10 @@ public sealed class GenericDeclarationContextTests
     public void CallerLocalCannotShadowSpecializedIteratorField()
     {
         var result = CompilerTestHelper.Run([
-            new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
-            new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Queries/Enumerable.gf"))),
-            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Memory/Span.gf"))),
-            new SourceFile("main.gf", "using std; using std::Memory; using std::Queries; using std::Collections; int main() { int[1] data = [42]; Span<int> view = new Span<int>(data, 1); foreach (int item in view) return item; return 1; }")
+            new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Collections/IEnumerable.gf"))),
+            new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Queries/Enumerable.gf"))),
+            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Memory/Span.gf"))),
+            new SourceFile("main.gf", "using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; int main() { int[1] data = [42]; Span<int> view = new Span<int>(data, 1); foreach (int item in view) return item; return 1; }")
         ]);
         Assert.Equal(42, result.ExitCode);
     }

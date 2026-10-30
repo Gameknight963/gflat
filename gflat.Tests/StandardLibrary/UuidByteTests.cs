@@ -7,7 +7,7 @@ namespace gflat.Tests.Std;
 public sealed class UuidByteTests
 {
     private const string Counters="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? p=malloc(count);if(p!=null)allocated++;return p;}
@@ -119,11 +119,11 @@ public sealed class UuidByteTests
     public void CoreByteBridgeUsesNoStringAndNothrowObserverHasNoExceptionBoundary()
     {
         string[] names=["Uuid.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("uuid-byte-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
                 bool Convert(readonly(byte)* input,nuint count,byte* output,nuint capacity,ref nuint written)nothrow{
-                    std::Uuid value=new();return std::Uuid::TryFromBytes(input,count,&value)&&value.TryWriteBytes(output,capacity,ref written);
+                    Standard::Uuid value=new();return Standard::Uuid::TryFromBytes(input,count,&value)&&value.TryWriteBytes(output,capacity,ref written);
                 }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
@@ -132,7 +132,7 @@ public sealed class UuidByteTests
     }
 
     private static void Run(string program,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("uuid-bytes.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"UUID bytes exit {result.ExitCode}: {result.StandardError}");
     }

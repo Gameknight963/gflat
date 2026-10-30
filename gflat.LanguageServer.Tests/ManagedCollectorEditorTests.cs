@@ -7,8 +7,8 @@ public sealed class ManagedCollectorEditorTests
 {
     private const string Declarations = """
         namespace Runtime {
-            public static class Collector : std::IGarbageCollector {
-                public static void* Allocate(nuint bytes, nuint alignment) => (void*)1;
+            public static class Collector : Standard::IGarbageCollector {
+                public static void* Allocate(nuint bytes, nuint alignment) => ((nuint)1).reinterpret<void*>();
                 public static void ReferenceAdded(void* slot) nothrow {}
                 public static void ReferenceRemoved(void* slot) nothrow {}
                 public static nuint Collect() => 0;
@@ -76,7 +76,7 @@ public sealed class ManagedCollectorEditorTests
     public void OpenCollectorParametersRetainGenericIdentity()
     {
         var (model, source) = Analyze("""
-            static class Factory<C : std::IGarbageCollector> {
+            static class Factory<C : Standard::IGarbageCollector> {
                 public static managed<int, C> Create() => new^ int(42) with C;
                 public static managed<T, C> Identity<T>(managed<T, C> argument) => argument;
             }

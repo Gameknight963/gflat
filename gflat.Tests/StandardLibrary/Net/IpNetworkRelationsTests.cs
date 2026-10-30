@@ -81,7 +81,7 @@ public sealed class IpNetworkRelationsTests
         }
         string text=Convert.ToHexString(manifest.ToArray());
         Run($$"""
-            using std; using std::Net;
+            using Standard; using Standard::Net;
             int attempts=0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++;return null; }
@@ -123,8 +123,8 @@ public sealed class IpNetworkRelationsTests
     public void ExistingAndNewContainmentAndProtectedWrappersRemainNothrowWithoutExceptionBoundaries()
     {
         string ir=Compiler.Emit(Sources("""
-            bool Observe(immutable(std::Net::IpNetwork)* a,immutable(std::Net::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
-            bool ObserveReadOnly(readonly(std::Net::IpNetwork)* a,immutable(std::Net::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
+            bool Observe(immutable(Standard::Net::IpNetwork)* a,immutable(Standard::Net::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
+            bool ObserveReadOnly(readonly(Standard::Net::IpNetwork)* a,immutable(Standard::Net::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
             int main() { return 0; }
             """));
         var members=Regex.Matches(ir,@"(?ms)^define [^\r\n]*\$IpNetwork\$(Contains|Overlaps)(?:\$[^\r\n(]*)?\([^\r\n]*\{\r?\n.*?^\}");
@@ -139,7 +139,7 @@ public sealed class IpNetworkRelationsTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("network-relations.gf",program));
     private static void Run(string program,int optimization) {
         var result=CompilerTestHelper.Run(Sources(program),optimization);

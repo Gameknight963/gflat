@@ -9,7 +9,7 @@ public sealed class BigIntegerModPowEditorTests
     public void BorrowedExponentAndModulusReturnAnOwningBigIntegerAndNavigateActualMethod()
     {
         const string text = """
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             void Observe(immutable(BigInteger)* value, immutable(BigInteger)* exponent, immutable(BigInteger)* modulus) {
                 BigInteger result = value.ModPow(exponent, modulus);
             }
@@ -44,7 +44,7 @@ public sealed class BigIntegerModPowEditorTests
         Assert.Equal(1, help.GetProperty("activeParameter").GetInt32());
         var signature = Assert.Single(help.GetProperty("signatures").EnumerateArray());
         Assert.Equal(2, signature.GetProperty("parameters").GetArrayLength());
-        Assert.Contains("std::Numerics::BigInteger", signature.GetProperty("label").GetString());
+        Assert.Contains("Standard::Numerics::BigInteger", signature.GetProperty("label").GetString());
     }
 
     private static JsonElement Json(object? value)

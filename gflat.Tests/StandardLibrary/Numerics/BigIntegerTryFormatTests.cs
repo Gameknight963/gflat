@@ -44,7 +44,7 @@ public sealed class BigIntegerTryFormatTests
         string[] rows = values.Select(value => value.ToString(CultureInfo.InvariantCulture)).ToArray();
         string data = string.Join('|', rows) + "|";
         string program = $$"""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             extern void*? malloc(nuint count); extern void free(void* value);
             int attempts=0; int allocated=0; int released=0; bool deny=false;
             namespace Memory {
@@ -90,7 +90,7 @@ public sealed class BigIntegerTryFormatTests
                 if(allocated!=released)return 8;return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("bigint-try-format.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);

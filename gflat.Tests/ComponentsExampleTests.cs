@@ -11,7 +11,7 @@ public sealed class ComponentsExampleTests
     [InlineData(2)]
     public async Task ActualToolReportsGraphPartitionsAndRejectsInputBeforePublishingOutput(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("components.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/components.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_components_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DefaultVectorResizeTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         int attempts=0; int allocated=0; int freed=0; bool deny=false; nuint firstDenied=0;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         namespace Memory {
@@ -20,7 +20,7 @@ public sealed class DefaultVectorResizeTests
         """;
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("default-vector-resize.gf", code));
 
@@ -172,7 +172,7 @@ public sealed class DefaultVectorResizeTests
     [Fact]
     public void DocumentedInitializedIoBufferExampleCompiles()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Guides/std/core/Collections/OWNING_COLLECTIONS.md");
+        string path = Path.Combine(AppContext.BaseDirectory, "Guides/Standard/core/Collections/OWNING_COLLECTIONS.md");
         string example = Regex.Matches(File.ReadAllText(path), @"(?ms)^```cpp\r?\n(?<code>.*?)^```")
             .Select(match => match.Groups["code"].Value)
             .Single(code => code.Contains("buffer.Resize(4096)", StringComparison.Ordinal));

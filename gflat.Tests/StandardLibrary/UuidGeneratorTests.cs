@@ -28,7 +28,7 @@ public sealed class UuidGeneratorTests
             records.Append(new Guid(expected, bigEndian: true).ToString("D"));
         }
         Run($$"""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void*? malloc(nuint count); extern void free(void* storage);
             bool deny=false; int allocations=0; int calls=0; nuint requested=0;
             readonly(byte)* payload=((nuint)1).reinterpret<readonly(byte)*>();
@@ -73,7 +73,7 @@ public sealed class UuidGeneratorTests
     [InlineData(2)]
     public void FalseProvidersDiscardEveryPartialPayloadAndThrowTheDocumentedFailure(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             int calls=0;nuint requested=0;nuint writeCount=0;
             bool Fail(byte* output,nuint count){
                 calls++;requested=count;if(count!=16)return false;
@@ -98,7 +98,7 @@ public sealed class UuidGeneratorTests
     [InlineData(2)]
     public void ProviderExceptionsPropagateWithoutChangingAnExistingResultOrRetrying(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             int calls=0;nuint requested=0;
             bool Throw(byte* output,nuint count){
                 calls++;requested=count;
@@ -120,7 +120,7 @@ public sealed class UuidGeneratorTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("uuid-generator.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

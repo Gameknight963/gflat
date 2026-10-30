@@ -6,7 +6,7 @@ public sealed class StandardExtensionTests
     public void FloatingFormattingSupportsTheSameInstanceSyntaxWithoutStringDependencies()
     {
         var sources = ConsoleWriterTests.Sources("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 Console::Writer output = new Console::Writer();
                 float single = 1.25f;
@@ -15,10 +15,10 @@ public sealed class StandardExtensionTests
                 double wide = 2.5d;
                 wide.Format(&output);
                 Console::Write("|");
-                std::Format(single, &output);
+                Standard::Format(single, &output);
                 return 0;
             }
-            """).Append(new SourceFile("libc/Formatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "floating_format.gf"))));
+            """).Append(new SourceFile("libc/Formatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "floating_format.gf"))));
         var result = CompilerTestHelper.Run(sources);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("1.25|2.5|1.25", result.StandardOutput);
@@ -26,19 +26,19 @@ public sealed class StandardExtensionTests
 
     private static SourceFile[] Sources(string program) => InterpolationTests.Sources(program).Concat(
         new[] { "core/Text/parsing.gf", "core/Text/string_parsing.gf" }.Select(file =>
-            new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))).ToArray();
+            new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", file))))).ToArray();
 
     [Fact]
     public void CStringAndBorrowedStringParsingShareTheSameGrammar()
     {
         Assert.Equal(42, CompilerTestHelper.Run(Sources("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 int number = 0;
-                if (!std::Text::TryParseInt("40", &number) || number != 40) return 1;
-                if (std::Text::ParseInt("42") != 42) return 2;
+                if (!Standard::Text::TryParseInt("40", &number) || number != 40) return 1;
+                if (Standard::Text::ParseInt("42") != 42) return 2;
                 char[3] counted = ['4', '2', 'x'];
-                if (!std::Text::TryParseInt(counted, 2, &number) || number != 42) return 3;
+                if (!Standard::Text::TryParseInt(counted, 2, &number) || number != 42) return 3;
                 String text = s"+42";
                 if (!text.TryParseInt(&number) || number != 42) return 4;
                 return text.ParseInt();
@@ -50,7 +50,7 @@ public sealed class StandardExtensionTests
     public void CountedStringParsingRejectsEmbeddedNull()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char[3] bytes = ['4', '\0', '2'];
                 String text = String::From(bytes, 3);
@@ -67,7 +67,7 @@ public sealed class StandardExtensionTests
     public void PrimitiveFormattingWritesIntoTheExistingWriter()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void* malloc(nuint size);
             extern void free(void* storage);
             extern int printf(immutable(char*) text, ...);

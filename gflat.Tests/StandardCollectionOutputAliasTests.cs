@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardCollectionOutputAliasTests
 {
     private const string Prelude="""
-        using std; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int made=0;int dead=0;int calls=0;
         struct Item {
             public int Id;
@@ -89,7 +89,7 @@ public sealed class StandardCollectionOutputAliasTests
     [InlineData(2)]
     public void ZeroSizedOwnersStillRejectAliasedOutputsAndAcceptExternalStorage(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int made=0;int dead=0;
             struct Empty{public Empty(){made++;}~Empty(){dead++;}}
             int Compare(immutable(Empty)* left,immutable(Empty)* right)=>0;
@@ -119,7 +119,7 @@ public sealed class StandardCollectionOutputAliasTests
     private static void Run(string program,int optimization)
     {
         string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Memory/Span.gf","Collections/Vector.gf","Collections/Stack.gf","Collections/Queue.gf","Collections/PriorityQueue.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("output-alias.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_output_alias_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{

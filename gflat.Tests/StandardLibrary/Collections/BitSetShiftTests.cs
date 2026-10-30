@@ -50,7 +50,7 @@ public sealed class BitSetShiftTests
                 }
             }
             Run(directory, $$"""
-                using std; using std::Queries; using std::Collections;
+                using Standard; using Standard::Queries; using Standard::Collections;
                 extern void*? fopen(immutable(char*) path,immutable(char*) mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);
@@ -98,7 +98,7 @@ public sealed class BitSetShiftTests
     [InlineData(2)]
     public void ShiftingMovedOwnersIsAllocationFreeAndReleasesExactlyOnce(int optimization)
         => WithDirectory(directory => Run(directory, """
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int allocations=0;int releases=0;bool deny=false;
             extern void*? malloc(nuint size);extern void free(void* storage);
             namespace Memory{
@@ -168,7 +168,7 @@ public sealed class BitSetShiftTests
     private static void Run(string directory, string program, int optimization)
     {
         var sources = new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("shifts.gf", program));
         string ir = Path.Combine(directory, "shifts.ll"), executable = Path.Combine(directory, "shifts.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));

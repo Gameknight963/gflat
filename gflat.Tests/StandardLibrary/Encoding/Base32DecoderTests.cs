@@ -40,7 +40,7 @@ public sealed class Base32DecoderTests
         string encoded = string.Concat(cases.Select(Encode));
         string expected = string.Concat(cases.Select(Convert.ToHexString));
         Run($$"""
-            using std;using std::Encoding;
+            using Standard;using Standard::Encoding;
             int Digit(char value)nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             struct Sink:ITextWriter{
                 private char* output;public nuint Count;public nuint Calls;
@@ -94,7 +94,7 @@ public sealed class Base32DecoderTests
         string textHex = string.Concat(cases.Select(value => Convert.ToHexString(value.Text)));
         string prefixes = string.Concat(cases.Select(value => Convert.ToHexString(value.Prefix)));
         Run($$"""
-            using std;using std::Encoding;
+            using Standard;using Standard::Encoding;
             int Digit(char value)nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             struct Sink:ITextWriter{
                 private char* output;public nuint Count;public nuint Calls;public bool Bad;
@@ -147,7 +147,7 @@ public sealed class Base32DecoderTests
         byte[] largeBytes = Enumerable.Range(0, 201).Select(value => (byte)value).ToArray();
         string large = Encode(largeBytes);
         Run($$"""
-            using std;using std::Encoding;using std::IO;using std::Binary;
+            using Standard;using Standard::Encoding;using Standard::IO;using Standard::Binary;
             int destroyed=0;
             int Digit(char value)nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             class SinkFailure:Exception{
@@ -208,7 +208,7 @@ public sealed class Base32DecoderTests
                     Sink sink=new(&output[1],1000);Base32Decoder decoder=new(&sink);
                     byte[16] text=[{{string.Join(",", Encoding.ASCII.GetBytes(small).Select(value => "(byte)" + value))}}];BinaryBufferReader reader=new(text,16);IByteReader* input=&reader;
                     char[5] scratch;for(nuint i=0;i<5;i++)scratch[i]='!';
-                    if(std::IO::CopyTo(input,&decoder,&scratch[1],3)!=16||reader.Position!=16||sink.Count!=6)return 29;
+                    if(Standard::IO::CopyTo(input,&decoder,&scratch[1],3)!=16||reader.Position!=16||sink.Count!=6)return 29;
                     decoder.Write(((nuint)1).reinterpret<readonly(char)*>(),0);nuint calls=sink.Calls;decoder.Complete();decoder.Complete();
                     if(sink.Calls!=calls||attempts!=baseline||scratch[0]!='!'||scratch[4]!='!'||output[0]!='?'||output[7]!='?')return 30;
                     for(nuint i=0;i<6;i++)if(output[i+1]!="foobar"[i])return 31;
@@ -223,7 +223,7 @@ public sealed class Base32DecoderTests
         string[] names = ["core/Exception.gf", "core/ITextWriter.gf", "core/Encoding/Base32.gf", "core/Encoding/Base32Decoder.gf",
             "core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/byte_reader.gf",
             "core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf", "libc/Memory/allocation.gf"];
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("base32-decoder-tests.gf", program)).ToList();
         if (denyAllocation || countAllocations) sources.Add(new SourceFile("allocation-hooks.gf", $$"""
             int attempts=0;

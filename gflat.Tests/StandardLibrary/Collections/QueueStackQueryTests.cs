@@ -11,7 +11,7 @@ public sealed class QueueStackQueryTests
     public void CapturedFifoAndLifoOrderMatchDotNetAcrossWrappedExtents(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern int printf(readonly(char)* format,...);
             int main(){
                 for(int count=0;count<=16;count++)for(int removed=0;removed<=count;removed++)for(int roomy=0;roomy<2;roomy++){
                     Queue<int> queue=new();Stack<int> stack=new();
@@ -43,7 +43,7 @@ public sealed class QueueStackQueryTests
     [InlineData(2)]
     public void LazyQueriesRepeatAndObserveElementEditsWithoutAllocation(int optimization)
         =>Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             bool Even(int value){predicates++;return value%2==0;}
@@ -75,7 +75,7 @@ public sealed class QueueStackQueryTests
     [InlineData(2)]
     public void NoncopyableElementsSupportMetadataQueriesAndDirectBorrowedIteration(int optimization)
         =>Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int releases=0;bool deny=false;int dead=0;
             namespace Memory{public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{releases++;free(pointer);}}
             struct Owner{public int Id;public Owner(int id){Id=id;}~Owner(){dead++;}}
@@ -104,7 +104,7 @@ public sealed class QueueStackQueryTests
     [InlineData("Stack", "new Span<int>()")]
     public void ViewConstructorsRemainPrivateToTheOwner(string type,string arguments)
     {
-        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources($"using std; using std::Memory; using std::Queries; using std::Collections;int main(){{{type}<int>::View view=new {type}<int>::View({arguments});return 0;}}")));
+        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources($"using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;int main(){{{type}<int>::View view=new {type}<int>::View({arguments});return 0;}}")));
         Assert.Equal("queue-stack-queries.gf",error.Span.Source?.Path);Assert.Contains("inaccessible",error.Message);
     }
 
@@ -112,7 +112,7 @@ public sealed class QueueStackQueryTests
     {
         string[] names=["Collections/Queue.gf","Collections/Stack.gf","Memory/Span.gf","Collections/Vector.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"];
-        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("queue-stack-queries.gf",source));
     }
     private static void Run(string source,int optimization)

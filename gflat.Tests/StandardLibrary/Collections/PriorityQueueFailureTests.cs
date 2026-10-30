@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class PriorityQueueFailureTests
 {
     private const string Prelude = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int made=0;int dead=0;int allocations=0;int releases=0;
         int calls=0;int failAt=-1;bool failAllocation=false;
         private extern void*? malloc(nuint bytes);
@@ -103,7 +103,7 @@ public sealed class PriorityQueueFailureTests
     private static void Run(string program,int optimization)
     {
         string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf", "Text/ByteSearch.gf","Collections/Vector.gf","Memory/Span.gf","Collections/PriorityQueue.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("priority-failure.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_priority_failure_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{

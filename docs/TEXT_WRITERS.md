@@ -1,12 +1,12 @@
 # Text writer helpers
 
-`std/core/Text/text_writer_line.gf` and
-`std/core/Text/text_writer_repeated.gf` add optional line and repeated-byte extensions
-to borrowed `ITextWriter*` values. Bring them into scope with `using std::Text;`:
+`Standard/core/Text/text_writer_line.gf` and
+`Standard/core/Text/text_writer_repeated.gf` add optional line and repeated-byte extensions
+to borrowed `ITextWriter*` values. Bring them into scope with `using Standard::Text;`:
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 Console::Error.WriteLine("warning");
 Console::Out.WriteLine("A\0B", 3);
 Console::Out.WriteLine();
@@ -38,8 +38,8 @@ it adds no terminator or newline. This is useful for padding or rulers, not
 Unicode-character repetition.
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 int main()
 {
     char[70] bytes;
@@ -68,7 +68,7 @@ preserves source bytes, and needs no intermediate String or completion call.
 
 ## Send one stream to two writers
 
-`std::Text::TeeWriter` borrows two `ITextWriter*` endpoints. Each `Write(data,
+`Standard::Text::TeeWriter` borrows two `ITextWriter*` endpoints. Each `Write(data,
 count)` calls the first writer, then the second with the same pointer and count,
 including zero-length writes. Identical endpoints receive two calls. Counted
 bytes include NUL and high bytes; no encoding or newline conversion is added by
@@ -76,7 +76,7 @@ the adapter. Each endpoint retains its own output behavior; Console streams can
 apply host text-mode transformations.
 
 ```csharp
-using std; using std::Text;
+using Standard; using Standard::Text;
 
 int main()
 {
@@ -116,13 +116,13 @@ reset, flush or close operation.
 
 ## Buffer small writes before forwarding
 
-`std::Text::BufferedWriter` borrows an `ITextWriter*` sink and caller-provided
+`Standard::Text::BufferedWriter` borrows an `ITextWriter*` sink and caller-provided
 scratch storage. It combines small writes without allocating a String. The
 constructor's capacity is entirely payload space; it reserves no terminator and
 does not touch scratch or write to the sink.
 
 ```csharp
-using std; using std::Text;
+using Standard; using Standard::Text;
 
 int main()
 {

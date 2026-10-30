@@ -1,8 +1,8 @@
 # Hash collections
 
 ```csharp
-using std::Text;
-using std; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Collections;
 
 HashMap<String, int> counts = new();
 counts.Add(s"apple", 1);
@@ -49,8 +49,8 @@ allocates no storage; noncopyable mapped values are supported. Capacity is
 retained. Output remains valid independently of the map.
 
 ```csharp
-using std::Text;
-using std; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Collections;
 int main()
 {
     HashMap<int, String> names = new();
@@ -130,8 +130,8 @@ call the predicate. Capacity is retained; removed buckets remain tombstones so
 colliding survivors can still be found and the set can be reused.
 
 ```csharp
-using std::Text;
-using std; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Collections;
 bool Temporary(immutable(String)* key) => key.StartsWith("tmp:");
 int main()
 {
@@ -168,7 +168,7 @@ helper scans private buckets directly and leaves tombstones for removed entries;
 it does not keep a public enumerator alive during structural mutation. Public
 enumerator invalidation rules remain unchanged.
 
-With `Collections/hash_set_algebra.gf` included and `using std::Collections;`,
+With `Collections/hash_set_algebra.gf` included and `using Standard::Collections;`,
 `target.UnionWith(&source)` copies missing keys into the target. Existing keys are
 checked before copying, and self-union does nothing. Added owning keys use their
 normal copy constructors; the source stays unchanged. This is a separate
@@ -207,8 +207,8 @@ operation may relocate or remove the entry; stable operations do not create a
 new independently owned key.
 
 ```csharp
-using std;
-using std::Collections;
+using Standard;
+using Standard::Collections;
 
 struct Key : IHashable, IEquatable<Key>
 {

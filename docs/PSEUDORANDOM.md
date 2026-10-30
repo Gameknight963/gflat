@@ -1,12 +1,12 @@
 # Deterministic pseudorandom values
 
-`std::Numerics::PseudoRandom` is an explicitly seeded SplitMix64 generator. It stores one
+`Standard::Numerics::PseudoRandom` is an explicitly seeded SplitMix64 generator. It stores one
 64-bit state value, owns no resources, and performs no allocations during normal
 generation. It is useful for reproducible tests, procedural content, and sampling.
 It is not a cryptographic generator.
 
 ```cpp
-using std::Numerics;
+using Standard::Numerics;
 PseudoRandom random = new PseudoRandom(42ul);
 int die = random.NextInt(1, 7);
 double fraction = random.NextDouble();
@@ -68,7 +68,7 @@ overflow. The exclusive endpoint remains excluded: to cover *every* signed bit
 pattern, use the parameterless form.
 
 ```cpp
-using std; using std::Numerics;
+using Standard; using Standard::Numerics;
 
 int main()
 {

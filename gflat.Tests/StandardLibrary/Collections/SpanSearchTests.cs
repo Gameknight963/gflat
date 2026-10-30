@@ -5,7 +5,7 @@ public sealed class SpanSearchTests
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",
             "Memory/Span.gf", "Collections/Vector.gf", "Text/String.gf", "Text/ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
 
     [Theory]
@@ -13,7 +13,7 @@ public sealed class SpanSearchTests
     [InlineData(2)]
     public void SearchesMatchIndependentLinearOracleForEverySliceAndKey(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int calls = 0;
             bool Equal(readonly(int)* a, readonly(int)* b) { calls++; return *a == *b; }
             int main() {
@@ -50,7 +50,7 @@ public sealed class SpanSearchTests
             """, optimization, "Collections/EqualityComparer.gf");
 
     private const string Owning = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint size);
         extern void free(void* storage);
         int allocations=0; int releases=0; int destroyed=0; int calls=0; int failAt=0;
@@ -128,7 +128,7 @@ public sealed class SpanSearchTests
     private static void Run(string code, int optimization, string? extra = null)
     {
         IEnumerable<SourceFile> sources = Sources(code);
-        if(extra != null) sources = sources.Append(new SourceFile(extra,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",extra))));
+        if(extra != null) sources = sources.Append(new SourceFile(extra,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",extra))));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }

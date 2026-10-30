@@ -6,7 +6,7 @@ public sealed class DateTimeOffsetArithmeticTests
 {
     private const long Maximum=3155378975999999999L,Epoch=621355968000000000L,Minute=600000000L;
     private const string Support="""
-        using std; using std::Text; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -176,7 +176,7 @@ public sealed class DateTimeOffsetArithmeticTests
     }
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-time-offset-arithmetic.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"DateTimeOffset arithmetic exit {result.ExitCode}: {result.StandardError}");
     }

@@ -21,7 +21,7 @@ public sealed class CStringCharacterSearchTests
             if (trial % 2 == 0) bytes[random.Next(bytes.Length)] = 0;
             cases.Add(bytes);
         }
-        var code = new StringBuilder("using std::Text;int main(){char[260] storage;\n");
+        var code = new StringBuilder("using Standard::Text;int main(){char[260] storage;\n");
         foreach (byte[] bytes in cases)
         {
             int zero = Array.IndexOf(bytes, (byte)0);
@@ -52,7 +52,7 @@ public sealed class CStringCharacterSearchTests
     [InlineData(2)]
     public void BorrowedArgumentOffsetsNeedNoAllocationsAndWorkInNothrowCode(int optimization)
         => Run("""
-            using std::Text;
+            using Standard::Text;
             int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
@@ -78,7 +78,7 @@ public sealed class CStringCharacterSearchTests
     private static void Run(string program, int optimization, bool minimal)
     {
         SourceFile[] sources = [
-            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/CString.gf"))),
+            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf"))),
             new("character-search.gf", program)
         ];
         if (!minimal)

@@ -1,12 +1,12 @@
 # Hexadecimal integer parsing
 
 `core/Text/hex_integer_parsing.gf` provides unsigned hexadecimal `TryParseHex...`
-functions in `std::Text` for `Byte`, `UShort`, `UInt`, `ULong`, and `NUInt`.
+functions in `Standard::Text` for `Byte`, `UShort`, `UInt`, `ULong`, and `NUInt`.
 `core/Text/hex_integer_parsing_throwing.gf` adds the optional throwing `ParseHex...`
 wrappers. Names follow the decimal parsers:
 
 ```cpp
-using std::Text;
+using Standard::Text;
 bool TryParseHexULong(readonly(char)* text, ulong* result) nothrow;
 bool TryParseHexULong(readonly(char)* text, nuint count, ulong* result) nothrow;
 ulong ParseHexULong(readonly(char)* text);
@@ -20,7 +20,7 @@ rejected. Signed and two's-complement interpretations are not provided.
 `NUInt` uses the target pointer-sized unsigned limit.
 
 ```cpp
-using std; using std::Text;
+using Standard; using Standard::Text;
 uint flags = ParseHexUInt("0x80000001");
 ulong address = 0ul;
 bool valid = TryParseHexULong("fF0012", &address);

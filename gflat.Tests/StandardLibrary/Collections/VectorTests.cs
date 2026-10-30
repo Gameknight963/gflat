@@ -6,7 +6,7 @@ public class VectorTests
     public void FailedReservePreservesElementsAndUsesEmergencyReserve()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint size);
             extern void free(void* pointer);
             namespace Memory {
@@ -29,14 +29,14 @@ public class VectorTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program) => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf" }
-        .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
     public void AddingAStringCopiesItWhenNotExplicitlyMoved()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Vector<String> values = new Vector<String>();
                 String original = s"abc";
@@ -53,7 +53,7 @@ public class VectorTests
     public void StringsAreOrdinaryElementsWithExplicitMovement()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Vector<String> words = new Vector<String>();
                 words.Add(s"one");
@@ -82,7 +82,7 @@ public class VectorTests
     public void PrimitiveElementsUseTheSameContainer()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Vector<int> values = new Vector<int>();
                 for (int i = 0; i < 100; i++) values.Add(i);
@@ -100,7 +100,7 @@ public class VectorTests
     public void EmptyElementsCanGrowAndBeRemoved()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Empty {}
             int main() {
                 Vector<Empty> values = new Vector<Empty>();
@@ -117,7 +117,7 @@ public class VectorTests
     public void FailedGrowthCleansItsArgumentAndPreservesExistingElements()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint size);
             extern void free(void* pointer);
             namespace Memory {

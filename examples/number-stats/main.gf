@@ -1,7 +1,7 @@
-using std::Text;
-using std::Memory;
-using std::Numerics;
-using std;
+using Standard::Text;
+using Standard::Memory;
+using Standard::Numerics;
+using Standard;
 
 void WriteField(readonly(char)* label, extralong value)
 {

@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public class StandardQueryOwnershipTests
 {
     private const string AllocationCounters = """
-        using std; using std::Text; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes);
         extern void free(void* storage);
         int allocations = 0;
@@ -249,7 +249,7 @@ public class StandardQueryOwnershipTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Std/core"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Standard/core"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("main.gf", code));
         string ir = Compiler.Emit(sources);

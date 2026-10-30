@@ -1,6 +1,6 @@
 # Explicit buffered input
 
-`std::IO::BufferedReader` implements `IByteReader`, owns a fixed-size `Vector<char>`
+`Standard::IO::BufferedReader` implements `IByteReader`, owns a fixed-size `Vector<char>`
 read-ahead buffer and borrows an underlying source. Its constructor accepts
 `IByteReader* source, nuint capacity = 4096`. Capacity zero throws `IOException`
 before allocating the buffer. Successful construction initializes every buffer byte
@@ -68,7 +68,7 @@ varint prefix and payload through the same buffered cursor. Opening the output
 truncates an existing file at the supplied path.
 
 ```csharp
-using std::IO;
+using Standard::IO;
 
 int main(int argc, char** argv)
 {

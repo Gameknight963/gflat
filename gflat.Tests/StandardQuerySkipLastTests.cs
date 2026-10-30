@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQuerySkipLastTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("query-skip-last.gf", code));
 
@@ -198,7 +198,7 @@ public sealed class StandardQuerySkipLastTests
     [InlineData(2)]
     public void ManagedElementsRemainRootedAcrossEvictionAndReleaseOnEofOrEarlyExit(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int created = 0;
             class Cell {
                 public int Id;
@@ -215,7 +215,7 @@ public sealed class StandardQuerySkipLastTests
             }
             nuint CleanCount() {
                 GC::Collect();
-                return std::TracingCollector::ManagedCount;
+                return Standard::TracingCollector::ManagedCount;
             }
             bool CountIs(nuint wanted, int phase) {
                 nuint actual = CleanCount();
@@ -264,7 +264,7 @@ public sealed class StandardQuerySkipLastTests
             """, optimization);
 
     private const string Memory = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int attempts=0;int allocated=0;int released=0;int failAt=0;bool deny=false;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory {

@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class SortedMapExtractTests
 {
     private const string Prelude="""
-        using std; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;int dead=0;int budget=-1;
         namespace Memory{
             public replace void*? Allocate(nuint size){allocations++;return malloc(size);}
@@ -79,7 +79,7 @@ public sealed class SortedMapExtractTests
 
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",Prelude+code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }

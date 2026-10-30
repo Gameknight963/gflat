@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.IO;
 public sealed class PathEndingTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::IO; using std::Encoding; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Encoding; using Standard::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
         bool deny=false;int attempts=0;int allocated=0;int released=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}
@@ -108,7 +108,7 @@ public sealed class PathEndingTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("path-ending.gf",code));
     private static void Run(string code,int optimization)=>Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);
 }

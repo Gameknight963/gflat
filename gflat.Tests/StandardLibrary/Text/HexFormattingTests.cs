@@ -31,7 +31,7 @@ public sealed class HexFormattingTests
     [InlineData(2)]
     public void SignedUnsignedPaddingCaseAndEveryShortCapacityMatchDotNet(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Text; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; int main() {\n");
         int[] widths = [0, 1, 4, 8, 16, 24];
         foreach (bool wide in new[] { false, true })
         foreach (bool signed in new[] { false, true })
@@ -83,7 +83,7 @@ public sealed class HexFormattingTests
     public void EveryIntegralTypeCanBePassedDirectlyWithItsOwnSignedWidth(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char[32] output; nuint written = 0;
                 byte unsignedByte = (byte)255; sbyte signedByte = (sbyte)-1;
@@ -115,7 +115,7 @@ public sealed class HexFormattingTests
     public void DefaultsZeroHugePaddingAndZeroCapacityRespectPreflight(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char[26] output;
                 for (nuint i = 0; i < 26; i++) output[i] = '!';
@@ -142,7 +142,7 @@ public sealed class HexFormattingTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = [
-            new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/IntegerFormatting.gf"))),
+            new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/IntegerFormatting.gf"))),
             new("main.gf", program)
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });

@@ -1,6 +1,6 @@
 # Scalar math
 
-`std/core/Numerics/Math.gf` provides `std::Numerics::Math`, with scalar helpers and checked integer
+`Standard/core/Numerics/Math.gf` provides `Standard::Numerics::Math`, with scalar helpers and checked integer
 operations. It does not directly call C math functions. The checked operations
 still require the normal exception and allocation support.
 
@@ -37,7 +37,7 @@ to zero. It divides out the GCD before checking multiplication, so a large
 intermediate `a * b` does not itself cause rejection.
 
 ```csharp
-using std::Numerics;
+using Standard::Numerics;
 uint divisor = Math::GreatestCommonDivisor(48u, 18u); // 6
 uint period = 0u;
 bool fits = Math::TryLeastCommonMultiple(6u, 8u, ref period); // true, 24
@@ -61,7 +61,7 @@ Use the value-returning form when a combined period must fit, or the Try form
 when overflow is an expected outcome:
 
 ```csharp
-using std; using std::Numerics;
+using Standard; using Standard::Numerics;
 int main()
 {
     uint period = Math::LeastCommonMultiple(6u, 8u);
@@ -102,7 +102,7 @@ including sign, payload and signaling bit. Both operations are `nothrow`, use
 integer bit operations and add no runtime or C math dependency.
 
 ```csharp
-using std::Numerics;
+using Standard::Numerics;
 float above = Math::BitIncrement(1.0f); // Smallest float greater than 1.
 double below = Math::BitDecrement(1.0); // Largest double less than 1.
 ```

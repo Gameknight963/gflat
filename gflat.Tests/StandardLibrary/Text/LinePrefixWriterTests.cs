@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class LinePrefixWriterTests
 {
     private const string DenyAllocation = """
-        using std; using std::Text; using std::IO;
+        using Standard; using Standard::Text; using Standard::IO;
         int attempts=0;
         extern void free(void* storage);
         namespace Memory {
@@ -123,7 +123,7 @@ public sealed class LinePrefixWriterTests
     [InlineData(2)]
     public void PartialPrefixAndRunFailuresPreserveOriginalErrorAndPoisonWriter(int optimization)
         => Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             struct Sink:ITextWriter {
                 public int Calls;public nuint Count;private nuint limit;private char* bytes;
                 public Sink(char* storage,nuint budget){Calls=0;Count=0;limit=budget;bytes=storage;}
@@ -175,7 +175,7 @@ public sealed class LinePrefixWriterTests
         });
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("line-prefix-writer-test.gf",program));
 

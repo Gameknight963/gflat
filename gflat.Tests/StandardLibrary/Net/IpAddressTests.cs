@@ -59,7 +59,7 @@ public sealed class IpAddressTests
                 }
             }
             Run(directory, """
-                using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
                 String ReadText(File* file){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(file);
                     String result=new();result.Resize(count);Span<char> data=result.AsSpan();file.ReadExactly(data.Data!,count);return move result;}
                 int main(int argc,char** argv){
@@ -116,7 +116,7 @@ public sealed class IpAddressTests
                 foreach (byte[] row in rows) { writer.Write(row.Length); writer.Write(row); }
             }
             Run(directory, """
-                using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
                 int main(int argc,char** argv){
                     File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     IpAddress zero=new();IpAddress seed=IpAddress::Parse("2001:db8::1");
@@ -152,7 +152,7 @@ public sealed class IpAddressTests
     [InlineData(2)]
     public async Task SuccessfulOperationsAndTryFailuresAllocateNothingAndSupportBackedAliases(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
             int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}
                 public replace void Free(void* value)nothrow{}}
@@ -186,7 +186,7 @@ public sealed class IpAddressTests
     [InlineData(2)]
     public async Task FamilyEqualityHashMapInterpolationAndWriterFailureUseValueContracts(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
             struct Sink:ITextWriter{
                 public char* Data;public bool Fail;public int Calls;
                 public Sink(char* data,bool fail){Data=data;Fail=fail;Calls=0;}
@@ -214,9 +214,9 @@ public sealed class IpAddressTests
     public void SelectiveSourcesNeedNoStringOrLibcImplementationAndKeepTryOperationsNothrow()
     {
         string[] names = ["core/Net/IpAddress.gf", "core/ITextWriter.gf", "core/IFormattable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("contract.gf", """
-                using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
                 namespace Memory{public void*? Allocate(nuint size){return null;}public void Free(void* value)nothrow{}}
                 bool Check(readonly(char)* text,nuint length,char* output,nuint capacity,ref nuint written)nothrow{
                     IpAddress value=new();bool valid=IpAddress::TryParse(text,length,&value);IpAddress other=new();
@@ -242,7 +242,7 @@ public sealed class IpAddressTests
     }
     private static void Run(string directory, string program, string[] arguments, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("ip-address-test.gf", program));
         string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "main.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));

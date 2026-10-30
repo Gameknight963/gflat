@@ -171,7 +171,7 @@ public class ExplicitDestructorTests
             void Destroy<T>(T* p) { p.~T(); }
             int main() {
                 S[2]* p = (S[2]*)Memory::Allocate((nuint)sizeof(S[2]));
-                S* elements = (S*)p;
+                S* elements = p.reinterpret<S*>();
                 new* S(1) at elements;
                 new* S(2) at elements + 1;
                 Destroy<S[2]>(p);

@@ -17,7 +17,7 @@ qualifies the destination and prevents assignment. `TryFirst`, `TryLast`, and
 does not by itself make the pointer's output slot readonly.
 
 ```csharp
-using std; using std::Memory; using std::Queries;
+using Standard; using Standard::Memory; using Standard::Queries;
 
 int main()
 {
@@ -59,5 +59,5 @@ normally. This follows the existing owning assignment and destructor contracts;
 the method does not catch errors or reinterpret them as an absent index.
 
 Projects selecting standard-library sources explicitly need
-`std/core/Queries/enumerable_element_at.gf` alongside their query and source
+`Standard/core/Queries/enumerable_element_at.gf` alongside their query and source
 dependencies. Ordinary projects including the standard library get it directly.

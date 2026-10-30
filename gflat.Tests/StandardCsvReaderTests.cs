@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardCsvReaderTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("main.gf",program));
 
@@ -14,7 +14,7 @@ public sealed class StandardCsvReaderTests
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(program),optimization).ExitCode);
 
     private const string Allocator="""
-        using std; using std::Text; using std::Csv; using std::Memory;
+        using Standard; using Standard::Text; using Standard::Csv; using Standard::Memory;
         int attempts=0;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         namespace Memory{
@@ -185,7 +185,7 @@ public sealed class StandardCsvReaderTests
             ("\"a\"\rb",4,0),("\"a\"\r",4,0),("\"a\"\"",4,0),
             (",\"bad",5,1),("\"a\",x\"bad",5,1),("a,b\n\"ok\",c\n\"bad\"x",16,4)
         ];
-        var program=new StringBuilder("using std; using std::Text; using std::Csv; using std::Memory;int main(){\n");
+        var program=new StringBuilder("using Standard; using Standard::Text; using Standard::Csv; using Standard::Memory;int main(){\n");
         foreach(var item in cases)
         {
             byte[] bytes=Bytes(item.Text);
@@ -208,7 +208,7 @@ public sealed class StandardCsvReaderTests
     public void ProtectedReaderCannotAdvanceOrReset(string protection,string method)
     {
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(
-            $"void F(ref {protection}(std::Csv::CsvReader) reader){{reader.{method}();}}")));
+            $"void F(ref {protection}(Standard::Csv::CsvReader) reader){{reader.{method}();}}")));
         Assert.Contains(method,error.Message);
     }
 
@@ -218,7 +218,7 @@ public sealed class StandardCsvReaderTests
     public void InventoryImportDecodesOnlyQuantityAndStreamsExactSum(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Csv; using std::Memory;
+            using Standard; using Standard::Text; using Standard::Csv; using Standard::Memory;
             int main(){
                 readonly(char)* document="\"bolts, large\",12\r\n\"m4 \"\"nut\"\"\",8\r\n";
                 CsvReader reader=new(document,CString::Length(document));

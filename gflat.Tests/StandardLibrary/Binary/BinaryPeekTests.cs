@@ -13,7 +13,7 @@ public sealed class BinaryPeekTests
         new Random(71942).Shuffle(values.AsSpan());
         string oracle=string.Join(',',values.Select(value=>"(byte)"+value));
         await Run($$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main(){
                 byte[256] oracle=[{{oracle}}];byte[258] data;
                 data[0]=(byte)165;data[257]=(byte)90;
@@ -60,7 +60,7 @@ public sealed class BinaryPeekTests
     [InlineData(2)]
     public async Task EmptyAndEndZeroOutputWithoutReadingAndProtectedReceiversRemainValidObservers(int optimization)
         =>await Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             bool ReadOnly(readonly(BinaryBufferReader)* reader,ref byte value) nothrow=>reader.TryPeekByte(ref value);
             bool DeepImmutable(immutable(BinaryBufferReader)* reader,ref byte value) nothrow=>reader.TryPeekByte(ref value);
             int main(){
@@ -86,7 +86,7 @@ public sealed class BinaryPeekTests
     private static async Task Run(string program,int optimization)
     {
         SourceFile[] sources=new[]{"Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Memory/bytes.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("binary-peek.gf",program)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$Allocate","gflat$Memory$Free","@malloc","@free"})

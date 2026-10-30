@@ -1,6 +1,6 @@
 # Borrowed text splitting
 
-`std/core/Text/TextParts.gf` provides `std::Text::TextParts`, splitting counted bytes on a
+`Standard/core/Text/TextParts.gf` provides `Standard::Text::TextParts`, splitting counted bytes on a
 single-byte delimiter without copying or allocating. It takes a
 `Span<readonly(char)>` and implements
 `IEnumerable<Span<readonly(char)>, TextParts::Enumerator>`.
@@ -25,13 +25,13 @@ Unicode code-point or multi-character delimiter operation.
 `text_parts_span.gf` adds `Split(delimiter, removeEmpty = false)` extensions for
 `Span<char>` and `Span<readonly(char)>`. These copy only the borrowed view's
 metadata. `string_split.gf` separately adds the same convenience to an owning
-String through a `ref immutable(String)` receiver, avoiding a deep copy and
-rejecting temporary String receivers. Neither extension file changes String or
-Span's own source dependencies.
+String through an immutable borrowed receiver, avoiding a deep copy. The
+explicit free `Split(ref text, ...)` overload requires existing storage. Neither
+extension file changes String or Span's own source dependencies.
 
 ```csharp
-using std::Text;
-using std; using std::Memory;
+using Standard::Text;
+using Standard; using Standard::Memory;
 String text = s"first,,last,";
 TextParts parts = text.Split(',');
 foreach (Span<readonly(char)> part in parts)
@@ -42,17 +42,19 @@ foreach (Span<readonly(char)> part in parts)
 
 The source storage must remain alive and at the same address for every use of
 the sequence, its iterators, and its returned spans. In particular, destroying,
-moving, or reallocating an owning String can invalidate them. A reference
-receiver prevents one easy temporary-lifetime mistake; it is not general
-lifetime analysis. Mutations to the underlying bytes are visible through
-existing parts and can change subsequent splitting; TextParts is not a snapshot.
+moving, or reallocating an owning String can invalidate them. The extension
+accepts temporary owners, whose lifetime ends with the full expression. A view
+does not extend that lifetime: consume it immediately or retain its owner in a
+variable before storing the view. The compiler does not check borrowed-view
+lifetimes. Mutations to the underlying bytes are visible through existing parts
+and can change subsequent splitting; TextParts is not a snapshot.
 
 `AsEnumerable()` exposes the existing concrete query wrapper without changing
 these borrowing rules. Direct `foreach` is sufficient for ordinary iteration.
 
 ## Trimming borrowed text
 
-`std/core/Text/text_trim_span.gf` optionally adds `Trim()`, `TrimStart()`, and
+`Standard/core/Text/text_trim_span.gf` optionally adds `Trim()`, `TrimStart()`, and
 `TrimEnd()` to `Span<char>` and `Span<readonly(char)>`. Include `Memory/Span.gf` and
 `Text/ascii.gf` with this extension source. Unlike the owning String's mutating
 methods, these return a sliced view and leave every source byte unchanged.
@@ -62,8 +64,8 @@ form feed, and CR. Embedded zero bytes and all non-ASCII bytes are retained;
 this is not Unicode whitespace trimming or UTF-8 decoding.
 
 ```csharp
-using std::Text;
-using std::Memory;
+using Standard::Text;
+using Standard::Memory;
 foreach (Span<readonly(char)> part in text.Split('=')) {
     Span<readonly(char)> token = part.Trim();
     // Use token while text's underlying storage remains alive.

@@ -31,7 +31,7 @@ public sealed class DateParsingTests
         int[] counted = cases.Select(Expected).ToArray();
         int[] terminated = cases.Select(text => Expected(text.Split('\0')[0])).ToArray();
         string code = $$"""
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int main(){
                 readonly(char)* text={{Literal(blob)}};
                 int[{{cases.Count}}] offsets=[{{string.Join(",",offsets)}}];
@@ -79,7 +79,7 @@ public sealed class DateParsingTests
                 expected.Add(Expected(new string(characters)));
             }
         Run($$"""
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int main(){
                 int[2560] expected=[{{string.Join(",",expected)}}];
                 readonly(char)* original="2024-02-29";
@@ -109,7 +109,7 @@ public sealed class DateParsingTests
     [InlineData(2)]
     public void OverlappingResultsAndWrongLengthsAreAllocationFree(int optimization)
         => Run("""
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -129,7 +129,7 @@ public sealed class DateParsingTests
                         for(nuint i=0;i<11;i++)bytes[input+i]=text[i];
                         if(variant==1||variant==3)bytes[input+9]='x';
                         for(nuint i=0;i<32;i++)before[i]=bytes[i];
-                        Date* result=(Date*)(bytes+output);
+                        Date* result=(bytes+output).reinterpret<Date*>();
                         bool valid=false;
                         if(variant<2)valid=Date::TryParse(bytes+input,10,result);
                         else valid=Date::TryParse(bytes+input,result);
@@ -163,7 +163,7 @@ public sealed class DateParsingTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("date-parsing.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }

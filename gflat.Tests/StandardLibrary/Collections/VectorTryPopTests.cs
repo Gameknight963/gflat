@@ -7,7 +7,7 @@ public sealed class VectorTryPopTests
     [InlineData(2)]
     public void NoncopyableOwnersTransferWithoutAllocationAndEmptyPreservesOutput(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int attempts=0;int allocated=0;int freed=0;int made=0;int dead=0;bool deny=false;
             namespace Memory {
@@ -43,7 +43,7 @@ public sealed class VectorTryPopTests
     [InlineData(2)]
     public void LiveAndConstructedSpareOutputAliasesRejectBeforeMutation(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int made=0;int dead=0;
             struct Item{public int Id;public Item(int id){Id=id;made++;}~Item(){dead++;}}
             int main(){
@@ -78,7 +78,7 @@ public sealed class VectorTryPopTests
     [InlineData(2)]
     public void ZeroSizedOwnerUsesAllocationStrideAndRetainsOrdinaryCleanup(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int made=0;int dead=0;
             struct Empty{public Empty(){made++;}~Empty(){dead++;}}
             int main(){
@@ -98,7 +98,7 @@ public sealed class VectorTryPopTests
     private static void Run(string program,int optimization)
     {
         string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Memory/Span.gf","Collections/Vector.gf","Memory/Unique.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("vector-try-pop.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Vector TryPop exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

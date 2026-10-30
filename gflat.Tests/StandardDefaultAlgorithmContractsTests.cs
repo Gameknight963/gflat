@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardDefaultAlgorithmContractsTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -126,5 +126,5 @@ public sealed class StandardDefaultAlgorithmContractsTests
     private static List<int[]> Inputs(){List<int[]> inputs=[[],[0],[3,1,3,1],[int.MinValue,int.MaxValue,0,-1]];var random=new Random(28371);for(int i=0;i<20;i++)inputs.Add(Enumerable.Range(0,random.Next(0,17)).Select(_=>random.Next(-4,5)).ToArray());return inputs;}
     private static string Bool(bool value)=>value?"true":"false";
     private static string Block(int[] a,int[] b,string checks){var code=new StringBuilder("{int[16] a;int[16] b;");for(int i=0;i<a.Length;i++)code.Append($"a[{i}]={a[i]};");for(int i=0;i<b.Length;i++)code.Append($"b[{i}]={b[i]};");return code+$"Span<int> first=new(a,{a.Length});Span<int> second=new(b,{b.Length});"+checks+"}";}
-    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("default-algorithm-contracts.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Default algorithm contracts exit {result.ExitCode}: {result.StandardError}");}
+    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("default-algorithm-contracts.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Default algorithm contracts exit {result.ExitCode}: {result.StandardError}");}
 }

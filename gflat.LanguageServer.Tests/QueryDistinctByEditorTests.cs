@@ -9,7 +9,7 @@ public sealed class QueryDistinctByEditorTests
     public void WholeRowsAndPrimitiveKeysInferConcreteQueryAndNavigateActualAdapter()
     {
         const string text = """
-            using std; using std::Memory; using std::Queries;
+            using Standard; using Standard::Memory; using Standard::Queries;
             struct Row { public int Id; public int Payload; }
             int Key(Row value) => value.Id;
             void Observe() {
@@ -64,7 +64,7 @@ public sealed class QueryDistinctByEditorTests
 
     private static void AssertDefinition(EditorModel model, SourceFile source, int use, SourceFile library, string declaration, string beforeName)
     {
-        int start = library.Text.IndexOf(declaration, StringComparison.Ordinal);
+        int start = declaration.StartsWith("DistinctBy<",StringComparison.Ordinal) ? EditorSourceDeclarations.ExtensionMethod(library,"DistinctBy") : library.Text.IndexOf(declaration, StringComparison.Ordinal);
         Assert.True(start >= 0, "Missing declaration " + declaration);
         var expected = model.Definition(library.Path, start + beforeName.Length);
         Assert.NotNull(expected);

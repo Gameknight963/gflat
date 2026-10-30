@@ -7,7 +7,7 @@ public class BitSetEnumerationTests
     [InlineData(2)]
     public void EveryBitPositionAcrossWordsAndDirtyPaddingRespectsLogicalLength(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 uint[5] words;
                 for (nuint size=0;size<=(nuint)129;size++) {
@@ -41,7 +41,7 @@ public class BitSetEnumerationTests
     [InlineData(2)]
     public void RawBorrowedWordsAreReloadedBetweenCallsAndCopiesKeepIndependentPositions(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 uint[3] words=[0x80000001u,0u,0xffffffffu];
                 BitSet::Enumerator iterator=new(words,65);
@@ -76,7 +76,7 @@ public class BitSetEnumerationTests
     private static void Run(string code,int optimization)
     {
         var sources=new[]{"Collections/IEnumerable.gf", "Queries/Enumerable.gf","Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }

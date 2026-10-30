@@ -5,7 +5,7 @@ public sealed class MathTests
     private static void Run(string program)
     {
         var result = CompilerTestHelper.Run([
-            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Numerics", "Math.gf"))),
+            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Numerics", "Math.gf"))),
             new SourceFile("main.gf", program)
         ]);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -25,7 +25,7 @@ public sealed class MathTests
     public void IntegerOverloadsReturnTheirInputTypeAndValidateClampBounds(string type)
     {
         Run($$"""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             int main() {
                 {{type}} minimum = ({{type}})2; {{type}} maximum = ({{type}})8;
                 {{type}} a = Math::Min(maximum, minimum);
@@ -50,7 +50,7 @@ public sealed class MathTests
     public void SignedAbsoluteValuesRejectUnrepresentableMinimum(string type, string minimum)
     {
         Run($$"""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             int main() {
                 {{type}} minimum = {{minimum}};
                 {{type}} zero = Math::Abs(({{type}})0);
@@ -71,7 +71,7 @@ public sealed class MathTests
         string negativeZeroBits, string infinityBits, string negativeNaNBits, string positiveNaNBits, string one)
     {
         Run($$"""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             {{type}} FromBits({{bitsType}} bits) => (bits).reinterpret<{{type}}>();
             {{bitsType}} Bits({{type}} value) => (value).reinterpret<{{bitsType}}>();
             int main() {

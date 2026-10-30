@@ -3,8 +3,8 @@ namespace gflat.Tests.Std;
 public sealed class OwnedExceptionMessageTests
 {
     private const string Prelude = """
-        using std;
-        using std::Text;
+        using Standard;
+        using Standard::Text;
 
         private extern void*? malloc(nuint bytes);
         private extern void free(void* storage);
@@ -27,8 +27,8 @@ public sealed class OwnedExceptionMessageTests
 
             public replace void Free(void* storage) nothrow
             {
-                if ((nuint)storage == watchedSource) sourceReleases++;
-                if ((nuint)storage == watchedMessage) messageReleases++;
+                if (storage.reinterpret<nuint>() == watchedSource) sourceReleases++;
+                if (storage.reinterpret<nuint>() == watchedMessage) messageReleases++;
                 releases++;
                 free(storage);
             }
@@ -85,7 +85,7 @@ public sealed class OwnedExceptionMessageTests
                         if (!CString::Equals(error.message, "")) return 3;
                         firstObject = (&error).reinterpret<nuint>();
                         firstMessage = error.GetMessage();
-                        watchedMessage = (nuint)error.GetMessage();
+                        watchedMessage = error.GetMessage().reinterpret<nuint>();
                         if (watchedMessage == watchedSource || messageReleases != 0) return 8;
                         firstAllocations = allocations;
                         firstReleases = releases;
@@ -120,7 +120,7 @@ public sealed class OwnedExceptionMessageTests
                 if (copy.GetMessage() == source.GetMessage()) badCopy = true;
                 source.Replace("changed source");
                 if (!CString::Equals(copy.GetMessage(), "original")) badCopy = true;
-                watchedSource = (nuint)source.GetMessage();
+                watchedSource = source.GetMessage().reinterpret<nuint>();
                 return copy;
             }
 
@@ -137,7 +137,7 @@ public sealed class OwnedExceptionMessageTests
                     {
                         caught = true;
                         if (error.GetMessage() == named.GetMessage()) return 4;
-                        watchedMessage = (nuint)error.GetMessage();
+                        watchedMessage = error.GetMessage().reinterpret<nuint>();
                         if (messageReleases != 0) return 5;
                         named.Replace("changed named");
                         if (!CString::Equals(error.GetMessage(), "original")) return 6;
@@ -154,7 +154,7 @@ public sealed class OwnedExceptionMessageTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("owned-exception-message.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);

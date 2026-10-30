@@ -1,14 +1,14 @@
 # Strings
 
-`std::Text::String` owns a null-terminated byte buffer. `Length` excludes the terminator;
+`Standard::Text::String` owns a null-terminated byte buffer. `Length` excludes the terminator;
 embedded zero bytes count toward its length. A copy owns independent storage,
 and `move` transfers storage. `Data` and `ToCString()` borrow storage until the
 string is mutated, moved, or destroyed. `String::From(text)` reads a C string;
 `String::From(text, count)` preserves every counted byte.
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 String text = s" hello ";
 text.Trim();
 text.Append('!');
@@ -19,7 +19,7 @@ nuint offset = text.IndexOf('!');
 
 Search, indexing, slicing, and removal use byte offsets. They do not split on
 Unicode character boundaries automatically. UTF-8 validation and scalar decoding
-are available separately through `std::Text::Utf8`.
+are available separately through `Standard::Text::Utf8`.
 
 `Equals(&other)` compares another String. `Equals(text)` compares a C string,
 and `Equals(data, count)` compares exactly the counted bytes, including embedded
@@ -31,10 +31,13 @@ through an immutable String pointer.
 
 The optional `string_span.gf` source adds `text.AsSpan()`, `text.AsReadOnly()`, and
 `text.AsImmutable()`. All borrow exactly `Length` bytes, including embedded zeros, without copying the
-owner or allocating. `AsSpan` requires a mutable `ref String` receiver and returns
-`Span<char>`. `AsReadOnly` accepts `ref readonly(String)`; `AsImmutable` accepts
-`ref immutable(String)`. Both return `Span<readonly(char)>`: shallow and deep
-protection are equivalent for individual characters. Temporary owners are rejected. Empty views have null data,
+owner or allocating. `AsSpan` requires a mutable receiver and returns
+`Span<char>`. `AsReadOnly` accepts a shallow readonly receiver; `AsImmutable`
+accepts an immutable receiver. Both return `Span<readonly(char)>`: shallow and
+deep protection are equivalent for individual characters. Temporary receivers
+are accepted and live only through the full expression; the returned view does
+not extend that lifetime. The explicit free ref overloads require existing
+storage. Empty views have null data,
 even when the String retains an allocation; neither spare capacity nor the shared
 empty sentinel or trailing terminator is exposed through these views.
 
@@ -57,7 +60,7 @@ zero. Search patterns may borrow the string's own storage. Forward character
 search also accepts a start offset. Invalid start and
 substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
 
-Substring searches reuse `std::Text::ByteSearch`'s Two-Way search with constant extra
+Substring searches reuse `Standard::Text::ByteSearch`'s Two-Way search with constant extra
 storage, no allocation, and O(string length + pattern length) worst-case work.
 Character search is linear. Explicit source selections containing `Text/String.gf`
 must also include `Text/ByteSearch.gf`; projects referencing the complete standard
@@ -130,8 +133,8 @@ cover `count` readable bytes; C-string input must contain a readable terminator.
 The String retains its full length even when compared to a C string.
 
 ```cpp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 
 int main()
 {
@@ -171,8 +174,8 @@ prefixes into the reserved output, without intermediate String copies. This
 repeats bytes, not Unicode scalars, display columns or a C-string prefix.
 
 ```csharp
-using std;
-using std::Text;
+using Standard;
+using Standard::Text;
 
 int main()
 {

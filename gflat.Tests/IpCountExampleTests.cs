@@ -192,7 +192,7 @@ public sealed class IpCountExampleTests
 
     private static string Compile(string directory,string name,string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("ip-count.gf",source));
         string ir=Path.Combine(directory,name+".ll"),executable=Path.Combine(directory,name+".exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

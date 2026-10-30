@@ -161,7 +161,7 @@ public sealed class AssignmentResultReceiverTests
                     if (target.value != null || deaths != 2) return 2;
                 }
                 if (deaths != 3) return 3;
-                if (GC::Collect() != (nuint)1 || std::TracingCollector::ManagedCount != (nuint)0) return 4;
+                if (GC::Collect() != (nuint)1 || Standard::TracingCollector::ManagedCount != (nuint)0) return 4;
                 return 0;
             }
             """, optimization);
@@ -407,7 +407,7 @@ public sealed class AssignmentResultReceiverTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("assignment-result-receiver.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);

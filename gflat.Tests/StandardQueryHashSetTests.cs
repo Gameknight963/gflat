@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryHashSetTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failureIndex=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){
@@ -175,7 +175,7 @@ public sealed class StandardQueryHashSetTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std/core"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard/core"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-hash-set.gf",code));
     private static void Run(string code,int optimization)
     {

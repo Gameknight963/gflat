@@ -25,7 +25,7 @@ public sealed class UnicodeTranscodingTests
             }
             texts.Add(text.ToString());
         }
-        var program = new StringBuilder("using std; using std::Text; int main(){");
+        var program = new StringBuilder("using Standard; using Standard::Text; int main(){");
         foreach (string text in texts)
         {
             byte[] bytes = new UTF8Encoding(false, true).GetBytes(text);
@@ -72,7 +72,7 @@ public sealed class UnicodeTranscodingTests
     {
         byte[][] invalidUtf8 = [[65, 0x80], [65, 0xc0, 0x80], [65, 0xf0, 0x90, 0x80], [65, 0xed, 0xa0, 0x80], [65, 0xf4, 0x90, 0x80, 0x80]];
         char[][] invalidUtf16 = [['A', '\ud800'], ['A', '\udc00'], ['A', '\ud800', 'B'], ['A', '\udbff', '\ud800']];
-        var program = new StringBuilder("using std; using std::Text; int main(){nuint length=99; nuint written=99; ushort[16] wide; char[16] bytes; for(int i=0;i<16;i++){wide[i]=(ushort)43690; bytes[i]=(char)165;}");
+        var program = new StringBuilder("using Standard; using Standard::Text; int main(){nuint length=99; nuint written=99; ushort[16] wide; char[16] bytes; for(int i=0;i<16;i++){wide[i]=(ushort)43690; bytes[i]=(char)165;}");
         foreach (byte[] input in invalidUtf8)
             program.AppendLine($$"""
                 { char[{{input.Length}}] input=[{{Bytes(input)}}];
@@ -96,7 +96,7 @@ public sealed class UnicodeTranscodingTests
     [InlineData(2)]
     public void EmptyBuffersNeedNoReadableOrWritableStorageAndAddNoTerminator(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 nuint count=99;
                 readonly(char)*? noBytes=null; readonly(ushort)*? noUnits=null;
@@ -112,7 +112,7 @@ public sealed class UnicodeTranscodingTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] files = new[] { "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(files, options: new() { NoStdLib = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "@free" }) Assert.DoesNotContain(forbidden, ir);

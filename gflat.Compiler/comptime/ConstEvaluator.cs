@@ -632,6 +632,14 @@ namespace gflat.comptime
             if (!ConstValue.TryIntegerValue(index, out var idx))
                 throw new ConstEvalException("Index must be an integer", node.Line);
 
+            if (target is ConstValue.BorrowedReference borrowed)
+            {
+                if (idx != 0)
+                    throw new ConstEvalException("Nonzero offsets from a borrowed scalar address are not supported during constant evaluation", node.Line);
+                _currentValue = borrowed.Read();
+                return;
+            }
+
             if (target is ConstValue.Array arr)
             {
                 if (idx < 0 || idx >= arr.Elements.Count)

@@ -1,7 +1,7 @@
-using std::Text;
-using std::Csv;
-using std::IO;
-using std;
+using Standard::Text;
+using Standard::Csv;
+using Standard::IO;
+using Standard;
 
 int main(int argc, char** argv)
 {

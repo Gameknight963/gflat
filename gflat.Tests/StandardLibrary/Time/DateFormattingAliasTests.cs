@@ -7,10 +7,10 @@ public sealed class DateFormattingAliasTests
     [InlineData(2)]
     public void BackedReceiverOverlapFormatsSnapshotAndPreservesAllBytesOnShortCapacity(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("date-formatting-alias.gf", """
-                using std; using std::Time;
+                using Standard; using Standard::Time;
                 int main(){
                     readonly(char)*[3] expected=["0001-01-01","2000-02-29","9999-12-31"];
                     int[3] numbers=[0,730178,3652058];

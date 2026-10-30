@@ -36,12 +36,12 @@ public sealed class IpAddressBinaryTests
                 }
             }
             Run(directory, """
-                using std; using std::Text; using std::IO; using std::Net;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Net;
                 int main(int argc,char** argv){
                     File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     for(int row=0;row<rows;row++){
                         nuint count=(nuint)FileBinary::ReadInt32LittleEndian(&file);byte[16] expected;
-                        file.ReadExactly((char*)expected,count);
+                        file.ReadExactly(((byte*)expected).reinterpret<char*>(),count);
                         nuint length=(nuint)FileBinary::ReadInt32LittleEndian(&file);char[46] text;
                         file.ReadExactly(text,length);text[length]='\0';
                         IpAddress fromText=IpAddress::Parse(text,length);IpAddress value=new();
@@ -76,7 +76,7 @@ public sealed class IpAddressBinaryTests
     [InlineData(2)]
     public async Task InvalidLengthsAvoidInputReadsResetTryResultsAndPreserveThrowingDestinations(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::Text; using std::IO; using std::Net;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Net;
             int main(){
                 IpAddress zero=new();IpAddress seed=IpAddress::Parse("2001:db8::1234");
                 for(nuint count=0;count<=33;count++){
@@ -102,7 +102,7 @@ public sealed class IpAddressBinaryTests
     [InlineData(2)]
     public async Task BinaryOperationsStageOverlappingStorageAndAllocateNothingOnSuccessOrTryFailure(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::Text; using std::IO; using std::Net;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Net;
             int allocations=0;int frees=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -144,9 +144,9 @@ public sealed class IpAddressBinaryTests
         string[] names = ["core/Net/IpAddress.gf", "core/ITextWriter.gf", "core/IFormattable.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("binary-contract.gf", """
-                using std; using std::Text; using std::IO; using std::Net;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Net;
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* value)nothrow{}}
                 bool Convert(readonly(byte)* input,nuint count,byte* output,nuint capacity,ref nuint written)nothrow{
                     IpAddress value=new();bool success=IpAddress::TryFromBytes(input,count,&value);nuint size=value.ByteCount;
@@ -168,7 +168,7 @@ public sealed class IpAddressBinaryTests
     }
     private static void Run(string directory, string program, string[] arguments, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("ip-address-binary-test.gf", program));
         string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "main.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));

@@ -82,7 +82,7 @@ internal static class ExampleOutputFailure
             string combinedSource = example + failure + wrapper;
             string sourcePath = Path.Combine(directory, "example-with-output-failure.gf");
             File.WriteAllText(sourcePath, combinedSource);
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile(sourcePath, combinedSource));
             string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "tool.exe");

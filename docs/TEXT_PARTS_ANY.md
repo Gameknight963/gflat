@@ -6,8 +6,8 @@ delimiter byte. `text_parts_any_span.gf` adds `SplitAny` to `Span<char>` and
 `ref immutable(String)` receiver, rejecting temporary owning receivers.
 
 ```csharp
-using std::Text;
-using std; using std::Memory;
+using Standard::Text;
+using Standard; using Standard::Memory;
 int main()
 {
     String text = s"one,two;three";

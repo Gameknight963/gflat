@@ -34,7 +34,7 @@ public partial class TypeChecker
     }
     public bool IsExtensionReceiverImmutable(AstNode receiver) => _types.TryGetValue(receiver, out var type) && type.IsImmutableValue;
     public bool IsExtensionReceiverReadOnly(AstNode receiver) => _types.TryGetValue(receiver, out var type) &&
-        (type.IsReadOnlyValue || _constValues.ContainsKey(receiver));
+        type.IsReadOnlyValue;
 
     private void RegisterExtensions(CompilationUnit unit)
     {

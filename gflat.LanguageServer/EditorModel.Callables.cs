@@ -143,6 +143,7 @@ public sealed partial class EditorModel
         // parameters without checking a sibling's body or changing checker state.
         var family = SymbolsNamed(source.Name).Where(candidate => candidate.Syntax.Node is MethodDeclaration method &&
                 (!selected.BoundExtension || method.Parameters.FirstOrDefault()?.IsExtensionReceiver == true) &&
+                (selected.BoundExtension || candidate.Syntax.Parent?.Node is not ExtensionDeclaration) &&
                 candidate.Namespace == source.Namespace && candidate.Owner == source.Owner && candidate.Scope == source.Scope &&
                 ReferenceEquals(primitiveImplementation, Parents(candidate.Syntax).FirstOrDefault(parent => parent.Node is PrimitiveImplementationDeclaration)?.Node) &&
                 Accessible(candidate, path, offset))

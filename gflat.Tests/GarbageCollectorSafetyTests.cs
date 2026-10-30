@@ -7,19 +7,19 @@ public sealed class GarbageCollectorSafetyTests
     [InlineData(2)]
     public void ManagedReceiverTemporaryIsRegisteredOnceWithItsValue(int optimization) => Succeeds("""
         replace alias GC = Probe;
-        static class Probe : std::IGarbageCollector {
+        static class Probe : Standard::IGarbageCollector {
             public static int Added;
             public static int Removed;
-            public static void* Allocate(nuint bytes, nuint alignment) => std::TracingCollector::Allocate(bytes, alignment);
+            public static void* Allocate(nuint bytes, nuint alignment) => Standard::TracingCollector::Allocate(bytes, alignment);
             public static void ReferenceAdded(void* slot) nothrow {
                 Added++;
-                std::TracingCollector::ReferenceAdded(slot);
+                Standard::TracingCollector::ReferenceAdded(slot);
             }
             public static void ReferenceRemoved(void* slot) nothrow {
                 Removed++;
-                std::TracingCollector::ReferenceRemoved(slot);
+                Standard::TracingCollector::ReferenceRemoved(slot);
             }
-            public static nuint Collect() => std::TracingCollector::Collect();
+            public static nuint Collect() => Standard::TracingCollector::Collect();
         }
         struct Box {
             public int number;
@@ -60,7 +60,7 @@ public sealed class GarbageCollectorSafetyTests
         int main() {
             App::Check();
             GC::Collect();
-            if (std::TracingCollector::ManagedCount != 0) return 1;
+            if (Standard::TracingCollector::ManagedCount != 0) return 1;
             return 0;
         }
         """, optimization);
@@ -68,8 +68,8 @@ public sealed class GarbageCollectorSafetyTests
     private static void Succeeds(string source, int optimization, bool vector = false)
     {
         string[] files = vector ? ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf"] : ["libc/GC.gf", "libc/TracingCollector.gf"];
-        string ir = Compiler.Emit(files.Select(name => new SourceFile("std/" + name,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        string ir = Compiler.Emit(files.Select(name => new SourceFile("Standard/" + name,
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", source)));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-tracing-safety-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -106,7 +106,7 @@ public sealed class GarbageCollectorSafetyTests
             for (int i = 0; i < 32; i++) {
                 CatchOne(i);
                 if (GC::Collect() != (nuint)1) return 1;
-                if (std::TracingCollector::ManagedCount != (nuint)0) return 2;
+                if (Standard::TracingCollector::ManagedCount != (nuint)0) return 2;
             }
             return 0;
         }
@@ -116,7 +116,7 @@ public sealed class GarbageCollectorSafetyTests
     [InlineData(0)]
     [InlineData(2)]
     public void AllocationAndCollectionInsideConstructorsKeepPartiallyBuiltGraphsAlive(int optimization) => Succeeds("""
-        public static replace nuint std::TracingCollector::CollectionThreshold() => 1;
+        public static replace nuint Standard::TracingCollector::CollectionThreshold() => 1;
         class Pair {
             public int^ first;
             public int^ second;
@@ -158,7 +158,7 @@ public sealed class GarbageCollectorSafetyTests
         int main() {
             Fail();
             if (GC::Collect() != (nuint)2) return 1;
-            if (std::TracingCollector::ManagedCount != (nuint)0) return 2;
+            if (Standard::TracingCollector::ManagedCount != (nuint)0) return 2;
             return 0;
         }
         """, optimization);
@@ -167,7 +167,7 @@ public sealed class GarbageCollectorSafetyTests
     [InlineData(0)]
     [InlineData(2)]
     public void NativeVectorRetiresMovedAndClearedCycleRoots(int optimization) => Succeeds("""
-        using std; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         class Node { public Node^? next; public int value; public Node(int n) { value = n; } }
         void Fill(Vector<Node^>* roots) {
             for (int i = 0; i < 24; i++) {

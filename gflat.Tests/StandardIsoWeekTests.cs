@@ -46,7 +46,7 @@ public sealed class StandardIsoWeekTests
                 foreach(var item in reverse){writer.Write(item.Year);writer.Write(item.Week);writer.Write(item.Weekday);writer.Write(item.Day);}
             }
             Run($$"""
-                using std; using std::Time;int allocations=0;
+                using Standard; using Standard::Time;int allocations=0;
                 namespace Memory{
                     public replace void*? Allocate(nuint count){allocations++;return null;}
                     public replace void Free(void* storage)nothrow{allocations++;}
@@ -95,7 +95,7 @@ public sealed class StandardIsoWeekTests
             (2021,53,1),(2020,54,1),(2020,1,-1),(2020,1,7),(2020,1,int.MinValue),(2020,1,int.MaxValue),
             (9999,52,6),(9999,52,0)];
         Run($$"""
-            using std; using std::Time;int main(){
+            using Standard; using Standard::Time;int main(){
                 int[4] years=[{{string.Join(',',years)}}];
                 int[{{invalid.Length*3}}] invalid=[{{string.Join(',',invalid.SelectMany(item=>new[]{item.Year,item.Week,item.Weekday}))}}];
                 Date baseline=new(2024,2,29);int original=baseline.DayNumber;
@@ -122,9 +122,9 @@ public sealed class StandardIsoWeekTests
     public void IsoPropertiesAreNothrowWithoutStringGcOrLibcSourceDependencies()
     {
         string[] names=["Time/Date.gf","Time/DayOfWeek.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("iso-contract.gf","""
-                using std; using std::Time;
+                using Standard; using Standard::Time;
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
                 int Read(immutable(Date)* value)nothrow=>value.IsoWeekYear+value.IsoWeekOfYear;
                 """));
@@ -136,7 +136,7 @@ public sealed class StandardIsoWeekTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("iso-week.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"ISO week exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

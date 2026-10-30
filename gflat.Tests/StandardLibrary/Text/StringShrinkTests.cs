@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringShrinkTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         extern void*? malloc(nuint bytes);
         extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;bool deny=false;
@@ -16,7 +16,7 @@ public sealed class StringShrinkTests
                 return result;
             }
             public replace void Free(void* storage) nothrow {
-                if((nuint)storage==watched)watchedReleases++;
+                if(storage.reinterpret<nuint>()==watched)watchedReleases++;
                 releases++;free(storage);
             }
         }
@@ -94,7 +94,7 @@ public sealed class StringShrinkTests
                     for(nuint i=0;i<=64;i++)snapshot[i]=text.Data[i];
                     readonly(char)* address=text.Data;nuint length=text.Length;nuint capacity=text.Capacity;
                     int before=allocations;int freed=releases;
-                    watched=(nuint)address;watchedReleases=0;
+                    watched=address.reinterpret<nuint>();watchedReleases=0;
                     bool caught=false;deny=true;
                     try{text.ShrinkToFit();}catch(ref BadAllocException error){caught=true;}
                     deny=false;

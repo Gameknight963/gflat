@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardCsvWriterTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("csv-writer.gf", program));
 
@@ -17,7 +17,7 @@ public sealed class StandardCsvWriterTests
     }
 
     private const string Allocator = """
-        using std; using std::Csv;
+        using Standard; using Standard::Csv;
         int attempts=0;
         extern void free(void* storage);
         namespace Memory {
@@ -135,7 +135,7 @@ public sealed class StandardCsvWriterTests
     [InlineData(2)]
     public void EveryPartialSinkFailurePropagatesAndPoisonsFutureOperations(int optimization)
         => Run("""
-            using std; using std::Csv;
+            using Standard; using Standard::Csv;
             class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
             struct Sink:ITextWriter {
                 public int Budget;public int Calls;public nuint Count;

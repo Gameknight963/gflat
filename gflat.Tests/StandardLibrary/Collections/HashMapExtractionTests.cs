@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class HashMapExtractionTests
 {
     private const string Owners = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         int made=0; int dead=0; int allocations=0; int releases=0;
         bool failHash=false; bool failEquality=false;
         private extern void*? malloc(nuint bytes);
@@ -88,7 +88,7 @@ public sealed class HashMapExtractionTests
     {
         var random=new Random(140981); var expected=new Dictionary<int,int>();
         var source=new StringBuilder("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             struct Key:IHashable,IEquatable<Key> {
                 public int Id; public Key(int id){Id=id;}
                 public immutable nuint GetHashCode()=>1;
@@ -126,7 +126,7 @@ public sealed class HashMapExtractionTests
     [InlineData(2)]
     public void ExtractedManagedFieldsStayRootedAfterMapClearAndReleaseAtScopeExit(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             class Node {public int Id;public Node^? Next;public Node(int id){Id=id;}}
             struct Key:IHashable,IEquatable<Key> {
                 public int Id; public Node^ Root;
@@ -157,8 +157,8 @@ public sealed class HashMapExtractionTests
     private static void Run(string program,int optimization,bool managed=false)
     {
         string[] files=["IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Collections/HashMap.gf","IStringConvertable.gf","Text/String.gf", "Text/ByteSearch.gf"];
-        IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))));
-        if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file)))));
+        IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",file))));
+        if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",file)))));
         sources=sources.Append(new SourceFile("extraction.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_extract_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try {

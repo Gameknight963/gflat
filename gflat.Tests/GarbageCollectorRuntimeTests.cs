@@ -7,10 +7,10 @@ public sealed class GarbageCollectorRuntimeTests
     private static void Succeeds(string body, string declarations = "")
     {
         var result = CompilerTestHelper.Run([
-            new SourceFile("std/core/IGarbageCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "IGarbageCollector.gf"))),
-            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
-            new SourceFile("std/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
-            new SourceFile("main.gf", declarations + "alias Collector = std::TracingCollector; int main() { " + body + " }")
+            new SourceFile("Standard/core/IGarbageCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", "IGarbageCollector.gf"))),
+            new SourceFile("Standard/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "TracingCollector.gf"))),
+            new SourceFile("Standard/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "GC.gf"))),
+            new SourceFile("main.gf", declarations + "alias Collector = Standard::TracingCollector; int main() { " + body + " }")
         ]);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
     }
@@ -41,7 +41,7 @@ public sealed class GarbageCollectorRuntimeTests
     public void ManagedSlotsTraceEdgesWithoutRootingUnreachableCycles() => Succeeds("""
         void** first = (void**)Collector::Allocate((nuint)sizeof(void*), (nuint)alignof(void*));
         void** second = (void**)Collector::Allocate((nuint)sizeof(void*), (nuint)alignof(void*));
-        if ((nuint)*first != (nuint)0 || (nuint)*second != (nuint)0) return 1;
+        if ((*first).reinterpret<nuint>() != (nuint)0 || (*second).reinterpret<nuint>() != (nuint)0) return 1;
         *first = second;
         *second = first;
         Collector::ReferenceAdded(first);

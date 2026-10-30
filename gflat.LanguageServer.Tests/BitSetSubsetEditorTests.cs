@@ -9,7 +9,7 @@ public sealed class BitSetSubsetEditorTests
     public void InclusionObserversBorrowProtectedOwnersAndNavigateTheirActualMethods()
     {
         const string text = """
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             void Observe(immutable(BitSet)* required, immutable(BitSet)* enabled) {
                 bool subset = required.IsSubsetOf(enabled);
                 bool superset = enabled.IsSupersetOf(required);

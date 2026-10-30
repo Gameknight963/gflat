@@ -57,7 +57,7 @@ pattern. Quote the pattern so the shell passes it unchanged. With no flag, all
 entries are listed as before. Unknown options, missing patterns and extra operands
 print usage and exit with code 2 before opening the input.
 
-Matching covers the whole counted filename using `std::Text::MatchesWildcard`:
+Matching covers the whole counted filename using `Standard::Text::MatchesWildcard`:
 `*` matches zero or more bytes, `?` matches one byte, and backslash escapes the
 next literal byte. A dangling backslash matches no names. Comparison is ordinal
 and case-sensitive. Separators are ordinary bytes, with no path rules or special

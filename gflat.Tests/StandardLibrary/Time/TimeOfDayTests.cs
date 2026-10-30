@@ -8,7 +8,7 @@ public sealed class TimeOfDayTests
 {
     private const long Day=864000000000L;
     private const string Counters="""
-        using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -166,11 +166,11 @@ public sealed class TimeOfDayTests
     public void SelectedPureSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
     {
         string[] names=["Time/TimeOfDay.gf","Time/TimeSpan.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("time-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
-                bool Observe(immutable(std::Time::TimeOfDay)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
-                    std::Time::TimeOfDay parsed=new();return std::Time::TimeOfDay::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
+                bool Observe(immutable(Standard::Time::TimeOfDay)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
+                    Standard::Time::TimeOfDay parsed=new();return Standard::Time::TimeOfDay::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
@@ -181,7 +181,7 @@ public sealed class TimeOfDayTests
     private static string Canonical(TimeOnly value)=>value.ToString(value.Ticks%10000000==0?"HH:mm:ss":"HH:mm:ss.fffffff",CultureInfo.InvariantCulture);
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.Latin1.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static void Run(string program,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("time-of-day.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"TimeOfDay exit {result.ExitCode}: {result.StandardError}");
     }

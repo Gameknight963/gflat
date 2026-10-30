@@ -19,7 +19,7 @@ public sealed class HexIntegerParsingTests
     public void StrictCountedAndCStringParsingMatchUnsignedHexOracleAtEveryWidth(int optimization)
     {
         var random = new Random(99831);
-        var code = new StringBuilder("using std; using std::Text; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; int main() {\n");
         foreach (var (name, type, maximum) in Widths)
         {
             List<string> cases = ["", "0", "f", "F", "0x0", "0XAf", "+F", "-0", "0x", "0X",
@@ -77,7 +77,7 @@ public sealed class HexIntegerParsingTests
     [InlineData(2)]
     public void OutputsMayOverlapAlignedInputAndZeroLengthNeverReadsInput(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Text; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; int main() {\n");
         foreach (var (name, type, _) in Widths)
             code.AppendLine($$"""
                 {
@@ -105,7 +105,7 @@ public sealed class HexIntegerParsingTests
     [InlineData(2)]
     public void TryParsersAreAllocationFreeNothrowAndAcceptLongLeadingZeroes(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             namespace Memory {
                 replace void*? Allocate(nuint count) => null;
                 replace void Free(void* storage) nothrow {}
@@ -135,7 +135,7 @@ public sealed class HexIntegerParsingTests
     private static void Run(string code, int optimization)
     {
         var sources = new[] { "Text/hex_integer_parsing.gf", "Text/hex_integer_parsing_throwing.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }

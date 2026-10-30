@@ -17,7 +17,7 @@ public class BinaryCursorTests
         BinaryPrimitives.WriteInt16LittleEndian(expected.AsSpan(15), -7);
         string checks = string.Join("\n", expected.Select((value, index) => $"if(data[{index + 1}]!=(byte){value})return 10;"));
         Run($$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 byte[20] data;
                 for (int i=0;i<20;i++)data[i]=(byte)165;
@@ -53,7 +53,7 @@ public class BinaryCursorTests
     [InlineData(2)]
     public void EveryFixedWidthOperationAdvancesOnlyOnSuccessAndChecksCapacityBeforeWriting(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Binary; int main(){byte[12] bytes;");
+        var code = new StringBuilder("using Standard; using Standard::Binary; int main(){byte[12] bytes;");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool signed in new[] { true, false })
         foreach (bool little in new[] { true, false })
@@ -85,7 +85,7 @@ public class BinaryCursorTests
     [InlineData(2)]
     public void EmptyResetCopiesSlicesAndMaximalSkipMaintainIndependentBoundedPositions(int optimization)
         => Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 BinaryBufferReader emptyRead=new(); BinaryBufferWriter emptyWrite=new();
                 if(emptyRead.Data!=null||emptyWrite.Data!=null)return 15;
@@ -119,7 +119,7 @@ public class BinaryCursorTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = new[] { "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$Allocate","gflat$Memory$Free","@malloc","@free"}) Assert.DoesNotContain(forbidden,ir);

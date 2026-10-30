@@ -9,7 +9,7 @@ public sealed class StandardRingShrinkTests
             "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf",
             "core/Collections/Queue.gf", "core/Collections/Deque.gf"];
         return names.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("ring-shrink.gf", program));
     }
 
@@ -19,7 +19,7 @@ public sealed class StandardRingShrinkTests
             .Replace("REMOVE", ring == "Queue" ? "Dequeue" : "RemoveFirst");
 
     private const string Allocator = """
-        using std; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
         int allocations=0;int frees=0;bool deny=false;nuint lastSize=0;
         namespace Memory{
@@ -114,7 +114,7 @@ public sealed class StandardRingShrinkTests
     public void WrappedManagedReferencesRemainRootedAfterRelocationAndDropWithRemovedSlots(string ring, int optimization)
     {
         var result = CompilerTestHelper.Run(Sources(Program("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             void Add(RING<Node^>* values,int first,int last){for(int i=first;i<last;i++){Node^ node=new^ Node(i);node.Next=node;values.ADD(node);}}
             int main(){RING<Node^> values=new();values.Reserve(8);Add(&values,0,8);
@@ -138,7 +138,7 @@ public sealed class StandardRingShrinkTests
     public void DequeBothEndsRemainUsableAfterShrinkingWrappedStorage(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){Deque<int> values=new();values.Reserve(8);
                 for(int i=1;i<=8;i++)values.AddLast(i);
                 for(int i=1;i<=5;i++)if(values.RemoveFirst()!=i)return 1;

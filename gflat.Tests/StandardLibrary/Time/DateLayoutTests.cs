@@ -8,7 +8,7 @@ public sealed class DateLayoutTests
     public void CalendarBoundDoesNotOccupyPerDateStorage(int optimization)
     {
         const string code = """
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int main(){
                 if(sizeof(Date)!=sizeof(int)||alignof(Date)!=alignof(int))return 1;
                 Date first=Date::FromDayNumber(0);
@@ -22,7 +22,7 @@ public sealed class DateLayoutTests
                 return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("date-layout.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }

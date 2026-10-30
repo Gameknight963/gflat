@@ -20,7 +20,7 @@ public sealed class TextMatchSpanTests
             int length=random.Next(text.Length+1);
             cases.Add((text,text[..length]));cases.Add((text,text[(text.Length-length)..]));
         }
-        var code=new StringBuilder("using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int main(){char[20] input;char[20] pattern;\n");
+        var code=new StringBuilder("using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int main(){char[20] input;char[20] pattern;\n");
         foreach(var item in cases)
         {
             for(int i=0;i<item.Text.Length;i++)code.AppendLine($"input[{i}]=(char){item.Text[i]};");
@@ -46,7 +46,7 @@ public sealed class TextMatchSpanTests
     [InlineData(2)]
     public void InteriorAliasedViewsAndEmptyChecksDoNotAllocateOrReadOutsideCounts(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -71,7 +71,7 @@ public sealed class TextMatchSpanTests
     private static void Run(string code,int optimization)
     {
         var sources=new[]{"Memory/Span.gf","Text/CString.gf","Text/text_match_span.gf","Collections/IEnumerable.gf","Queries/Enumerable.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("match.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

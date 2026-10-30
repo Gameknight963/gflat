@@ -1,13 +1,13 @@
 # JSON writer
 
-`std::Json::JsonWriter` writes one UTF-8 JSON document to a borrowed
+`Standard::Json::JsonWriter` writes one UTF-8 JSON document to a borrowed
 `ITextWriter*`. It owns its nesting stack, not the destination. It never closes,
 flushes, or destroys the destination, and destruction writes nothing. Keep the
 destination alive and at a stable address until the writer is no longer used.
 
 ```csharp
-using std::Text;
-using std; using std::Json;
+using Standard::Text;
+using Standard; using Standard::Json;
 
 String output = s"";
 JsonWriter writer = new(&output);

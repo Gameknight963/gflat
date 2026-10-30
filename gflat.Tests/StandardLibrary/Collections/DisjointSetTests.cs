@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DisjointSetTests
 {
     private const string Counters="""
-        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){
@@ -153,12 +153,12 @@ public sealed class DisjointSetTests
     [Fact]
     public void ImplicitCopyOfTheOwningPartitionIsRejected()
     {
-        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources("using std; using std::Collections;void Probe(){DisjointSet original=new(3);DisjointSet copied=original;}")));
+        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources("using Standard; using Standard::Collections;void Probe(){DisjointSet original=new(3);DisjointSet copied=original;}")));
         Assert.Contains("copy",error.Message,StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("disjoint-set.gf",program));
     private static void Run(string program,int optimization)
     {

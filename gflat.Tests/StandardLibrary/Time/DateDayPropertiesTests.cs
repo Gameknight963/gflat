@@ -15,7 +15,7 @@ public sealed class DateDayPropertiesTests
         const int cycleDays=146097;
         int lastYearStart=new DateOnly(9999,1,1).DayNumber;
         string source=$$"""
-            using std; using std::Time;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Time;extern int printf(readonly(char)* format,...);
             void Emit(int first,int count){
                 for(int day=first;day<first+count;day++){
                     Date value=Date::FromDayNumber(day);immutable(Date)* view=&value;
@@ -43,7 +43,7 @@ public sealed class DateDayPropertiesTests
     public void ImmutableNonthrowingDayPropertiesDoNotAllocateOrChangeDateLayout(int optimization)
     {
         const string source="""
-            using std; using std::Time;int allocations=0;
+            using Standard; using Standard::Time;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
                 public replace void Free(void* storage) nothrow{allocations++;}
@@ -67,6 +67,6 @@ public sealed class DateDayPropertiesTests
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-day-properties.gf",source));
 }

@@ -8,7 +8,7 @@ public sealed class QueryOrderEditorTests
     [Fact]
     public void DefaultAndCustomOrderShareCompletionAndSelectTheirSourceOverloads()
     {
-        const string text="using std; using std::Memory; using std::Queries;int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}void Probe(){int[3] data=[3,1,2];Span<int> values=new(data,3);var ascending=values.AsEnumerable().Order();var custom=values.AsEnumerable().Order(&Compare);}";
+        const string text="using Standard; using Standard::Memory; using Standard::Queries;int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}void Probe(){int[3] data=[3,1,2];Span<int> values=new(data,3);var ascending=values.AsEnumerable().Order();var custom=values.AsEnumerable().Order(&Compare);}";
         var (model,source,files)=Analyze(text);
         var library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_order.gf");
         foreach(var row in new[]{(Call:".Order()",Arity:0,Declaration:"Order<T : IComparable<T>, S, E>"),(Call:".Order(&Compare)",Arity:1,Declaration:"Order<T, S, E>")})
@@ -17,7 +17,7 @@ public sealed class QueryOrderEditorTests
             var items=Json(model.Completion(source.Path,use)).GetProperty("items");
             Assert.Single(items.EnumerateArray(),item=>item.GetProperty("label").GetString()=="Order");
             string hover=Hover(model,source,use);Assert.Contains("Order",hover);Assert.Contains("OrderSource<int",hover.Replace(" ",""));Assert.Contains("Enumerator",hover);Assert.DoesNotContain('$',hover);
-            Definition(model,source,use,library,Declaration(library,row.Declaration));
+            Definition(model,source,use,library,EditorSourceDeclarations.ExtensionMethod(library,"Order",row.Arity));
             var help=Json(model.SignatureHelp(source.Path,use+"Order(".Length));
             var signatures=help.GetProperty("signatures");Assert.Equal(2,signatures.GetArrayLength());
             var selected=signatures[help.GetProperty("activeSignature").GetInt32()];
@@ -30,7 +30,7 @@ public sealed class QueryOrderEditorTests
     [Fact]
     public void QualifiedNestedCursorRetainsConcreteTypeNavigationAndBorrowedCurrent()
     {
-        const string text="using std; using std::Memory; using std::Queries;int Probe(){int[2] data=[2,1];std::Memory::Span<int> values=new(data,2);var query=values.AsEnumerable().Order();std::Queries::OrderSource<int,std::Memory::Span<int>,std::Memory::Span<int>::Enumerator>::Enumerator iterator=query.GetEnumerator();bool moved=iterator.MoveNext();immutable(int)* borrowed=&iterator.Current;return *borrowed;}";
+        const string text="using Standard; using Standard::Memory; using Standard::Queries;int Probe(){int[2] data=[2,1];Standard::Memory::Span<int> values=new(data,2);var query=values.AsEnumerable().Order();Standard::Queries::OrderSource<int,Standard::Memory::Span<int>,Standard::Memory::Span<int>::Enumerator>::Enumerator iterator=query.GetEnumerator();bool moved=iterator.MoveNext();immutable(int)* borrowed=&iterator.Current;return *borrowed;}";
         var (model,source,files)=Analyze(text);
         var library=files.Single(file=>Path.GetFileName(file.Path)=="OrderSource.gf");
         int nested=text.IndexOf("Enumerator iterator",StringComparison.Ordinal);

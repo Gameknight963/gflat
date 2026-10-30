@@ -27,7 +27,7 @@ public sealed class FileSkipTests
             }
             string output = Path.Combine(directory, "write-only.bin");
             string code = $$"""
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 extern void*? malloc(nuint size); extern void free(void* storage);
                 bool deny = false; int attempts = 0;
                 namespace Memory {
@@ -84,7 +84,7 @@ public sealed class FileSkipTests
                     return 0;
                 }
                 """;
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("file-skip.gf", code));
             var result = CompilerTestHelper.Run(sources, optimization);

@@ -165,7 +165,7 @@ public sealed class BinaryCursorZigZagTests
     public void SelectiveSignedCursorContractUsesNothrowCallsWithoutAllocatorOrExceptionServices()
     {
         string ir=Emit("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             bool Convert(ref BinaryBufferReader reader,ref BinaryBufferWriter writer,ref int small,ref long big)nothrow{
                 VarInt::Status a=reader.ReadZigZagInt32(ref small);VarInt::Status b=reader.ReadZigZagInt64(ref big);
                 bool c=writer.TryWriteZigZagInt32(small);bool d=writer.TryWriteZigZagInt64(big);
@@ -179,7 +179,14 @@ public sealed class BinaryCursorZigZagTests
         foreach(string name in new[]{"ReadZigZagInt32","ReadZigZagInt64","TryWriteZigZagInt32","TryWriteZigZagInt64"})
         {
             string definition=Assert.Single(ir.Split('\n'),line=>line.StartsWith("define ",StringComparison.Ordinal)&&line.Contains("$"+name+"(",StringComparison.Ordinal));
-            Assert.Contains(" nounwind",definition);Assert.Contains("\"no-builtins\"",definition);Assert.Contains("$"+name+"(",body);
+            Assert.Contains(" nounwind",definition);Assert.Contains("\"no-builtins\"",definition);
+            Match wrapper=Assert.Single(Regex.Matches(ir,@"(?ms)^(?<definition>define [^\r\n]*@(?<name>[^\s(]+)\([^\r\n]*\{)\r?\n(?<body>.*?)^\}").Cast<Match>(),
+                match=>match.Groups["name"].Value.Contains("$extension$",StringComparison.Ordinal)
+                    && body.Contains("@"+match.Groups["name"].Value+"(",StringComparison.Ordinal)
+                    && match.Groups["body"].Value.Contains("$"+name+"(",StringComparison.Ordinal));
+            Assert.Contains(" nounwind",wrapper.Groups["definition"].Value);
+            Assert.Contains("\"no-builtins\"",wrapper.Groups["definition"].Value);
+            Assert.DoesNotContain("invoke",wrapper.Groups["body"].Value);
         }
     }
 
@@ -191,14 +198,14 @@ public sealed class BinaryCursorZigZagTests
         return bytes.ToArray();
     }
     private const string NoAllocation="""
-        using std; using std::Binary;
+        using Standard; using Standard::Binary;
         int allocations=0;
         namespace Memory{public void*? Allocate(nuint count){allocations++;return null;}public void Free(void* value)nothrow{}}
         """;
     private static string Emit(string program)
     {
         string[] names=["Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("signed-cursor.gf",program));
         return Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
     }

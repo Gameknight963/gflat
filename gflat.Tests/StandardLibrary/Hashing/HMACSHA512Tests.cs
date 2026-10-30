@@ -48,7 +48,7 @@ public sealed class HMACSHA512Tests
                 output.Write(HMACSHA512.HashData(key,data));output.Write(HMACSHA512.HashData(key,Array.Empty<byte>()));
             }
             await Run($$"""
-                using std::Hashing;
+                using Standard::Hashing;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
                 extern nuint fread(void* data,nuint size,nuint count,void* file)nothrow;
                 extern int fclose(void* file)nothrow;
@@ -106,15 +106,15 @@ public sealed class HMACSHA512Tests
         byte[] b=HMACSHA512.HashData(key,messageB),empty=HMACSHA512.HashData(key,Array.Empty<byte>());
         byte[] again=HMACSHA512.HashData(key,"again"u8);
         await Run($$"""
-            using std::Hashing;
+            using Standard::Hashing;
             bool Same(byte[64] a,byte[64] b)nothrow{for(nuint i=0;i<64;i++)if(a[i]!=b[i])return false;return true;}
             int main(){
                 byte[129] key={{Bytes(key)}};byte[139] input={{Bytes(prefix)}};
                 byte[64] before={{Bytes(before)}};byte[64] a={{Bytes(a)}};byte[64] b={{Bytes(b)}};
                 byte[64] empty={{Bytes(empty)}};byte[64] again={{Bytes(again)}};
-                HMACSHA512 hash=new((readonly(char)*)(byte*)key,129);
+                HMACSHA512 hash=new(((byte*)key).reinterpret<readonly(char)*>(),129);
                 for(nuint i=0;i<129;i++)key[i]=(byte)0;
-                if(!hash.TryAppend((readonly(char)*)(byte*)input,139))return 1;
+                if(!hash.TryAppend(((byte*)input).reinterpret<readonly(char)*>(),139))return 1;
                 for(nuint i=0;i<139;i++)input[i]=(byte)0;
                 immutable(HMACSHA512) frozen=hash;HMACSHA512 copy=hash;
                 if(!Same(frozen.GetHash(),before)||!Same(hash.GetHash(),before))return 2;
@@ -135,9 +135,9 @@ public sealed class HMACSHA512Tests
     {
         // Synthetic private counters test preflight, not huge-message execution.
         await Run("""
-            using std::Hashing;
+            using Standard::Hashing;
             bool SameState(readonly(HMACSHA512)* a,readonly(HMACSHA512)* b)nothrow{
-                readonly(byte)* first=(readonly(byte)*)a;readonly(byte)* second=(readonly(byte)*)b;
+                readonly(byte)* first=a.reinterpret<readonly(byte)*>();readonly(byte)* second=b.reinterpret<readonly(byte)*>();
                 for(nuint i=0;i<(nuint)sizeof(HMACSHA512);i++)if(first[i]!=second[i])return false;return true;
             }
             bool Same(byte[64] a,byte[64] b)nothrow{for(nuint i=0;i<64;i++)if(a[i]!=b[i])return false;return true;}
@@ -164,7 +164,7 @@ public sealed class HMACSHA512Tests
     [Fact]
     public void ConstructionRequiresAnExplicitCountedKey()
     {
-        var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using std::Hashing;int main(){HMACSHA512 missing=new();return 0;}",false)));
+        var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using Standard::Hashing;int main(){HMACSHA512 missing=new();return 0;}",false)));
         Assert.Contains("constructor",error.Message,StringComparison.OrdinalIgnoreCase);
     }
 
@@ -175,7 +175,7 @@ public sealed class HMACSHA512Tests
     private static IEnumerable<SourceFile> Sources(string code,bool exposeCounters)
     {
         foreach(string name in new[]{"Hashing/HMACSHA512.gf","Hashing/SHA512.gf","Numerics/BitOperations.gf"}) {
-            string path=Path.Combine(AppContext.BaseDirectory,"Std/core",name),source=File.ReadAllText(path);
+            string path=Path.Combine(AppContext.BaseDirectory,"Standard/core",name),source=File.ReadAllText(path);
             if(exposeCounters&&name!="Numerics/BitOperations.gf") {
                 string[] fields=name=="Hashing/HMACSHA512.gf"?["SHA512 running"]:["ulong lengthLow","ulong lengthHigh"];
                 string fixture=source;

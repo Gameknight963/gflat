@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryGenericSumTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Encoding; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Encoding; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}
@@ -60,10 +60,10 @@ public sealed class StandardQueryGenericSumTests
                         int before=attempts;deny=true;long result=0l;
                         if(narrow){
                             result=first.AsEnumerable().Sum();if(Tag(result)!=1||Tag(first.AsEnumerable().Sum())!=1)return 1;
-                            if(std::Queries::Sum<int,Span<int>,Span<int>::Enumerator>(first.AsEnumerable())!=expected)return 2;
+                            if(Standard::Queries::Sum<int,Span<int>,Span<int>::Enumerator>(first.AsEnumerable())!=expected)return 2;
                         }else{
                             result=second.AsEnumerable().Sum();if(Tag(second.AsEnumerable().Sum())!=1)return 3;
-                            if(std::Queries::Sum<long,Span<long>,Span<long>::Enumerator>(second.AsEnumerable())!=expected)return 4;
+                            if(Standard::Queries::Sum<long,Span<long>,Span<long>::Enumerator>(second.AsEnumerable())!=expected)return 4;
                         }
                         deny=false;if(result!=expected||attempts!=before)return 5;
                     }else{
@@ -109,11 +109,11 @@ public sealed class StandardQueryGenericSumTests
     [InlineData(2)]
     public void SourceCopyAndNoncopyableCursorFailuresCleanUpAndReadEachCurrentOnce(int optimization)
         =>Run(Allocator+"""
-            int mode=0;int live=0;int starts=0;int ends=0;int moves=0;int reads=0;
+            int sourceCopies=0;int mode=0;int live=0;int starts=0;int ends=0;int moves=0;int reads=0;
             struct Source{
                 private readonly(long)* values;private String token;
                 public Source(readonly(long)* input){values=input;token=s"source";live++;}
-                public copy Source(immutable(Source)* other){values=other.values;token=other.token;if(mode==1)throw new Exception("copy",71);live++;}
+                public copy Source(immutable(Source)* other){sourceCopies++;values=other.values;token=other.token;if(mode==1)throw new Exception("copy",71);live++;}
                 ~Source(){live--;}
                 public struct Cursor{
                     private readonly(long)* values;private int position;private String token;
@@ -128,8 +128,22 @@ public sealed class StandardQueryGenericSumTests
                 long[3] values=[3l,1l,4l];
                 {
                     var query=new Enumerable<long,Source,Source::Cursor>(new Source(values));int baseline=allocated-released;
+                    // Named-receiver calls must finish their local cursor cleanup before returning.
                     if(query.Sum()!=8l||moves!=4||reads!=3||starts!=ends||live!=1||allocated-released!=baseline)return 1;
-                    for(int failure=1;failure<=5;failure++){
+                    if(sourceCopies!=0)return 15;
+                    moves=0;reads=0;int beforeCopies=sourceCopies;
+                    long copied=Standard::Queries::Sum<long,Source,Source::Cursor>(query);
+                    if(copied!=8l||moves!=4||reads!=3||starts!=ends||live!=1||allocated-released!=baseline||sourceCopies!=beforeCopies+1)return 11;
+                    // A borrowed receiver remains usable while its copy constructor would throw.
+                    mode=1;moves=0;reads=0;beforeCopies=sourceCopies;
+                    long borrowed=query.Sum();
+                    if(borrowed!=8l||moves!=4||reads!=3||starts!=ends||live!=1||allocated-released!=baseline||sourceCopies!=beforeCopies)return 12;
+                    moves=0;reads=0;bool sourceFailure=false;
+                    try{Standard::Queries::Sum<long,Source,Source::Cursor>(query);}
+                    catch(ref Exception error){if(error.GetCode()!=71)return 13;sourceFailure=true;}
+                    mode=0;
+                    if(!sourceFailure||moves!=0||reads!=0||starts!=ends||live!=1||allocated-released!=baseline||sourceCopies!=beforeCopies+1)return 14;
+                    for(int failure=2;failure<=5;failure++){
                         mode=failure;moves=0;reads=0;bool caught=false;
                         if(failure==5){values[0]=9223372036854775807l;values[1]=1l;values[2]=-1l;}
                         try{query.Sum();}
@@ -144,7 +158,9 @@ public sealed class StandardQueryGenericSumTests
                         if(failure>=4&&(moves!=2||reads!=2))return 7;
                         if(failure==5&&(values[0]!=9223372036854775807l||values[1]!=1l||values[2]!=-1l))return 8;
                         values[0]=3l;values[1]=1l;values[2]=4l;moves=0;reads=0;
+                        beforeCopies=sourceCopies;
                         if(query.Sum()!=8l||moves!=4||reads!=3||starts!=ends||live!=1||allocated-released!=baseline)return 9;
+                        if(sourceCopies!=beforeCopies)return 16;
                     }
                 }
                 if(live!=0||allocated!=released)return 10;return 0;
@@ -164,7 +180,7 @@ public sealed class StandardQueryGenericSumTests
             { {{row.Type}}[2] input=[{{row.First}},{{row.Second}}];Span<{{row.Type}}> samples=new(input,2);
               Span<readonly({{row.Type}})> shallow=samples.AsReadOnly();Span<immutable({{row.Type}})> deep=samples.AsImmutable();
               if(samples.AsEnumerable().Sum()!={{row.Expected}}||shallow.AsEnumerable().Sum()!={{row.Expected}}||deep.AsEnumerable().Sum()!={{row.Expected}})return 20;
-              if(std::Queries::Sum<readonly({{row.Type}}),Span<readonly({{row.Type}})>,Span<readonly({{row.Type}})>::Enumerator>(shallow.AsEnumerable())!={{row.Expected}})return 21;
+              if(Standard::Queries::Sum<readonly({{row.Type}}),Span<readonly({{row.Type}})>,Span<readonly({{row.Type}})>::Enumerator>(shallow.AsEnumerable())!={{row.Expected}})return 21;
               if(deep.AsEnumerable().Take(0).Sum()!=0l)return 22; }
             """));
     }
@@ -180,7 +196,7 @@ public sealed class StandardQueryGenericSumTests
         ];
         SourceFile[] library = dependencies.Select(relative =>
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "Std", "core", relative);
+            string path = Path.Combine(AppContext.BaseDirectory, "Standard", "core", relative);
             return new SourceFile(path, File.ReadAllText(path));
         }).ToArray();
 
@@ -200,7 +216,7 @@ public sealed class StandardQueryGenericSumTests
 
         IEnumerable<SourceFile> Inputs(string type, string value)
             => library.Append(new SourceFile("query-sum.gf", $$"""
-                using std; using std::Text; using std::Encoding; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Encoding; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 enum Code : int { One = 1 }
                 int main() {
                     {{type}}[1] values = [{{value}}];
@@ -212,7 +228,7 @@ public sealed class StandardQueryGenericSumTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-sum.gf",code));
     private static void Run(string code,int optimization)=>Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);
 }

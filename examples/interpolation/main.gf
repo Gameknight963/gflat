@@ -1,5 +1,5 @@
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 
 extern int printf(readonly(char)* text, ...);
 
@@ -11,7 +11,7 @@ struct Player : IFormattable
     public immutable void Format(ITextWriter* output)
     {
         output.Write("Player(score=", 13);
-        std::Format(score, output);
+        Standard::Format(score, output);
         output.Write(")", 1);
     }
 }

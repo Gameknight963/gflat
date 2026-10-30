@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DequeTryRemoveTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;bool deny=false;bool capture=false;void*? captured=null;
         namespace Memory{
             public replace void*? Allocate(nuint count){
@@ -145,7 +145,7 @@ public sealed class DequeTryRemoveTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("deque-try-remove.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Deque TryRemove exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

@@ -24,7 +24,7 @@ public sealed class DateTimeOffsetUnixTests
         }
         string hex=Convert.ToHexString(bytes.ToArray());
         string program=$$$"""
-            using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+            using Standard; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
             int attempts=0;int allocated=0;int released=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -55,7 +55,7 @@ public sealed class DateTimeOffsetUnixTests
                 if(allocated!=released)return 8;return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-time-offset-unix.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Unix conversions exit {result.ExitCode}: {result.StandardError}");
     }

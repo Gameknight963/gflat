@@ -9,7 +9,7 @@ public sealed class CStringTests
     [InlineData(2)]
     public void UnsignedByteOrderAndTerminatorSemanticsAreExhaustive(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 if(!CString::IsNullOrEmpty(null)||!CString::IsNullOrEmpty(""))return 11;
                 char oneByte='x';
@@ -42,7 +42,7 @@ public sealed class CStringTests
     [InlineData(2)]
     public void BoundedLengthRespectsCapacityAndAllowsAlignedAliasedOutput(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char[35] storage;
                 for(nuint count=0;count<=32;count++) {
@@ -77,7 +77,7 @@ public sealed class CStringTests
     public void CountedDotNetOracleMatchesRandomNullTerminatedRegions(int optimization)
     {
         var random=new Random(4717);
-        var code=new StringBuilder("using std; using std::Text;int main(){char[35] left;char[35] right;\n");
+        var code=new StringBuilder("using Standard; using Standard::Text;int main(){char[35] left;char[35] right;\n");
         for(int trial=0;trial<100;trial++)
         {
             byte[] left=new byte[random.Next(33)],right=new byte[random.Next(33)];random.NextBytes(left);random.NextBytes(right);
@@ -105,7 +105,7 @@ public sealed class CStringTests
 
     private static void Run(string code,int optimization)
     {
-        SourceFile[] sources=[new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/CString.gf"))),new("main.gf",code)];
+        SourceFile[] sources=[new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/CString.gf"))),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"invoke ","personality","@__gflat_eh_","gflat$Memory$","@malloc","@free"})Assert.DoesNotContain(forbidden,ir);
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

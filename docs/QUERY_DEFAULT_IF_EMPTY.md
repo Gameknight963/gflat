@@ -5,7 +5,7 @@ its first `MoveNext()` reports no elements, the query yields its captured value
 once. It creates a lazy, repeatable query and does not change the source.
 
 ```csharp
-using std; using std::Memory; using std::Queries;
+using Standard; using Standard::Memory; using Standard::Queries;
 int main()
 {
     Span<int> empty = new();

@@ -17,7 +17,7 @@ public sealed class HashSetAlgebraTests
             x=new(a);x.SymmetricExceptWith(b);symmetric[i]=x.Sum(key=>1<<(key+8));
         }
         Run($$"""
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             int Mask(immutable(HashSet<int>)* set){
                 int result=0;for(int key=-8;key<=8;key++)if(set.Contains(&key))result=result|(1<<(key+8));
                 return result;
@@ -49,7 +49,7 @@ public sealed class HashSetAlgebraTests
     [InlineData(2)]
     public void IntersectionOwnsNoncopyableCollisionKeysAndKeepsCompletedRemovalsOnFailure(int optimization)
         => Run("""
-            using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using Standard; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
             int allocations=0;int releases=0;int dead=0;int budget=-1;bool failHash=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
@@ -89,7 +89,7 @@ public sealed class HashSetAlgebraTests
     [InlineData(2)]
     public void SymmetricDifferenceCopiesOnlyMissingKeysAndPreservesEarlierTogglesOnCopyFailure(int optimization)
         => Run("""
-            using std; using std::Collections;int made=0;int dead=0;int copies=0;bool denyCopy=false;bool denyAlloc=false;
+            using Standard; using Standard::Collections;int made=0;int dead=0;int copies=0;bool denyCopy=false;bool denyAlloc=false;
             extern void*? malloc(nuint count);extern void free(void* storage);
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(denyAlloc)return null;return malloc(count);}
@@ -132,7 +132,7 @@ public sealed class HashSetAlgebraTests
     public void CopyingExtensionRequiresCopyableElements()
     {
         const string program="""
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             struct Key:IHashable,IEquatable<Key>{
                 public immutable nuint GetHashCode()=>0;
                 public immutable bool Equals(immutable(Key)* other)=>true;
@@ -150,7 +150,7 @@ public sealed class HashSetAlgebraTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);

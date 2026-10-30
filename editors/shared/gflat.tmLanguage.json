@@ -7,7 +7,7 @@
   "patterns": [
     {
       "name": "storage.modifier.gflat",
-      "match": "\\bimplementation\\b(?=\\s+[A-Za-z_][A-Za-z0-9_:]*\\s*[:{])"
+      "match": "\\bimplementation\\b(?=\\s+[A-Za-z_][A-Za-z0-9_:]*\\s*[:{])|\\bextension\\b(?=\\s+implementation\\b)|\\bextension\\b(?=\\s*(?:<[^;{}]*>\\s*)?[A-Za-z_][A-Za-z0-9_:]*(?:\\s*<[^;{}]*>)?\\s*(?:\\{|$))|\\bexplicit\\b(?=\\s+operator\\b)"
     },
     {
       "name": "keyword.other.accessor.gflat",

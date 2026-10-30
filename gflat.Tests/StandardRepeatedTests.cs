@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardRepeatedTests
 {
     private const string Counters="""
-        using std; using std::Text; using std::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint count) { attempts++;if(deny)return null;void*? p=malloc(count);if(p!=null)allocated++;return p; }
@@ -139,8 +139,8 @@ public sealed class StandardRepeatedTests
     [InlineData(2)]
     public void ManagedReferenceCapturesAndEmptyIteratorsKeepRootsUntilTheirOwnScopeEnds(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Queries;
-            public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
+            using Standard; using Standard::Text; using Standard::Queries;
+            public static replace nuint Standard::TracingCollector::CollectionThreshold()=>0;
             class Box {
                 public Box^? Self;public int Value;
                 public Box(int value){Self=null;Value=value;}
@@ -172,7 +172,7 @@ public sealed class StandardRepeatedTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("repeated.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Repeated exit {result.ExitCode}: {result.StandardError}");

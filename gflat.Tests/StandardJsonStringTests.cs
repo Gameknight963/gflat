@@ -38,7 +38,7 @@ public sealed class StandardJsonStringTests
     public void AllSingleBytesAndEmptyInputHaveStrictValidityAndAtomicFailures(int optimization)
     {
         Run("""
-            using std; using std::Json;
+            using Standard; using Standard::Json;
             int main() {
                 char[1] input;char[10] output;
                 for(int value=0;value<256;value++) {
@@ -81,7 +81,7 @@ public sealed class StandardJsonStringTests
         byte[] valid=Encoding.UTF8.GetBytes("a\0\n\"\\\uffff😀");
         byte[][] malformed=[[0x80],[0xc0,0x80],[0xc2],[0xe0,0x9f,0xbf],[0xe1,0x80],[0xed,0xa0,0x80],
             [0xf0,0x8f,0xbf,0xbf],[0xf1,0x80,0x80],[0xf4,0x90,0x80,0x80],[0xf5,0x80,0x80,0x80],[0xff],[0xe2,0x28,0xa1]];
-        var code=new StringBuilder("using std; using std::Json;int main(){char[64] input;char[128] output;\n");
+        var code=new StringBuilder("using Standard; using Standard::Json;int main(){char[64] input;char[128] output;\n");
         Assign(code,"input",valid);
         code.AppendLine($$"""
             nuint needed=0;nuint written=0;
@@ -112,7 +112,7 @@ public sealed class StandardJsonStringTests
     private static string[] QuoteCases(List<byte[]> cases,int optimization)
     {
         int maximum=Math.Max(1,cases.Max(value=>value.Length));
-        var code=new StringBuilder($"using std; using std::Json;extern int putchar(int value) nothrow;int main(){{char[{maximum}] input;char[{maximum*6+4}] output;nuint needed=0;nuint written=0;\n");
+        var code=new StringBuilder($"using Standard; using Standard::Json;extern int putchar(int value) nothrow;int main(){{char[{maximum}] input;char[{maximum*6+4}] output;nuint needed=0;nuint written=0;\n");
         foreach(byte[] input in cases)
         {
             Assign(code,"input",input);
@@ -153,7 +153,7 @@ public sealed class StandardJsonStringTests
     private static string Run(string code,int optimization)
     {
         SourceFile[] sources=new[]{"Text/utf8.gf","Json/JsonString.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new("main.gf",code)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"invoke ","personality","@__gflat_eh_","gflat$Memory$","@malloc","@free"})Assert.DoesNotContain(forbidden,ir);

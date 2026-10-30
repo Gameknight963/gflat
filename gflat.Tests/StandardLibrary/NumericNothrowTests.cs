@@ -18,37 +18,37 @@ public class NumericNothrowTests
     {
         string checks = string.Join("\n", IntegerTypes.Select((type, index) => $$"""
             {{type.Type}} value{{index}} = ({{type.Type}})99;
-            if (!std::Text::TryParse{{type.Suffix}}("42", &value{{index}}) || value{{index}} != ({{type.Type}})42) return 1;
-            if (!std::Text::TryParse{{type.Suffix}}("+42suffix", 3, &value{{index}}) || value{{index}} != ({{type.Type}})42) return 2;
-            if (std::Text::TryParse{{type.Suffix}}("bad", &value{{index}}) || value{{index}} != ({{type.Type}})0) return 3;
-            if (std::Text::TryParse{{type.Suffix}}("", 0, &value{{index}}) || value{{index}} != ({{type.Type}})0) return 4;
-            if (std::Numerics::Math::Min(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})4) return 5;
-            if (std::Numerics::Math::Max(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})7) return 6;
+            if (!Standard::Text::TryParse{{type.Suffix}}("42", &value{{index}}) || value{{index}} != ({{type.Type}})42) return 1;
+            if (!Standard::Text::TryParse{{type.Suffix}}("+42suffix", 3, &value{{index}}) || value{{index}} != ({{type.Type}})42) return 2;
+            if (Standard::Text::TryParse{{type.Suffix}}("bad", &value{{index}}) || value{{index}} != ({{type.Type}})0) return 3;
+            if (Standard::Text::TryParse{{type.Suffix}}("", 0, &value{{index}}) || value{{index}} != ({{type.Type}})0) return 4;
+            if (Standard::Numerics::Math::Min(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})4) return 5;
+            if (Standard::Numerics::Math::Max(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})7) return 6;
             """));
         string program = $$"""
             int main() {
                 {{checks}}
-                if (!std::Numerics::Math::IsFinite(1.0f) || !std::Numerics::Math::IsFinite(1.0)) return 7;
-                if (std::Numerics::Math::IsNaN(1.0f) || std::Numerics::Math::IsNaN(1.0)) return 8;
-                if (std::Numerics::Math::Abs(-2.0f) != 2.0f || std::Numerics::Math::Abs(-2.0) != 2.0) return 9;
-                if (std::Numerics::Math::Min(1.0f, 2.0f) != 1.0f || std::Numerics::Math::Max(1.0f, 2.0f) != 2.0f) return 10;
-                if (std::Numerics::Math::Min(1.0, 2.0) != 1.0 || std::Numerics::Math::Max(1.0, 2.0) != 2.0) return 11;
+                if (!Standard::Numerics::Math::IsFinite(1.0f) || !Standard::Numerics::Math::IsFinite(1.0)) return 7;
+                if (Standard::Numerics::Math::IsNaN(1.0f) || Standard::Numerics::Math::IsNaN(1.0)) return 8;
+                if (Standard::Numerics::Math::Abs(-2.0f) != 2.0f || Standard::Numerics::Math::Abs(-2.0) != 2.0) return 9;
+                if (Standard::Numerics::Math::Min(1.0f, 2.0f) != 1.0f || Standard::Numerics::Math::Max(1.0f, 2.0f) != 2.0f) return 10;
+                if (Standard::Numerics::Math::Min(1.0, 2.0) != 1.0 || Standard::Numerics::Math::Max(1.0, 2.0) != 2.0) return 11;
                 extralong wide = (extralong)1 << 100;
-                if (std::Numerics::Math::Min(wide, wide + (extralong)1) != wide) return 12;
-                if (std::Numerics::Math::Max(wide, wide + (extralong)1) != wide + (extralong)1) return 13;
+                if (Standard::Numerics::Math::Min(wide, wide + (extralong)1) != wide) return 12;
+                if (Standard::Numerics::Math::Max(wide, wide + (extralong)1) != wide + (extralong)1) return 13;
                 return 0;
             }
             """;
         var sources = new[] { "Text/parsing.gf", "Text/integer_parsing.gf", "Numerics/Math.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Compiler.Emit(sources);
         string main = Regex.Match(ir, @"(?ms)^define [^\r\n]*@main\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
         Assert.NotEmpty(main);
         Assert.DoesNotContain("invoke", main);
         Assert.DoesNotContain("__gflat_eh_", main);
-        Assert.Contains("call zeroext i1 @gflat$std$Text$TryParseInt", main);
-        Assert.Contains("call zeroext i1 @gflat$std$Text$TryParseExtraLong", main);
+        Assert.Contains("call zeroext i1 @gflat$Standard$Text$TryParseInt", main);
+        Assert.Contains("call zeroext i1 @gflat$Standard$Text$TryParseExtraLong", main);
         Assert.Matches(@"call i32 @[^\r\n ]*\$Math\$Min", main);
 
         string[] definitions = Regex.Matches(ir, @"(?m)^define [^\r\n]+").Select(match => match.Value).ToArray();

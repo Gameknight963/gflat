@@ -14,7 +14,7 @@ public sealed class JsonPrettyExampleTests
         string directory=Path.Combine(Path.GetTempPath(),"gflat-json-pretty-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try
         {
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile("json-pretty.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/json-pretty.gf"))));
             string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"json-pretty.exe"),input=Path.Combine(directory,"document with spaces.json");

@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Queries;
 public sealed class TryExtremaByTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         private extern void*? malloc(nuint count);
         private extern void free(void* storage);
         int attempts = 0;
@@ -324,7 +324,7 @@ public sealed class TryExtremaByTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("query-try-extrema-by.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

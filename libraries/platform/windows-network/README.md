@@ -2,7 +2,7 @@
 
 Optional `Windows::TcpClient` for blocking numeric IPv4/IPv6 TCP connections on
 64-bit Windows. Reference `WindowsNetwork.gfproj`; its source-library reference
-propagates the `ws2_32` native link dependency. It is separate from portable std.
+propagates the `ws2_32` native link dependency. It is separate from portable Standard.
 
 ```xml
 <ItemGroup>
@@ -16,19 +16,19 @@ references propagate that requirement to the final executable.
 The move-only value owns its socket and WinSock startup reference. Default
 construction is closed. `Connect(IpEndpoint)` opens a connection; `IsOpen` reports
 whether it still owns a socket. It implements counted `ITextWriter::Write` and
-`std::IO::IByteReader::Read`.
+`Standard::IO::IByteReader::Read`.
 
 | API | Behavior |
 | --- | --- |
 | `Read(char* data, nuint count)` | One read, up to 2,147,483,647 bytes; returns the actual count, zero at peer EOF. |
-| `ReadExactly(char* data, nuint count)` | Loops over short reads; early EOF throws `std::IO::EndOfStreamException`. |
+| `ReadExactly(char* data, nuint count)` | Loops over short reads; early EOF throws `Standard::IO::EndOfStreamException`. |
 | `Write(readonly(char)* data, nuint count)` | Sends all counted bytes on success; embedded zeros are preserved. |
 | `ShutdownSend()` | Ends sending while receiving remains available. |
 | `Close()` | Checks native close/cleanup errors; successful repeated close is a no-op. |
 
 Closed clients reject I/O and shutdown, including zero-count I/O. Read/Write errors
 can follow an already consumed/sent prefix. `SocketException` derives from
-`std::IO::IOException`; `GetCode()` returns the captured native WSA error.
+`Standard::IO::IOException`; `GetCode()` returns the captured native WSA error.
 A failed socket close retains ownership for retry. If the socket closes but
 WinSock cleanup fails, `IsOpen` is false and another `Close` retries that cleanup.
 Destruction attempts cleanup without reporting errors.
@@ -46,7 +46,7 @@ waiting behavior. No global initializer, background thread, or polling is used.
 For a protocol where the peer replies after request EOF and then ends its reply:
 
 ```csharp
-void PrintReply(std::Net::IpEndpoint endpoint)
+void PrintReply(Standard::Net::IpEndpoint endpoint)
 {
     Windows::TcpClient client = Windows::TcpClient::Connect(endpoint);
     client.Write("ping\n", 5);

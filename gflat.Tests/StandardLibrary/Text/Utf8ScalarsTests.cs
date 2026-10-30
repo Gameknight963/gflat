@@ -32,7 +32,7 @@ public class Utf8ScalarsTests
             int main() {
                 char[{{bytes.Length}}] bytes = [{{data}}];
                 uint[{{runes.Length}}] expected = [{{expected}}];
-                std::Text::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
+                Standard::Text::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
                 if (scalars.ByteLength != {{bytes.Length}}) return 1;
                 for (int pass = 0; pass < 2; pass++) {
                     nuint index = 0;
@@ -42,15 +42,15 @@ public class Utf8ScalarsTests
                     }
                     if (index != (nuint){{runes.Length}}) return 3;
                 }
-                std::Text::Utf8Scalars::Enumerator first = scalars.GetEnumerator();
-                std::Text::Utf8Scalars::Enumerator second = scalars.GetEnumerator();
+                Standard::Text::Utf8Scalars::Enumerator first = scalars.GetEnumerator();
+                Standard::Text::Utf8Scalars::Enumerator second = scalars.GetEnumerator();
                 if (!first.MoveNext() || first.Current != 65u) return 4;
                 if (!first.MoveNext() || first.Current != 0u) return 5;
                 if (!second.MoveNext() || second.Current != 65u) return 6;
-                std::Text::Utf8Scalars::Enumerator copy = second;
+                Standard::Text::Utf8Scalars::Enumerator copy = second;
                 if (!copy.MoveNext() || copy.Current != 0u || second.Current != 65u) return 7;
-                std::Collections::IEnumerable<uint, std::Text::Utf8Scalars::Enumerator>* source = &scalars;
-                std::Text::Utf8Scalars::Enumerator iterator = source.GetEnumerator();
+                Standard::Collections::IEnumerable<uint, Standard::Text::Utf8Scalars::Enumerator>* source = &scalars;
+                Standard::Text::Utf8Scalars::Enumerator iterator = source.GetEnumerator();
                 nuint count = 0;
                 while (iterator.MoveNext()) {
                     if (iterator.Current != expected[count]) return 8;
@@ -69,13 +69,13 @@ public class Utf8ScalarsTests
         => Run("""
             int main() {
                 char[3] bytes = ['A','B','C'];
-                std::Text::Utf8Scalars scalars = new(bytes, 3);
-                std::Text::Utf8Scalars copied = scalars;
-                std::Text::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
+                Standard::Text::Utf8Scalars scalars = new(bytes, 3);
+                Standard::Text::Utf8Scalars copied = scalars;
+                Standard::Text::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
                 if (!iterator.MoveNext() || iterator.Current != 65u) return 1;
                 bytes[0] = 'X'; bytes[1] = 'Y';
                 if (iterator.Current != 65u || !iterator.MoveNext() || iterator.Current != 89u) return 2;
-                std::Text::Utf8Scalars::Enumerator fresh = copied.GetEnumerator();
+                Standard::Text::Utf8Scalars::Enumerator fresh = copied.GetEnumerator();
                 if (!fresh.MoveNext() || fresh.Current != 88u) return 3;
                 // Breaking enumeration neither changes nor owns caller storage.
                 foreach (uint scalar in scalars) { if (scalar != 88u) return 4; break; }
@@ -90,21 +90,21 @@ public class Utf8ScalarsTests
     public void EmptyAndInvalidIteratorStatesThrowAndExceptionsReleaseTheirStorage(int optimization)
         => Run("""
             int main() {
-                std::Text::Utf8Scalars empty = new();
-                std::Text::Utf8Scalars nullEmpty = new(null, 0);
+                Standard::Text::Utf8Scalars empty = new();
+                Standard::Text::Utf8Scalars nullEmpty = new(null, 0);
                 if (empty.ByteLength != 0 || nullEmpty.ByteLength != 0) return 1;
                 foreach (uint scalar in empty) return 2;
-                std::Text::Utf8Scalars::Enumerator iterator = empty.GetEnumerator();
+                Standard::Text::Utf8Scalars::Enumerator iterator = empty.GetEnumerator();
                 bool caught = false;
                 try { iterator.Current; } catch { caught = true; }
                 if (!caught || iterator.MoveNext() || iterator.MoveNext()) return 3;
                 caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught) return 4;
-                caught = false; try { new std::Text::Utf8Scalars(null, 1); } catch { caught = true; }
+                caught = false; try { new Standard::Text::Utf8Scalars(null, 1); } catch { caught = true; }
                 if (!caught) return 5;
-                caught = false; try { new std::Text::Utf8Scalars::Enumerator(null, 1); } catch { caught = true; }
+                caught = false; try { new Standard::Text::Utf8Scalars::Enumerator(null, 1); } catch { caught = true; }
                 if (!caught) return 6;
-                iterator = new std::Text::Utf8Scalars("A", 1).GetEnumerator();
+                iterator = new Standard::Text::Utf8Scalars("A", 1).GetEnumerator();
                 caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught || !iterator.MoveNext() || iterator.Current != 65u || iterator.MoveNext()) return 7;
                 caught = false; try { iterator.Current; } catch { caught = true; }
@@ -126,8 +126,8 @@ public class Utf8ScalarsTests
             return $$"""
                 {
                     char[{{bytes.Length}}] bytes = [{{data}}];
-                    std::Text::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
-                    std::Text::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
+                    Standard::Text::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
+                    Standard::Text::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
                     if (!iterator.MoveNext() || iterator.Current != 65u) return 1;
                     bool caught = false; try { iterator.MoveNext(); } catch { caught = true; }
                     if (!caught) return 2;
@@ -152,7 +152,7 @@ public class Utf8ScalarsTests
     private static void Run(string program, int optimization)
     {
         var sources = new[] { "Text/utf8.gf", "Text/Utf8Scalars.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", AllocationCounters + program));
         string ir = Compiler.Emit(sources);
         string directory = Path.Combine(Path.GetTempPath(), "gflat-utf8-scalars-" + Guid.NewGuid().ToString("N"));

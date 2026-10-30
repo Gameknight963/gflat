@@ -15,7 +15,7 @@ final executable. Direct source/CLI consumers must supply `--native-library bcry
 The current Windows toolchain must already provide the import library; this
 library does not install dependencies. It is separate from `Windows.gfproj`,
 so clock-only consumers acquire neither the random source nor this link requirement.
-It needs no std source or runtime definitions.
+It needs no Standard source or runtime definitions.
 
 ```csharp
 int main()

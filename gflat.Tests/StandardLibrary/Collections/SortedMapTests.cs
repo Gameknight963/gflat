@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class SortedMapTests
 {
     private const string Prelude = """
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
         extern int puts(immutable(char*) text);
         int made = 0; int dead = 0; int budget = -1;
         struct Owned {
@@ -190,7 +190,7 @@ public sealed class SortedMapTests
     [InlineData(2)]
     public void ManagedValuesStayRootedAcrossShiftsGrowthAndRemoval(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             class Node { public int Value; public Node^? Next; public Node(int value) { Value = value; } }
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             void Fill(SortedMap<int,Node^>* map) {
@@ -230,9 +230,9 @@ public sealed class SortedMapTests
     {
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/SortedMap.gf",
             "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf"];
-        IEnumerable<SourceFile> sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))));
+        IEnumerable<SourceFile> sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))));
         if (managed) sources = sources.Concat(new[] { "GC.gf", "TracingCollector.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc", file)))));
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/libc", file)))));
         return sources.Append(new SourceFile("sorted.gf", program));
     }
 

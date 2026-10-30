@@ -16,7 +16,7 @@ public sealed class FileWriterTests
     {
         var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/primitive_format.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" };
         if (strings) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf"]);
-        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files));
@@ -33,7 +33,7 @@ public sealed class FileWriterTests
         {
             string path = Path.Combine(directory, "formatted.bin");
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 static class Calls { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -68,7 +68,7 @@ public sealed class FileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllBytes(path, Enumerable.Range(0, 12005).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 static class Calls { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -96,7 +96,7 @@ public sealed class FileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllText(path, "AB");
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});
                     ITextWriter* self = &input;
@@ -122,7 +122,7 @@ public sealed class FileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllBytes(path, Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 struct Reject : ITextWriter {
                     public nuint Count;
                     public Reject() { Count = 0; }
@@ -148,7 +148,7 @@ public sealed class FileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllBytes(path, Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 namespace Memory {
@@ -179,7 +179,7 @@ public sealed class FileWriterTests
             string path = Path.Combine(directory, "empty.bin");
             File.WriteAllBytes(path, []);
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 struct Reject : ITextWriter {
                     public void Write(readonly(char)* data, nuint count) { throw new Exception("unexpected sink call"); }
                 }

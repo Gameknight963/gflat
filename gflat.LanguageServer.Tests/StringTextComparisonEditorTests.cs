@@ -9,7 +9,7 @@ public sealed class StringTextComparisonEditorTests
     public void BorrowedTextComparisonSelectsEachActualImmutableOverload()
     {
         const string text = """
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             void Observe(immutable(String)* value, immutable(String)* other)
             {
                 int owned = value.CompareTo(other);

@@ -8,7 +8,7 @@ public sealed class UniqueReplacementFailureTests
     public void FailedAllocationAndThrowingConstructionPreserveExistingOwnerAndReleaseFailedStorage(int optimization)
     {
         const string program = """
-            using std;using std::Memory;
+            using Standard;using Standard::Memory;
             extern void*? malloc(nuint bytes);extern void free(void* storage);
             int allocated=0;int released=0;int denied=0;int started=0;int dead=0;
             int originalFrees=0;int failedFrees=0;
@@ -66,7 +66,7 @@ public sealed class UniqueReplacementFailureTests
             }
             """;
         var sources = new[] { "Memory/Unique.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("unique-replacement-failure.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Unique replacement failure exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

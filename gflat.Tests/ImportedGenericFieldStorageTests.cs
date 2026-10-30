@@ -67,10 +67,10 @@ public sealed class ImportedGenericFieldStorageTests
     {
         string[] names = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"];
-        var sources = names.Select(name => new SourceFile("std/" + name,
-                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        var sources = names.Select(name => new SourceFile("Standard/" + name,
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("consumer.gf", """
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 Vector<int>*? watched=null;
                 int Sum(){Span<readonly(int)> values=watched!.AsImmutable();int total=0;for(nuint i=0;i<values.Length;i++)total+=values[i];return total;}
                 int main(){Vector<int> values=new();values.Add(17);values.Add(25);watched=&values;

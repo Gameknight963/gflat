@@ -1,9 +1,9 @@
-using std::Time;
+using Standard::Time;
 namespace Linux;
 
 namespace system_clock_detail
 {
-    internal std::Time::DateTime FromUnixTime(long seconds, long nanoseconds)
+    internal Standard::Time::DateTime FromUnixTime(long seconds, long nanoseconds)
     {
         if (nanoseconds < 0l || nanoseconds >= 1000000000l)
             throw new Exception("clock_gettime returned an invalid timestamp");
@@ -11,7 +11,7 @@ namespace system_clock_detail
         if (seconds < -62135596800l || seconds > 253402300799l)
             throw new Exception("System time is outside years 1 through 9999");
         long ticks = (seconds + 62135596800l) * 10000000l + nanoseconds / 100l;
-        return std::Time::DateTime::FromTicks(ticks);
+        return Standard::Time::DateTime::FromTicks(ticks);
     }
 }
 
@@ -20,7 +20,7 @@ public static class SystemClock
     private static bool HasCompatibleLayout() nothrow
         => sizeof(nint) == 8 && sizeof(monotonic_clock_detail::Timespec) == 16;
 
-    public static std::Time::DateTime GetUtcNow()
+    public static Standard::Time::DateTime GetUtcNow()
     {
         if (!HasCompatibleLayout())
             throw new Exception("SystemClock requires Linux LP64");

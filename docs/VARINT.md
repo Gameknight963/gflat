@@ -1,7 +1,7 @@
 # Variable-length integers
 
-`core/Binary/VarInt.gf` provides `std::Binary::VarInt`, a standalone, allocation-free codec
-for unsigned base-128 integers. All methods are `nothrow`; no other std source
+`core/Binary/VarInt.gf` provides `Standard::Binary::VarInt`, a standalone, allocation-free codec
+for unsigned base-128 integers. All methods are `nothrow`; no other Standard source
 is required.
 
 For position-tracking buffers, optional `Binary/binary_buffer_var_int.gf` adds
@@ -35,7 +35,7 @@ one. Decoding reverses the mapping for the entire 32-bit or 64-bit range.
 Compose the helpers with the matching unsigned length/read/write methods:
 
 ```csharp
-using std; using std::Binary;
+using Standard; using Standard::Binary;
 int main()
 {
     int original = -150;
@@ -95,7 +95,7 @@ arguments must not overlap buffers or each other. Reading never changes input;
 writing uses only the supplied value and output buffer.
 
 ```csharp
-using std; using std::Binary;
+using Standard; using Standard::Binary;
 int main()
 {
     byte[10] data;

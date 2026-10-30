@@ -1,6 +1,6 @@
-using std::Text;
-using std::Numerics;
-using std;
+using Standard::Text;
+using Standard::Numerics;
+using Standard;
 
 int main(int argc, char** argv)
 {

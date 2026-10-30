@@ -31,7 +31,7 @@ public sealed class BinaryCursorVarIntTests
                 output.WriteByte((byte)encoded.Length);output.Write(encoded);output.Write(new byte[10-encoded.Length]);
             }
             Run($$"""
-                using std; using std::Binary;extern void* fopen(readonly(char)* path,readonly(char)* mode);
+                using Standard; using Standard::Binary;extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int allocations=0;
                 namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}public replace void Free(void* pointer) nothrow{} }
@@ -83,7 +83,7 @@ public sealed class BinaryCursorVarIntTests
     [InlineData(2)]
     public void EmptyInvalidAndAliasedResultsRespectCommitRules(int optimization)
         => Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main(){
                 BinaryBufferReader empty=new();BinaryBufferWriter writer=new();uint small=42u;ulong big=43ul;
                 if(empty.ReadVarUInt32(ref small)!=VarInt::Status::NeedMore||small!=42u||empty.Position!=0)return 1;
@@ -120,7 +120,7 @@ public sealed class BinaryCursorVarIntTests
     public void OptionalIntegrationIsNothrowWithoutAllocatorOrExceptionContracts()
     {
         string ir=Compiler.Emit(Sources("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             bool Roundtrip(ref BinaryBufferReader reader,ref BinaryBufferWriter writer,ref ulong value)nothrow{
                 if(reader.ReadVarUInt64(ref value)!=VarInt::Status::Done)return false;
                 return writer.TryWriteVarUInt64(value);
@@ -132,7 +132,7 @@ public sealed class BinaryCursorVarIntTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
         => new[]{"Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("cursor-varint.gf",code));
     private static void Run(string program,int optimization)
     {

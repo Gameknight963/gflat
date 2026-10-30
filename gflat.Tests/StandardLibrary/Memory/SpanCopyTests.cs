@@ -8,7 +8,7 @@ public sealed class SpanCopyTests
     private static IEnumerable<SourceFile> Sources(string program)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/span_copy.gf", "Memory/Span.gf", "Collections/Vector.gf",
             "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("copy.gf", program));
 
     [Theory]
@@ -33,7 +33,7 @@ public sealed class SpanCopyTests
         Assert.Equal(285, scenarios);
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern int puts(immutable(char*) text);
             int Nibble(char value) {
                 if (value <= '9') return (int)value - (int)'0';
@@ -76,7 +76,7 @@ public sealed class SpanCopyTests
     }
 
     private const string Owner = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int constructed = 0; int destroyed = 0; int budget = -1;
         struct Owned {
             public int Value;
@@ -148,7 +148,7 @@ public sealed class SpanCopyTests
     [InlineData(2)]
     public void CopyFailureAfterOwningFieldInitializationCleansTemporaryAndPreservesDestination(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int allocations = 0; int releases = 0; int copies = 0;
             int constructed = 0; int destroyed = 0; int budget = -1;
             private extern void*? malloc(nuint bytes);
@@ -194,7 +194,7 @@ public sealed class SpanCopyTests
     public void CopyToCannotWriteThroughReadonlyDestination()
     {
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 int[2] source = [1,2]; int[2] destination = [3,4];
                 Span<int> input = new((int*)source,2);
@@ -208,7 +208,7 @@ public sealed class SpanCopyTests
     [Fact]
     public void NoncopyableSpansRemainUsableWithoutInstantiatingCopyTo()
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int destroyed = 0;
             struct Unique { public int Value; public Unique(int value) { Value = value; } ~Unique() { destroyed++; } }
             int main() { {
@@ -223,7 +223,7 @@ public sealed class SpanCopyTests
     public void CopyToDoesNotBypassNoncopyableElementOwnership()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Unique { public int Value; public Unique(int value) { Value = value; } ~Unique() {} }
             int main() {
                 Vector<Unique> source = new(); source.Add(new Unique(7));

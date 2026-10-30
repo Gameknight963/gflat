@@ -11,7 +11,7 @@ public sealed class HashSetAlgebraEditorTests
         var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         string text="""
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             int main(){HashSet<int> target=new();HashSet<int> source=new();
                 target.Add(1);source.Add(2);
                 target.IntersectWith(&source);

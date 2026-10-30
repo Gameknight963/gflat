@@ -21,7 +21,7 @@ public sealed class BinaryCursorPeekSliceTests
         }
         string bytes = string.Join(',', backing.Select(value => $"(byte){value}"));
         Run($$"""
-            using std::Binary;
+            using Standard::Binary;
             int main() nothrow {
                 nuint[{{packet.Count}}] packet = [{{string.Join(',', packet)}}]; nuint at = 0;
                 byte[32] data = [{{bytes}}]; byte[4] other = [(byte)222, (byte)173, (byte)190, (byte)239];
@@ -57,7 +57,7 @@ public sealed class BinaryCursorPeekSliceTests
     [InlineData(2)]
     public void ProtectedParentsYieldIndependentLiveChildrenWithoutMutatingBackingOrParentMetadata(int optimization)
         => Run("""
-            using std::Binary;
+            using Standard::Binary;
             bool PeekReadOnly(readonly(BinaryBufferReader)* reader, nuint count, ref BinaryBufferReader child) nothrow
                 => reader.TryPeekSlice(count, ref child);
             bool PeekImmutable(immutable(BinaryBufferReader)* reader, nuint count, ref BinaryBufferReader child) nothrow
@@ -99,7 +99,7 @@ public sealed class BinaryCursorPeekSliceTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = new[] { "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Memory/bytes.gf" }
-            .Select(name => Path.Combine(AppContext.BaseDirectory, "Std", "core", name))
+            .Select(name => Path.Combine(AppContext.BaseDirectory, "Standard", "core", name))
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("binary-peek-slice.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

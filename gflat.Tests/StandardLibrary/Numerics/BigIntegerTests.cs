@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Numerics;
 public sealed class BigIntegerTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("main.gf", code));
 
@@ -57,7 +57,7 @@ public sealed class BigIntegerTests
                 }
             }
             Run("""
-                using std; using std::Text; using std::Numerics; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Numerics; using Standard::Collections;
                 extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* buffer,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);
@@ -93,7 +93,7 @@ public sealed class BigIntegerTests
     }
 
     private const string Allocator="""
-        using std; using std::Text; using std::Numerics; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Numerics; using Standard::Collections;
         int allocations=0;int releases=0;bool deny=false;int failAfter=-1;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         namespace Memory{

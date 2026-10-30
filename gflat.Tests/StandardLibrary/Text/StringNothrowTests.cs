@@ -21,7 +21,7 @@ public class StringNothrowTests
             """));
         string failureChecks = string.Join("\n", types.Select((type, index) => $"if (text.TryParse{type.Item1}(&value{index}) || value{index} != ({type.Item2})0) return 12;"));
         string code = $$"""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int Probe(ref String text, immutable(String)* other) {
                 if (text.Length != 2 || text.Capacity < 2 || text.IsEmpty || text.Data[0] != '4') return 1;
                 if (text.ToCString() != text.Data || !text.Equals(other) || text.CompareTo(other) != 0) return 2;
@@ -45,7 +45,7 @@ public class StringNothrowTests
                 return 0;
             }
             """;
-        var sources = Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Std/core"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Standard/core"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("main.gf", code));
         string ir = Compiler.Emit(sources);
@@ -54,7 +54,12 @@ public class StringNothrowTests
         Assert.DoesNotContain("invoke", body);
         Assert.DoesNotContain("__gflat_eh_", body);
         Assert.Contains("ToCString", body);
-        Assert.Contains("TryParseInt", body);
+        Match parserWrapper = Assert.Single(Regex.Matches(ir, @"(?ms)^(?<definition>define [^\r\n]*@(?<name>[^\s(]+)\([^\r\n]*\{)\r?\n(?<body>.*?)^\}").Cast<Match>(),
+            match => match.Groups["name"].Value.Contains("$extension$", StringComparison.Ordinal)
+                && body.Contains("@" + match.Groups["name"].Value + "(", StringComparison.Ordinal)
+                && match.Groups["body"].Value.Contains("$TryParseInt", StringComparison.Ordinal));
+        Assert.Contains(" nounwind", parserWrapper.Groups["definition"].Value);
+        Assert.DoesNotContain("invoke", parserWrapper.Groups["body"].Value);
         Assert.Contains("Length", body);
 
         string[] definitions = Regex.Matches(ir, @"(?m)^define [^\r\n]+").Select(match => match.Value).ToArray();

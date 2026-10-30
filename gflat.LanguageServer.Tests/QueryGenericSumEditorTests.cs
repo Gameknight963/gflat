@@ -14,7 +14,7 @@ public sealed class QueryGenericSumEditorTests
     [InlineData("long","immutable(long)","1l,2l,3l","samples.AsImmutable()")]
     public void GenericSumKeepsConcreteQualifiedElementArgumentAndReturnsLong(string storage,string element,string literals,string view)
     {
-        string text="using std; using std::Memory; using std::Queries; using std::Collections;long Probe(){"+storage+"[3] numbers=["+literals+"];Span<"+storage+"> samples=new(numbers,3);"+
+        string text="using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;long Probe(){"+storage+"[3] numbers=["+literals+"];Span<"+storage+"> samples=new(numbers,3);"+
             "Span<"+element+"> values="+view+";long total=values.AsEnumerable().Sum();return total;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Memory/Span.gf","Queries/enumerable_sum.gf"];
@@ -34,15 +34,16 @@ public sealed class QueryGenericSumEditorTests
         string hover=Hover(model,source,use);
         // Deep protection on a scalar has the canonical readonly presentation.
         string displayElement=element=="immutable(long)"?"readonly(long)":element;
-        Assert.Contains("long",hover);Assert.Contains("Sum<"+displayElement+",",hover);Assert.DoesNotContain('$',hover);
-        int declaration=library.Text.IndexOf("Sum<T, S, E>(",StringComparison.Ordinal);Assert.True(declaration>=0);
+        Assert.Contains("long",hover);Assert.Contains("Sum()",hover);
+        Assert.Equal(displayElement,snapshot.Checker!.DisplayTypeName(snapshot.Checker.GetGenericCallTypeArguments(call)![0]));Assert.DoesNotContain('$',hover);
+        int declaration=EditorSourceDeclarations.ExtensionMethod(library,"Sum");Assert.True(declaration>=0);
         var expected=model.Definition(library.Path,declaration);Assert.NotNull(expected);
         Assert.Equal(expected,model.Definition(source.Path,use));Assert.Contains("enumerable_sum.gf",JsonSerializer.Serialize(expected,Protocol.JsonOptions));
         var help=Json(model.SignatureHelp(source.Path,text.IndexOf('(',use)+1));
         var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
         Assert.Empty(signature.GetProperty("parameters").EnumerateArray());
         string label=signature.GetProperty("label").GetString()!;
-        Assert.Contains("long",label);Assert.Contains("Sum<"+displayElement+",",label);Assert.DoesNotContain('$',label);
+        Assert.Contains("long",label);Assert.Contains("Sum()",label);Assert.DoesNotContain('$',label);
         int total=text.LastIndexOf("total",StringComparison.Ordinal);
         Assert.Contains("long total",Hover(model,source,total));
         var local=model.Definition(source.Path,text.IndexOf("total=",StringComparison.Ordinal));Assert.NotNull(local);

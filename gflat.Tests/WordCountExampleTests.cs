@@ -14,7 +14,7 @@ public class WordCountExampleTests
         {
             string input=Path.Combine(directory,"input.txt");
             File.WriteAllText(input, "Apple apple! PEAR\0pear\n" + new string(' ',4070) + "Banana BANANA final");
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(file=>new SourceFile(file,File.ReadAllText(file)))
                 .Append(new SourceFile(path,File.ReadAllText(path)));
             string ir=Path.Combine(directory,"words.ll"), exe=Path.Combine(directory,"words.exe");

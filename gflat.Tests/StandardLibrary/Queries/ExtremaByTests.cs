@@ -4,7 +4,7 @@ namespace gflat.Tests.Std.Queries;
 public sealed class ExtremaByTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -58,7 +58,7 @@ public sealed class ExtremaByTests
     [InlineData(2)]
     public void CurrentSelectorAndCurrentVersusBestComparisonsHaveExactForwardOrderIncludingEmptyAndSingleton(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int length=5;int moves=0;int reads=0;int selected=0;int compared=0;int starts=0;int ends=0;int events=0;int[32] trace;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int length=5;int moves=0;int reads=0;int selected=0;int compared=0;int starts=0;int ends=0;int events=0;int[32] trace;
             void Event(int value){trace[(nuint)events]=value;events++;}
             struct Source{
                 private int* values;public Source(int* input){values=input;}
@@ -148,7 +148,7 @@ public sealed class ExtremaByTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-extrema-by.gf",program));
     private static void Run(string program,int optimization)
     {

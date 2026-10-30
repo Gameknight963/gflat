@@ -29,15 +29,15 @@ try {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Sdks/Gflat.Sdk/Sdk/$file"))) { throw "VSIX is missing $tool's private SDK entry $file" }
         }
         foreach ($source in @('core/TypeInfo.gf', 'core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/allocation.gf')) {
-            if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Std/$source"))) { throw "VSIX is missing $tool/Std/$source" }
+            if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Standard/$source"))) { throw "VSIX is missing $tool/Standard/$source" }
         }
     }
     # The complete optional source library lives in the project SDK. Compiler and
     # server Std folders contain only the built-in runtime contract subset.
     foreach ($source in @('core/Text/String.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
-        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/Standard/$source"))) { throw "VSIX is missing Sdk/Standard/$source" }
     }
-    foreach ($source in @('std/core/Version.gf', 'std/core/Time/DateTimeOffset.gf', 'std/core/Numerics/Rational.gf', 'std/core/Queries/enumerable_extrema_by.gf', 'std/core/Queries/enumerable_count_by.gf', 'std/core/Queries/enumerable_to_hash_map.gf', 'std/core/Queries/enumerable_to_lookup.gf', 'std/core/Queries/enumerable_order.gf', 'std/core/Queries/OrderSource.gf', 'std/core/Collections/default_ordering.gf', 'std/core/Collections/default_equality.gf', 'std/core/Memory/alignment.gf', 'std/core/Time/IMonotonicClock.gf', 'std/core/Time/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('Standard/core/Version.gf', 'Standard/core/Time/DateTimeOffset.gf', 'Standard/core/Numerics/Rational.gf', 'Standard/core/Queries/enumerable_extrema_by.gf', 'Standard/core/Queries/enumerable_count_by.gf', 'Standard/core/Queries/enumerable_to_hash_map.gf', 'Standard/core/Queries/enumerable_to_lookup.gf', 'Standard/core/Queries/enumerable_order.gf', 'Standard/core/Queries/OrderSource.gf', 'Standard/core/Collections/default_ordering.gf', 'Standard/core/Collections/default_equality.gf', 'Standard/core/Memory/alignment.gf', 'Standard/core/Time/IMonotonicClock.gf', 'Standard/core/Time/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -46,7 +46,7 @@ try {
         }
     }
     foreach ($source in @('span_find_run.gf', 'span_subsequence_search.gf')) {
-        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/core/Collections/$source"))) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/Standard/core/Collections/$source"))) {
             throw "Packaged SDK is missing $source"
         }
     }
@@ -112,7 +112,7 @@ try {
     & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
-    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Std/core/IGarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Standard/core/IGarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
     $noThrowSource = Join-Path $extracted 'nothrow-no-stdlib.gf'
     $noThrowIr = Join-Path $extracted 'nothrow-no-stdlib.ll'
     @'
@@ -249,7 +249,7 @@ int main(){Box<int>::Item item=new(42);void* raw=(void*)&item;Box<int>::Item* re
 
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
-    $std = Join-Path $extracted 'Sdk/std'
+    $std = Join-Path $extracted 'Sdk/Standard'
     $managed = Join-Path $extracted 'managed.gf'
     @'
 void Drop() { int^ value = new(42); }
@@ -261,8 +261,8 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     $collections = Join-Path $extracted 'collections.gf'
     @'
-using std::Text;
-using std; using std::Queries; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Queries; using Standard::Collections;
 int WordLength(String word) => (int)word.Length;
 int main() {
     Vector<String> words = new();
@@ -279,14 +279,14 @@ int main() {
     return 0;
 }
 '@ | Set-Content -LiteralPath $collections
-    $bundledStd = Join-Path $extracted 'Sdk/std/core'
+    $bundledStd = Join-Path $extracted 'Sdk/Standard/core'
     $querySources = @('Collections', 'Queries' | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $bundledStd $_) -Filter '*.gf' -File | ForEach-Object FullName })
     $contractSources = @('IHashable.gf', 'IEquatable.gf', 'IComparable.gf', 'Hashing/primitive_hashing.gf') | ForEach-Object { Join-Path $bundledStd $_ }
     & $compiler $collections (Join-Path $bundledStd 'Memory/Span.gf') (Join-Path $bundledStd 'Text/String.gf') (Join-Path $bundledStd 'Text/ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
-using std; using std::Text; using std::Csv; using std::Json; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
+using Standard; using Standard::Text; using Standard::Csv; using Standard::Json; using Standard::IO; using Standard::Encoding; using Standard::Time; using Standard::Net; using Standard::Memory; using Standard::Binary; using Standard::Hashing; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
 int smokeDestroyed = 0;
 long smokeTimestamp = 0l;
 static class SmokeClock : IMonotonicClock {
@@ -357,7 +357,7 @@ int SmokeCore() {
         || bufferedPayload[0] != 'A' || bufferedPayload[4] != 'E'
         || bufferedInput.Read(bufferedPayload, 1) != 0) return 9040;
     byte[2] memoryInput = [(byte)0x41, (byte)0x42];
-    global::std::Binary::BinaryBufferReader memoryReader = new(memoryInput, 2);
+    global::Standard::Binary::BinaryBufferReader memoryReader = new(memoryInput, 2);
     IByteReader* memoryBytes = &memoryReader;
     if (memoryBytes.ReadUInt16BigEndian() != (ushort)0x4142 || memoryReader.Position != 2) return 9041;
     memoryReader.Reset();
@@ -386,12 +386,12 @@ int SmokeCore() {
     if (!MatchesWildcard("folder/report.csv", "*.csv") || MatchesWildcard("Report", "report")
         || !MatchesWildcard("a\0b", 3, "a?b", 3)) return 9022;
     int atomicValue = 40;
-    if (std::Threading::Interlocked::Increment(ref atomicValue) != 41
-        || std::Threading::Interlocked::CompareExchange(ref atomicValue, 42, 41) != 41
-        || std::Threading::Interlocked::Read(ref atomicValue) != 42) return 9024;
+    if (Standard::Threading::Interlocked::Increment(ref atomicValue) != 41
+        || Standard::Threading::Interlocked::CompareExchange(ref atomicValue, 42, 41) != 41
+        || Standard::Threading::Interlocked::Read(ref atomicValue) != 42) return 9024;
     long atomicWide = 4294967297l;
-    if (std::Threading::Interlocked::CompareExchange(ref atomicWide, 9l, 1l) != 4294967297l
-        || std::Threading::Interlocked::Exchange(ref atomicWide, 0l) != 4294967297l) return 9025;
+    if (Standard::Threading::Interlocked::CompareExchange(ref atomicWide, 9l, 1l) != 4294967297l
+        || Standard::Threading::Interlocked::Exchange(ref atomicWide, 0l) != 4294967297l) return 9025;
     byte[2] bitFieldData = [(byte)0x96, (byte)0x35]; ulong bitFieldValue = 0ul;
     if (!BitPrimitives::TryReadUInt64(bitFieldData, 2, 4, 8, BitOrder::MostSignificantFirst, ref bitFieldValue)
         || bitFieldValue != 0x63ul) return 9026;
@@ -447,7 +447,7 @@ int SmokeCore() {
     BufferWriter writer = new(storage, 32);
     map[&key].Format(&writer);
     if (writer.Length != 2 || writer.Data[0] != '4' || writer.Data[1] != '2') return 3;
-    if (!std::Text::Utf8::IsValid(writer.Data, writer.Length)) return 4;
+    if (!Standard::Text::Utf8::IsValid(writer.Data, writer.Length)) return 4;
     String hex = HexText::Encode(writer.Data, writer.Length);
     if (!hex.StartsWith("3432") || hex.Length != 4) return 5;
     HashMap<String, int>::Entry entry = map.Extract(&key);
@@ -658,7 +658,7 @@ int SmokeBinaryAndQueries() {
         var batchQuery = batchRange.Where((int value) => value % 2 == 0).AsEnumerable().Take(2);
         if (batchQuery.Aggregate(0, (int total, int value) => total + value) != 2) return 79;
         if (!CString::IsNullOrEmpty(null) || CString::IsNullOrEmpty(batchSpaced.Data)) return 80;
-        if (std::Hashing::Integer(4294967297ul) == std::Hashing::Integer(0ul)) return 81;
+        if (Standard::Hashing::Integer(4294967297ul) == Standard::Hashing::Integer(0ul)) return 81;
         JsonReader batchToken = new("\"na\\u006de\"", 11);
         if (!batchToken.Read() || !batchToken.ValueTextEquals("name", 4)) return 82;
         Span<readonly(char)> batchRaw = batchToken.RawToken;
@@ -1393,12 +1393,12 @@ int main(int argc, char** argv) {
     }
     $clockProbe = Join-Path $extracted 'clock-provider.gf'
     @'
-alias Timer = std::Time::Stopwatch<Windows::PerformanceCounter>;
+alias Timer = Standard::Time::Stopwatch<Windows::PerformanceCounter>;
 int main() {
     Timer timer = Timer::StartNew(); timer.Stop();
-    std::Time::TimeSpan elapsed = timer.Elapsed;
+    Standard::Time::TimeSpan elapsed = timer.Elapsed;
     if (timer.IsRunning || timer.ElapsedTicks < 0l || elapsed.Ticks < 0l) return 1;
-    std::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
+    Standard::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
     if (utc.Ticks < 504911232000000000l || utc.Ticks > 3155378975999999999l) return 2;
     return 0;
 }

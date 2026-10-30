@@ -9,7 +9,7 @@ public sealed class DateTimeTests
 {
     private const long Day=864000000000L,Maximum=3155378975999999999L;
     private const string Support="""
-        using std; using std::Text; using std::Time;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Time;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -175,15 +175,15 @@ public sealed class DateTimeTests
     {
         string[] names=["Time/DateTime.gf","Time/Date.gf","Time/DayOfWeek.gf","Time/TimeOfDay.gf","Time/TimeSpan.gf","ITextWriter.gf", "IFormattable.gf",
             "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("date-time-contract.gf","""
                 namespace Memory{
                     public void*? Allocate(nuint count){return null;}
                     public void Free(void* storage)nothrow{}
                 }
-                bool Observe(immutable(std::Time::DateTime)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
-                    std::Time::DateTime parsed=new();
-                    return std::Time::DateTime::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
+                bool Observe(immutable(Standard::Time::DateTime)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
+                    Standard::Time::DateTime parsed=new();
+                    return Standard::Time::DateTime::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
@@ -209,7 +209,7 @@ public sealed class DateTimeTests
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.Latin1.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-time.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"DateTime exit {result.ExitCode}: {result.StandardError}");
     }

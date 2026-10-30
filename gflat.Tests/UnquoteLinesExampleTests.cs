@@ -12,7 +12,7 @@ public sealed class UnquoteLinesExampleTests
     [InlineData(2)]
     public async Task ActualToolDecodesCompleteStringsInPlaceAndReportsInvalidLines(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("unquote-lines.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/unquote-lines.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-unquote-lines-" + Guid.NewGuid().ToString("N"));

@@ -3292,7 +3292,7 @@ public partial class LlvmEmitter : IVisitor
                 EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}");
             }
 
-            // gflat$Memory$Free is defined in user code (or std/libc/Memory/allocation.gf), no declare needed
+            // gflat$Memory$Free is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
             _externNames.Add(RuntimeMemorySymbol("Free"));
 
             string castPtr;
@@ -4008,7 +4008,7 @@ public partial class LlvmEmitter : IVisitor
         {
             bool adopting = _typeChecker.GetManagedAllocation(node) != null;
             string allocator = RuntimeMemorySymbol("Allocate");
-            // gflat$Memory$Allocate is defined in user code (or std/libc/Memory/allocation.gf), no declare needed
+            // gflat$Memory$Allocate is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
             _ = _externNames.Add(allocator);
 
             string sizePtr = NewTemp();
@@ -4406,7 +4406,7 @@ public partial class LlvmEmitter : IVisitor
             rawPointer.Inner is not ArrayTypeExpression)
             EmitManagedReferences(rawPointer.Inner, ptrVal, false);
 
-        // gflat$Memory$Free is defined in user code (or std/libc/Memory/allocation.gf), no declare needed
+        // gflat$Memory$Free is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
         _externNames.Add(RuntimeMemorySymbol("Free"));
 
         string castPtr;

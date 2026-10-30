@@ -19,7 +19,7 @@ public sealed class PathfindingExampleTests
     public void WeightedSearchUsesCheaperDetourAndHandlesTrivialAndUnreachableGoals()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             using Pathfinding;
             int main() {
                 Span<readonly(char)> cells = new("S9G...", 6);
@@ -42,7 +42,7 @@ public sealed class PathfindingExampleTests
     public void RandomWeightedGridsMatchIndependentBellmanFordCosts()
     {
         var program = new System.Text.StringBuilder("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             using Pathfinding;
             bool Verify(immutable(char*) text, int expected) {
                 Span<readonly(char)> cells = new(text, 42);
@@ -114,7 +114,7 @@ public sealed class PathfindingExampleTests
     public void InvalidDimensionsAndEndpointsHaveUsefulErrors()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             using Pathfinding;
             int main() {
                 Span<readonly(char)> cells = new("S#G...", 6); int caught = 0;
@@ -137,7 +137,7 @@ public sealed class PathfindingExampleTests
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",
             "Collections/Vector.gf", "Memory/Span.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf", "Collections/PriorityQueue.gf"];
         string grid = Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "examples", "pathfinding", "Grid.gf");
-        return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+        return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile(grid, File.ReadAllText(grid))).Append(new SourceFile("main.gf", program));
     }
 }

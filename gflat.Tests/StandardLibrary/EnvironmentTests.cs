@@ -12,7 +12,7 @@ public sealed class EnvironmentTests
         {
             var names = new List<string> { "libc/Environment.gf" };
             if (strings) names.AddRange(["libc/EnvironmentText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
-            var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Compiler.Emit(files, options: new() { NoStdLib = !strings });
             if (!strings)
@@ -20,7 +20,7 @@ public sealed class EnvironmentTests
                 Assert.DoesNotContain("%Exception", ir);
                 Assert.DoesNotContain("Memory$Allocate", ir);
                 Assert.DoesNotContain("__gflat_eh", ir);
-                Assert.DoesNotContain("%std$Text$String", ir);
+                Assert.DoesNotContain("%Standard$Text$String", ir);
             }
             string llvm = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
             File.WriteAllText(llvm, ir);
@@ -52,7 +52,7 @@ public sealed class EnvironmentTests
     public void TryLookupAllowsNameBorrowedFromItsAssignmentDestination(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 String output = s"GFLAT_STD_PRESENT";
                 if (!EnvironmentText::TryGetVariable(output.ToCString(), ref output)
@@ -80,7 +80,7 @@ public sealed class EnvironmentTests
     public void BorrowedLookupDistinguishesEmptyMissingAndNullTerminatedNamesWithoutStd()
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 readonly(char)*? value = Environment::GetVariable("GFLAT_STD_PRESENT");
                 if (value == null) return 1;
@@ -101,7 +101,7 @@ public sealed class EnvironmentTests
     public void OwningCopiesRemainIndependentAndTryLookupClearsOnlyMissingOutput()
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 String first = EnvironmentText::GetVariable("GFLAT_STD_PRESENT");
                 String second = EnvironmentText::GetVariable("GFLAT_STD_EXTRA");
@@ -126,7 +126,7 @@ public sealed class EnvironmentTests
     public void AllocationFailurePreservesOldOutputAndBorrowedLookupDoesNotAllocate()
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void*? malloc(nuint size);
             extern void free(void* data);
             static class State { public static bool Fail; public static int Allocations; }

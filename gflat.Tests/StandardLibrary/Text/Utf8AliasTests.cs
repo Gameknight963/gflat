@@ -22,14 +22,14 @@ public class Utf8AliasTests
                     uint storage = 0u; char* input = (&storage).reinterpret<char*>();
                     {{fill}}
                     nuint consumed = 99;
-                    if (!std::Text::Utf8::TryDecode(input, {{count}}, &storage, &consumed) || storage != {{value}}u || consumed != (nuint){{count}}) return 1;
+                    if (!Standard::Text::Utf8::TryDecode(input, {{count}}, &storage, &consumed) || storage != {{value}}u || consumed != (nuint){{count}}) return 1;
                 }
                 {
                     // Aligned count output overlaps input, independently of scalar.
                     nuint[4] storage; char* input = (&storage[0]).reinterpret<char*>();
                     {{fill}}
                     uint scalar = 99u;
-                    if (!std::Text::Utf8::TryDecode(input, {{count}}, &scalar, &storage[0]) || scalar != {{value}}u || storage[0] != (nuint){{count}}) return 2;
+                    if (!Standard::Text::Utf8::TryDecode(input, {{count}}, &scalar, &storage[0]) || scalar != {{value}}u || storage[0] != (nuint){{count}}) return 2;
                 }
                 """;
         }));
@@ -39,11 +39,11 @@ public class Utf8AliasTests
                 uint storage = 0u; char* input = (&storage).reinterpret<char*>();
                 input[0]=(char)0xe0; input[1]=(char)0x80; input[2]=(char)0x80;
                 nuint consumed = 99;
-                if (std::Text::Utf8::TryDecode(input,3,&storage,&consumed) || storage != 0u || consumed != (nuint)0) return 3;
+                if (Standard::Text::Utf8::TryDecode(input,3,&storage,&consumed) || storage != 0u || consumed != (nuint)0) return 3;
                 nuint other = 0; input=(&other).reinterpret<char*>();
                 input[0]=(char)0xf0; input[1]=(char)0x90;
                 uint scalar = 99u;
-                if (std::Text::Utf8::TryDecode(input,2,&scalar,&other) || scalar != 0u || other != (nuint)0) return 4;
+                if (Standard::Text::Utf8::TryDecode(input,2,&scalar,&other) || scalar != 0u || other != (nuint)0) return 4;
                 return 0;
             }
             """, optimization);
@@ -59,19 +59,19 @@ public class Utf8AliasTests
                 char* text=(&storage[0]).reinterpret<char*>();
                 text[0]='A'; text[1]=(char)0; text[2]=(char)0xe2; text[3]=(char)0x82; text[4]=(char)0xac;
                 text[5]=(char)0xf0; text[6]=(char)0x9f; text[7]=(char)0x98; text[8]=(char)0x80;
-                if (!std::Text::Utf8::TryCount(text,9,&storage[0]) || storage[0]!=(nuint)4) return 1;
+                if (!Standard::Text::Utf8::TryCount(text,9,&storage[0]) || storage[0]!=(nuint)4) return 1;
                 text[0]='A'; text[1]=(char)0xe0; text[2]=(char)0x80; text[3]=(char)0x80;
-                if (std::Text::Utf8::TryCount(text,4,&storage[0]) || storage[0]!=(nuint)0) return 2;
+                if (Standard::Text::Utf8::TryCount(text,4,&storage[0]) || storage[0]!=(nuint)0) return 2;
                 text[0]=(char)0xf0; text[1]=(char)0x90;
-                if (std::Text::Utf8::TryCount(text,2,&storage[0]) || storage[0]!=(nuint)0) return 3;
-                if (!std::Text::Utf8::TryCount(text,0,&storage[0]) || storage[0]!=(nuint)0) return 4;
+                if (Standard::Text::Utf8::TryCount(text,2,&storage[0]) || storage[0]!=(nuint)0) return 3;
+                if (!Standard::Text::Utf8::TryCount(text,0,&storage[0]) || storage[0]!=(nuint)0) return 4;
                 return 0;
             }
             """, optimization);
 
     private static void Run(string code, int optimization)
     {
-        SourceFile[] sources = [new("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/utf8.gf"))), new("main.gf", code)];
+        SourceFile[] sources = [new("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/utf8.gf"))), new("main.gf", code)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotContain("@__gflat_eh_", ir);
         Assert.DoesNotContain("personality", ir);

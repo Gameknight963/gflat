@@ -9,7 +9,7 @@ again and produce independent sets. Results have unspecified iteration order.
 its hash storage owned by each iterator.
 
 ```csharp
-using std; using std::Memory; using std::Queries; using std::Collections;
+using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
 
 int main()
 {

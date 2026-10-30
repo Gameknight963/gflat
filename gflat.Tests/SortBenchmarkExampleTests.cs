@@ -15,7 +15,7 @@ public sealed class SortBenchmarkExampleTests
         string example=Path.Combine(AppContext.BaseDirectory,"Examples/sort-bench");
         string alias=Path.Combine(example,windows?"Clock.Windows.gf":"Clock.Linux.gf");
         string main=Path.Combine(example,"main.gf");
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Concat([platform,alias,main]).Select(path=>new SourceFile(path,File.ReadAllText(path)));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_sort_bench_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{

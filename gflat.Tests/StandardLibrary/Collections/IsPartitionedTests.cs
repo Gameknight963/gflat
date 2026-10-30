@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class IsPartitionedTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocated = 0; int released = 0; bool deny = false;
         namespace Memory {
@@ -151,7 +151,7 @@ public sealed class IsPartitionedTests
     [InlineData(2)]
     public void MaintainedDocumentationExampleRuns(int optimization)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Guides/std/core/Collections/ALGORITHMS.md");
+        string path = Path.Combine(AppContext.BaseDirectory, "Guides/Standard/core/Collections/ALGORITHMS.md");
         string section = File.ReadAllText(path).Split("## Partition validation")[1].Split("## Partition boundary search")[0];
         string program = section.Split("```csharp")[1].Split("```")[0];
         Run(program, optimization);
@@ -159,7 +159,7 @@ public sealed class IsPartitionedTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("is-partitioned.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);

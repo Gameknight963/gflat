@@ -9,7 +9,7 @@ public sealed class RepeatedEditorTests
     [Fact]
     public void ExplicitRepeatedValueOffersNoThrowMetadataAndItsQueryWrapper()
     {
-        const string text="using std; using std::Queries; using std::Collections;int Probe(){Repeated<int> values=new(7,3);nuint count=values.Count;bool empty=values.IsEmpty;var query=values.AsEnumerable();return (int)count;}";
+        const string text="using Standard; using Standard::Queries; using Standard::Collections;int Probe(){Repeated<int> values=new(7,3);nuint count=values.Count;bool empty=values.IsEmpty;var query=values.AsEnumerable();return (int)count;}";
         var (model,source,library)=Analyze(text);
         int completionOffset=text.IndexOf("Count;",StringComparison.Ordinal);
         var items=Json(model.Completion(source.Path,completionOffset)).GetProperty("items");
@@ -33,7 +33,7 @@ public sealed class RepeatedEditorTests
     [Fact]
     public void NestedEnumeratorIsASourceStructWithNoThrowMoveAndConcreteIntCurrent()
     {
-        const string text="using std; using std::Queries; using std::Collections;int Probe(){Repeated<int> values=new(7,2);Repeated<int>::Enumerator iterator=values.GetEnumerator();bool moved=iterator.MoveNext();int current=iterator.Current;return current;}";
+        const string text="using Standard; using Standard::Queries; using Standard::Collections;int Probe(){Repeated<int> values=new(7,2);Repeated<int>::Enumerator iterator=values.GetEnumerator();bool moved=iterator.MoveNext();int current=iterator.Current;return current;}";
         var (model,source,library)=Analyze(text);
         int nested=text.IndexOf("Enumerator iterator",StringComparison.Ordinal);
         Assert.Equal("struct",Color(model,source,nested));

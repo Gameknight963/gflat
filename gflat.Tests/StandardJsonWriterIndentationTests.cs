@@ -13,7 +13,7 @@ public sealed class StandardJsonWriterIndentationTests
     {
         string[] documents=["null","true","123.00e-99999","\"abc\"","{}","[]","[{},[],[1,2],{\"x\":false}]",
             "{\"a\":[],\"b\":{},\"c\":[1,[],{}, {\"x\":false}],\"a\":\"q\\\"\\\\\\n\\u0000\"}"];
-        var code=new StringBuilder("using std; using std::Text; using std::Json; using std::Numerics;extern int printf(readonly(char)* text,...);extern int putchar(int ch);int main(){\n");
+        var code=new StringBuilder("using Standard; using Standard::Text; using Standard::Json; using Standard::Numerics;extern int printf(readonly(char)* text,...);extern int putchar(int ch);int main(){\n");
         var expected=new List<byte[]>();int id=0;
         foreach(string document in documents)foreach(bool indented in new[]{false,true}){
             using var parsed=JsonDocument.Parse(document);
@@ -39,7 +39,7 @@ public sealed class StandardJsonWriterIndentationTests
     {
         var values=new Dictionary<string,string>{["\0\ud83d\ude00"]="\u20ac\0\n",["separators"]="\u2028\u2029\uffff\udbff\udfff",["quotes"]="\"\\\t\b\f\r"};
         using var original=JsonDocument.Parse(JsonSerializer.Serialize(values));
-        var code=new StringBuilder("using std; using std::Text; using std::Json; using std::Numerics;extern int printf(readonly(char)* text,...);int main(){String text=new();JsonWriter writer=new(&text,true);\n");
+        var code=new StringBuilder("using Standard; using Standard::Text; using Standard::Json; using Standard::Numerics;extern int printf(readonly(char)* text,...);int main(){String text=new();JsonWriter writer=new(&text,true);\n");
         int id=0;Emit(code,original.RootElement,ref id);
         code.AppendLine("writer.Complete();for(nuint i=0;i<text.Length;i++)printf(\"%02X\",(uint)(byte)text.Data[i]);return 0;}");
         var result=CompilerTestHelper.Run(Sources(code.ToString()),optimization);Assert.Equal(0,result.ExitCode);
@@ -55,7 +55,7 @@ public sealed class StandardJsonWriterIndentationTests
     [InlineData(2)]
     public void IndentationAndMovedWriterAllocateOnlyTheOrdinaryNestingStack(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json; using std::Numerics;extern void*? malloc(nuint count);extern void free(void* pointer);int allocations=0;int releases=0;
+            using Standard; using Standard::Text; using Standard::Json; using Standard::Numerics;extern void*? malloc(nuint count);extern void free(void* pointer);int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
                 public replace void Free(void* pointer) nothrow{releases++;free(pointer);}
@@ -77,7 +77,7 @@ public sealed class StandardJsonWriterIndentationTests
     [InlineData(2)]
     public void EveryOutputByteFailureIncludingIndentationPoisonsWriter(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Json; using Standard::Numerics;
             struct Sink:ITextWriter{
                 public int Budget;public int Calls;public nuint Bytes;
                 public Sink(int budget){Budget=budget;Calls=0;Bytes=0;}
@@ -107,7 +107,7 @@ public sealed class StandardJsonWriterIndentationTests
     [InlineData(2)]
     public void ValidationAndNestingAllocationFailuresDoNotEmitWhitespaceAndCanRetry(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json; using std::Numerics;extern void*? malloc(nuint count);extern void free(void* pointer);bool deny=false;
+            using Standard; using Standard::Text; using Standard::Json; using Standard::Numerics;extern void*? malloc(nuint count);extern void free(void* pointer);bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny)return null;return malloc(count);}
                 public replace void Free(void* pointer) nothrow{free(pointer);}
@@ -154,7 +154,7 @@ public sealed class StandardJsonWriterIndentationTests
         code.AppendLine($"writer.{method}({name},{bytes.Length});");
     }
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);

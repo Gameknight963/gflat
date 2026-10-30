@@ -6,7 +6,7 @@ public sealed class StringTextEqualityTests
     private static IEnumerable<SourceFile> Sources(string program)
         => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf",
             "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf" }
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("string-text-equality.gf",program));
 
     private static void Run(string program,int optimization)
@@ -56,7 +56,7 @@ public sealed class StringTextEqualityTests
         string Chars(IEnumerable<byte> values)=>string.Join(",",values.Select(value=>"(char)"+value));
         string Bools(IEnumerable<bool> values)=>string.Join(",",values.Select(value=>value?"true":"false"));
         string code=$$"""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             int main(){
                 char[{{ownerBytes.Count}}] owners=[{{Chars(ownerBytes)}}];
                 char[{{inputBytes.Count}}] inputs=[{{Chars(inputBytes)}}];
@@ -87,7 +87,7 @@ public sealed class StringTextEqualityTests
     [InlineData(2)]
     public void EmptyMismatchAliasedStorageAndExistingInterfacesNeedNoComparisonAllocation(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             int attempts=0;bool deny=false;
             extern void*? malloc(nuint bytes);extern void free(void* storage);
             namespace Memory {

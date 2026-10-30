@@ -1,8 +1,8 @@
 # Raw byte operations
 
 `Memory::Copy`, `Move`, `Fill`, `Compare`, and `Equal` operate on raw storage.
-Their source file, `std/core/Memory/bytes.gf`, is independent of the default
-allocator implementation in `std/libc/Memory/allocation.gf`.
+Their source file, `Standard/core/Memory/bytes.gf`, is independent of the default
+allocator implementation in `Standard/libc/Memory/allocation.gf`.
 
 | Operation | Signature and meaning |
 | --- | --- |
@@ -36,7 +36,7 @@ notifications. Use the language's normal typed copying and movement for objects.
 The allocator source provides `Memory::Allocate(nuint)` and
 `Memory::Free(void*) nothrow`. Replace both when supplying a custom allocator;
 the replacement `Free` must also declare `nothrow`. Allocator definitions supplied
-without std have the same requirement.
+without Standard have the same requirement.
 
 `Allocate` can fail or throw before a container moves its existing values.
 `Free` must release valid storage without propagating an exception. Containers
@@ -115,6 +115,6 @@ These functions operate only on integers. They allocate no storage, do not
 validate backing storage or buffer size, and do not construct objects. A caller
 laying out a real buffer must independently check its capacity and any additional
 size arithmetic.
-Selective source users can include `std/core/Memory/alignment.gf` separately;
+Selective source users can include `Standard/core/Memory/alignment.gf` separately;
 its throwing helpers require ordinary exception support. Success performs no
 allocation; exception runtime behavior still applies to failures.

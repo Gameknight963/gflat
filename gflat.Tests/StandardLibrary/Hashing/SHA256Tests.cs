@@ -45,12 +45,12 @@ public sealed class SHA256Tests
                         input[0]=(char)165;input[count+1]=(char)90;
                         if(fread((void*)&input[1],1,count,file!)!=count||fread((void*)&expected[0],1,32,file!)!=32)return 4;
                         char[8195] original=input;
-                        std::Hashing::SHA256 whole=new();
+                        Standard::Hashing::SHA256 whole=new();
                         if(!whole.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!whole.TryAppend(&input[1],count))return 5;
                         if(!Matches(whole.GetHash(),expected)||!Matches(whole.GetHash(),expected))return 6;
                         // Try different boundaries, including one byte at a time and partial blocks.
                         for(int mode=0;mode<3;mode++){
-                            std::Hashing::SHA256 chunked=new();nuint position=0;
+                            Standard::Hashing::SHA256 chunked=new();nuint position=0;
                             while(position<count){
                                 nuint take=1;if(mode==1)take=position%97+1;if(mode==2)take=64;
                                 if(take>count-position)take=count-position;
@@ -83,10 +83,10 @@ public sealed class SHA256Tests
             int main(){
                 const byte[32] firstExpected={{Bytes(first)}};const byte[32] secondExpected={{Bytes(second)}};
                 const byte[32] millionExpected={{Bytes(million)}};
-                std::Hashing::SHA256 hash=new();char[7] prefix=['p','r','e','f','i','x','-'];
+                Standard::Hashing::SHA256 hash=new();char[7] prefix=['p','r','e','f','i','x','-'];
                 if(!hash.TryAppend(prefix,7))return 1;
                 for(nuint i=0;i<7;i++)prefix[i]='?';
-                std::Hashing::SHA256 branch=hash;immutable(std::Hashing::SHA256) frozen=hash;
+                Standard::Hashing::SHA256 branch=hash;immutable(Standard::Hashing::SHA256) frozen=hash;
                 byte[32] prefixHash=hash.GetHash();if(!Equal(prefixHash,frozen.GetHash()))return 2;
                 byte[32] changed=prefixHash;changed[0]=(byte)(changed[0]^(byte)255);
                 if(!Equal(prefixHash,hash.GetHash())||Equal(changed,hash.GetHash()))return 3;
@@ -95,7 +95,7 @@ public sealed class SHA256Tests
                 hash.Reset();char[1000] block;for(nuint i=0;i<1000;i++)block[i]='a';
                 for(int i=0;i<1000;i++)if(!hash.TryAppend(block,1000))return 6;
                 if(!Equal(hash.GetHash(),millionExpected))return 7;
-                hash.Reset();std::Hashing::SHA256 empty=new();
+                hash.Reset();Standard::Hashing::SHA256 empty=new();
                 if(!Equal(hash.GetHash(),empty.GetHash())||!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0))return 8;
                 return 0;
             }
@@ -119,7 +119,7 @@ public sealed class SHA256Tests
                 for(nuint i=0;i<32;i++)if(first[i]!=second[i])return false;return true;
             }
             int main(){
-                std::Hashing::SHA256 hash=new();byte[32] empty=hash.GetHash();
+                Standard::Hashing::SHA256 hash=new();byte[32] empty=hash.GetHash();
                 {{limitChecks}}
                 hash.Reset();if(!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!Same(hash.GetHash(),empty))return 6;
                 return 0;
@@ -130,7 +130,7 @@ public sealed class SHA256Tests
     private static string Bytes(byte[] bytes)=>"["+string.Join(",",bytes.Select(value=>"(byte)"+value))+"]";
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>new[]{"Hashing/SHA256.gf","Numerics/BitOperations.gf"}.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        =>new[]{"Hashing/SHA256.gf","Numerics/BitOperations.gf"}.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("sha256-test.gf",code));
     private static void Run(string code,int optimization)
     {

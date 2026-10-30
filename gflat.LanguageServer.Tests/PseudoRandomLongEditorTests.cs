@@ -8,7 +8,7 @@ public sealed class PseudoRandomLongEditorTests
     [Fact]
     public void SignedDrawOverloadsHaveReadableLongSignaturesAndActualDeclarations()
     {
-        const string text = "using std; using std::Numerics;void Probe(){PseudoRandom random=new(42ul);long bits=random.NextLong();long upper=random.NextLong(10l);long interval=random.NextLong(-10l,10l);}";
+        const string text = "using Standard; using Standard::Numerics;void Probe(){PseudoRandom random=new(42ul);long bits=random.NextLong();long upper=random.NextLong(10l);long interval=random.NextLong(-10l,10l);}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "PseudoRandom.gf");

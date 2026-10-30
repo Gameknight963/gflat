@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class BitSetSubsetTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("bitset-subset.gf", code));
 
@@ -152,7 +152,7 @@ public sealed class BitSetSubsetTests
             """, optimization);
 
     private const string Memory = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         bool deny=false;int attempts=0;int allocated=0;int released=0;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory {

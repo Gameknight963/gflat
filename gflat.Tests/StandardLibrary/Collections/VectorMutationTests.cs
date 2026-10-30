@@ -5,14 +5,14 @@ public sealed class VectorMutationTests
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf", "IHashable.gf",
         "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"
-    }.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+    }.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
     public void InsertionAndRemovalPreserveOrderAtEveryPosition()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Vector<int> values = new();
                 values.Insert(0, 2); values.Insert(0, 1); values.Insert(2, 4); values.Insert(2, 3);
@@ -37,7 +37,7 @@ public sealed class VectorMutationTests
     public void AliasedStringInsertionCopiesBeforeGrowthAndRemovalTransfers()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Vector<String> values = new(); values.Reserve(4);
                 values.Add(s"one"); values.Add(s"two"); values.Add(s"three"); values.Add(s"four");
@@ -59,7 +59,7 @@ public sealed class VectorMutationTests
     public void NoncopyableElementsAreRelocatedAndDestroyedExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -89,7 +89,7 @@ public sealed class VectorMutationTests
     public void InvalidBoundsDestroyInsertionArgumentAndPreserveContents()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -116,7 +116,7 @@ public sealed class VectorMutationTests
     public void UnorderedRemovalMovesTheLastOwnerAndDestroysEveryValueOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -145,7 +145,7 @@ public sealed class VectorMutationTests
     public void ThrowingArgumentCopyHappensBeforeAnyVectorMutation()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* copies;
                 private int* destroyed;
@@ -179,7 +179,7 @@ public sealed class VectorMutationTests
     public void FailedGrowthDestroysInsertionArgumentAndPreservesOrdering()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint bytes); extern void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 64) return null; return malloc(bytes); }

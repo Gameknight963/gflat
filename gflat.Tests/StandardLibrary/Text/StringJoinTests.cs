@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringJoinTests
 {
     private const string Prelude="""
-        using std; using std::Text; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocations=0;int releases=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){if(deny)return null;allocations++;return malloc(count);}
@@ -84,7 +84,7 @@ public sealed class StringJoinTests
 
     private static void Assign(StringBuilder code,string name,byte[] bytes){for(int i=0;i<bytes.Length;i++)code.AppendLine($"{name}[{i}]=(char){bytes[i]};");}
     private static void Run(string code,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }

@@ -9,7 +9,7 @@ public sealed class TextTrimSpanTests
     [InlineData(2)]
     public void EveryByteBoundaryUsesExactlyAsciiWhitespaceWithoutChangingStorage(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){
                 char[5] data;
                 for(int value=0;value<256;value++){
@@ -38,7 +38,7 @@ public sealed class TextTrimSpanTests
     [InlineData(2)]
     public void EmptyAndWhitespaceViewsAreCanonicalAndMutableResultsStillAliasWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
@@ -74,7 +74,7 @@ public sealed class TextTrimSpanTests
     [InlineData(2)]
     public void TrimComposesWithBorrowedLineAndDelimiterViews(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){
                 readonly(char)* input=" name = value \r\n\tflag= yes\t\n \t = \t \n";
                 Span<readonly(char)> text=new(input,36);int lineIndex=0;
@@ -105,7 +105,7 @@ public sealed class TextTrimSpanTests
         foreach (string method in new[] { "Trim", "TrimStart", "TrimEnd" })
         {
             var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources($$"""
-                using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main(){Span<readonly(char)> text=new(" x ",3);text.{{method}}()[0]='!';return 0;}
                 """)));
             Assert.Contains("read", error.Message, StringComparison.OrdinalIgnoreCase);
@@ -116,7 +116,7 @@ public sealed class TextTrimSpanTests
     {
         string[] files = ["Memory/Span.gf", "Text/ascii.gf", "Text/text_trim_span.gf", "Text/TextParts.gf", "Text/text_parts_span.gf", "Text/TextLines.gf", "Text/text_lines_span.gf",
             "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf"];
-        return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+        return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("main.gf", program));
     }
     private static void Run(string program, int optimization)

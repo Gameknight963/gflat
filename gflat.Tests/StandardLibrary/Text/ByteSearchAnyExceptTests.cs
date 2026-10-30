@@ -39,7 +39,7 @@ public sealed class ByteSearchAnyExceptTests
             rows.AddRange([one.First, one.Last, many.First, many.Last]);
         }
         Run($$"""
-            using std::Text;
+            using Standard::Text;
             int main() nothrow {
                 byte[514] input; byte[3] pattern;
                 input[0] = (byte)90; input[513] = (byte)165;
@@ -90,7 +90,7 @@ public sealed class ByteSearchAnyExceptTests
             overlap.AddRange([start, length, setStart, count, result.First, result.Last]);
         }
         Run($$"""
-            using std::Text;
+            using Standard::Text;
             int main() nothrow {
                 byte[256] input = [{{Bytes(input)}}]; byte[320] pattern = [{{Bytes(pattern)}}];
                 byte[256] inputBefore; byte[320] patternBefore;
@@ -123,7 +123,7 @@ public sealed class ByteSearchAnyExceptTests
     [InlineData(2)]
     public void EmptySidesAll256ValuesAndGuardedExtentsHaveExactSentinels(int optimization)
         => Run("""
-            using std::Text;
+            using Standard::Text;
             int main() nothrow {
                 readonly(byte)* invalid = ((nuint)1).reinterpret<readonly(byte)*>(); nuint maximum = (nuint)0 - (nuint)1;
                 if (ByteSearch::IndexOfAnyExcept(invalid, 0, invalid, maximum) != 0) return 1;
@@ -153,7 +153,7 @@ public sealed class ByteSearchAnyExceptTests
 
     private static void Run(string program, int optimization)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Std", "core", "Text", "ByteSearch.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Text", "ByteSearch.gf");
         string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)), new SourceFile("byte-search-any-except.gf", program)],
             options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "invoke ", "personality", "__gflat_eh_", "gflat$Memory$", "@malloc", "@free", "__gflat_gc" })

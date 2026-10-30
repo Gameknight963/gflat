@@ -11,7 +11,7 @@ public sealed class SortedMapRangeTests
     public void HalfOpenRangesMatchHostSortedDictionaryInComparerOrder(int optimization)
     {
         var code = new StringBuilder("""
-            using std::Collections;using std::Memory;
+            using Standard::Collections;using Standard::Memory;
             int Ascending(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             int Descending(immutable(int)* a,immutable(int)* b)=>Ascending(b,a);
             int Magnitude(immutable(int)* a,immutable(int)* b){int x=*a;int y=*b;if(x<0)x=-x;if(y<0)y=-y;return Ascending(&x,&y);}
@@ -61,7 +61,7 @@ public sealed class SortedMapRangeTests
     [InlineData(2)]
     public void RangesBorrowNoncopyableOwnersAndComparerFailuresPreserveTheMap(int optimization)
         => Run("""
-            using std::Collections;using std::Memory;
+            using Standard::Collections;using Standard::Memory;
             extern void*? malloc(nuint count);extern void free(void* storage);
             int allocations=0;int releases=0;int dead=0;int calls=0;int budget=-1;bool deny=false;
             namespace Memory{
@@ -111,7 +111,7 @@ public sealed class SortedMapRangeTests
     [InlineData(2)]
     public void ViewsDoNotInvokeThrowingCopyConstructors(int optimization)
         => Run("""
-            using std::Collections;
+            using Standard::Collections;
             int copies=0;int made=0;int dead=0;
             struct Item{
                 public int Id;
@@ -136,7 +136,7 @@ public sealed class SortedMapRangeTests
     public void BorrowedRangeCannotMutateKeysOrValues(string invalid)
     {
         const string setup = """
-            using std::Collections;
+            using Standard::Collections;
             int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             int main(){SortedMap<int,int> map=new(Compare);map.Add(1,10);int lower=0;int upper=2;
                 readonly(SortedMap<int,int>)* view=&map;var range=view.GetRange(&lower,&upper);
@@ -150,7 +150,7 @@ public sealed class SortedMapRangeTests
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/Vector.gf",
             "Memory/Span.gf", "Collections/SortedMap.gf"];
         return files.Select(file => new SourceFile(file,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("sorted-map-range.gf", program));
     }
 

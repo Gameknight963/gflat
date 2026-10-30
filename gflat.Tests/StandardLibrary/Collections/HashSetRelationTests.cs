@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class HashSetRelationTests
 {
     private const string Prelude = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         extern int puts(immutable(char*) message);
         int made = 0; int destroyed = 0; int allocations = 0; int releases = 0;
         bool failHash = false; bool failEquality = false;
@@ -175,7 +175,7 @@ public sealed class HashSetRelationTests
     {
         string[] files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf", "Collections/HashSet.gf",
             "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf"];
-        var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+        var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("relations.gf", program));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_set_relations_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);

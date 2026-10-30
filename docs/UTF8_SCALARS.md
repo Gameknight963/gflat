@@ -1,11 +1,11 @@
 # Iterating UTF-8 scalar values
 
-`std::Text::Utf8Scalars` is a borrowed view over counted UTF-8 bytes. It implements
+`Standard::Text::Utf8Scalars` is a borrowed view over counted UTF-8 bytes. It implements
 `IEnumerable<uint, Utf8Scalars::Enumerator>` and supports ordinary `foreach`:
 
 ```cpp
-using std::Text;
-std::Text::Utf8Scalars text = new("hello", 5);
+using Standard::Text;
+Standard::Text::Utf8Scalars text = new("hello", 5);
 foreach (uint scalar in text) {
     // Each scalar is a Unicode code point, not an individual UTF-8 byte.
 }
@@ -30,11 +30,11 @@ lifetime requirements. Queries can be enumerated repeatedly and see subsequent
 changes to unread backing bytes. For example,
 `text.AsEnumerable().Where(IsNonAscii).Take(10)` decodes only as far as needed
 to find ten matching scalar values. Early completion does not validate a
-malformed suffix. See [lazy queries](../std/core/Queries/README.md).
+malformed suffix. See [lazy queries](../Standard/core/Queries/README.md).
 
 ## Validation and errors
 
-`MoveNext()` uses `std::Text::Utf8::TryDecode` for strict validation and returns false
+`MoveNext()` uses `Standard::Text::Utf8::TryDecode` for strict validation and returns false
 at the end. U+0000 is an ordinary scalar and does not terminate enumeration.
 Invalid or truncated UTF-8 throws `Exception` when reached. Construction does
 not validate the entire buffer, and early termination does not inspect its

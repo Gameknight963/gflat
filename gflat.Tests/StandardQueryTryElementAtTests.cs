@@ -18,7 +18,7 @@ public sealed class StandardQueryTryElementAtTests
         }
         data.Add(0);
         Run($$"""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
             int main(){
                 int[{{data.Count}}] data=[{{string.Join(',',data)}}];int[{{rows.Count}}] rows=[{{string.Join(',',rows)}}];
@@ -40,7 +40,7 @@ public sealed class StandardQueryTryElementAtTests
     [InlineData(2)]
     public void SkippedCurrentsAreNotReadAndSelectionStopsBeforeAThrowingSuffix(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int moves=0;int reads=0;int projections=0;int starts=0;int ends=0;bool poison=false;bool failProjection=false;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int moves=0;int reads=0;int projections=0;int starts=0;int ends=0;bool poison=false;bool failProjection=false;
             struct Source{
                 public struct Iterator{
                     private int position;public Iterator(){position=0;starts++;}
@@ -78,7 +78,7 @@ public sealed class StandardQueryTryElementAtTests
     [InlineData(2)]
     public void OwningOutputsCommitOnceAndStayUnchangedAcrossFalseAndConstructionReadCopyFailures(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
             int allocations=0;int releases=0;int starts=0;int ends=0;int live=0;int oldReleased=0;int mode=0;int freshMade=0;int freshDead=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocations++;return value;}
@@ -141,7 +141,7 @@ public sealed class StandardQueryTryElementAtTests
 
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std/core"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard/core"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-try-element-at.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"TryElementAt exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

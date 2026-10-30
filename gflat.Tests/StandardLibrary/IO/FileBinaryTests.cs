@@ -15,7 +15,7 @@ public sealed class FileBinaryTests
             string source = Path.Combine(directory, "input.bin"), target = Path.Combine(directory, "output.bin");
             File.WriteAllBytes(source, input);
             var files = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
-                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program(Literal(source), Literal(target))));
             string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
             File.WriteAllText(ir, Compiler.Emit(files));
@@ -49,7 +49,7 @@ public sealed class FileBinaryTests
         // Follow high-bit values with zeros to check full-width reads/writes.
         string order = little ? "LittleEndian" : "BigEndian";
         Run(expected, (source, target) => $$"""
-            using std; using std::IO;
+            using Standard; using Standard::IO;
             int main() {
                 File input = File::OpenRead({{source}});
                 if (FileBinary::ReadUInt16{{order}}(&input) != (ushort)33022) return 1;
@@ -75,7 +75,7 @@ public sealed class FileBinaryTests
     public void EmptyInputIsEndOfStreamAndReadModeFailureIsIOExceptionWithoutClosingBorrow()
     {
         Run([], (source, target) => $$"""
-            using std; using std::IO;
+            using Standard; using Standard::IO;
             int main() {
                 File empty = File::OpenRead({{source}});
                 try { FileBinary::ReadUInt64BigEndian(&empty); return 1; }
@@ -97,7 +97,7 @@ public sealed class FileBinaryTests
     public void TruncatedReadsAndClosedStreamsThrow()
     {
         Run([1, 2, 3], (source, target) => $$"""
-            using std; using std::IO;
+            using Standard; using Standard::IO;
             int main() {
                 File input = File::OpenRead({{source}});
                 try { FileBinary::ReadUInt32LittleEndian(&input); return 1; } catch (EndOfStreamException* error) { }

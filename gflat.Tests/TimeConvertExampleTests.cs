@@ -35,7 +35,7 @@ public sealed class TimeConvertExampleTests
         }
         string directory=Path.Combine(Path.GetTempPath(),"gflat-time-convert-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile("time-convert.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/time-convert.gf"))));
             string ll=Path.Combine(directory,"tool.ll"),exe=Path.Combine(directory,"time-convert.exe");File.WriteAllText(ll,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

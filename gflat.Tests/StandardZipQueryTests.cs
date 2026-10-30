@@ -12,7 +12,7 @@ public sealed class StandardZipQueryTests
         for(int leftCount=0;leftCount<=16;leftCount++)for(int rightCount=0;rightCount<=20;rightCount++)
             expected.Add(left.Take(leftCount).Zip(Enumerable.Range(100,rightCount),(a,b)=>(long)a*1000+b).Sum());
         Run($$"""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int allocations=0;int callbacks=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int allocations=0;int callbacks=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -41,7 +41,7 @@ public sealed class StandardZipQueryTests
     }
 
     private const string OwningSources="""
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
         int allocations=0;int releases=0;int active=0;int created=0;int destroyed=0;
         int starts=0;int advances=0;int callbacks=0;int failure=0;
@@ -165,7 +165,7 @@ public sealed class StandardZipQueryTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("zip.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

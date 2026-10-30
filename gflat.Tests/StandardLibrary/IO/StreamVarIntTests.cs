@@ -60,16 +60,16 @@ public sealed class StreamVarIntTests
                 { {{integer}}[{{bits.Count}}] expected=[{{string.Join(",", bits.Select(value => value.ToString(CultureInfo.InvariantCulture) + suffix))}}];
                   nuint[{{lengths.Count}}] lengths=[{{string.Join(",", lengths)}}];
                   for(nuint index=0;index<{{bits.Count}};index++){
-                    {{family.Type}} value=std::IO::Read{{family.Name}}(input);
+                    {{family.Type}} value=Standard::IO::Read{{family.Name}}(input);
                     if(({{integer}})value!=expected[index])return 11;
-                    sink.Expected=lengths[index];std::IO::Write{{family.Name}}(output,value);
+                    sink.Expected=lengths[index];Standard::IO::Write{{family.Name}}(output,value);
                     position+=lengths[index];if(source.Position!=position||sink.Position!=position)return 12;
                   }
                 }
                 """);
         }
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){attempts++;return null;}
@@ -126,7 +126,7 @@ public sealed class StreamVarIntTests
                 operations.AppendLine($$"""
                     {char[{{input.Length}}] bytes=[{{string.Join(",", input.Select(value => "(char)" + value))}}];
                      Source source=new(bytes,{{input.Length}},0);bool caught=false;
-                     try{std::IO::Read{{family.Name}}(&source);}
+                     try{Standard::IO::Read{{family.Name}}(&source);}
                      catch(ref EndOfStreamException error){return 31;}
                      catch(ref IOException error){caught=true;}
                      if(!caught||source.Position!={{bytes.Length}}||source.Calls!={{bytes.Length}})return 32;
@@ -140,19 +140,19 @@ public sealed class StreamVarIntTests
                 for(nuint length=0;length<{{maximum}};length++){
                     char[10] bytes;for(nuint i=0;i<10;i++)bytes[i]=(char)128;
                     Source source=new(bytes,length,0);bool caught=false;
-                    try{std::IO::Read{{family.Name}}(&source);}catch(ref EndOfStreamException error){caught=true;}
+                    try{Standard::IO::Read{{family.Name}}(&source);}catch(ref EndOfStreamException error){caught=true;}
                     if(!caught||source.Position!=length||source.Calls!=length+1)return 35;
                 }
                 {char[10] bytes;for(nuint i=0;i<10;i++)bytes[i]=(char)128;
                  Source source=new(bytes,10,3);bool caught=false;
-                 try{std::IO::Read{{family.Name}}(&source);}
+                 try{Standard::IO::Read{{family.Name}}(&source);}
                  catch(ref EndOfStreamException error){return 36;}
                  catch(ref IOException error){caught=error.GetCode()==73;}
                  if(!caught||source.Calls!=3||source.Position!=3)return 37;}
                 """);
         }
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             class ReadFailure:IOException{
                 public ReadFailure():base("VarInt source failure"){code=73;}
             }
@@ -181,19 +181,19 @@ public sealed class StreamVarIntTests
             ulong encoded = family.Signed ? 1UL : raw;
             byte[] expected = Encode(encoded);
             operations.AppendLine($$"""
-                {Sink sink=new(&bytes[1],false);std::IO::Write{{family.Name}}(&sink,({{family.Type}}){{raw}}ul);
+                {Sink sink=new(&bytes[1],false);Standard::IO::Write{{family.Name}}(&sink,({{family.Type}}){{raw}}ul);
                  char[{{expected.Length}}] expected=[{{string.Join(",", expected.Select(value => "(char)" + value))}}];
                  if(sink.Calls!=1||sink.Count!={{expected.Length}})return 41;
                  for(nuint i=0;i<{{expected.Length}};i++)if(bytes[i+1]!=expected[i])return 42;
                  if(bytes[0]!='Q'||bytes[11]!='R')return 43;}
                 {Sink sink=new(&bytes[1],true);bool caught=false;
-                 try{std::IO::Write{{family.Name}}(&sink,({{family.Type}}){{raw}}ul);}
+                 try{Standard::IO::Write{{family.Name}}(&sink,({{family.Type}}){{raw}}ul);}
                  catch(ref IOException error){caught=error.GetCode()==74;}
                  if(!caught||sink.Calls!=1||sink.Count!=1||bytes[0]!='Q'||bytes[11]!='R')return 44;}
                 """);
         }
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             class WriteFailure:IOException{
                 public WriteFailure():base("VarInt sink failure"){code=74;}
             }
@@ -215,7 +215,7 @@ public sealed class StreamVarIntTests
         string[] names = ["core/Exception.gf", "core/ITextWriter.gf", "core/IO/IByteReader.gf", "core/IO/IOException.gf",
             "core/IO/EndOfStreamException.gf", "core/IO/byte_reader.gf", "core/Binary/VarInt.gf",
             "core/IO/byte_reader_var_int.gf", "core/IO/text_writer_var_int.gf", "libc/Memory/allocation.gf"];
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("stream-varint-tests.gf", program));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

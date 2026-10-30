@@ -56,7 +56,7 @@ terminator into writable inline storage. Larger buffers are zero-padded; smaller
 buffers are rejected. `char[] buffer = "hello"` infers the size including the
 terminator. Literal-to-buffer copying also works for fixed buffer fields, returns,
 and arguments. It does not implicitly convert arbitrary string pointers to buffers.
-The standard library's `s"text"` creates an owning `std::Text::String`. There is no built-in
+The standard library's `s"text"` creates an owning `Standard::Text::String`. There is no built-in
 `c` prefix; it is available for custom literal operators.
 The identifier `string` is available for user declarations.
 
@@ -494,7 +494,7 @@ Free functions and concrete class/struct methods support these modifiers. Static
 
 `T*` expresses non-null intent; `T*?` permits null. Null and zero constants cannot be explicitly cast to a non-null pointer. Explicit casts to non-null pointer types check their result at runtime and trap on null. This check proves neither bounds nor lifetime. Default construction and foreign contracts must not be assumed to prove complete object validity.
 
-`new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `std::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object; it does not make aliases safe or permit repeated deletion.
+`new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `Standard::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object; it does not make aliases safe or permit repeated deletion.
 
 `new(...)` infers both the constructed type and allocation kind from its target:
 
@@ -538,7 +538,7 @@ Instance constructors cannot be `immutable`, `virtual`, `override`, or `abstract
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
-The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory/allocation.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public signatures and non-throwing callback behavior:
+The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `Standard/libc/Memory/allocation.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public signatures and non-throwing callback behavior:
 
 ```csharp
 extern void*? malloc(nuint size);
@@ -550,7 +550,7 @@ namespace Memory {
 ```
 
 `Memory::Free(void*)` must be declared `nothrow`, including selected replacements
-and declarations supplied without std. An exception reaching that boundary
+and declarations supplied without Standard. An exception reaching that boundary
 terminates rather than escaping into callers or runtime cleanup. This is the
 ordinary `nothrow` boundary behavior, not a promise that its body cannot call
 potentially throwing functions.
@@ -560,7 +560,7 @@ runtime uses these same hooks for payload allocation and release. Its allocation
 callback guard uses the emergency reserve for recursive exception storage rather
 than reentering the same allocator. An exhausted reserve can still terminate.
 
-`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `std::BadAllocException` on null before initialization; direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
+`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `Standard::BadAllocException` on null before initialization; direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 
 Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
@@ -657,8 +657,8 @@ and `using` directives do not select a different collector. Type-only queries ca
 describe the default-reference shape without a provider; creating and tracking
 live references requires a concrete binding. `T^?` additionally permits null.
 
-The provider implements `std::IGarbageCollector`, a static interface declared in
-`std/core/IGarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint
+The provider implements `Standard::IGarbageCollector`, a static interface declared in
+`Standard/core/IGarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint
 alignment)` returning non-null `void*`, `ReferenceAdded(void* slot) nothrow`,
 `ReferenceRemoved(void* slot) nothrow`, and `Collect()` returning `nuint`.
 The first three operations are the compiler integration contract. `Collect` is
@@ -675,18 +675,18 @@ managed reference; failure retires that reference through normal exception
 cleanup. References from different collectors cannot be implicitly converted or
 stored in each other's managed object graphs.
 
-`std/libc/GC.gf`, included by projects referencing std, declares the default
-`public weak alias GC : std::IGarbageCollector = std::TracingCollector;`.
-The implementation lives in `std/libc/TracingCollector.gf`; direct source builds
+`Standard/libc/GC.gf`, included by projects referencing Standard, declares the default
+`public weak alias GC : Standard::IGarbageCollector = Standard::TracingCollector;`.
+The implementation lives in `Standard/libc/TracingCollector.gf`; direct source builds
 using this default alias must include that file too.
 Applications select another provider with `replace alias GC = MyCollector;`.
 The constraint validates the selected implementation and limits member access
 through `GC` to the common contract. Provider-specific operations, such as
-`std::TracingCollector::ManagedCount`, use the concrete provider's name.
+`Standard::TracingCollector::ManagedCount`, use the concrete provider's name.
 
 The default provider allocates through `Memory::Allocate`, records ownership,
 and zeroes storage before construction. It collects and retries once after an
-allocation failure, then throws `std::BadAllocException`. A returned native
+allocation failure, then throws `Standard::BadAllocException`. A returned native
 address that cannot satisfy the requested alignment is freed and rejected.
 Zero-sized managed objects receive one byte of storage. Allocation and collection
 policy belong to the library. There are no legacy `__gflat_gc_*` allocation hooks.
@@ -694,8 +694,8 @@ Collector bookkeeping also uses `Memory::Allocate` and `Memory::Free`. Failure t
 allocate its process state or root-slot records terminates: the non-throwing
 reference-notification contract cannot report those failures as exceptions.
 
-`std::TracingCollector::Adopt<T>(T* storage)` is an ordinary generic library
-method returning `managed<T, std::TracingCollector>`. It transfers an already
+`Standard::TracingCollector::Adopt<T>(T* storage)` is an ordinary generic library
+method returning `managed<T, Standard::TracingCollector>`. It transfers an already
 constructed, destructor-free allocation to that collector. This is an unsafe
 operation: the caller must own a complete allocation from the matching `Memory`
 allocator, not stack storage, an interior address, or foreign-allocator storage.
@@ -708,7 +708,7 @@ free the object. Adoption does not collect before establishing the returned root
 The bundled provider is single-threaded and non-moving. `GC::Collect()` explicitly
 collects unreachable allocations and returns the number reclaimed. The default
 allocation method also collects when bytes allocated/adopted since the previous
-collection reach `std::TracingCollector::CollectionThreshold()`. This ordinary
+collection reach `Standard::TracingCollector::CollectionThreshold()`. This ordinary
 weak static method defaults to 65536 bytes; a qualified replacement can return
 another budget, or zero to disable automatic collection. Merely assigning or
 copying a reference does not request collection. There is no compiler polling,
@@ -859,9 +859,9 @@ whole values before use. Owning fields must also be initialized as whole values 
 writing nested fields. Returning a whole owning local implicitly transfers it.
 Returning borrowed fields or indexed elements requires copying.
 
-```csharp std
-using std::Text;
-using std;
+```csharp Standard
+using Standard::Text;
+using Standard;
 int main() {
     String a = s"hello";
     String b = move a;
@@ -1169,7 +1169,7 @@ implementations, and property accessors. Calls use the guarantee visible through
 their receiver's declared type; a stronger concrete implementation does not make
 all calls through a potentially throwing interface nonthrowing.
 
-Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. When declared, this runtime entry point must provide a public, non-generic namespace function returning `void` and taking exactly one mutable nullable `Exception` pointer. Other overloads may coexist; termination selects the canonical signature, including its overload symbol. This weak `void` function lives in `std/libc/Exceptions/unhandled.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. To use allocating `new*`, it must also support the standard `(message, code)` constructor used by the automatically included `std::BadAllocException`, or supply its own `std::BadAllocException` with a public constructor callable without arguments. Process termination does not unwind the remaining stack.
+Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. When declared, this runtime entry point must provide a public, non-generic namespace function returning `void` and taking exactly one mutable nullable `Exception` pointer. Other overloads may coexist; termination selects the canonical signature, including its overload symbol. This weak `void` function lives in `Standard/libc/Exceptions/unhandled.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. To use allocating `new*`, it must also support the standard `(message, code)` constructor used by the automatically included `Standard::BadAllocException`, or supply its own `Standard::BadAllocException` with a public constructor callable without arguments. Process termination does not unwind the remaining stack.
 
 The compiler driver links a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM.
 
@@ -1198,7 +1198,7 @@ still occur before specialization.
 `pointer.~T()` ends the lifetime of the pointed-to `T` without freeing its
 storage. The receiver is evaluated once and must be a non-null, mutable raw
 pointer to the named type. `T` may be a generic type parameter or a qualified
-type such as `std::Text::String`.
+type such as `Standard::Text::String`.
 
 ```csharp
 void Destroy<T>(T* slot) {
@@ -1363,9 +1363,9 @@ Literal operators have no implicit instance (`this`), but retain access to their
 
 ## String interpolation
 
-```csharp std
-using std::Text;
-using std;
+```csharp Standard
+using Standard::Text;
+using Standard;
 
 int main()
 {
@@ -1375,14 +1375,14 @@ int main()
 }
 ```
 
-Include `std/core/Text/String.gf`, its substring-search dependency `std/core/Text/ByteSearch.gf`,
-and `std/core/primitive_format.gf`, or reference `std/std.gfproj`.
-Floating-point conversion additionally uses `std/libc/floating_format.gf` and libc's `snprintf`.
+Include `Standard/core/Text/String.gf`, its substring-search dependency `Standard/core/Text/ByteSearch.gf`,
+and `Standard/core/primitive_format.gf`, or reference `Standard/Standard.gfproj`.
+Floating-point conversion additionally uses `Standard/libc/floating_format.gf` and libc's `snprintf`.
 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
-including qualified syntax such as `std::Text::s$"{42}"`. Unprefixed `$"..."` is
+including qualified syntax such as `Standard::Text::s$"{42}"`. Unprefixed `$"..."` is
 not supported. Implementing a literal operator alone does not opt into interpolation.
-Its containing/result type must implement the automatically available global interface `ITextWriter` from `std/core/ITextWriter.gf`:
+Its containing/result type must implement the automatically available global interface `ITextWriter` from `Standard/core/ITextWriter.gf`:
 
 ```text
 interface ITextWriter
@@ -1402,20 +1402,20 @@ It may not retain either the input pointer or a formatter's borrowed destination
 
 Custom values, pointers, and managed references implement `IFormattable`; holes call
 `Format` with the destination. Alternatively, `IStringConvertable` declares
-`immutable std::Text::String ToString()`: the hole converts once, writes the returned
+`immutable Standard::Text::String ToString()`: the hole converts once, writes the returned
 string's counted bytes, and destroys the owning temporary. `IFormattable` takes
 precedence when both contracts are implemented. Interface views support dynamic dispatch. Nullable
 receivers require a checked cast or unchecked postfix `!`. Primitives call the exact
-`global::std::Format(value, writer)` overload independently of local using directives.
+`global::Standard::Format(value, writer)` overload independently of local using directives.
 Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
 `uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
 arrays are not implicitly converted to text; provide an explicit string value.
-Signed 128-bit formatting uses `std/core/Text/IntegerFormatting.gf` and the optional
-`std/core/extra_long_format.gf` writer adapter. Both are included by the full
+Signed 128-bit formatting uses `Standard/core/Text/IntegerFormatting.gf` and the optional
+`Standard/core/extra_long_format.gf` writer adapter. Both are included by the full
 standard library; explicit source selections must include them together.
 
 Formatting does not imply a heap allocation, a terminator scan, or a caller-owned
-C-string. `std::Text::String` writes its existing counted bytes, preserving embedded nulls.
+C-string. `Standard::Text::String` writes its existing counted bytes, preserving embedded nulls.
 Its `ToString()` method returns an independent owning string. Its optional
 `ToCString()` method borrows immutable data, valid only while the original buffer
 remains alive and unchanged; interpolation never implicitly uses that operation.
@@ -1430,7 +1430,7 @@ implicit interpolation-to-type conversions, or compile-time interpolation.
 
 ## Attributes
 
-Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in `std/core/Attribute.gf`. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.
+Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in `Standard/core/Attribute.gf`. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.
 
 ```csharp
 class Priority : Attribute
@@ -1453,13 +1453,13 @@ Annotations can precede types, functions, extern declarations, fields, propertie
 
 A compilation accepts multiple named source snapshots and produces one LLVM module. Each file is parsed independently; declarations are collected across all files before bodies are checked. Source argument order does not select definitions. Namespaces may span files, while classes cannot be split across declarations (partial classes remain unsupported).
 
-`using` directives apply only to their source file. They affect name lookup, not which files are compiled. Imported namespaces expose their child namespace names: `using std;` permits `Hashing::Integer(...)`. Lexical and global namespace names take precedence over imported child namespaces; multiple different imported children with the same name require qualification. Import names themselves resolve lexically, without other imports. Types and generic functions have namespace-qualified identities; same-named types in separate namespaces remain distinct. Ambiguous type and child-namespace imports require explicit qualification. Generic bodies and extension signatures retain their definition's namespace and imports when instantiated from another file.
+`using` directives apply only to their source file. They affect name lookup, not which files are compiled. Imported namespaces expose their child namespace names: `using Standard;` permits `Hashing::Integer(...)`. Lexical and global namespace names take precedence over imported child namespaces; multiple different imported children with the same name require qualification. Import names themselves resolve lexically, without other imports. Types and generic functions have namespace-qualified identities; same-named types in separate namespaces remain distinct. Ambiguous type and child-namespace imports require explicit qualification. Generic bodies and extension signatures retain their definition's namespace and imports when instantiated from another file.
 
 A type name may start with `global::`, such as `global::Library::Item`, to resolve from the compilation root instead of lexical scopes or imports. This applies to declared types and aliases, including generic arguments, nested types, base types, signatures, casts and construction. Root qualification preserves the same nominal type identity; it does not create a separate type. A missing root name is an error, and a namespace alone is not a value type.
 
 Defined functions with the same name in imported namespaces participate together in overload resolution. Calls select by their arguments; function values select by their target signature. Import order does not select a function, and repeated imports do not duplicate candidates. A callable declaration in the nearest lexical scope shadows imported functions even when it cannot accept the call. Equally good imported matches remain ambiguous and require qualification. Combining candidates does not combine their declarations or change their emitted identities. Each candidate retains its own declaration imports, default arguments, and generic constraints; imported alternatives cannot expose capabilities hidden by a constrained alias or generic parameter view. This rule does not introduce overloading of foreign `extern` declarations.
 
-Compilation setup automatically includes `std/core/Attribute.gf`, `std/core/Exception.gf`, `std/core/ITextWriter.gf`, `std/core/IFormattable.gf`, and `std/libc/Memory/allocation.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these std-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
+Compilation setup automatically includes `Standard/core/Attribute.gf`, `Standard/core/Exception.gf`, `Standard/core/ITextWriter.gf`, `Standard/core/IFormattable.gf`, and `Standard/libc/Memory/allocation.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these Standard-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
 
 The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through `Compiler.Check(IEnumerable<SourceFile>, diagnostics)` and `Compiler.Emit(IEnumerable<SourceFile>, diagnostics)`. The path identifies the snapshot; the compiler does not read its text from disk. This permits unsaved editor buffers and independent command-line or IDE hosts. Source spans use UTF-16 offsets and one-based lines and columns. Diagnostics expose their source span, code, severity, message, and related declaration locations.
 
@@ -1553,7 +1553,7 @@ int main() { return Add(20, 22); }
 
 ## Static type metadata
 
-`typeof(T)` produces a compile-time constant `std::TypeInfo` describing the static
+`typeof(T)` produces a compile-time constant `Standard::TypeInfo` describing the static
 queried type. It works through aliases and generic specialization. Its immutable
 fields are `Name`, `Size`, `Alignment`, `IsPointer`, `IsManaged`, `IsNullable`,
 `IsReadOnly`, and `HasDestructor`. It also exposes `Kind`, `HasLayout`,
@@ -1603,7 +1603,7 @@ struct Packet { public int sequence; }
 const nuint Size<T>() => typeof(T).Size;
 const nuint PacketSize = Size<Packet>();
 int main() {
-    std::TypeInfo info = typeof(Packet);
+    Standard::TypeInfo info = typeof(Packet);
     if (info.Size != PacketSize) return 1;
     return 0;
 }
@@ -1612,7 +1612,7 @@ int main() {
 ```csharp
 const nuint ArgumentSize = typeof(void(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size;
 int main() {
-    std::TypeInfo signature = typeof(void(ref readonly(int), int**)*);
+    Standard::TypeInfo signature = typeof(void(ref readonly(int), int**)*);
     if (signature.ParameterCount != (nuint)2) return 1;
     if (signature.ReturnType!.HasLayout || ArgumentSize != (nuint)4) return 2;
     return 0;

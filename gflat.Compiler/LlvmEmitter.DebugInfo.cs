@@ -160,19 +160,28 @@ public partial class LlvmEmitter
         string name;
         if (source is MethodDeclaration methodDeclaration)
         {
+            var definition = _typeChecker.GetGenericMethodDefinition(methodDeclaration) ?? methodDeclaration;
             string prefix = _typeChecker.TryGetMethodOwner(methodDeclaration, out string methodOwner, out _)
                 ? _typeChecker.DisplayTypeName(NamedTypeExpression.Resolved(methodOwner, source.Line))
-                : _typeChecker.GetFunctionNamespace(methodDeclaration).Replace("$", "::");
-            string member = methodDeclaration.StringLiteralPrefix is { } literal ? "operator " + literal + "\"\"" : methodDeclaration.Name;
+                : (_typeChecker.DeclarationNamespace(methodDeclaration) ?? _typeChecker.GetFunctionNamespace(definition)).Replace("$", "::");
+            string member = methodDeclaration.IsExplicitConversion
+                ? "explicit operator " + _typeChecker.DisplayTypeName(methodDeclaration.ReturnType)
+                : methodDeclaration.StringLiteralPrefix is { } literal ? "operator " + literal + "\"\""
+                : methodDeclaration.ExtensionMemberName ?? _typeChecker.GetPrimitiveMethodSource(methodDeclaration)?.Name ?? definition.Name;
             name = (prefix.Length > 0 ? prefix + "::" : "") + member;
         }
         else if (owner != null && source is ConstructorDeclaration or DestructorDeclaration or OperatorDeclaration)
         {
             string typeName = _typeChecker.DisplayTypeName(NamedTypeExpression.Resolved(owner, source.Line));
+            string sourceTypeName = _typeChecker.GetTypeDeclaration(owner) switch {
+                ClassDeclaration declaration => declaration.SourceName,
+                StructDeclaration declaration => declaration.SourceName,
+                _ => typeName
+            };
             string member = source switch
             {
-                ConstructorDeclaration constructor => constructor.Name,
-                DestructorDeclaration destructor => "~" + destructor.Name,
+                ConstructorDeclaration => sourceTypeName,
+                DestructorDeclaration => "~" + sourceTypeName,
                 OperatorDeclaration op => "operator " + op.OperatorSymbol,
                 _ => ""
             };

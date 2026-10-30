@@ -1,6 +1,6 @@
 # Streaming Base32 output
 
-`std::Encoding::Base32Encoder` implements `ITextWriter`, encoding counted bytes to
+`Standard::Encoding::Base32Encoder` implements `ITextWriter`, encoding counted bytes to
 one borrowed synchronous sink. It reuses the existing uppercase padded
 [Base32 codec](BASE32.md). It adds no whitespace, line wrapping, BOM or newline.
 
@@ -13,8 +13,8 @@ input or output in a String. Use distinct input and output files: opening the ou
 truncates an existing file, so it must not name or alias the input.
 
 ```csharp
-using std::IO;
-using std::Encoding;
+using Standard::IO;
+using Standard::Encoding;
 
 int main(int argc, char** argv)
 {

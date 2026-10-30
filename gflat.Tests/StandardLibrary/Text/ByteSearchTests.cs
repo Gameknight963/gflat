@@ -9,7 +9,7 @@ public sealed class ByteSearchTests
     [InlineData(2)]
     public void ExhaustiveSmallBinaryInputsMatchIndependentNaiveSearch(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             int main() {
                 byte[10] input; byte[8] pattern;
                 for(nuint length=0;length<=8;length++) {
@@ -47,7 +47,7 @@ public sealed class ByteSearchTests
         var random=new Random(71931);
         byte[] input=new byte[512];random.NextBytes(input);
         for(int i=0;i<256;i++)input[i]=(byte)i;
-        var code=new StringBuilder("using std; using std::Text; using std::Collections;int main(){byte[512] input;byte[96] pattern;\n");
+        var code=new StringBuilder("using Standard; using Standard::Text; using Standard::Collections;int main(){byte[512] input;byte[96] pattern;\n");
         for(int i=0;i<input.Length;i++)code.AppendLine($"input[{i}]=(byte){input[i]};");
         for(int trial=0;trial<80;trial++)
         {
@@ -69,7 +69,7 @@ public sealed class ByteSearchTests
     [InlineData(2)]
     public void LongPeriodicPatternsAndRegionLimitsHaveDefinedResults(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             int main() {
                 byte[262144] input;byte[8192] pattern;
                 for(nuint i=0;i<262144;i++)input[i]=(byte)97;
@@ -95,7 +95,7 @@ public sealed class ByteSearchTests
 
     private static void Run(string code,int optimization)
     {
-        SourceFile[] sources=[new("ByteSearch.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/ByteSearch.gf"))),new("main.gf",code)];
+        SourceFile[] sources=[new("ByteSearch.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/ByteSearch.gf"))),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"invoke ","personality","@__gflat_eh_","gflat$Memory$","@malloc","@free"})Assert.DoesNotContain(forbidden,ir);
         Assert.Equal(0,CompilerTestHelper.RunIr(ir,optimization,expectedExitCode:0).ExitCode);

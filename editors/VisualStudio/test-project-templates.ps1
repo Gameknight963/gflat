@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $compiler = Join-Path $PackageDirectory 'Compiler/gflat.exe'
 $sdk = Join-Path $PackageDirectory 'Sdk'
 if (Test-Path -LiteralPath (Join-Path $sdk 'build/Sdks/Gflat.Sdk')) { throw 'VSIX must not ship MSBuild SDK registration files' }
-foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'std/std.gfproj', 'std/core/Text/String.gf', 'std/libc/GC.gf')) {
+foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'Standard/Standard.gfproj', 'Standard/core/Text/String.gf', 'Standard/libc/GC.gf')) {
     if (-not (Test-Path -LiteralPath (Join-Path $sdk $file))) { throw "Bundled SDK is missing $file" }
 }
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $PackageDirectory 'extension.vsixmanifest')

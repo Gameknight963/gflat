@@ -7,7 +7,7 @@ public sealed class StringSpanTests
     [InlineData(2)]
     public void ViewsBorrowCountedBytesWithoutCopyingOrAllocating(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory;
+            using Standard; using Standard::Text; using Standard::Memory;
             extern void*? malloc(nuint count);extern void free(void* storage);
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
@@ -38,7 +38,7 @@ public sealed class StringSpanTests
     [InlineData(2)]
     public void EveryEmptyViewHasNullDataAndExposesNeitherCapacityNorSentinel(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory;
+            using Standard; using Standard::Text; using Standard::Memory;
             bool Empty(ref String text){
                 Span<char> bytes=text.AsSpan();Span<readonly(char)> read=text.AsImmutable();
                 return bytes.Length==0&&bytes.Data==null&&read.Length==0&&read.Data==null;
@@ -52,13 +52,57 @@ public sealed class StringSpanTests
 
     [Theory]
     [InlineData("immutable(String) text=s\"read\";text.AsSpan();")]
-    [InlineData("String::From(\"temporary\").AsSpan();")]
-    [InlineData("String::From(\"temporary\").AsImmutable();")]
-    public void ViewsRejectReadonlyMutationAndTemporaryOwners(string statement)
-        => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using std; using std::Text; using std::Memory;int main(){"+statement+"return 0;}")));
+    public void ViewsRejectReadonlyMutation(string statement)
+        => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using Standard; using Standard::Text; using Standard::Memory;int main(){"+statement+"return 0;}")));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void TemporaryStringViewsCanBeConsumedBeforeFullExpressionCleanup(int optimization)
+    {
+        const string program = """
+            using Standard; using Standard::Text; using Standard::Memory;
+            extern void*? malloc(nuint size);extern void free(void* data);
+            int allocated=0;int released=0;
+            namespace Memory {
+                public replace void*? Allocate(nuint size){void*? result=malloc(size);if(result!=null)allocated++;return result;}
+                public replace void Free(void* data)nothrow{released++;free(data);}
+            }
+            int Consume(Span<readonly(char)> view){
+                if(allocated-released!=1||view.Length!=3||view[0]!='a'||view[2]!='c')return 1;
+                return 0;
+            }
+            int ConsumeMutable(Span<char> view){
+                if(allocated-released!=1||view.Length!=3||view[0]!='a'||view[2]!='c')return 2;
+                view[1]='X';if(view[1]!='X')return 3;return 0;
+            }
+            int main(){
+                int result=ConsumeMutable(String::From("abc").AsSpan());
+                if(result!=0)return result;if(allocated!=released)return 4;
+                result=Consume(String::From("abc").AsReadOnly());
+                if(result!=0)return result;if(allocated!=released)return 5;
+                result=Consume(String::From("abc").AsImmutable());
+                if(result!=0)return result;if(allocated!=released)return 6;
+                return 0;
+            }
+            """;
+        string ir = Compiler.Emit(Sources(program), options: new() { InternalizeFunctions = true });
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
+    [Theory]
+    [InlineData("AsSpan")]
+    [InlineData("AsReadOnly")]
+    [InlineData("AsImmutable")]
+    public void ExplicitRefViewFunctionsStillRequireExistingOwners(string name)
+    {
+        string program = "using Standard;using Standard::Text;using Standard::Memory;int main(){" + name + "(ref String::From(\"abc\"));return 0;}";
+        var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Check(Sources(program)));
+        Assert.Contains("existing storage", error.Message);
+    }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);

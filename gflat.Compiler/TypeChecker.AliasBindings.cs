@@ -17,6 +17,12 @@ public partial class TypeChecker
     private readonly Dictionary<(AstNode Body, SourceSpan Call), GenericCallDependency> selectedGenericDependencies = new();
     private readonly Dictionary<(AstNode Body, SourceSpan Call), MethodDeclaration> selectedAliasCallTargets = new();
     private readonly Dictionary<(AstNode Definition, string Arguments), AstNode> aliasSpecializationBodies = new();
+
+    // Source identity for debug/display consumers. Runtime linkage stays attached
+    // to the specialized body; the existing specialization cache owns the origin.
+    public MethodDeclaration? GetGenericMethodDefinition(MethodDeclaration body)
+        => aliasSpecializationBodies.FirstOrDefault(entry => ReferenceEquals(entry.Value, body)).Key.Definition as MethodDeclaration;
+
     private readonly HashSet<AstNode> unfinishedAliasProofBodies = new();
     private readonly Dictionary<AstNode, List<(AstNode Definition, List<GenericParameter> Parameters, List<TypeExpression> Arguments)>> pendingAliasProofs = new();
 

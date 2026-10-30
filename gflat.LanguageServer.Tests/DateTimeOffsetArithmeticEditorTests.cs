@@ -8,7 +8,7 @@ public sealed class DateTimeOffsetArithmeticEditorTests
     [Fact]
     public void DurationArithmeticUsesTheActualDeclarationsAndQualifiedValueSignatures()
     {
-        const string text="using std; using std::Time;void Probe(){DateTimeOffset first=DateTimeOffset::Parse(\"2024-06-01T12:30:00+02:00\");TimeSpan span=TimeSpan::FromMinutes(1l);DateTimeOffset later=first.Add(span);DateTimeOffset earlier=later.Subtract(span);TimeSpan elapsed=later.Difference(first);}";
+        const string text="using Standard; using Standard::Time;void Probe(){DateTimeOffset first=DateTimeOffset::Parse(\"2024-06-01T12:30:00+02:00\");TimeSpan span=TimeSpan::FromMinutes(1l);DateTimeOffset later=first.Add(span);DateTimeOffset earlier=later.Subtract(span);TimeSpan elapsed=later.Difference(first);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="DateTimeOffset.gf");
@@ -17,9 +17,9 @@ public sealed class DateTimeOffsetArithmeticEditorTests
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,files);
         foreach(var row in new[]{
-            (Name:"Add",Declaration:"public immutable DateTimeOffset Add(TimeSpan value)",Type:"std::Time::DateTimeOffset",Parameter:"std::Time::TimeSpan value"),
-            (Name:"Subtract",Declaration:"public immutable DateTimeOffset Subtract(TimeSpan value)",Type:"std::Time::DateTimeOffset",Parameter:"std::Time::TimeSpan value"),
-            (Name:"Difference",Declaration:"public immutable TimeSpan Difference(DateTimeOffset other) nothrow",Type:"std::Time::TimeSpan",Parameter:"std::Time::DateTimeOffset other")}){
+            (Name:"Add",Declaration:"public immutable DateTimeOffset Add(TimeSpan value)",Type:"Standard::Time::DateTimeOffset",Parameter:"Standard::Time::TimeSpan value"),
+            (Name:"Subtract",Declaration:"public immutable DateTimeOffset Subtract(TimeSpan value)",Type:"Standard::Time::DateTimeOffset",Parameter:"Standard::Time::TimeSpan value"),
+            (Name:"Difference",Declaration:"public immutable TimeSpan Difference(DateTimeOffset other) nothrow",Type:"Standard::Time::TimeSpan",Parameter:"Standard::Time::DateTimeOffset other")}){
             int call=text.IndexOf("."+row.Name+"(",StringComparison.Ordinal);Assert.True(call>=0);int use=call+1;
             var items=Json(model.Completion(source.Path,use)).GetProperty("items");
             Assert.Contains(items.EnumerateArray(),item=>item.GetProperty("label").GetString()==row.Name);
@@ -34,7 +34,7 @@ public sealed class DateTimeOffsetArithmeticEditorTests
             Assert.Single(signature.GetProperty("parameters").EnumerateArray());
             Assert.Equal(0,help.GetProperty("activeParameter").GetInt32());
             string label=signature.GetProperty("label").GetString()!;
-            Assert.Contains(row.Type+" std::Time::DateTimeOffset::"+row.Name+"(",label);
+            Assert.Contains(row.Type+" Standard::Time::DateTimeOffset::"+row.Name+"(",label);
             Assert.Contains(row.Parameter,label);
         }
     }

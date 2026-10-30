@@ -35,7 +35,7 @@ public sealed class DateArithmeticTests
         foreach (int years in new[] { -9998, -9999 }) Add(DateOnly.MaxValue.DayNumber, years, true);
 
         string code = $$"""
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int main(){
                 int[{{samples.Count}}] numbers=[{{string.Join(",",samples.Select(s=>s.Number))}}];
                 int[{{samples.Count}}] offsets=[{{string.Join(",",samples.Select(s=>s.Offset))}}];
@@ -76,7 +76,7 @@ public sealed class DateArithmeticTests
     [InlineData(2)]
     public void SuccessfulCalendarShiftsAllocateNothingAndDoNotRememberClampedDays(int optimization)
         => Run("""
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
@@ -101,7 +101,7 @@ public sealed class DateArithmeticTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("calendar-shifts.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }

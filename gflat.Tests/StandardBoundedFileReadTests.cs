@@ -35,7 +35,7 @@ public sealed class StandardBoundedFileReadTests
                 }
             }
             Run(directory, """
-                using std; using std::Text; using std::IO; using std::Memory; using std::Collections;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Collections;
                 String ReadPath(File* input) {
                     nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     String result=new(); result.Resize(count); Span<char> data=result.AsSpan();
@@ -175,7 +175,7 @@ public sealed class StandardBoundedFileReadTests
     }
 
     private const string Counters = """
-        using std; using std::Text; using std::IO; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint size);extern void free(void* value);
         int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory {
@@ -197,7 +197,7 @@ public sealed class StandardBoundedFileReadTests
 
     private static void Run(string directory, string program, string[] arguments, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("bounded-file-read.gf", program));
         string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "main.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));

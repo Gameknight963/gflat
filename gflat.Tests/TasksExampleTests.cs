@@ -10,7 +10,7 @@ public sealed class TasksExampleTests
     [InlineData(2)]
     public async Task ActualTaskToolUsesOwningTitlesAndCountedConsoleLines(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("tasks.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/tasks.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-tasks-" + Guid.NewGuid().ToString("N"));

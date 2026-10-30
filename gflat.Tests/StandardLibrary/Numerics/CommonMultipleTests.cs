@@ -41,16 +41,16 @@ public sealed class CommonMultipleTests
                     for(int i=0;i<{{pairs.Count}};i++){
                         if(fread((void*)&row[0],1,68,file!)!=68)return 2;
                         ulong a=Word(row,8);ulong b=Word(&row[8],8);ulong wide=7ul;
-                        if(std::Numerics::Math::GreatestCommonDivisor(a,b)!=Word(&row[16],8))return 3;
-                        bool fits=std::Numerics::Math::TryLeastCommonMultiple(a,b,ref wide);
+                        if(Standard::Numerics::Math::GreatestCommonDivisor(a,b)!=Word(&row[16],8))return 3;
+                        bool fits=Standard::Numerics::Math::TryLeastCommonMultiple(a,b,ref wide);
                         if(wide!=Word(&row[24],8)||fits!=(Word(&row[32],4)!=0ul))return 4;
                         uint narrow=7u;
-                        if(std::Numerics::Math::GreatestCommonDivisor((uint)a,(uint)b)!=(uint)Word(&row[36],4))return 5;
-                        fits=std::Numerics::Math::TryLeastCommonMultiple((uint)a,(uint)b,ref narrow);
+                        if(Standard::Numerics::Math::GreatestCommonDivisor((uint)a,(uint)b)!=(uint)Word(&row[36],4))return 5;
+                        fits=Standard::Numerics::Math::TryLeastCommonMultiple((uint)a,(uint)b,ref narrow);
                         if(narrow!=(uint)Word(&row[40],4)||fits!=(Word(&row[44],4)!=0ul))return 6;
                         nuint native=(nuint)7;
-                        if(std::Numerics::Math::GreatestCommonDivisor((nuint)a,(nuint)b)!=(nuint)Word(&row[48],8))return 7;
-                        fits=std::Numerics::Math::TryLeastCommonMultiple((nuint)a,(nuint)b,ref native);
+                        if(Standard::Numerics::Math::GreatestCommonDivisor((nuint)a,(nuint)b)!=(nuint)Word(&row[48],8))return 7;
+                        fits=Standard::Numerics::Math::TryLeastCommonMultiple((nuint)a,(nuint)b,ref native);
                         if(native!=(nuint)Word(&row[56],8)||fits!=(Word(&row[64],4)!=0ul))return 8;
                     }
                     if(fread((void*)&row[0],1,1,file!)!=0)return 9;return 0;
@@ -78,7 +78,7 @@ public sealed class CommonMultipleTests
     public void RefResultMayAliasEitherInputOnSuccessZeroOrOverflow(string type,int optimization)
     {
         string code=$$"""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             int main()nothrow{
                 {{type}} a=({{type}})6;{{type}} b=({{type}})8;
                 if(!Math::TryLeastCommonMultiple(a,b,ref a)||a!=({{type}})24||b!=({{type}})8)return 1;
@@ -110,6 +110,6 @@ public sealed class CommonMultipleTests
         });
     }
     private static SourceFile[] Sources(string source)=>[
-        new("Math.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Numerics/Math.gf"))),new("common-multiples.gf",source)];
+        new("Math.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Numerics/Math.gf"))),new("common-multiples.gf",source)];
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
 }

@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardToStringExtensionTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -137,7 +137,7 @@ public sealed class StandardToStringExtensionTests
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/ByteSearch.gf", "Text/String.gf",
             "primitive_format.gf", "Text/formattable_string.gf", "Text/primitive_string.gf"];
         var sources = names.Select(name => new SourceFile(name,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", name))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", name))))
             .Append(new SourceFile("core-conversions.gf", """
                 namespace Memory {
                     public void*? Allocate(nuint size) { return null; }
@@ -146,8 +146,8 @@ public sealed class StandardToStringExtensionTests
                 struct Label : IFormattable {
                     public immutable void Format(ITextWriter* output) { output.Write("label", 5); }
                 }
-                std::Text::String ConvertLabel(ref immutable(Label) value) => std::Text::ToString(ref value);
-                std::Text::String ConvertInteger(int value) => std::Text::ToString(value);
+                Standard::Text::String ConvertLabel(ref immutable(Label) value) => Standard::Text::ToString(ref value);
+                Standard::Text::String ConvertInteger(int value) => Standard::Text::ToString(value);
                 """));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotMatch(@"(?m)^declare\s+[^\r\n]*@(?:malloc|free|snprintf|printf|fwrite|strlen)\(", ir);
@@ -155,7 +155,7 @@ public sealed class StandardToStringExtensionTests
 
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.ASCII.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("to-string-extensions.gf",program));
     private static void Run(string program,int optimization)
     {

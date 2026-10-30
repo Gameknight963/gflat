@@ -9,7 +9,7 @@ public sealed class QuerySkipLastEditorTests
     public void StreamingSuffixSkipInfersConcreteElementAndNavigatesItsBufferedCurrent()
     {
         const string text = """
-            using std; using std::Memory; using std::Queries;
+            using Standard; using Standard::Memory; using Standard::Queries;
             void Observe() {
                 int[3] data = [1, 2, 3];
                 Span<int> values = new(data, 3);
@@ -55,7 +55,7 @@ public sealed class QuerySkipLastEditorTests
 
     private static void AssertDefinition(EditorModel model, SourceFile source, int use, SourceFile library, string declaration, string prefix)
     {
-        int start = library.Text.IndexOf(declaration, StringComparison.Ordinal);
+        int start = declaration.StartsWith("SkipLast<",StringComparison.Ordinal) ? EditorSourceDeclarations.ExtensionMethod(library,"SkipLast") : library.Text.IndexOf(declaration, StringComparison.Ordinal);
         Assert.True(start >= 0, "Missing declaration " + declaration);
         var expected = model.Definition(library.Path, start + prefix.Length);
         Assert.NotNull(expected);

@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonPointerTests
 {
     private const string Allocator = """
-        using std; using std::Json; using std::Encoding; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Json; using Standard::Encoding; using Standard::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int failAt=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(attempts==failAt)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}
@@ -168,7 +168,7 @@ public sealed class StandardJsonPointerTests
     private static void Write(BinaryWriter writer,byte[] bytes){writer.Write((uint)bytes.Length);writer.Write(bytes);}
     private static string Pack(Action<BinaryWriter> write){using var stream=new MemoryStream();using(var writer=new BinaryWriter(stream,Encoding.UTF8,true))write(writer);return Convert.ToHexString(stream.ToArray());}
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)=>Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);
 }

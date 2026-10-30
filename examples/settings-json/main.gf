@@ -1,8 +1,8 @@
-using std::Text;
-using std::Json;
-using std::Memory;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Json;
+using Standard::Memory;
+using Standard::Collections;
+using Standard;
 
 void Report(nuint line, readonly(char)* message)
 {

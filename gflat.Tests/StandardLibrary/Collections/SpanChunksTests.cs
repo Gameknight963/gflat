@@ -11,7 +11,7 @@ public sealed class SpanChunksTests
     public void EverySmallPartitionMatchesDotNetChunkIncludingPartialTail(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern int printf(readonly(char)* format,...);
             int main(){
                 int[20] data;for(nuint i=0;i<20;i++)data[i]=(int)(3*i+2);
                 for(nuint length=0;length<=20;length++)for(nuint size=1;size<=25;size++){
@@ -42,7 +42,7 @@ public sealed class SpanChunksTests
     [InlineData(2)]
     public void LazyRepeatedQueriesCaptureMetadataAndObserveWritesWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* data);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* data);
             int allocations=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* data) nothrow{free(data);}}
             int SumChunk(Span<readonly(int)> chunk){selections++;int sum=0;for(nuint i=0;i<chunk.Length;i++)sum+=chunk[i];return sum;}
@@ -67,7 +67,7 @@ public sealed class SpanChunksTests
     [InlineData(2)]
     public void NoncopyableAndQualifiedElementsRetainOwnershipAndProtection(int optimization)
         =>Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;int dead=0;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;int dead=0;
             struct Owner{public int Id;public int* Pointer;public Owner(int id,int* pointer){Id=id;Pointer=pointer;}~Owner(){dead++;}}
             int main(){int pointed=0;
                 {
@@ -86,7 +86,7 @@ public sealed class SpanChunksTests
     [InlineData(2)]
     public void EmptyInvalidCurrentAndMaximumSizeBoundariesAreDefined(int optimization)
         =>Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){
                 Span<int> empty=new();var absent=empty.Chunks(1).GetEnumerator();if(absent.MoveNext()||absent.MoveNext())return 1;int errors=0;
                 try{absent.Current;}catch{errors++;}
@@ -114,7 +114,7 @@ public sealed class SpanChunksTests
     public void ChunkElementQualifiersRejectForbiddenWrites(bool deep)
     {
         string setup="""
-            using std; using std::Memory; using std::Queries; using std::Collections;struct Item{public int Value;public int* Pointer;public Item(int* pointer){Value=0;Pointer=pointer;}}
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;struct Item{public int Value;public int* Pointer;public Item(int* pointer){Value=0;Pointer=pointer;}}
             int main(){int pointed=0;Item item=new(&pointed);Span<Item> source=new(&item,1);
             """;
         string loop=deep?"foreach(Span<immutable(Item)> chunk in source.AsImmutable().Chunks(1)){BODY}":
@@ -128,7 +128,7 @@ public sealed class SpanChunksTests
     {
         string[] names=["Memory/Span.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Collections/SpanChunks.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"];
-        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("span-chunks.gf",source));
     }
     private static void Run(string source,int optimization)

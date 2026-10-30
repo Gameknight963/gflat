@@ -10,7 +10,7 @@ public sealed class BitSetOccupancyTests
     [InlineData(2)]
     public void EverySmallLengthAndSingleHoleRespectWordPaddingAndReadonlyNothrowQueries(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             bool Any(immutable(BitSet)* value) nothrow=>value.HasAnySet();
             bool All(immutable(BitSet)* value) nothrow=>value.HasAllSet();
             int main(){BitSet bits=new();
@@ -38,7 +38,7 @@ public sealed class BitSetOccupancyTests
     public void RandomResizeRangesAndSetOperationsMatchBitArrayOccupancy(int optimization)
     {
         var random=new Random(109833);var reference=new BitArray(0);
-        var source=new StringBuilder("using std; using std::Queries; using std::Collections;int main(){BitSet bits=new();\n");
+        var source=new StringBuilder("using Standard; using Standard::Queries; using Standard::Collections;int main(){BitSet bits=new();\n");
         for(int step=0;step<180;step++)
         {
             int operation=random.Next(8);
@@ -73,7 +73,7 @@ public sealed class BitSetOccupancyTests
     [InlineData(2)]
     public void OccupancyQueriesNeedNoAllocationAndRemainCorrectAcrossMovesCloneAndFailedResize(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int allocations=0;int releases=0;bool fail=false;
             private extern void*? malloc(nuint bytes);private extern void free(void* storage);
             namespace Memory{
@@ -98,7 +98,7 @@ public sealed class BitSetOccupancyTests
     private static void Run(string program,int optimization)
     {
         var sources=new[]{"Collections/IEnumerable.gf", "Queries/Enumerable.gf","Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("bitset-occupancy.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_bitset_occupancy_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{

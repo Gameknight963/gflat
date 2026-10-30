@@ -12,7 +12,7 @@ public sealed class TextPartsAnyEditorTests
     [InlineData("ref immutable(String)","String text=String::From(\"a,b\",3);","string_split_any.gf")]
     public void SplitAnyMergesCompletionAndSelectsTheConcreteReceiverAndSeparatorAdapter(string receiver,string setup,string adapter)
     {
-        string text="using std; using std::Text; using std::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
+        string text="using Standard; using Standard::Text; using Standard::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
             +"TextPartsAny counted=text.SplitAny(separators,false);TextPartsAny terminated=text.SplitAny(\",;\",false);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
@@ -41,13 +41,12 @@ public sealed class TextPartsAnyEditorTests
             string label=selected.GetProperty("label").GetString()!;
             Assert.Contains("TextPartsAny",label);Assert.Contains("SplitAny(",label);Assert.DoesNotContain('$',label);
             Assert.Matches(@"bool\s+removeEmpty\s*=\s*false",label);
-            if(row.Counted)Assert.Matches(@"(?:std::Memory::)?Span<readonly\(char\)>\s+separators",label);
+            if(row.Counted)Assert.Matches(@"(?:Standard::Memory::)?Span<readonly\(char\)>\s+separators",label);
             else {Assert.Contains("char",label);Assert.Contains("* separators",label);}
 
-            string declaration="TextPartsAny SplitAny(this "+receiver+" text, "
-                +(row.Counted?"Span<readonly(char)> separators":"readonly(char)* separators");
-            int start=library.Text.IndexOf(declaration,StringComparison.Ordinal);Assert.True(start>=0,declaration);
-            int declaredName=start+"TextPartsAny ".Length;
+            string receiverType=receiver=="ref immutable(String)"?"String":receiver;
+            int declaredName=EditorSourceDeclarations.ExtensionMethod(library,"SplitAny",2,receiverType,
+                row.Counted?"Span<readonly(char)>":"readonly(char)*");
             var expected=model.Definition(library.Path,declaredName);Assert.NotNull(expected);
             Assert.Equal(expected,model.Definition(source.Path,row.Use));
             Assert.Contains(adapter,JsonSerializer.Serialize(expected,Protocol.JsonOptions));

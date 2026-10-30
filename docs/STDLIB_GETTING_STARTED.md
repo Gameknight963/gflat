@@ -1,9 +1,9 @@
 # Getting started with the standard library
 
 A normal gflat project includes the standard library. Import the namespaces for
-the APIs you need, such as `using std::Text;` for strings and text parsing or
-`using std::Memory;` for spans. `using std;` imports only the general APIs in
-`std`, not its nested namespaces. See the [namespace layout](../std/README.md#namespaces-and-files)
+the APIs you need, such as `using Standard::Text;` for strings and text parsing or
+`using Standard::Memory;` for spans. `using Standard;` imports only the general APIs in
+`Standard`, not its nested namespaces. See the [namespace layout](../Standard/README.md#namespaces-and-files)
 and [project setup](PROJECTS.md) for creating and building a `.gfproj`.
 
 ## Parse some text and print a result
@@ -11,9 +11,9 @@ and [project setup](PROJECTS.md) for creating and building a `.gfproj`.
 This complete program prints `Sum: 33`:
 
 ```csharp
-using std::Text;
-using std;
-using std::Memory;
+using Standard::Text;
+using Standard;
+using Standard::Memory;
 
 int main()
 {
@@ -79,10 +79,10 @@ Other mutable aliases can still change the backing storage. See
 `Console::WriteLine("hello")` accepts a borrowed null-terminated C string.
 `Console::WriteLine(data, length)` accepts counted bytes, including embedded
 zeros. `Console::WriteLine(ref summary)` borrows an owning String's counted bytes
-without copying its allocation. [Console](../std/libc/README.md#console) also provides caller-buffer
+without copying its allocation. [Console](../Standard/libc/README.md#console) also provides caller-buffer
 and owning-String input methods.
 
 For a complete streaming program using a reusable input buffer, see
 [number statistics](../examples/number-stats/README.md). The
-[standard-library index](../std/README.md) links the collection, file, Unicode,
+[standard-library index](../Standard/README.md) links the collection, file, Unicode,
 JSON, and formatting APIs as you need them.

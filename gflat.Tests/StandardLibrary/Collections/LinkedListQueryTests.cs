@@ -11,7 +11,7 @@ public sealed class LinkedListQueryTests
     public void QueriesMatchDotNetAfterMixedNodeOperations(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections; extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; extern int printf(readonly(char)* format,...);
             int main() {
                 for (int count=0;count<25;count++) {
                     LinkedList<int> values=new();
@@ -48,7 +48,7 @@ public sealed class LinkedListQueryTests
     public void NoncopyableBorrowedQueriesSurviveOwnerMoveAndObserveElementEdits(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections; extern void*? malloc(nuint size); extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; extern void*? malloc(nuint size); extern void free(void* pointer);
             int allocations=0; int releases=0; int dead=0; bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if(deny)return null; allocations++; return malloc(size); }
@@ -87,7 +87,7 @@ public sealed class LinkedListQueryTests
     public void BorrowedViewCannotBeConstructedFromAnArbitraryNode()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){LinkedList<int>::View view=new LinkedList<int>::View(null);return 0;}
             """)));
         Assert.Equal("linked-list-query.gf", error.Span.Source?.Path);
@@ -99,7 +99,7 @@ public sealed class LinkedListQueryTests
         string[] names = ["Collections/LinkedList.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf", "Queries/WhereSource.gf", "Queries/SelectSource.gf", "Queries/SliceSource.gf",
             "Queries/TakeWhileSource.gf", "Queries/SkipWhileSource.gf"];
-        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("linked-list-query.gf", source));
     }
 }

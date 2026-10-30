@@ -30,7 +30,7 @@ public sealed class FileVarIntTests
             string input = Path.Combine(directory, "input.bin"), output = Path.Combine(directory, "output.bin");
             byte[] oracle = expected.ToArray(); File.WriteAllBytes(input, oracle);
             string program = $$"""
-                using std; using std::IO; int attempts=0;
+                using Standard; using Standard::IO; int attempts=0;
                 extern void free(void* value);
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -64,7 +64,7 @@ public sealed class FileVarIntTests
     public void InvalidAndTruncatedReadsPreserveTheFirstUnconsumedByte(int optimization)
         => WithDirectory(directory => {
             string executable = Compile(directory, """
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 int main(int argc,char** argv){
                     File input=File::OpenRead(argv[1]);int caught=0;
                     try{
@@ -112,7 +112,7 @@ public sealed class FileVarIntTests
     public void ClosedAndWrongModeFailuresKeepBorrowedFileOwnership(int optimization)
         => WithDirectory(directory => {
             string executable = Compile(directory, """
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 int main(int argc,char** argv){
                     File closed=new();int caught=0;
                     try{FileVarInt::ReadUInt32(&closed);}catch(EndOfStreamException* error){return 1;}catch(IOException* error){caught++;}
@@ -153,7 +153,7 @@ public sealed class FileVarIntTests
     }
     private static string Compile(string directory,string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("file-varint-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

@@ -24,7 +24,7 @@ public sealed class Base64UrlTests
                 }
             }
             Run(directory, $$"""
-                using std; using std::Encoding;
+                using Standard; using Standard::Encoding;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
@@ -75,7 +75,7 @@ public sealed class Base64UrlTests
     [InlineData(2)]
     public void EveryBytePositionAndTailBitsAreStrictAndFailureIsAtomic(int optimization)
         => WithDirectory(directory => Run(directory, """
-            using std; using std::Encoding;
+            using Standard; using Standard::Encoding;
             int Digit(int value) nothrow{
                 if(value>=65&&value<=90)return value-65;
                 if(value>=97&&value<=122)return value-97+26;
@@ -118,7 +118,7 @@ public sealed class Base64UrlTests
     [InlineData(2)]
     public void ZeroInputsOverflowPreflightAndOrdinaryCallsNeedNoAllocation(int optimization)
         => WithDirectory(directory => Run(directory, """
-            using std; using std::Encoding;
+            using Standard; using Standard::Encoding;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
@@ -158,7 +158,7 @@ public sealed class Base64UrlTests
     }
     private static void Run(string directory, string program, int optimization)
     {
-        var sources = new[] { new SourceFile("Base64Url.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Encoding/Base64Url.gf"))), new SourceFile("main.gf", program) };
+        var sources = new[] { new SourceFile("Base64Url.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Encoding/Base64Url.gf"))), new SourceFile("main.gf", program) };
         string ir = Path.Combine(directory, "codec.ll"), executable = Path.Combine(directory, "codec.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
         var compilation = NativeToolchain.Compile(ir, executable, optimizationLevel: optimization);

@@ -1,11 +1,11 @@
 # Joining borrowed Strings
 
-The optional `std/core/Text/string_join.gf` source joins a borrowed span of String
+The optional `Standard/core/Text/string_join.gf` source joins a borrowed span of String
 owners into one independent owning String. It adds these nongeneric extensions:
 
 ```csharp
-using std::Text;
-using std::Memory;
+using Standard::Text;
+using Standard::Memory;
 extension Span<immutable(String)> {
     public readonly String Join(readonly(char)* separator);
 }
@@ -17,8 +17,8 @@ extension Span<immutable(String)> {
 For example:
 
 ```csharp
-using std::Text;
-using std; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Collections;
 Vector<String> fields = new();
 fields.Add(s"one");
 fields.Add(s"two");

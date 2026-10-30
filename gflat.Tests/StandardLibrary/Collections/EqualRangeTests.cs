@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class EqualRangeTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocated = 0; int released = 0; bool deny = false;
         namespace Memory {
@@ -172,7 +172,7 @@ public sealed class EqualRangeTests
     {
         string call = defaultComparison ? "EqualRange<Value>(values.AsImmutable(), &key)" : "EqualRange<Value>(values.AsImmutable(), &key, Compare)";
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources($$"""
-            using std; using std::Memory; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Collections;
             struct Value : IComparable<Value> { public int Key; public immutable int CompareTo(immutable(Value)* other) => 0; }
             int Compare(immutable(Value)* left, immutable(Value)* right) => 0;
             int main() { Value[1] data; Value key = new(); Span<Value> values = new(data, 1);
@@ -182,7 +182,7 @@ public sealed class EqualRangeTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("equal-range.gf", program));
 
     private static void Run(string program, int optimization)

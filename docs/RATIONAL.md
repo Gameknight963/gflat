@@ -1,13 +1,13 @@
 # Exact rational values
 
-`std::Numerics::Rational` owns a numerator and denominator backed by BigInteger. Every
+`Standard::Numerics::Rational` owns a numerator and denominator backed by BigInteger. Every
 successfully constructed value has coprime parts, a positive denominator, and
 canonical zero `0/1`. This is exact fraction arithmetic, without a fixed-width
 overflow representation, floating-point approximation, or special infinity/NaN.
 
 ```csharp
-using std::Text;
-using std; using std::Numerics;
+using Standard::Text;
+using Standard; using Standard::Numerics;
 
 int main()
 {

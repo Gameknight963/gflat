@@ -1,6 +1,6 @@
 # Binary scalar IO
 
-Import `std::IO` to read fixed-width values through a borrowed `IByteReader*` and
+Import `Standard::IO` to read fixed-width values through a borrowed `IByteReader*` and
 write them through a borrowed `ITextWriter*`. The endpoints can be a `File`, an
 optional `Windows::TcpClient`, or an application implementation of the contracts.
 No owning File/TcpClient value is copied or transferred.
@@ -33,7 +33,7 @@ back through the same borrowed interfaces usable by a network consumer. Opening 
 output truncates an existing file at that path.
 
 ```csharp
-using std::IO;
+using Standard::IO;
 
 uint ReadLength(IByteReader* input)
 {

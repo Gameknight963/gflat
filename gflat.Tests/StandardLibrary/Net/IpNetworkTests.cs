@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Net;
 public sealed class IpNetworkTests
 {
     private const string Counters="""
-        using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -187,9 +187,9 @@ public sealed class IpNetworkTests
     public void TryObserversCompileNothrowWithoutStringCollectorOrLibcSource()
     {
         string[] names=["Net/IpNetwork.gf","Net/IpAddress.gf","ITextWriter.gf", "IFormattable.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("network-contract.gf","""
-                using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
                 bool Observe(immutable(IpNetwork)* network,readonly(char)* input,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
                     IpNetwork parsed=new();bool valid=IpNetwork::TryParse(input,count,&parsed);IpAddress address=network.NetworkAddress;int prefix=network.PrefixLength;
                     nuint hash=network.GetHashCode();bool equal=network.Equals(&parsed);bool contains=network.Contains(&address);
@@ -218,7 +218,7 @@ public sealed class IpNetworkTests
     }
     private static void Run(string directory,string source,string[] arguments,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("ip-network.gf",source));
         string input=Path.Combine(directory,"main.ll"),output=Path.Combine(directory,"main.exe");File.WriteAllText(input,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
         var compiled=NativeToolchain.Compile(input,output,optimizationLevel:optimization);Assert.True(compiled.ExitCode==0,compiled.StandardError);

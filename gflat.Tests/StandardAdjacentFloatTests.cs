@@ -44,7 +44,7 @@ public sealed class StandardAdjacentFloatTests
     public void EdgesExponentTransitionsAndSeededBitPatternsMatchHostSteppingWithExactNaNs(int optimization)
     {
         var code = new StringBuilder("""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             int attempts = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++; return null; }
@@ -133,10 +133,10 @@ public sealed class StandardAdjacentFloatTests
     public void AdjacentMethodsAndNothrowWrappersUseIntegerOperationsWithoutExceptionBoundaries()
     {
         string ir = Compiler.Emit(Sources("""
-            float UpFloat(float value) nothrow => std::Numerics::Math::BitIncrement(value);
-            float DownFloat(float value) nothrow => std::Numerics::Math::BitDecrement(value);
-            double UpDouble(double value) nothrow => std::Numerics::Math::BitIncrement(value);
-            double DownDouble(double value) nothrow => std::Numerics::Math::BitDecrement(value);
+            float UpFloat(float value) nothrow => Standard::Numerics::Math::BitIncrement(value);
+            float DownFloat(float value) nothrow => Standard::Numerics::Math::BitDecrement(value);
+            double UpDouble(double value) nothrow => Standard::Numerics::Math::BitIncrement(value);
+            double DownDouble(double value) nothrow => Standard::Numerics::Math::BitDecrement(value);
             int main() { return 0; }
             """));
         var methods = Regex.Matches(ir, @"(?ms)^define [^\r\n]*\$Math\$Bit(Increment|Decrement)\$[^\r\n]*\{\r?\n.*?^\}");
@@ -160,7 +160,7 @@ public sealed class StandardAdjacentFloatTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program) => [
-        new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
+        new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
         new SourceFile("main.gf", program)
     ];
 }

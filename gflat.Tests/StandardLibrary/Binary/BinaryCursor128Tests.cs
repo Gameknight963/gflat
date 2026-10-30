@@ -20,7 +20,7 @@ public sealed class BinaryCursor128Tests
             foreach (byte b in row) expected = unchecked((expected ^ b) * 1099511628211ul);
         }
         Run($$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 extralong[6] values = [(extralong)0, (extralong)1, (extralong)-1,
                     (extralong)1 << 127, ((extralong)1 << 127) ^ (extralong)-1,
@@ -66,7 +66,7 @@ public sealed class BinaryCursor128Tests
     [InlineData(2)]
     public void ShortRegionsAvoidPointerAccessAndReadsAllowAlignedOverlappingOutputs(int optimization)
         => Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 byte[20] bytes;
                 for(nuint count=0;count<16;count++) {
@@ -109,7 +109,7 @@ public sealed class BinaryCursor128Tests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = new[] { "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$Allocate", "@malloc", "@free" })

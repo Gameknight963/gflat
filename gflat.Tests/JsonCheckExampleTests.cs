@@ -10,7 +10,7 @@ public sealed class JsonCheckExampleTests
     [InlineData(2)]
     public async Task ActualToolValidatesWholeFilesAndReportsErrorsWithoutChangingInput(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("json-check.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/json-check.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat-json-check-"+Guid.NewGuid().ToString("N"));

@@ -1,10 +1,10 @@
 # Windows clocks
 
-Optional Windows x64 source library. Add a project reference to `libraries/platform/windows/Windows.gfproj`; it uses the normal std reference. It is outside automatic std inclusion.
+Optional Windows x64 source library. Add a project reference to `libraries/platform/windows/Windows.gfproj`; it uses the normal Standard reference. It is outside automatic Standard inclusion.
 
 ```csharp
-using std::Time;
-alias Timer = std::Time::Stopwatch<Windows::PerformanceCounter>;
+using Standard::Time;
+alias Timer = Standard::Time::Stopwatch<Windows::PerformanceCounter>;
 ```
 
 The provider queries the Windows performance counter and its fixed frequency. It measures intervals, not calendar dates. Timestamp/frequency failures throw exceptions with static messages. Successful readings require no application allocation.
@@ -15,13 +15,13 @@ Primary documentation: [QueryPerformanceCounter](https://learn.microsoft.com/en-
 
 ## UTC wall-clock time
 
-`Windows::SystemClock::GetUtcNow()` returns a `std::Time::DateTime` interpreted as
+`Windows::SystemClock::GetUtcNow()` returns a `Standard::Time::DateTime` interpreted as
 UTC by this method's contract. DateTime itself still carries no timezone or
 UTC/local marker. For example, keep the interpretation explicit at the call site:
 
 ```csharp
-using std::Time;
-std::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
+using Standard::Time;
+Standard::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
 utc.Format(Console::Out);
 Console::WriteLine();
 ```
@@ -40,7 +40,7 @@ adjusted. Use Stopwatch<Windows::PerformanceCounter> for elapsed durations.
 emits no Z or offset suffix; label serialized timestamps as UTC yourself when
 needed. No local-time conversion, timezone database, leap-second field, or
 cross-host synchronization guarantee is supplied. Successful calls make no
-application allocation and add no default clock/provider to core std.
+application allocation and add no default clock/provider to core Standard.
 
 Primary ABI references: [GetSystemTimePreciseAsFileTime](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime),
 [FILETIME layout and epoch](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime).

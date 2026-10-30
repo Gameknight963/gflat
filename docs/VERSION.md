@@ -1,6 +1,6 @@
 # Dotted numeric versions
 
-std::Version is an ordinary value with two through four nonnegative signed
+Standard::Version is an ordinary value with two through four nonnegative signed
 32-bit integer components: major.minor[.build[.revision]]. It is not SemVer:
 there are no prerelease labels, build metadata, version ranges, or coercions.
 It can describe numeric protocol or file-format revisions.
@@ -12,7 +12,7 @@ present when build is absent. Invalid tuples throw Exception("Invalid version co
 Immutable Major, Minor, Build, and Revision getters expose these exact values.
 
 ```csharp
-using std;
+using Standard;
 
 int main()
 {

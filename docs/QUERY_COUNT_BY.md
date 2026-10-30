@@ -7,7 +7,7 @@ following the existing HashMap rules. Hash values and equality must agree and
 remain stable while a key is stored. Map enumeration order is unspecified.
 
 ```csharp
-using std; using std::Memory; using std::Queries; using std::Collections;
+using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
 
 int Parity(int value) => value % 2;
 

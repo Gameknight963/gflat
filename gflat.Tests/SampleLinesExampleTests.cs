@@ -17,7 +17,7 @@ public sealed class SampleLinesExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("sample-lines.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/sample-lines.gf"))));
             string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "sample-lines.exe");

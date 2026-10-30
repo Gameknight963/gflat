@@ -56,7 +56,7 @@ Both `-O0` and `-O2` are tested. Measurements on this machine:
 | Placement construction with a user constructor | Runs | Runs |
 | Ordinary allocating `new*` | Exception-runtime symbols unresolved | Exception-runtime symbols unresolved |
 | Throw/catch | Exception-runtime symbols unresolved | Exception-runtime symbols unresolved |
-| `std::String` with our Memory implementation | Exception-runtime symbols unresolved | Exception-runtime symbols and `strlen` unresolved |
+| `Standard::String` with our Memory implementation | Exception-runtime symbols unresolved | Exception-runtime symbols and `strlen` unresolved |
 
 The constructor is deliberately trivial: it only stores an integer field.
 Originally this probe required exception-runtime symbols at `-O0` because the

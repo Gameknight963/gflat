@@ -1,6 +1,6 @@
-using std::Text;
-using std::IO;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard;
 
 void EmitMatch(ref String line, immutable(char*) needle, nuint needleLength, bool ignoreCase, bool endedWithLF, ref bool writingOutput)
 {

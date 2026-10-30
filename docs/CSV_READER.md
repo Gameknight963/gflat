@@ -1,6 +1,6 @@
 # CSV reader
 
-`std::Csv::CsvReader` reads fields from one complete borrowed byte buffer. It does not
+`Standard::Csv::CsvReader` reads fields from one complete borrowed byte buffer. It does not
 build a table, allocate field strings, infer a schema, or decode character sets.
 `Read()` emits one validated field at a time; `EndOfRecord` identifies a record's
 last field. Read through `false` to validate the whole input. Stopping early does
@@ -13,7 +13,7 @@ names may contain commas or doubled quotes. Only the numeric column is decoded
 into a caller-owned buffer; numeric parsing and column-count policy remain explicit.
 
 ```csharp
-using std; using std::Text; using std::Csv;
+using Standard; using Standard::Text; using Standard::Csv;
 
 int main()
 {
@@ -119,7 +119,7 @@ The optional `CsvReaderText` convenience decodes into an initialized `String`,
 reusing its capacity between fields:
 
 ```csharp
-using std; using std::Text; using std::Csv;
+using Standard; using Standard::Text; using Standard::Csv;
 int main()
 {
     readonly(char)* input = "first,\"two\"\"quotes\"";

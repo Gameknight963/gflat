@@ -24,7 +24,7 @@ public sealed class SpanIntegerParsingTests
             }
             string checks=string.Join("\n",Types.Select((type,index)=>$$"""
                 { {{type.Type}} expected=({{type.Type}})99;{{type.Type}} actual=({{type.Type}})99;
-                  bool valid=std::Text::TryParse{{type.Name}}(&record[1],count,&expected);
+                  bool valid=Standard::Text::TryParse{{type.Name}}(&record[1],count,&expected);
                   if(text.TryParse{{type.Name}}(&actual)!=valid||actual!=expected)return 2;
                   int caught=0;
                   try{actual=text.Parse{{type.Name}}();if(!valid||actual!=expected)return 3;}
@@ -33,7 +33,7 @@ public sealed class SpanIntegerParsingTests
                 """));
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using std; using std::Text; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using Standard; using Standard::Text; using Standard::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int main(){
                     void*? input=fopen({{literal}},"rb");if(input==null)return 1;defer{fclose(input!);}
@@ -64,7 +64,7 @@ public sealed class SpanIntegerParsingTests
               if(zero.TryParse{{type.Name}}(&result)||result!=({{type.Type}})0)return false; }
             """));
         string program=$$"""
-            using std; using std::Text; using std::Memory;int allocations=0;
+            using Standard; using Standard::Text; using Standard::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -89,14 +89,14 @@ public sealed class SpanIntegerParsingTests
         string check=Regex.Match(ir,@"(?ms)^define [^\r\n]*@[^\r\n ]*SpanParsingCheck[^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
         Assert.NotEmpty(check);Assert.DoesNotContain("invoke",check);Assert.DoesNotContain("__gflat_eh_",check);
         string[] definitions=Regex.Matches(ir,@"(?m)^define [^\r\n]+").Select(match=>match.Value)
-            .Where(line=>Types.Any(type=>line.Contains("@gflat$std$Text$TryParse"+type.Name+"(",StringComparison.Ordinal)||
-                line.Contains("@gflat$std$Text$TryParse"+type.Name+"$overload$",StringComparison.Ordinal))).ToArray();
+            .Where(line=>Types.Any(type=>line.Contains("@gflat$Standard$Text$TryParse"+type.Name+"(",StringComparison.Ordinal)||
+                line.Contains("@gflat$Standard$Text$TryParse"+type.Name+"$overload$",StringComparison.Ordinal))).ToArray();
         Assert.NotEmpty(definitions);Assert.All(definitions,line=>Assert.Contains("nounwind",line));
         Run(program,optimization);
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("span-parsing.gf",program));
     private static void Run(string program,int optimization)
     {

@@ -9,7 +9,7 @@ public sealed class TextLinesTests
     [InlineData(2)]
     public void ProtectedSequencesAndCurrentObserversRetainIndependentBorrowedViews(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -37,7 +37,7 @@ public sealed class TextLinesTests
     public void ImmutableCurrentObserverCannotWriteBorrowedCharacters()
     {
         const string prefix="""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             void Test(immutable(TextLines::Enumerator)* observer){Span<readonly(char)> line=observer.Current;
             """;
         Compiler.Check(Sources(prefix+"char value=line[0];}"));
@@ -57,7 +57,7 @@ public sealed class TextLinesTests
         const string alphabet = "ab\r\n\0";
         for (int n = 1; n <= 40; n++) cases.Add(new string(Enumerable.Range(0, n).Select(_ => alphabet[random.Next(alphabet.Length)]).ToArray()));
         var program = new StringBuilder("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* data) nothrow {} }
             bool Next(TextLines::Enumerator* iterator, readonly(char)* expected, nuint length) {
                 if(!iterator.MoveNext())return false;
@@ -93,7 +93,7 @@ public sealed class TextLinesTests
     [InlineData(2)]
     public void IteratorsBorrowExactSlicesAndCopiesAdvanceIndependently(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){
                 char[7] bytes=['a','\r','\n','b','\0','c','\n'];
                 TextLines lines=new(new Span<readonly(char)>(bytes,7));
@@ -125,7 +125,7 @@ public sealed class TextLinesTests
     [InlineData(2)]
     public void NamedStringAndSpanConveniencesBorrowAndSupportLazyQueries(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             static class Calls { public static int Allocations; }
             namespace detail {
                 extern void*? malloc(nuint size); extern void free(void* data);
@@ -158,14 +158,47 @@ public sealed class TextLinesTests
             }
             """, optimization, conveniences: true);
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void TemporaryOwnerLivesThroughImmediateBorrowedViewConsumption(int optimization)
+    {
+        const string program = """
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+            extern void*? malloc(nuint size); extern void free(void* data);
+            int allocated=0;int released=0;
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { void*? result=malloc(size);if(result!=null)allocated++;return result; }
+                public replace void Free(void* data) nothrow { released++;free(data); }
+            }
+            int Consume(TextLines view) {
+                if(allocated==0||released!=0)return 1;
+                TextLines::Enumerator iterator=view.GetEnumerator();
+                if(!iterator.MoveNext()||iterator.Current.Length!=1||iterator.Current[0]!='a')return 2;
+                if(!iterator.MoveNext()||iterator.Current.Length!=1||iterator.Current[0]!='b')return 3;
+                if(iterator.MoveNext()||released!=0)return 4;
+                return 0;
+            }
+            int main() {
+                int status=Consume(s"a\nb\n".Lines());
+                if(status!=0)return status;
+                // Borrowed view was consumed within the owner's full expression.
+                if(allocated==0||allocated!=released)return 5;
+                return 0;
+            }
+            """;
+        string ir = Compiler.Emit(Sources(program, conveniences: true), options: new() { InternalizeFunctions = true });
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
     [Fact]
-    public void StringConvenienceRejectsTemporaryOwners()
+    public void ExplicitRefFreeFunctionStillRejectsTemporaryOwners()
     {
         var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
-            int main(){ TextLines lines=s"a\n".Lines(); return 0; }
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+            int main() { TextLines view=Lines(ref s"a\nb\n"); return 0; }
             """, conveniences: true)));
-        Assert.Contains("Lines", error.Message);
+        Assert.Contains("existing storage", error.Message);
     }
 
     private static SourceFile[] Sources(string program, bool conveniences = false)
@@ -173,7 +206,7 @@ public sealed class TextLinesTests
         var names = new List<string> { "Memory/Span.gf", "Text/TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" };
         if(conveniences) names.AddRange(["Text/text_lines_span.gf","Text/string_lines.gf","Collections/Vector.gf","Text/String.gf", "Text/ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","primitive_format.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"]);
-        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }
 

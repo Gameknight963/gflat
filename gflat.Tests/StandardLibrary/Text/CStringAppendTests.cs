@@ -28,7 +28,7 @@ public sealed class CStringAppendTests
             }
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using std; using std::Text;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using Standard; using Standard::Text;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int main(){
                     void*? input=fopen({{literal}},"rb");if(input==null)return 1;defer{fclose(input!);}
@@ -53,7 +53,7 @@ public sealed class CStringAppendTests
     public void ScanBoundsEmptyAndUnterminatedBuffersNeedNoRuntimeServices(int optimization)
     {
         const string program="""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main(){
                 if(CString::TryAppend(((nuint)1).reinterpret<readonly(char)*>(),((nuint)1).reinterpret<char*>(),0))return 1;
                 char[3] none=['a','b','c'];
@@ -76,7 +76,7 @@ public sealed class CStringAppendTests
     }
 
     private static SourceFile[] Sources(string program)=>[
-        new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/CString.gf"))),
+        new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/CString.gf"))),
         new("append.gf",program)
     ];
     private static void Run(string program,int optimization)

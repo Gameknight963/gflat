@@ -8,7 +8,7 @@ public partial class TypeChecker
     public void Visit(TypeofExpression node)
     {
         using var sourceContext = SourceContext.Enter(node.Span);
-        RecordType(node, NamedTypeExpression.Resolved("std$TypeInfo", node.Line));
+        RecordType(node, NamedTypeExpression.Resolved("Standard$TypeInfo", node.Line));
         _constValues[node] = DescribeType(node.TargetType, node.Line);
     }
 
@@ -52,7 +52,7 @@ public partial class TypeChecker
             ReferenceTypeExpression reference => reference.Inner,
             _ => null
         };
-        return new ConstValue.Struct("std$TypeInfo", new Dictionary<string, ConstValue> {
+        return new ConstValue.Struct("Standard$TypeInfo", new Dictionary<string, ConstValue> {
             ["Name"] = new ConstValue.String(DisplayTypeName(type)),
             ["Kind"] = new ConstValue.Integer(kind),
             ["HasLayout"] = new ConstValue.Boolean(hasLayout),
@@ -65,13 +65,13 @@ public partial class TypeChecker
             ["IsImmutable"] = new ConstValue.Boolean(type.IsImmutableValue),
             ["HasDestructor"] = new ConstValue.Boolean(hasLayout && !isReference && HasDestructor(type)),
             ["ElementType"] = element == null ? new ConstValue.Integer(0) :
-                new ConstValue.Pointer("std$TypeInfo", DescribeResolvedType(element, line)),
+                new ConstValue.Pointer("Standard$TypeInfo", DescribeResolvedType(element, line)),
             ["HasFixedLength"] = new ConstValue.Boolean(type is ArrayTypeExpression { Size: not null }),
             ["Length"] = new ConstValue.UInteger((ulong)(type is ArrayTypeExpression { Size: int length } ? length : 0)),
             ["ReturnType"] = type is FunctionPointerTypeExpression functionReturn
-                ? new ConstValue.Pointer("std$TypeInfo", DescribeResolvedType(functionReturn.ReturnType, line)) : new ConstValue.Integer(0),
+                ? new ConstValue.Pointer("Standard$TypeInfo", DescribeResolvedType(functionReturn.ReturnType, line)) : new ConstValue.Integer(0),
             ["ParameterTypes"] = type is FunctionPointerTypeExpression { ParameterTypes.Count: > 0 } functionParameters
-                ? new ConstValue.ArrayPointer(NamedTypeExpression.Resolved("std$TypeInfo", line),
+                ? new ConstValue.ArrayPointer(NamedTypeExpression.Resolved("Standard$TypeInfo", line),
                     new ConstValue.Array(functionParameters.ParameterTypes.Select(p => DescribeResolvedType(p, line)).ToList())) : new ConstValue.Integer(0),
             ["ParameterCount"] = new ConstValue.UInteger((ulong)(type is FunctionPointerTypeExpression function ? function.ParameterTypes.Count : 0))
         });

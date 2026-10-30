@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Numerics;
 public sealed class RationalTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -163,7 +163,7 @@ public sealed class RationalTests
     private static void WriteText(BinaryWriter writer,BigInteger value)=>WriteText(writer,value.ToString(CultureInfo.InvariantCulture));
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.ASCII.GetBytes(text);writer.Write((ushort)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("rational.gf",program));
     private static void Run(string program,int optimization)
     {

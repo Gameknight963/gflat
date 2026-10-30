@@ -8,7 +8,7 @@ public sealed class SpanTryCopyTests
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/span_copy.gf",
             "Memory/Span.gf", "Collections/Vector.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf",
             "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("span-try-copy.gf", program));
 
     private static void Run(string program, int optimization)
@@ -48,7 +48,7 @@ public sealed class SpanTryCopyTests
         }
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int allocations = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { allocations++; return null; }
@@ -98,7 +98,7 @@ public sealed class SpanTryCopyTests
     public void ShortBuffersNeverCopyAndOwningCopyFailuresPropagateWithNormalPartialProgress(int optimization)
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint bytes); extern void free(void* storage);
             int allocated = 0; int freed = 0; int copies = 0; int made = 0; int dead = 0;
             int budget = -1; bool deny = false; bool failNext = false;
@@ -157,7 +157,7 @@ public sealed class SpanTryCopyTests
             """, optimization);
 
         const string protectedOutput = """
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 int[2] data = [1, 2]; Span<int> view = new(data, 2);
                 view.AsImmutable().TryCopyTo(view.AsImmutable()); return 0;
@@ -165,7 +165,7 @@ public sealed class SpanTryCopyTests
             """;
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(protectedOutput)));
         const string noncopyable = """
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Unique { public Unique() {} ~Unique() {} }
             int main() {
                 Vector<Unique> values = new(); values.Add(new Unique());

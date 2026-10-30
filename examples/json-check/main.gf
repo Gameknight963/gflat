@@ -1,7 +1,7 @@
-using std::Text;
-using std::Json;
-using std::IO;
-using std;
+using Standard::Text;
+using Standard::Json;
+using Standard::IO;
+using Standard;
 
 // Keep the complete file alive while JsonReader borrows its counted bytes.
 int main(int argc, char** argv)

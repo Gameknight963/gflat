@@ -7,7 +7,7 @@ public sealed class TeeWriterTests
     [InlineData(2)]
     public void BinaryChunksAndSingleFormattingPassReachBothOutputsWithoutInternalAllocation(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             int attempts=0;int formatCalls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -42,7 +42,7 @@ public sealed class TeeWriterTests
     [InlineData(2)]
     public void CallsKeepEndpointOrderIncludingZeroCountsAndIdenticalEndpoints(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             struct Sink:ITextWriter{
                 private int id;private int* events;private int* used;
                 public int Calls;public nuint Length;
@@ -66,7 +66,7 @@ public sealed class TeeWriterTests
     [InlineData(2)]
     public void PartialFailuresPropagateInOrderAndRetriesCanDuplicateAcceptedOutput(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             struct Sink:ITextWriter{
                 private int id;private char* bytes;private int* events;private int* used;
                 public bool Fail;public nuint Length;public int Calls;
@@ -106,7 +106,7 @@ public sealed class TeeWriterTests
     [InlineData(2)]
     public void CopiesAndMovesShareBorrowedSinksWithoutWritingOrDestroyingThemOnExit(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             struct Sink:ITextWriter{
                 private int* destroyed;public nuint Length;public int Calls;
                 public Sink(int* count){destroyed=count;Length=0;Calls=0;}
@@ -132,7 +132,7 @@ public sealed class TeeWriterTests
 
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("tee-writer.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);

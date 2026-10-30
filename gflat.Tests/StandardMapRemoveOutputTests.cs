@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardMapRemoveOutputTests
 {
     private const string Owners="""
-        using std; using std::Text; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         bool capture=false;void*? backing=null;nuint backingBytes=0;void*? watchedStorage=null;int watchedFrees=0;
         int madeKeys=0;int deadKeys=0;int madeValues=0;int deadValues=0;int hashCalls=0;int equalCalls=0;int compareCalls=0;
@@ -153,7 +153,7 @@ public sealed class StandardMapRemoveOutputTests
             string flags=sorted?"":"""
                 {
                 // Construct a zero-size owner at the final state byte: no map bytes are overwritten.
-                Empty* placed=new* Empty() at (Empty*)((byte*)backing!+backingBytes-1);
+                Empty* placed=new* Empty() at ((byte*)backing!+backingBytes-1).reinterpret<Empty*>();
                 int before=deadEmpty;bool caught=false;
                 try{map.Remove(&query,ref *placed);}catch(ref Exception error){caught=true;}
                 if(!caught||map.Count!=3||deadEmpty!=before)return 4;
@@ -194,8 +194,8 @@ public sealed class StandardMapRemoveOutputTests
     {
         foreach(bool sorted in new[]{false,true}) {
             string source="""
-                using std; using std::Text; using std::Collections;
-                public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
+                using Standard; using Standard::Text; using Standard::Collections;
+                public static replace nuint Standard::TracingCollector::CollectionThreshold()=>0;
                 class Box {
                     public Box^? Self;public int Id;
                     public Box(int id){Self=null;Id=id;}
@@ -250,7 +250,7 @@ public sealed class StandardMapRemoveOutputTests
             .Replace("$WATCH$",sorted?"watchedSorted":"watchedHash");
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("map-remove-output.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Map Remove output exit {result.ExitCode}: {result.StandardError}");

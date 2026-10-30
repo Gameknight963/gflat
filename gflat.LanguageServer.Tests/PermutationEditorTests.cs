@@ -9,7 +9,7 @@ public sealed class PermutationEditorTests
     public void ExplicitComparersAndBooleanResultsNavigateBothArrangementOperations()
     {
         const string text = """
-            using std; using std::Memory; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Collections;
             int Compare(readonly(int)* a, readonly(int)* b)
             {
                 if (*a < *b) return -1;

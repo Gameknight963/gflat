@@ -18,11 +18,11 @@ public class StandardReverseEndiannessTests
                 for(uint raw=0u;raw<=65535u;raw++) {
                     ushort value=(ushort)raw;
                     ushort expected=(ushort)(256u*(raw%256u)+raw/256u);
-                    ushort result=std::Numerics::BitOperations::ReverseEndianness(value);
-                    if(result!=expected||std::Numerics::BitOperations::ReverseEndianness(result)!=value)return 1;
+                    ushort result=Standard::Numerics::BitOperations::ReverseEndianness(value);
+                    if(result!=expected||Standard::Numerics::BitOperations::ReverseEndianness(result)!=value)return 1;
                     short signed=(short)value;
-                    short changed=std::Numerics::BitOperations::ReverseEndianness(signed);
-                    if(changed!=(short)expected||std::Numerics::BitOperations::ReverseEndianness(changed)!=signed)return 2;
+                    short changed=Standard::Numerics::BitOperations::ReverseEndianness(signed);
+                    if(changed!=(short)expected||Standard::Numerics::BitOperations::ReverseEndianness(changed)!=signed)return 2;
                 }
                 return 0;
             }
@@ -46,15 +46,15 @@ public class StandardReverseEndiannessTests
                 ulong[{{values.Length}}] reversed64=[{{string.Join(",",values.Select(value=>BinaryPrimitives.ReverseEndianness(value)+"ul"))}}];
                 for(int i=0;i<{{values.Length}};i++) {
                     uint small=(uint)values[i];ulong large=values[i];
-                    uint changed32=std::Numerics::BitOperations::ReverseEndianness(small);
-                    ulong changed64=std::Numerics::BitOperations::ReverseEndianness(large);
+                    uint changed32=Standard::Numerics::BitOperations::ReverseEndianness(small);
+                    ulong changed64=Standard::Numerics::BitOperations::ReverseEndianness(large);
                     if(changed32!=reversed32[i]||changed64!=reversed64[i])return 1;
-                    if(std::Numerics::BitOperations::ReverseEndianness(changed32)!=small||std::Numerics::BitOperations::ReverseEndianness(changed64)!=large)return 2;
+                    if(Standard::Numerics::BitOperations::ReverseEndianness(changed32)!=small||Standard::Numerics::BitOperations::ReverseEndianness(changed64)!=large)return 2;
                     int signed32=(int)small;long signed64=(long)large;
-                    int result32=std::Numerics::BitOperations::ReverseEndianness(signed32);
-                    long result64=std::Numerics::BitOperations::ReverseEndianness(signed64);
+                    int result32=Standard::Numerics::BitOperations::ReverseEndianness(signed32);
+                    long result64=Standard::Numerics::BitOperations::ReverseEndianness(signed64);
                     if((uint)result32!=reversed32[i]||(ulong)result64!=reversed64[i])return 3;
-                    if(std::Numerics::BitOperations::ReverseEndianness(result32)!=signed32||std::Numerics::BitOperations::ReverseEndianness(result64)!=signed64)return 4;
+                    if(Standard::Numerics::BitOperations::ReverseEndianness(result32)!=signed32||Standard::Numerics::BitOperations::ReverseEndianness(result64)!=signed64)return 4;
                 }
                 return 0;
             }
@@ -64,7 +64,7 @@ public class StandardReverseEndiannessTests
 
     private static void Run(string code,int optimization)
     {
-        SourceFile[] sources=[new("BitOperations.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Numerics/BitOperations.gf"))),new("main.gf",code)];
+        SourceFile[] sources=[new("BitOperations.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Numerics/BitOperations.gf"))),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$","@malloc","fptoui","uitofp"})Assert.DoesNotContain(forbidden,ir);
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);

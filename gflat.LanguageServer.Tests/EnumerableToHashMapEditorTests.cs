@@ -8,7 +8,7 @@ public sealed class EnumerableToHashMapEditorTests
     [Fact]
     public void BothMaterializersInferTheirKeyValueTypesAndRetainTheirVisibleSelectorParameters()
     {
-        const string text="using std; using std::Memory; using std::Queries; using std::Collections;int Key(int value)=>value;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,int> originals=values.AsEnumerable().ToHashMap(Key);HashMap<int,long> squares=values.AsEnumerable().ToHashMap(Key,Square);}";
+        const string text="using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;int Key(int value)=>value;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,int> originals=values.AsEnumerable().ToHashMap(Key);HashMap<int,long> squares=values.AsEnumerable().ToHashMap(Key,Square);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_to_hash_map.gf");
@@ -23,7 +23,7 @@ public sealed class EnumerableToHashMapEditorTests
             Assert.Contains(completion.EnumerateArray(),item=>item.GetProperty("label").GetString()=="ToHashMap");
             string hover=Json(model.Hover(source.Path,use)).GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains(row.Result,hover.Replace(" ",""));Assert.Contains("ToHashMap",hover);Assert.DoesNotContain('$',hover);
-            int declaration=library.Text.IndexOf(row.Declaration,StringComparison.Ordinal);Assert.True(declaration>=0);
+            int declaration=EditorSourceDeclarations.ExtensionMethod(library,"ToHashMap",row.Arity);Assert.True(declaration>=0);
             var expected=model.Definition(library.Path,declaration);Assert.NotNull(expected);
             Assert.Equal(expected,model.Definition(source.Path,use));
             int argument=use+"ToHashMap(".Length;if(row.Arity==2)argument+="Key,".Length;

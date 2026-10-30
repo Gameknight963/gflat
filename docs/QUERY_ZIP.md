@@ -5,7 +5,7 @@
 result type, so no pair or tuple allocation is needed.
 
 ```csharp
-using std; using std::Memory; using std::Queries;
+using Standard; using Standard::Memory; using Standard::Queries;
 int[3] numbers = [1, 2, 3];
 int[2] offsets = [10, 20];
 Span<int> first = new(numbers, 3);
@@ -63,4 +63,4 @@ has no recovery guarantee. Discard that iterator after such an error.
 Zip retains the source views' borrowing rules. Keep backing storage alive and
 stable for the query and all iterators; pointer results do not extend an owner's
 lifetime. Writes through other valid aliases remain visible when their elements
-are read. See [query ownership](../std/core/Queries/README.md#ownership).
+are read. See [query ownership](../Standard/core/Queries/README.md#ownership).

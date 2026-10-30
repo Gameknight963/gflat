@@ -16,7 +16,7 @@ public sealed class BinaryCursorBulkTests
             foreach(byte value in bytes)expected=unchecked((expected^value)*1099511628211ul);
         }
         Run($$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main(){ulong hash=14695981039346656037ul;byte[18] bytes;byte* buffer=bytes;
                 for(int mode=0;mode<2;mode++)for(nuint source=0;source<16;source++)for(nuint destination=0;destination<16;destination++){
                     nuint limit=source;if(destination>limit)limit=destination;
@@ -39,7 +39,7 @@ public sealed class BinaryCursorBulkTests
     [InlineData(2)]
     public void BoundsFailuresAndZeroCountsDoNotAccessPointersOrChangeBytes(int optimization)
         => Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main(){
                 BinaryBufferReader emptyRead=new();BinaryBufferWriter emptyWrite=new();
                 if(!emptyRead.TryReadBytes(((nuint)1).reinterpret<byte*>(),0)||!emptyWrite.TryWriteBytes(((nuint)1).reinterpret<readonly(byte)*>(),0))return 1;
@@ -65,7 +65,7 @@ public sealed class BinaryCursorBulkTests
     private static void Run(string code,int optimization)
     {
         var sources=new[]{"Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("main.gf",code)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$Allocate","gflat$Memory$Free","@malloc","@free"})

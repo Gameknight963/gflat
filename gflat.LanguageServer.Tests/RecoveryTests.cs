@@ -131,48 +131,48 @@ public class RecoveryTests
     public void QualifiedExceptionTypesHaveNamespaceColors()
     {
         var source = new SourceFile(Path.GetFullPath("exceptions.gf"), """
-            namespace std { public class IOException : Exception { } public class EndOfStreamException : Exception { } }
-            void Flush() { throw new std::IOException(); }
-            nuint ReadLine() { throw new std::EndOfStreamException(); }
+            namespace Standard { public class IOException : Exception { } public class EndOfStreamException : Exception { } }
+            void Flush() { throw new Standard::IOException(); }
+            nuint ReadLine() { throw new Standard::EndOfStreamException(); }
             """);
         var snapshot = new AnalysisSnapshot([source]);
         var model = new EditorModel(snapshot, [source]);
         var colors = Colors(model, source);
-        foreach (string name in new[] { "std::IOException", "std::EndOfStreamException" }) {
+        foreach (string name in new[] { "Standard::IOException", "Standard::EndOfStreamException" }) {
             int start = source.Text.LastIndexOf(name, StringComparison.Ordinal);
             Assert.Equal("namespace", colors[start]);
-            Assert.Equal("class", colors[start + 5]);
+            Assert.Equal("class", colors[start + "Standard::".Length]);
             Assert.NotNull(model.Hover(source.Path, start));
-            Assert.NotNull(model.Definition(source.Path, start + 5));
+            Assert.NotNull(model.Definition(source.Path, start + "Standard::".Length));
         }
     }
 
     [Fact]
     public void FileScopedNamespaceQualifierInAnotherFileHasNamespaceColor()
     {
-        var source = new SourceFile(Path.GetFullPath("console.gf"), "namespace Console; void Flush() { throw new std::IOException(\"Console flush failed\"); }");
-        var exception = new SourceFile(Path.GetFullPath("io.gf"), "namespace std; public class IOException : Exception { public IOException(immutable(char*) message) : base(message, 1) {} }");
+        var source = new SourceFile(Path.GetFullPath("console.gf"), "namespace Console; void Flush() { throw new Standard::IOException(\"Console flush failed\"); }");
+        var exception = new SourceFile(Path.GetFullPath("io.gf"), "namespace Standard; public class IOException : Exception { public IOException(immutable(char*) message) : base(message, 1) {} }");
         var files = new[] { source, exception };
         var model = new EditorModel(new AnalysisSnapshot(files), files);
-        Assert.Equal("namespace", Colors(model, source)[source.Text.IndexOf("std::", StringComparison.Ordinal)]);
+        Assert.Equal("namespace", Colors(model, source)[source.Text.IndexOf("Standard::", StringComparison.Ordinal)]);
     }
 
     [Fact]
     public void ConsoleSourceExceptionQualifierHasNamespaceColor()
     {
         string root = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(root, "std", "libc", "Console", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
-        string path = Path.Combine(root, "std", "libc", "Console", "Console.gf");
+        while (!File.Exists(Path.Combine(root, "Standard", "libc", "Console", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
+        string path = Path.Combine(root, "Standard", "libc", "Console", "Console.gf");
         var source = new SourceFile(path, File.ReadAllText(path));
-        var files = Directory.EnumerateFiles(Path.Combine(root, "std"), "*.gf", SearchOption.AllDirectories)
+        var files = Directory.EnumerateFiles(Path.Combine(root, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(p => p == path ? source : new SourceFile(p, File.ReadAllText(p))).ToArray();
         var model = new EditorModel(new AnalysisSnapshot(files), files);
-        int offset = source.Text.IndexOf("std::IO::IOException(\"Console flush failed", StringComparison.Ordinal);
+        int offset = source.Text.IndexOf("Standard::IO::IOException(\"Console flush failed", StringComparison.Ordinal);
         Assert.True(offset >= 0, "Console flush exception qualifier was not found in the actual source");
         var colors = Colors(model, source);
         Assert.Equal("namespace", colors[offset]);
-        Assert.Equal("namespace", colors[offset + "std::".Length]);
-        Assert.Equal("class", colors[offset + "std::IO::".Length]);
+        Assert.Equal("namespace", colors[offset + "Standard::".Length]);
+        Assert.Equal("class", colors[offset + "Standard::IO::".Length]);
     }
 
     [Fact]

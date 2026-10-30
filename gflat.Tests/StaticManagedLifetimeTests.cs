@@ -109,8 +109,8 @@ public sealed class StaticManagedLifetimeTests
     public void VectorManagedElementsBalanceParameterMovesAndRawStorageRelocation()
     {
         var sources = new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Memory/Span.gf", "core/Collections/Vector.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
-            .Append(new SourceFile("main.gf", "using std; using std::Memory; using std::Queries; using std::Collections;\n" + ProbeSource + """
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
+            .Append(new SourceFile("main.gf", "using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;\n" + ProbeSource + """
                 void Work() {
                     Vector<managed<int, Probe>?> values = new Vector<managed<int, Probe>?>();
                     values.Add(null); values.Add(null); values.Reserve(16);
@@ -329,7 +329,7 @@ public sealed class StaticManagedLifetimeTests
     private const string ProbeSource = """
             extern int putchar(int value);
             extern void*? malloc(nuint bytes);
-            static class Probe : std::IGarbageCollector {
+            static class Probe : Standard::IGarbageCollector {
                 private static void*?[128] slots;
                 private static nuint count;
                 public static void* Allocate(nuint bytes, nuint alignment) => (void*)malloc(bytes);

@@ -11,7 +11,7 @@ public sealed class JsonGetExampleTests
     [InlineData(2)]
     public async Task ActualToolSelectsRawValuesAndValidatesEntireInputBeforeOutput(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("json-get.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/json-get.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat-json-get-"+Guid.NewGuid().ToString("N"));

@@ -42,7 +42,7 @@ public sealed class GlobalTypeQualificationTests
             int main()=>Client::Run();
             """;
         SourceFile[] sources = [
-            new("Exception.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Exception.gf"))),
+            new("Exception.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Exception.gf"))),
             new("global-types.gf", code)
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

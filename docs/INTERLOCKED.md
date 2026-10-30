@@ -1,6 +1,6 @@
 # Atomic integer operations
 
-`std::Threading::Interlocked` provides atomic operations on existing `int` and
+`Standard::Threading::Interlocked` provides atomic operations on existing `int` and
 `long` storage. Each method is `nothrow` and uses sequentially consistent ordering
 across threads. Every method below has both an `int` and a `long` overload;
 `T` in the table stands for that same integer type, not a generic parameter.
@@ -21,7 +21,7 @@ occurred. Add, Increment, and Decrement wrap at the integer width: incrementing
 `2147483647`. The corresponding wraparound applies to 64-bit `long` values.
 
 ```csharp
-using std::Threading;
+using Standard::Threading;
 
 int main() nothrow
 {
@@ -35,12 +35,12 @@ int main() nothrow
 }
 ```
 
-With `NoStdLib`, include only `std/core/Threading/Interlocked.gf` alongside this
+With `NoStdLib`, include only `Standard/core/Threading/Interlocked.gf` alongside this
 program. That file has no other source dependencies. For example, from the
 repository root with the compiler already built:
 
 ```powershell
-dotnet gflat/bin/Debug/net10.0/gflat.dll main.gf std/core/Threading/Interlocked.gf --no-stdlib --no-builtins --run
+dotnet gflat/bin/Debug/net10.0/gflat.dll main.gf Standard/core/Threading/Interlocked.gf --no-stdlib --no-builtins --run
 ```
 
 The program exits with zero. It illustrates operation results in one thread;

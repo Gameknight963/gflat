@@ -5,14 +5,14 @@ public sealed class StandardCollectionAlgorithmsTests
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf", "IStringConvertable.gf",
         "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
     public void SortAndReverseHandleAllSmallLengthsAndRepeatedKeys()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             int main() {
                 for (int size = 0; size < 100; size++) {
@@ -33,7 +33,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void BoundsFindDuplicateRangesAndInsertionPositions()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             int main() {
                 Vector<int> values = new();
@@ -56,7 +56,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void SortingNoncopyableOwningValuesDoesNotDestroyOrDuplicateThem()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -86,7 +86,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void BorrowedSearchEqualityAndPartitionDoNotCopyOwningElements()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -127,7 +127,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void ThrowingComparisonLeavesEveryElementAliveAndOwned()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int comparisons = 0;
             struct Item {
                 private int* destroyed;

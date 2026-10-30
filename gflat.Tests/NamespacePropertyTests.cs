@@ -57,7 +57,7 @@ public class NamespacePropertyTests
     [InlineData("int P { get => 1; } = 2;", "initializers")]
     [InlineData("immutable int P => 1;", "receiver modifiers")]
     [InlineData("int P { immutable get => 1; }", "readonly")]
-    [InlineData("int P { get => this.value; }", "not a struct")]
+    [InlineData("int P { get => this.value; }", "'this' is available only")]
     [InlineData("int P => 1; int main() { P = 2; return 0; }", "no setter")]
     [InlineData("int P { set {} } int main() => P;", "no getter")]
     [InlineData("int P => 1; int main() { int* p = &P; return 0; }", "address of a property")]

@@ -12,9 +12,9 @@ public sealed class EmptyVectorNoThrowTests
         string[] names = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
             "core/Memory/Span.gf", "core/Collections/Vector.gf"];
         var sources = names.Select(name => new SourceFile(name,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("empty-vector.gf", """
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int allocations=0;int frees=0;int constructed=0;int destroyed=0;int collectorAllocations=0;
                 namespace Memory {
                     public replace void*? Allocate(nuint count){allocations++;return null;}

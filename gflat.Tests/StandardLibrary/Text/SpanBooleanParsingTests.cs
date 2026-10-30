@@ -26,7 +26,7 @@ public sealed class SpanBooleanParsingTests
                 output.Write(record);
             }
             Run($$"""
-                using std; using std::Text; using std::Memory;
+                using Standard; using Standard::Text; using Standard::Memory;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
@@ -59,7 +59,7 @@ public sealed class SpanBooleanParsingTests
     public void EmptyViewsAndOverlappingResultKeepTryParsingAllocationFreeAndNothrow(int optimization)
     {
         const string program="""
-            using std; using std::Text; using std::Memory;int allocations=0;
+            using Standard; using Standard::Text; using Standard::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
                 public replace void Free(void* storage) nothrow{}
@@ -72,7 +72,7 @@ public sealed class SpanBooleanParsingTests
                 char[7] input=['?','T','r','U','e','?','?'];
                 Span<readonly(char)> text=new(&input[1],4);
                 if(!CheckBooleanView(text,&value)||!value)return 3;
-                bool* overlapping=(bool*)&input[1];
+                bool* overlapping=(&input[1]).reinterpret<bool*>();
                 if(!CheckBooleanView(text,overlapping)||!*overlapping)return 4;
                 for(nuint i=0;i<5;i++)input[i+1]="FaLsE"[i];
                 text=new(&input[1],5);if(!CheckBooleanView(text,overlapping)||*overlapping)return 5;
@@ -94,7 +94,7 @@ public sealed class SpanBooleanParsingTests
     [InlineData(2)]
     public void ThrowingDefaultAndZeroViewsDoNotReadMissingStorage(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory;
+            using Standard; using Standard::Text; using Standard::Memory;
             int main(){
                 Span<readonly(char)> empty=new();Span<readonly(char)> zero=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 bool value=true;int caught=0;
@@ -106,7 +106,7 @@ public sealed class SpanBooleanParsingTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("span-boolean.gf",code));
     private static void Run(string code,int optimization)
     {

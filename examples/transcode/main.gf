@@ -1,16 +1,16 @@
-using std::Text;
-using std::IO;
-using std::Memory;
-using std::Binary;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard::Memory;
+using Standard::Binary;
+using Standard::Collections;
+using Standard;
 
 Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)
 {
     if(input.IsEmpty)return new Vector<byte>();
     Span<readonly(byte)> bytes=input.AsImmutable();
     nuint units=0;
-    if(!UnicodeTranscoding::TryGetUtf16Length((readonly(char)*)bytes.Data!,bytes.Length,ref units))
+    if(!UnicodeTranscoding::TryGetUtf16Length((bytes.Data!).reinterpret<readonly(char)*>(),bytes.Length,ref units))
         throw new Exception("Input is not valid UTF-8");
     if(units>((nuint)0-(nuint)1)/2)throw new Exception("Output length overflow");
     nuint required=units*2;
@@ -20,7 +20,7 @@ Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)
     // Complete validation and sizing above prove these per-scalar operations fit.
     while(position<bytes.Length) {
         uint scalar=0u; nuint consumed=0; nuint encoded=0;
-        Utf8::TryDecode((readonly(char)*)bytes.Data!+position,bytes.Length-position,&scalar,&consumed);
+        Utf8::TryDecode((bytes.Data!).reinterpret<readonly(char)*>()+position,bytes.Length-position,&scalar,&consumed);
         Utf16::TryEncode(scalar,wide,2,&encoded);
         for(nuint i=0;i<encoded;i++) {
             BinaryPrimitives::TryWriteUInt16LittleEndian(output.Data!+produced,2,wide[i]);
@@ -69,7 +69,7 @@ Vector<byte> FromUtf16Le(ref immutable(Vector<byte>) input)
     while(position<bytes.Length) {
         uint scalar=0u; nuint consumed=0; nuint encoded=0;
         TryDecodeUtf16Le(bytes.Data!+position,bytes.Length-position,&scalar,&consumed);
-        Utf8::TryEncode(scalar,(char*)output.Data!+produced,required-produced,&encoded);
+        Utf8::TryEncode(scalar,(output.Data!).reinterpret<char*>()+produced,required-produced,&encoded);
         produced+=encoded; position+=consumed;
     }
     return move result;

@@ -14,7 +14,7 @@ public sealed class FileLinesTests
             File.WriteAllBytes(path, contents);
             var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileLines.gf" };
             if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
-            var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program(Literal(path))));
             string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
             File.WriteAllText(ir, Compiler.Emit(files));
@@ -30,7 +30,7 @@ public sealed class FileLinesTests
     public void CallerBuffersHandleCrLfEmptyLinesZerosAndFinalBareCr()
     {
         Run(System.Text.Encoding.UTF8.GetBytes("\r\nhello\nA\0B\rX\r"), path => $$"""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 char[16] buffer; nuint length = 99;
@@ -49,7 +49,7 @@ public sealed class FileLinesTests
     public void OverflowConsumesLineAndKeepsTerminatedPrefixAndCount()
     {
         Run(System.Text.Encoding.UTF8.GetBytes(new string('x', 1000) + "\r\nnext\n\n"), path => $$"""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 char[5] buffer; nuint length = 99;
@@ -68,7 +68,7 @@ public sealed class FileLinesTests
     public void ZeroCapacityDoesNotConsumeAndClosedInputThrows()
     {
         Run([65, 10], path => $$"""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 char[4] buffer; nuint length = 99;
@@ -87,7 +87,7 @@ public sealed class FileLinesTests
     {
         byte[] bytes = Enumerable.Repeat((byte)120, 255).Concat(new byte[] { 13, 13, 0, 90, 13, 10 }).ToArray();
         Run(bytes, path => $$"""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 String line = s"prefix:";

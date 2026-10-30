@@ -1,8 +1,8 @@
-using std::Text;
-using std::Json;
-using std::IO;
-using std::Memory;
-using std;
+using Standard::Text;
+using Standard::Json;
+using Standard::IO;
+using Standard::Memory;
+using Standard;
 
 // Decode in place: validation completes before JsonString writes any bytes.
 int main(int argc, char** argv)

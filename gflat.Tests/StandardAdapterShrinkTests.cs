@@ -86,7 +86,7 @@ public sealed class StandardAdapterShrinkTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("adapter-shrink.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -94,7 +94,7 @@ public sealed class StandardAdapterShrinkTests
     }
 
     private const string Common = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         bool deny = false; bool failNext = false;
         int attempts = 0; int allocated = 0; int freed = 0;
         int made = 0; int dead = 0; int comparisons = 0;

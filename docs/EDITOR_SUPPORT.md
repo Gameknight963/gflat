@@ -164,7 +164,7 @@ For multiple files, open the source folder in your editor and put
 
 ```json
 {
-  "sources": ["main.gf", "std/Buffer.gf", "std/StringView.gf"]
+  "sources": ["main.gf", "Standard/Buffer.gf", "Standard/StringView.gf"]
 }
 ```
 
@@ -248,7 +248,7 @@ and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstud
   narrows it to namespace/type members. Visual Studio handles filtering and commit.
 - Hover shows a declaration signature. Go to definition targets its source name,
   including unsaved files in the same project. Automatically included standard-library
-  symbols navigate to their shipped `.gf` sources; explicit std project sources and
+  symbols navigate to their shipped `.gf` sources; explicit Standard project sources and
   their unsaved edits take precedence over bundled copies.
 - Signature help follows the innermost call and counts arguments without counting
   commas in nested calls.

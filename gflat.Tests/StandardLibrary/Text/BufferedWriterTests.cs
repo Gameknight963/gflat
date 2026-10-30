@@ -7,7 +7,7 @@ public sealed class BufferedWriterTests
     [InlineData(2)]
     public void BinaryChunksMatchExpectedBytesAndDrainSizesAcrossSmallCapacities(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             struct Sink:ITextWriter{
                 private char* bytes;private nuint* sizes;public nuint Length;public nuint Calls;
                 public Sink(char* storage,nuint* counts){bytes=storage;sizes=counts;Length=0;Calls=0;}
@@ -59,7 +59,7 @@ public sealed class BufferedWriterTests
     [InlineData(2)]
     public void TinyFormattingWritesCoalesceOnceWithoutAllocationOrFlushingTheSink(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             int attempts=0;int formatted=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -92,7 +92,7 @@ public sealed class BufferedWriterTests
     [InlineData(2)]
     public void PartialSinkFailuresLatchAutomaticExplicitAndPassthroughDrains(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             struct Sink:ITextWriter{
                 private char* bytes;public int Calls;public nuint Length;public int FailCall;
                 public Sink(char* storage,int failure){bytes=storage;Calls=0;Length=0;FailCall=failure;}
@@ -132,7 +132,7 @@ public sealed class BufferedWriterTests
     [InlineData(2)]
     public void SharedScratchCopiesDuplicateCountsAndMetadataHandoffAddsNoDestructorOutput(int optimization)
         => Run("""
-            using std;using std::Text;
+            using Standard;using Standard::Text;
             struct Sink:ITextWriter{
                 private char* bytes;private int* destroyed;public nuint Length;public int Calls;public bool Fail;
                 public Sink(char* storage,int* counter){bytes=storage;destroyed=counter;Length=0;Calls=0;Fail=false;}
@@ -172,7 +172,7 @@ public sealed class BufferedWriterTests
 
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("buffered-writer.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);

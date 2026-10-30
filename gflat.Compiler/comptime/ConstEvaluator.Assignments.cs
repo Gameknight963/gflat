@@ -89,6 +89,20 @@ public partial class ConstEvaluator
             ConstValue array = _currentValue!;
             if (array is ConstValue.ArrayPointer pointer) array = pointer.Target;
             index.Index.Accept(this);
+            if (array is ConstValue.BorrowedReference borrowed)
+            {
+                if (!ConstValue.TryIntegerValue(_currentValue!, out var scalarOffset) || scalarOffset != 0)
+                    throw new ConstEvalException("Nonzero offsets from a borrowed scalar address are not supported during constant evaluation", target.Line);
+                return new(borrowed.Read, borrowed.Write);
+            }
+            if (array is ConstValue.String text)
+            {
+                RequireCStringByteView(index.Target);
+                var characterOffset = CStringIndex(_currentValue!, target.Line);
+                // Validate once when capturing the receiver, before later arguments.
+                ConstValue character = ReadCString(text, characterOffset, target.Line);
+                return new(() => character, _ => throw new ConstEvalException("Cannot modify immutable constant C-string storage", target.Line));
+            }
             if (array is not ConstValue.Array elements ||
                 !ConstValue.TryIntegerValue(_currentValue!, out var position) || position < 0 || position >= elements.Elements.Count)
                 throw new ConstEvalException("Array assignment index is outside constant storage", target.Line);

@@ -15,7 +15,7 @@ public sealed class CsvToJsonExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("csv-to-json.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/csv-to-json.gf"))));
             string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "csv-to-json.exe");

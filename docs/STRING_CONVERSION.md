@@ -1,15 +1,15 @@
 # Convert a value to an owning String
 
-With `using std::Text;`, `ToString()` offers the same textual representation
-as the value's existing `Format` operation, collected into a new owning `std::Text::String`.
+With `using Standard::Text;`, `ToString()` offers the same textual representation
+as the value's existing `Format` operation, collected into a new owning `Standard::Text::String`.
 It introduces no separate formatting policy, encoding conversion, or ToCString
 helper. A returned String remains owned by its caller and must stay alive while
 any pointer borrowed from it is used.
 For a borrowed C string, use `String::From(text)`.
 
 ```csharp
-using std::Text;
-using std; using std::Time;
+using Standard::Text;
+using Standard; using Standard::Time;
 
 int main()
 {

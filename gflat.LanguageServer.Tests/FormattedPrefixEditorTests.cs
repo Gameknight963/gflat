@@ -8,7 +8,7 @@ public sealed class FormattedPrefixEditorTests
     [Fact]
     public void BorrowedFormatterConstructorKeepsItsImmutableInterfaceSignatureAndDefinition()
     {
-        const string text = "using std; using std::Text;struct Prefix:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\">\",1);}}void Probe(){char[32] data;BufferWriter output=new(data,32);Prefix prefix=new();LinePrefixWriter lines=new(&output,&prefix);lines.Write(\"a\",1);}";
+        const string text = "using Standard; using Standard::Text;struct Prefix:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\">\",1);}}void Probe(){char[32] data;BufferWriter output=new(data,32);Prefix prefix=new();LinePrefixWriter lines=new(&output,&prefix);lines.Write(\"a\",1);}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "LinePrefixWriter.gf");

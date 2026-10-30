@@ -1,12 +1,12 @@
 # Counted byte searches
 
-`std/core/Text/ByteSearch.gf` is standalone: it needs neither String, Span, libc,
+`Standard/core/Text/ByteSearch.gf` is standalone: it needs neither String, Span, libc,
 allocation, nor an exception runtime. All methods are `nothrow`.
 
 ```csharp
-using std::Text;
-nuint first = std::Text::ByteSearch::IndexOf(data, length, pattern, count);
-nuint last = std::Text::ByteSearch::LastIndexOf(data, length, pattern, count);
+using Standard::Text;
+nuint first = Standard::Text::ByteSearch::IndexOf(data, length, pattern, count);
+nuint last = Standard::Text::ByteSearch::LastIndexOf(data, length, pattern, count);
 ```
 
 Both pointers borrow readable regions of the specified byte lengths. The
@@ -38,7 +38,7 @@ They return `length` if there is no match. The pattern is a set of individual
 bytes, not a substring: duplicates and order do not affect membership.
 
 ```csharp
-using std; using std::Text;
+using Standard; using Standard::Text;
 int main()
 {
     byte[6] data = [7, 0, 255, 3, 255, 8];
@@ -132,7 +132,7 @@ searches and their Two-Way implementation are unchanged. No String or Span
 convenience overload is added.
 
 ```csharp
-using std::Text;
+using Standard::Text;
 
 int main()
 {

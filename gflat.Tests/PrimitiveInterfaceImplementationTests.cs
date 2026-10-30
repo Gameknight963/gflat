@@ -203,7 +203,8 @@ public sealed class PrimitiveInterfaceImplementationTests
             int Outer<T : IHash>(T value) => Unconstrained(value);
             int main() => Outer(42);
             """));
-        Assert.Contains("not a struct or class", error.Message);
+        Assert.Contains("has no applicable", error.Message);
+        Assert.Contains("Hash", error.Message);
     }
 
     [Fact]

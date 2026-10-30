@@ -62,16 +62,16 @@ public partial class TypeChecker
                     else if (type is NamedTypeExpression primitive && primitive.Name is
                         "bool" or "char" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "extralong" or "nint" or "nuint" or "float" or "double")
                     {
-                        if (!_globalScope.Children.TryGetValue("std", out var std) || !std.Functions.TryGetValue("Format", out var first) ||
+                        if (!_globalScope.Children.TryGetValue("Standard", out var std) || !std.Functions.TryGetValue("Format", out var first) ||
                             !(overloadFamilies.TryGetValue(first, out var family) ? family : new List<MethodDeclaration> { first })
                                 .Any(m => m.Parameters.Count == 2 && ResolveAlias(m.Parameters[0].Type) is NamedTypeExpression parameter && parameter.Name == primitive.Name))
                         {
                             string source = primitive.Name == "extralong"
-                                ? "std/core/Text/IntegerFormatting.gf and std/core/extra_long_format.gf"
-                                : "std/core/primitive_format.gf (and std/libc/floating_format.gf for floating-point values)";
-                            throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include {source}", part.Line);
+                                ? "Standard/core/Text/IntegerFormatting.gf and Standard/core/extra_long_format.gf"
+                                : "Standard/core/primitive_format.gf (and Standard/libc/floating_format.gf for floating-point values)";
+                            throw new TypeCheckException($"Primitive interpolation requires Standard::Format({primitive.Name}, ITextWriter*); include {source}", part.Line);
                         }
-                        action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "std", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
+                        action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "Standard", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
                         primitiveInterpolationCalls.Add(action);
                     }
                     else if (TypeImplementsInterface(type, "IStringConvertable") || valueType is NamedTypeExpression { Name: "IStringConvertable" })

@@ -34,7 +34,7 @@ public sealed class BigCalcExampleTests
         cases.AddRange([("+000","+","-00",Integer.Zero),("-000","gcd","+000",Integer.Zero),("-000","lcm","+000",Integer.Zero),("-00084","lcm","+00126",new Integer(252)),
             ("+00123","/","-0007",new Integer(-17)),("-00123","%","+0007",new Integer(-4)),("000","*","-0001",Integer.Zero)]);
 
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("big-calc.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/big-calc.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_big_calc_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

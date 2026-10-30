@@ -8,7 +8,7 @@ public sealed class DateTimeOffsetUnixEditorTests
     [Fact]
     public void UnixFactoriesAndObserversNavigateTheirActualSignatures()
     {
-        const string text="using std; using std::Time;void Probe(){DateTimeOffset sec=DateTimeOffset::FromUnixTimeSeconds(0l);DateTimeOffset milli=DateTimeOffset::FromUnixTimeMilliseconds(-1l);long seconds=sec.ToUnixTimeSeconds();long milliseconds=milli.ToUnixTimeMilliseconds();}";
+        const string text="using Standard; using Standard::Time;void Probe(){DateTimeOffset sec=DateTimeOffset::FromUnixTimeSeconds(0l);DateTimeOffset milli=DateTimeOffset::FromUnixTimeMilliseconds(-1l);long seconds=sec.ToUnixTimeSeconds();long milliseconds=milli.ToUnixTimeMilliseconds();}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="DateTimeOffset.gf");
@@ -17,8 +17,8 @@ public sealed class DateTimeOffsetUnixEditorTests
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,files);
         foreach(var row in new[]{
-            (Name:"FromUnixTimeSeconds",Arity:1,Declaration:"public static DateTimeOffset FromUnixTimeSeconds(",Type:"std::Time::DateTimeOffset",Parameter:"long seconds"),
-            (Name:"FromUnixTimeMilliseconds",Arity:1,Declaration:"public static DateTimeOffset FromUnixTimeMilliseconds(",Type:"std::Time::DateTimeOffset",Parameter:"long milliseconds"),
+            (Name:"FromUnixTimeSeconds",Arity:1,Declaration:"public static DateTimeOffset FromUnixTimeSeconds(",Type:"Standard::Time::DateTimeOffset",Parameter:"long seconds"),
+            (Name:"FromUnixTimeMilliseconds",Arity:1,Declaration:"public static DateTimeOffset FromUnixTimeMilliseconds(",Type:"Standard::Time::DateTimeOffset",Parameter:"long milliseconds"),
             (Name:"ToUnixTimeSeconds",Arity:0,Declaration:"public immutable long ToUnixTimeSeconds(",Type:"long",Parameter:""),
             (Name:"ToUnixTimeMilliseconds",Arity:0,Declaration:"public immutable long ToUnixTimeMilliseconds(",Type:"long",Parameter:"")}){
             int use=text.IndexOf(row.Name+"(",StringComparison.Ordinal);Assert.True(use>=0);

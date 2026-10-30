@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Hashing;
 public sealed class HMACSHA256Tests
 {
     private const string DenyAllocation = """
-        using std; using std::IO; using std::Hashing;
+        using Standard; using Standard::IO; using Standard::Hashing;
         int attempts=0;
         extern void free(void* storage);
         namespace Memory {
@@ -166,7 +166,7 @@ public sealed class HMACSHA256Tests
     [InlineData(2)]
     public void ImpossibleKeyLengthThrowsBeforeReadingKey(int optimization)
         => Run("""
-            using std; using std::IO; using std::Hashing;
+            using Standard; using Standard::IO; using Standard::Hashing;
             int main(){
                 if(sizeof(nuint)!=8)return 0;
                 try{HMACSHA256 invalid=new(((nuint)1).reinterpret<readonly(char)*>(),(nuint)2305843009213693952ul);return 1;}
@@ -180,7 +180,7 @@ public sealed class HMACSHA256Tests
     public void ConstructionRequiresAnExplicitKey()
     {
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::IO; using std::Hashing;int main(){HMACSHA256 missing=new();return 0;}
+            using Standard; using Standard::IO; using Standard::Hashing;int main(){HMACSHA256 missing=new();return 0;}
             """)));
         Assert.Contains("constructor",error.Message,StringComparison.OrdinalIgnoreCase);
     }
@@ -189,7 +189,7 @@ public sealed class HMACSHA256Tests
     private static byte[] Repeat(byte value,int count)=>Enumerable.Repeat(value,count).ToArray();
     private static byte[] RandomBytes(Random random,int count){byte[] bytes=new byte[count];random.NextBytes(bytes);return bytes;}
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("hmac-sha256-test.gf",program));
     private static void Run(string program,int optimization)

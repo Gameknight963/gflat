@@ -11,7 +11,7 @@ Linux), then enter commands such as:
 
 ```text
 add Finish String tests
-add Write std
+add Write Standard
 done 2
 list
 quit

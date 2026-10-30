@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryDistinctByTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("query-distinct-by.gf", program));
 
@@ -14,7 +14,7 @@ public sealed class StandardQueryDistinctByTests
     }
 
     private const string Memory = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocated = 0; int freed = 0; int denyAt = 0;
         namespace Memory {
@@ -243,7 +243,7 @@ public sealed class StandardQueryDistinctByTests
             }
             """, optimization);
         const string borrowed = """
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Unique {
                 public int Id;
                 public Unique(int id) { Id = id; }

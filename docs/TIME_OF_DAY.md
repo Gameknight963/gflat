@@ -1,12 +1,12 @@
 # Time of day
 
-`std::Time::TimeOfDay` stores a time within one day as a private `long` tick count.
+`Standard::Time::TimeOfDay` stores a time within one day as a private `long` tick count.
 One tick is 100 nanoseconds. Valid values range from midnight through
 `23:59:59.9999999`; default construction produces midnight.
 
 ```csharp
-using std::Text;
-using std; using std::Time;
+using Standard::Text;
+using Standard; using Standard::Time;
 int main()
 {
     TimeOfDay opening = new(9, 30);

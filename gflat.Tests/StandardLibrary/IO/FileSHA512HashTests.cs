@@ -5,12 +5,12 @@ namespace gflat.Tests.Std.IO;
 public sealed class FileSHA512HashTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("file-sha512.gf",program));
 
     private const string DenyAllocation="""
-        using std; using std::IO; using std::Hashing;int attempts=0;
+        using Standard; using Standard::IO; using Standard::Hashing;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -31,7 +31,7 @@ public sealed class FileSHA512HashTests
                 }
                 int main(int argc,char** argv){
                     File expected=File::OpenRead(argv[2]);byte[64] wanted;byte[64] empty;
-                    expected.ReadExactly((char*)(byte*)wanted,64);expected.ReadExactly((char*)(byte*)empty,64);
+                    expected.ReadExactly(((byte*)wanted).reinterpret<char*>(),64);expected.ReadExactly(((byte*)empty).reinterpret<char*>(),64);
                     byte[64] pathHash=FileHash::SHA512(argv[1]);
                     if(!Equal(pathHash,wanted))return 1;
                     pathHash[0]=(byte)(pathHash[0]^(byte)255);
@@ -46,7 +46,7 @@ public sealed class FileSHA512HashTests
                     int[8] capacities=[1,7,111,112,127,128,129,4096];char[4098] scratch;
                     for(int position=0;position<positions;position++){
                         int offset=FileBinary::ReadInt32LittleEndian(&expected);
-                        expected.ReadExactly((char*)(byte*)wanted,64);
+                        expected.ReadExactly(((byte*)wanted).reinterpret<char*>(),64);
                         for(nuint choice=0;choice<8;choice++){
                             nuint capacity=(nuint)capacities[choice];
                             File input=File::OpenRead(argv[1]);
@@ -94,7 +94,7 @@ public sealed class FileSHA512HashTests
         await WithDirectory(directory=>
         {
             string executable=Compile(directory,"""
-                using std; using std::IO; using std::Hashing;
+                using Standard; using Standard::IO; using Standard::Hashing;
                 int main(int argc,char** argv){
                     File input=File::OpenRead(argv[1]);int caught=0;char[3] scratch=['?','?','?'];
                     try{FileHash::SHA512(&input,((nuint)1).reinterpret<char*>(),0);}catch(ref IOException error){caught++;}

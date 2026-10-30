@@ -177,8 +177,8 @@ public sealed class ExtensionMethodTests
     public void ManagedReceiverRemainsRootedDuringCall()
     {
         var result = CompilerTestHelper.Run(new[] {
-            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
-            new SourceFile("GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
+            new SourceFile("Standard/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "TracingCollector.gf"))),
+            new SourceFile("GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/libc/GC.gf"))),
             new SourceFile("main.gf", "int Read(int^ self) { GC::Collect(); return *self; }\nextension int { public int Read() { GC::Collect(); return *this; } } int main() => (new^ int(42)).Read();") });
         Assert.Equal(42, result.ExitCode);
     }
@@ -248,8 +248,8 @@ public sealed class ExtensionMethodTests
     public void ManagedPointeesBorrowTheSameInstanceReceiver()
     {
         var result = CompilerTestHelper.Run(new[] {
-            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
-            new SourceFile("GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
+            new SourceFile("Standard/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "TracingCollector.gf"))),
+            new SourceFile("GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/libc/GC.gf"))),
             new SourceFile("main.gf", "struct S { public int value; } extension S { public int Read() { GC::Collect(); return this.value; } } int main() { S^ s = new^ S(); s.value = 42; return s.Read(); }") });
         Assert.Equal(42, result.ExitCode);
     }

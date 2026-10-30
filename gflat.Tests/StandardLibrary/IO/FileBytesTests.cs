@@ -18,7 +18,7 @@ public sealed class FileBytesTests
         string[] names = ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
             "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Memory/Span.gf", "core/Collections/Vector.gf",
             "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileBytes.gf"];
-        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files));
@@ -42,7 +42,7 @@ public sealed class FileBytesTests
             byte[] expected = Enumerable.Range(0, length).Select(i => (byte)i).ToArray();
             File.WriteAllBytes(input, expected);
             Run(directory, $$"""
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main() {
                     Vector<byte> bytes = FileBytes::ReadAll({{Literal(input)}});
                     if (bytes.Count != (nuint){{length}}) return 1;
@@ -70,7 +70,7 @@ public sealed class FileBytesTests
         {
             string path = Path.Combine(directory, "bytes.bin");
             Run(directory, $$"""
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main() {
                     byte[4] data; data[0] = 0; data[1] = 255; data[2] = 128; data[3] = 42;
                     FileBytes::WriteAll({{Literal(path)}}, data, 0);
@@ -92,7 +92,7 @@ public sealed class FileBytesTests
             string path = Path.Combine(directory, "failure.bin");
             File.WriteAllBytes(path, new byte[9000]);
             Run(directory, $$"""
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 static class State { public static void*? Last; public static int Released; }
@@ -125,7 +125,7 @@ public sealed class FileBytesTests
     {
         if (!OperatingSystem.IsLinux()) return;
         WithDirectory(directory => Run(directory, """
-            using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 byte value = (byte)42;
                 try { FileBytes::WriteAll("/dev/full", &value, 1); return 1; }
@@ -145,7 +145,7 @@ public sealed class FileBytesTests
             string empty = Path.Combine(directory, "empty.bin"), missing = Path.Combine(directory, "missing.bin");
             File.WriteAllBytes(empty, []);
             Run(directory, $$"""
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 static class State { public static int Calls; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { State::Calls++; return null; }

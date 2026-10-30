@@ -7,7 +7,7 @@ public sealed class StringTextComparisonTests
         => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Collections/Comparer.gf",
             "Hashing/primitive_hashing.gf", "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf" }
             .Select(name => new SourceFile(name,
-                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("string-text-comparison.gf", program));
 
     private static void Run(string program, int optimization)
@@ -94,7 +94,7 @@ public sealed class StringTextComparisonTests
         string hex = Convert.ToHexString(packet.ToArray()).ToLowerInvariant();
 
         Run($$$"""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             int Sign(int value) nothrow {
                 if (value < 0) return -1;
                 if (value > 0) return 1;
@@ -163,7 +163,7 @@ public sealed class StringTextComparisonTests
     [InlineData(2)]
     public void AliasesQualifiedReceiversAndExistingComparisonContractsAllocateNothing(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             int attempts = 0;
             int live = 0;
             bool deny = false;

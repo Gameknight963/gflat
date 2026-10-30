@@ -15,7 +15,7 @@ public sealed class BinaryInfoExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("binary-info.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/binary-info.gf"))));
             string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "binary-info.exe");

@@ -162,7 +162,7 @@ public sealed class ProjectSdkTests
         {
             string project = Path.Combine(root, "app.gfproj");
             File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project />"));
-            Assert.Contains(ProjectModel.Load(project).References, path => path.EndsWith("std.gfproj"));
+            Assert.Contains(ProjectModel.Load(project).References, path => path.EndsWith("Standard.gfproj"));
             var bare = ProjectModel.Load(project, "Debug", "AnyCPU", noStdLib: true);
             Assert.True(bare.NoStdLib);
             Assert.Empty(bare.References);

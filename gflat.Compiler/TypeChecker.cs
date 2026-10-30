@@ -4035,6 +4035,8 @@ namespace gflat
         public void Visit(IdentifierExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Name == "this" && !TryLookupVariable("this", out _))
+                throw new TypeCheckException("'this' is available only in an instance member or extension block", node.Span);
             if (CheckPropertyRead(node)) return;
             if (TryBindStaticStorage(node)) return;
             if (!TryLookupVariable(node.Name, out _) && TryBindFunctionValue(node)) return;
@@ -5166,9 +5168,9 @@ namespace gflat
             if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
             RequireMemoryFunction("Allocate", node);
             RequireMemoryFunction("Free", node);
-            if (GetClass("std::BadAllocException") == null)
-                throw new TypeCheckException("new* requires std::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own std::BadAllocException", node.Span);
-            var value = new NewExpression(new NamedTypeExpression("BadAllocException", "std", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
+            if (GetClass("Standard::BadAllocException") == null)
+                throw new TypeCheckException("new* requires Standard::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own Standard::BadAllocException", node.Span);
+            var value = new NewExpression(new NamedTypeExpression("BadAllocException", "Standard", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
             var failure = new ThrowStatement(value, node.Line) { Span = node.Span };
             failure.Accept(this);
             _allocationFailures[node] = failure;
@@ -5897,6 +5899,11 @@ namespace gflat
             if (TryCheckInterfaceViewCast(node, sourceType, targetType)) return;
             ValidateTypeUsage(targetType, node.Line);
             ValidateArrayValueShape(targetType, node.Line);
+
+            // A target signature selects an overload; this does not reinterpret an address.
+            if (targetType is FunctionPointerTypeExpression { IsSignature: false, IsManaged: false } functionTarget &&
+                _functionAddressTargets.ContainsKey(node.Operand) && SelectFunctionValue(node.Operand, functionTarget))
+                sourceType = ResolveAlias(GetType(node.Operand));
 
             if (targetType is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false })
             {

@@ -10,7 +10,7 @@ public sealed class TargetTypedCreationTests
         var files = new List<SourceFile>();
         if (managed)
             foreach (string name in new[] { "libc/GC.gf", "libc/TracingCollector.gf" })
-                files.Add(new("std/" + name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))));
+                files.Add(new("Standard/" + name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))));
         files.Add(new("main.gf", Thing + source));
         var result = CompilerTestHelper.Run(files);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -31,7 +31,7 @@ public sealed class TargetTypedCreationTests
 
     [Fact]
     public void ManagedNullableAndCustomCollectorTargetsArePreserved() => Succeeds("""
-        alias OwnGC = std::TracingCollector;
+        alias OwnGC = Standard::TracingCollector;
         void Check() {
             Thing^ value = new(20);
             managed<Thing, OwnGC>? other = new(22);
@@ -180,7 +180,7 @@ public sealed class TargetTypedCreationTests
         }
         int main() {
             try { Thing* item = new(42); return 1; }
-            catch (ref std::BadAllocException error) { return 0; }
+            catch (ref Standard::BadAllocException error) { return 0; }
         }
         """);
 

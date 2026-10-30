@@ -63,7 +63,7 @@ public sealed class ForeachFreshCurrentTests
             """;
         SourceFile[] sources =
         [
-            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/CString.gf"))),
+            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf"))),
             new("foreach-fresh-current.gf", source)
         ];
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -105,7 +105,7 @@ public sealed class ForeachFreshCurrentTests
     }
 
     private const string Support = """
-        using std; using std::Text;
+        using Standard; using Standard::Text;
         extern void*? malloc(nuint count);
         extern void free(void* storage);
         int allocated=0;

@@ -6,9 +6,9 @@ public sealed class BufferWriterTests
     public void BufferMetadataAndUnboundedRandomDrawsDoNotIntroduceExceptionBoundaries()
     {
         var files = new[] { "Text/BufferTooSmallException.gf", "Text/BufferWriter.gf", "Numerics/PseudoRandom.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", """
-                using std; using std::Text; using std::Numerics;
+                using Standard; using Standard::Text; using Standard::Numerics;
                 bool Inspect(char* buffer) nothrow {
                     BufferWriter writer = new(buffer, 16);
                     PseudoRandom random = new(42ul);
@@ -31,7 +31,7 @@ public sealed class BufferWriterTests
     private static void Run(string program)
     {
         var files = new[] { "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/primitive_format.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -41,7 +41,7 @@ public sealed class BufferWriterTests
     public void CountedAndCStringWritesPreserveZerosAndMaintainCapacityAndTerminator()
     {
         Run("""
-            using std; using std::Text; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Numerics;
             int main() {
                 char[9] storage;
                 BufferWriter writer = new BufferWriter(storage, 9);
@@ -65,7 +65,7 @@ public sealed class BufferWriterTests
     public void OverflowLeavesEntireBufferAndPositionUntouched()
     {
         Run("""
-            using std; using std::Text; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Numerics;
             int main() {
                 char[6] storage;
                 for (int i = 0; i < 6; i++) storage[i] = '?';
@@ -86,7 +86,7 @@ public sealed class BufferWriterTests
     public void ZeroStorageNeverTouchesPointerAndOneByteStorageOnlyHoldsTerminator()
     {
         Run("""
-            using std; using std::Text; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Numerics;
             int main() {
                 char sentinel = '?';
                 BufferWriter zero = new BufferWriter(&sentinel, 0);
@@ -108,7 +108,7 @@ public sealed class BufferWriterTests
     public void OverlappingWritesUseMemmoveOrderInBothDirections()
     {
         Run("""
-            using std; using std::Text; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Numerics;
             int main() {
                 char[16] storage;
                 BufferWriter writer = new BufferWriter(storage, 16);
@@ -133,7 +133,7 @@ public sealed class BufferWriterTests
     public void PrimitiveAndUserFormattingThroughInterfacesNeverAllocate()
     {
         Run("""
-            using std; using std::Text; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Numerics;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }

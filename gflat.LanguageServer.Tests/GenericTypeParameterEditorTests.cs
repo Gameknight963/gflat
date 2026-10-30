@@ -32,7 +32,7 @@ public sealed class GenericTypeParameterEditorTests
     public void UnspecializedManagedAdoptTypeParameterHasOneSourceIdentity()
     {
         const string text = "public T^ Adopt<T>(T* storage) { nuint size = (nuint)sizeof(T); return (T^)storage; } " +
-            "alias GC = Collector; static class Collector { public static void* Allocate(nuint bytes, nuint alignment) => (void*)1; " +
+            "alias GC = Collector; static class Collector { public static void* Allocate(nuint bytes, nuint alignment) => ((nuint)1).reinterpret<void*>(); " +
             "public static void ReferenceAdded(void* slot) nothrow {} public static void ReferenceRemoved(void* slot) nothrow {} }";
         var (model, source) = Analyze(text);
         var occurrences = Lexer.Tokenize(source, new DiagnosticBag()).Where(token => token.Text == "T").ToArray();

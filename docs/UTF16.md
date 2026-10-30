@@ -1,6 +1,6 @@
 # Strict UTF-16 code-unit helpers
 
-`std/core/Text/utf16.gf` supplies `std::Text::Utf16`, an allocation-free, `nothrow` core
+`Standard/core/Text/utf16.gf` supplies `Standard::Text::Utf16`, an allocation-free, `nothrow` core
 codec with no String, libc, GC, or exception-runtime dependency.
 
 Inputs and outputs are **host `ushort` code-unit values**. Lengths, capacities,
@@ -59,7 +59,7 @@ int main()
     nuint length = 3;
     uint scalar = 0u;
     nuint consumed = 0;
-    if (!std::Text::Utf16::TryDecodeLast(text, length, &scalar, &consumed)) return 1;
+    if (!Standard::Text::Utf16::TryDecodeLast(text, length, &scalar, &consumed)) return 1;
     if (scalar != 0x1f600u || consumed != (nuint)2) return 2;
     length -= consumed;
     if (length != (nuint)1 || text[0] != (ushort)65) return 3;
@@ -69,8 +69,8 @@ int main()
 
 ## Incremental decoding
 
-`std/core/Text/Utf16Decoder.gf` independently supplies the value type
-`std::Text::Utf16Decoder`, mirroring `Utf8Decoder` with `ushort` input. Its constructor,
+`Standard/core/Text/Utf16Decoder.gf` independently supplies the value type
+`Standard::Text::Utf16Decoder`, mirroring `Utf8Decoder` with `ushort` input. Its constructor,
 `Reset`, and `Read` are `nothrow`; no other library source is required.
 
 `Read(input, count, final, scalar, consumed)` produces at most one scalar.

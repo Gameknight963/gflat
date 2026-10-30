@@ -1,4 +1,4 @@
-using std::Time;
+using Standard::Time;
 namespace Linux;
 
 namespace monotonic_clock_detail
@@ -21,7 +21,7 @@ namespace monotonic_clock_detail
     }
 }
 
-public static class MonotonicClock : std::Time::IMonotonicClock
+public static class MonotonicClock : Standard::Time::IMonotonicClock
 {
     private static bool HasCompatibleLayout() nothrow
         => sizeof(nint) == 8 && sizeof(monotonic_clock_detail::Timespec) == 16;

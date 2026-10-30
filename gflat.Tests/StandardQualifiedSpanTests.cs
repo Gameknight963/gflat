@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQualifiedSpanTests
 {
     private const string Cell = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         struct Cell {
             public int* value;
             public Cell(int* storage) { value = storage; }
@@ -53,6 +53,6 @@ public sealed class StandardQualifiedSpanTests
             "void Test(){int value=1;Vector<Cell> cells=new();cells.Add(new Cell(&value));" + operation + "}")));
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("main.gf", code));
 }

@@ -8,7 +8,7 @@ public sealed class StandardStructuredIntegerHashTests
     public void StructuredIntegerFamiliesDistributeAndAvoidQuadraticMapEquality(int optimization)
     {
         string code = """
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             static class State { public static int EqualCalls; public static bool Wide; }
             nuint Hash<T:IHashable>(ref immutable(T) value)=>value.GetHashCode();
             struct Key:IHashable,IEquatable<Key> {
@@ -71,7 +71,7 @@ public sealed class StandardStructuredIntegerHashTests
             }
             """;
         var sources = new[] { "IHashable.gf", "IEquatable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

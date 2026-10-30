@@ -1,6 +1,6 @@
 # UUID values
 
-`std::Uuid` stores an opaque 128-bit identifier in two private `ulong` fields.
+`Standard::Uuid` stores an opaque 128-bit identifier in two private `ulong` fields.
 Default construction is the Nil UUID (all zero bits). The numeric constructor
 `Uuid(ulong upper, ulong lower)` and immutable `High`/`Low` getters use canonical
 network-order halves: `00112233-4455-6677-8899-aabbccddeeff` has
@@ -9,8 +9,8 @@ This describes numeric significance, not the native byte layout of a struct or
 the Windows GUID ABI. `IsNil` reports whether both halves are zero.
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 Uuid id = Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
 String label = s$"id={id}";
 ```
@@ -99,8 +99,8 @@ This program checks one identifier and prints its canonical lowercase form.
 It uses the standard project library and does not construct an owning String:
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 
 int main(int argc, char** argv)
 {
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
 
 ## Version 4 generation with an explicit source
 
-`std::UuidGenerator` creates version 4 UUIDs from a caller-selected random-byte
+`Standard::UuidGenerator` creates version 4 UUIDs from a caller-selected random-byte
 callback. It has no default source, global state, or operating-system dependency.
 The existing `Uuid` value and parsing APIs do not require the generator source.
 

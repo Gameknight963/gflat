@@ -1,6 +1,6 @@
 # Numeric IP addresses
 
-`std::Net::IpAddress` is an IPv4 or IPv6 numeric value for configuration validation,
+`Standard::Net::IpAddress` is an IPv4 or IPv6 numeric value for configuration validation,
 canonical logs, comparison, and collection keys. It owns no heap storage and
 consults no operating-system services. Its two private `ulong` fields hold
 network-order numeric payloads; a private family discriminator distinguishes
@@ -8,8 +8,8 @@ IPv4 from IPv6. Default construction is IPv4 `0.0.0.0`. Immutable `IsIpv4`
 reports whether the address belongs to that family.
 
 ```csharp
-using std::Text;
-using std; using std::Net;
+using Standard::Text;
+using Standard; using Standard::Net;
 int main()
 {
     IpAddress address = IpAddress::Parse("2001:0DB8:0000:0000:0:0:0:1");

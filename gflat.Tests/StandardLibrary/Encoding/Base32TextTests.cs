@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Codecs;
 public sealed class Base32TextTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Encoding;
+        using Standard; using Standard::Text; using Standard::Encoding;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int allocations=0; int releases=0; int large=0; bool deny=false;
         namespace Memory {
@@ -172,7 +172,7 @@ public sealed class Base32TextTests
     {
         string[] names=["Encoding/Base32.gf","Encoding/Base32Text.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
             "IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf","Text/ByteSearch.gf","primitive_format.gf","Text/CString.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("base32-text.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Base32Text exit {result.ExitCode}: {result.StandardError}");

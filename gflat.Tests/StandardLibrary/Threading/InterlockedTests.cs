@@ -8,7 +8,7 @@ public sealed class InterlockedTests
     public void ScalarOperationsPreserveRefStorageAndReturnDocumentedWrappingValues(int optimization)
     {
         string ir = Emit("""
-            using std::Threading;
+            using Standard::Threading;
             int main()nothrow{
                 int value=7;readonly(int) readOnly=-31;
                 if(Interlocked::Read(ref value)!=7||Interlocked::Read(ref readOnly)!=-31)return 1;
@@ -52,7 +52,7 @@ public sealed class InterlockedTests
         try
         {
             string ir = Emit("""
-                using std::Threading;
+                using Standard::Threading;
                 extern int run_atomic_threads(void(int,int,int,int*,long*,long*)* worker,int mode,int* narrow,long* wide,long* total)nothrow;
                 void Worker(int mode,int workerIndex,int iterations,int* narrow,long* wide,long* result)nothrow{
                     long sum=0l;
@@ -111,7 +111,7 @@ public sealed class InterlockedTests
 
     private static string Emit(string program)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Std/core/Threading/Interlocked.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Standard/core/Threading/Interlocked.gf");
         string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)), new SourceFile("interlocked.gf", program)],
             options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "invoke ", "personality", "__gflat_eh_", "gflat$Memory$", "@malloc", "@free", "__gflat_gc", "cmpxchg weak", "add nsw", "add nuw" })

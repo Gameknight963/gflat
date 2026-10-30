@@ -1,7 +1,7 @@
-using std::Text;
-using std::IO;
-using std::Encoding;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard::Encoding;
+using Standard;
 
 // One stack-backed output row, including a full-width byte offset.
 void PrintRow(ulong offset, readonly(char)* bytes, nuint count)
@@ -26,7 +26,7 @@ void PrintRow(ulong offset, readonly(char)* bytes, nuint count)
         char display = ' ';
         if (column < count) {
             display = bytes[column];
-            if (!std::Text::Ascii::IsPrintable(display)) display = '.';
+            if (!Standard::Text::Ascii::IsPrintable(display)) display = '.';
         }
         output.Write(&display, 1);
     }

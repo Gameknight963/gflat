@@ -93,7 +93,7 @@ public sealed class BigIntegerConversionTests
     public void PublicTryDefinitionsAndCallsRetainTheirNothrowContract()
     {
         string ir=Compiler.Emit(Sources("""
-            using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
             bool Convert(immutable(BigInteger)* value,ref long signedValue,ref ulong unsignedValue)nothrow{
                 bool first=value.TryToLong(ref signedValue);bool second=value.TryToULong(ref unsignedValue);return first&&second;
             }
@@ -205,7 +205,7 @@ public sealed class BigIntegerConversionTests
         await TestDirectoryCleanup.DeleteAsync(directory);
     }
     private const string Counters="""
-        using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
         extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
@@ -220,7 +220,7 @@ public sealed class BigIntegerConversionTests
         }
         """;
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-conversions.gf",program));
     private static void Run(string directory,string program,string[] arguments,int optimization)
     {

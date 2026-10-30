@@ -26,7 +26,7 @@ public sealed class StandardJsonWriterExtraLongTests
             }
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using std; using std::Text; using std::Json;
+                using Standard; using Standard::Text; using Standard::Json;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* file);
                 extern int fclose(void* file);
@@ -65,7 +65,7 @@ public sealed class StandardJsonWriterExtraLongTests
     [InlineData(2)]
     public void WideNumbersPreserveWriterStateAndOutputFailureContracts(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Json;extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            using Standard; using Standard::Text; using Standard::Json;extern void*? malloc(nuint bytes);extern void free(void* pointer);
             int allocations=0;int calls=0;int fail=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}
@@ -108,7 +108,7 @@ public sealed class StandardJsonWriterExtraLongTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("json-writer-wide.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

@@ -9,7 +9,7 @@ public sealed class UniqueImmutableTests
     [InlineData(2)]
     public void DeepBorrowReadsNoncopyablePayloadWithoutAllocationCopyOrEarlyDestruction(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* data);
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* data);
             int allocations=0;int dead=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
@@ -43,7 +43,7 @@ public sealed class UniqueImmutableTests
     [InlineData(2)]
     public void ManagedFieldsAndBorrowedAddressSurviveOwnerMovesAndVectorRelocation(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;int dead=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;int dead=0;
             class Node{public int Value;public Node(int value){Value=value;}public immutable int Read()nothrow=>Value;}
             struct Payload{
                 public int* Data;public Node^ Child;
@@ -81,7 +81,7 @@ public sealed class UniqueImmutableTests
     public void DeepBorrowCannotMutateOrExposeWritableAliases(string operation)
     {
         string source="""
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             class Node{public int Value;public Node(int value){Value=value;}public void Change(){Value=1;}}
             struct Payload{
                 public int Number;public int* Data;public Node^ Child;
@@ -95,7 +95,7 @@ public sealed class UniqueImmutableTests
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("unique-immutable.gf",source));
     private static void Run(string source,int optimization)
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(source),optimization).ExitCode);

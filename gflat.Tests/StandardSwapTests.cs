@@ -9,7 +9,7 @@ public sealed class StandardSwapTests
     [InlineData(2)]
     public void PrimitiveSlotsFieldsAndRefGettersSwapWithoutChangingTheirAddresses(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             int getterCalls=0;
             struct Cells {
                 public int Left;public int Right;public bool Fail;
@@ -42,7 +42,7 @@ public sealed class StandardSwapTests
     [InlineData(2)]
     public void OwningStringsAndNoncopyableUniqueValuesRelocateWithoutAllocatingOrDestroying(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int attempts=0;int allocated=0;int freed=0;int dead=0;bool deny=false;
             namespace Memory {
@@ -81,7 +81,7 @@ public sealed class StandardSwapTests
     [InlineData(2)]
     public void ManagedLocalAndNativeStructSlotsRemainRootsAfterSwapping(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             class Node {public int Number;public Node^? Next;public Node(int value){Number=value;Next=null;}}
             struct Pair {
                 public Node^ First;public Node^ Second;
@@ -114,14 +114,14 @@ public sealed class StandardSwapTests
     public void SwapRequiresInitializedMutableNativeStorage(string statements,string diagnostic)
     {
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources("""
-            using std; using std::Text; using std::Memory; using std::Collections;class Holder{public int Field;public int Value{get=>Field;}}
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;class Holder{public int Field;public int Value{get=>Field;}}
             int main(){
             """+statements+"return 0;}")));
         Assert.Contains(diagnostic,error.Message,StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("swap-test.gf",program));
     private static void Run(string program,int optimization)

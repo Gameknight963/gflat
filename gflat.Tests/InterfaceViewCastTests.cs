@@ -82,7 +82,7 @@ public sealed class InterfaceViewCastTests
         => Run("""
             alias GC=Collector;
             interface IRead{immutable int Read();}
-            static class Collector:std::IGarbageCollector{
+            static class Collector:Standard::IGarbageCollector{
                 private static void*? allocation;
                 private static void*?[128] slots;
                 private static nuint count;
@@ -151,7 +151,7 @@ public sealed class InterfaceViewCastTests
     {
         var files = new List<string> { "core/Exception.gf", "libc/Memory/allocation.gf" };
         if (managed) files.Add("core/IGarbageCollector.gf");
-        var sources = files.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = files.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("interface-view-tests.gf", code)).ToList();
         if (denyAllocation) sources.Add(new SourceFile("no-allocation.gf", """
             int attempts=0;

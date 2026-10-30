@@ -1,8 +1,8 @@
-using std::Text;
-using std::Csv;
-using std::Json;
-using std::IO;
-using std;
+using Standard::Text;
+using Standard::Csv;
+using Standard::Json;
+using Standard::IO;
+using Standard;
 
 int main(int argc, char** argv)
 {

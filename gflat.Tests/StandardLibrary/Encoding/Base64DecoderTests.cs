@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Codecs;
 public sealed class Base64DecoderTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("base64-decoder.gf",program));
 
@@ -16,7 +16,7 @@ public sealed class Base64DecoderTests
     }
 
     private const string DenyAllocation="""
-        using std; using std::IO; using std::Encoding;int attempts=0;
+        using Standard; using Standard::IO; using Standard::Encoding;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -129,7 +129,7 @@ public sealed class Base64DecoderTests
             Bytes(new string('A',260)+"!"),Bytes(new string('A',256)+"Zg==x")
         ];
         var code=new StringBuilder("""
-            using std; using std::IO; using std::Encoding;
+            using Standard; using Standard::IO; using Standard::Encoding;
             struct Sink:ITextWriter {
                 public int Calls;public nuint Count;
                 public Sink(){Calls=0;Count=0;}
@@ -162,7 +162,7 @@ public sealed class Base64DecoderTests
     [InlineData(2)]
     public void OriginalPartialSinkFailurePoisonsBothWritesAndCompletion(int optimization)
         => Run("""
-            using std; using std::IO; using std::Encoding;
+            using Standard; using Standard::IO; using Standard::Encoding;
             class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
             struct Sink:ITextWriter {
                 public int Budget;public int Calls;public int Count;
@@ -199,7 +199,7 @@ public sealed class Base64DecoderTests
     [InlineData(2)]
     public void CopiedCarryAndPaddedCompletionNeverOwnOrCompleteSinkImplicitly(int optimization)
         => Run("""
-            using std; using std::IO; using std::Encoding;
+            using Standard; using Standard::IO; using Standard::Encoding;
             struct Sink:ITextWriter {
                 private char* data;public nuint Count;public int Calls;
                 public Sink(char* storage){data=storage;Count=0;Calls=0;}

@@ -1,7 +1,7 @@
-using std::Text;
-using std::Json;
-using std::IO;
-using std;
+using Standard::Text;
+using Standard::Json;
+using Standard::IO;
+using Standard;
 
 // Emit one JSON string literal per input line, without a second owning buffer.
 int main(int argc, char** argv)

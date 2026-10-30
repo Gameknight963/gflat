@@ -54,15 +54,15 @@ public sealed class StreamBinaryTests
                 _ => $"if(value!=({scalar.Type}){low}ul)return 14;"
             };
             operations.AppendLine($$"""
-                { {{scalar.Type}} value=std::IO::Read{{scalar.Suffix}}{{order}}(input);
+                { {{scalar.Type}} value=Standard::IO::Read{{scalar.Suffix}}{{order}}(input);
                   {{assertion}}
-                  sink.ExpectedWidth={{scalar.Width}};std::IO::Write{{scalar.Suffix}}{{order}}(output,value); }
+                  sink.ExpectedWidth={{scalar.Width}};Standard::IO::Write{{scalar.Suffix}}{{order}}(output,value); }
                 """);
             records++;
             readCalls += (scalar.Width + 1) / 2;
         }
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){attempts++;return null;}
@@ -109,17 +109,17 @@ public sealed class StreamBinaryTests
             operations.AppendLine($$"""
                 for(nuint length=0;length<{{width}};length++){
                     Source source=new(length,false);bool caught=false;
-                    try{std::IO::Read{{suffix}}{{order}}(&source);}catch(ref EndOfStreamException error){caught=true;}
+                    try{Standard::IO::Read{{suffix}}{{order}}(&source);}catch(ref EndOfStreamException error){caught=true;}
                     if(!caught||source.Position!=length||source.Calls!=(length+1)/2+1)return 31;
                 }
                 {Source source=new({{width}},true);bool caught=false;
-                 try{std::IO::Read{{suffix}}{{order}}(&source);}
+                 try{Standard::IO::Read{{suffix}}{{order}}(&source);}
                  catch(ref EndOfStreamException error){return 32;}
                  catch(ref IOException error){caught=error.GetCode()==71;}
                  if(!caught||source.Calls!=1||source.Position!=1)return 33;}
                 """);
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             class ReadFailure:IOException{
                 public ReadFailure():base("sentinel read failure"){code=71;}
             }
@@ -146,15 +146,15 @@ public sealed class StreamBinaryTests
         foreach (string order in new[] { "LittleEndian", "BigEndian" })
         foreach (var (suffix, type, width) in Families)
             operations.AppendLine($$"""
-                {Sink sink=new(&data[1],{{width}},false);std::IO::Write{{suffix}}{{order}}(&sink,({{type}})1);
+                {Sink sink=new(&data[1],{{width}},false);Standard::IO::Write{{suffix}}{{order}}(&sink,({{type}})1);
                  if(sink.Calls!=1||sink.Count!={{width}}||data[0]!='Q'||data[17]!='R')return 41;}
                 {Sink sink=new(&data[1],{{width}},true);bool caught=false;
-                 try{std::IO::Write{{suffix}}{{order}}(&sink,({{type}})1);}
+                 try{Standard::IO::Write{{suffix}}{{order}}(&sink,({{type}})1);}
                  catch(ref IOException error){caught=error.GetCode()==72;}
                  if(!caught||sink.Calls!=1||sink.Count!=1||data[0]!='Q'||data[17]!='R')return 42;}
                 """);
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             class WriteFailure:IOException{
                 public WriteFailure():base("sentinel write failure"){code=72;}
             }
@@ -176,7 +176,7 @@ public sealed class StreamBinaryTests
         string[] names = [ "core/Exception.gf", "core/ITextWriter.gf", "core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
             "core/IO/byte_reader.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader_binary.gf",
             "core/IO/text_writer_binary.gf", "libc/Memory/allocation.gf" ];
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("stream-binary-tests.gf", program));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

@@ -5,7 +5,7 @@ namespace gflat.Tests.Std;
 public sealed class VersionTests
 {
     private const string Support="""
-        using std; using std::Text;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -153,11 +153,11 @@ public sealed class VersionTests
     public void SelectedCoreValueSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
     {
         string[] names=["Version.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("version-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
-                bool Observe(immutable(std::Version)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
-                    std::Version parsed=new();return std::Version::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
+                bool Observe(immutable(Standard::Version)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
+                    Standard::Version parsed=new();return Standard::Version::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});Assert.DoesNotContain("$String",ir);
@@ -178,7 +178,7 @@ public sealed class VersionTests
     }
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.Latin1.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("version.gf",program));
     private static void Run(string program,int optimization)
     {

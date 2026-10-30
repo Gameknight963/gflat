@@ -66,7 +66,7 @@ For standalone MSBuild, the relative fallback must locate the toolchain. Otherwi
 set `GflatSdkRoot` in the environment or pass `-p:GflatSdkRoot=/path/to/gflat`.
 The directory must contain the complete `build/` directory, including the
 precompiled tasks under `build/tasks/`; keep
-`std/` there too when using the standard library. Builds do not install files into
+`Standard/` there too when using the standard library. Builds do not install files into
 .NET or Visual Studio.
 
 Downloaded compiler and language-server bundles include MSBuild and the .NET runtime.
@@ -85,7 +85,7 @@ gflat new Minimal --no-stdlib
 
 `new` creates the MSBuild `.gfproj`, `main.gf`, and a `.gitignore` in a new or
 empty directory. It never overwrites existing files. `--name Name` changes the
-project filename. Applications use std and print a greeting by default.
+project filename. Applications use Standard and print a greeting by default.
 `--library` creates a source library. `--no-stdlib` sets `NoStdLib` in the project.
 
 The default `OutputType` is `Executable`. A source library uses `SourceLibrary`:
@@ -118,11 +118,11 @@ deduplicated, and cycles rejected.
 
 ## Standard library selection
 
-The build rules reference the bundled `std/std.gfproj` unless `NoStdLib` is `true`.
+The build rules reference the bundled `Standard/Standard.gfproj` unless `NoStdLib` is `true`.
 With `NoStdLib`, no library reference or hidden compiler declarations are added.
-This is how std itself builds. Explicit source files and project references remain
+This is how Standard itself builds. Explicit source files and project references remain
 available, so applications can select their own runtime/library implementation.
-Excluding std does not turn a bare pointer operation into a library-independent
+Excluding Standard does not turn a bare pointer operation into a library-independent
 operation: features that call allocation or exception services need implementations
 of those services supplied as ordinary inputs.
 
@@ -133,7 +133,7 @@ gflat build app.gfproj --no-stdlib
 
 The direct compiler API accepts `CompilationOptions { NoStdLib = true }` for
 checking, emission, and editor analysis. Project/editor builds use the evaluated
-source graph and never inject another copy of std. This controls source inputs;
+source graph and never inject another copy of Standard. This controls source inputs;
 it is not a promise to link without the host C startup/runtime libraries.
 
 ## Sources and references
@@ -219,7 +219,7 @@ debug PDBs must differ from every supplied source file and source list.
 
 The targets choose `GflatCompilerCommand` if explicitly configured, otherwise the
 compiler shipped with the SDK distribution/VSIX, the checkout's Debug compiler
-if available, or `gflat` from PATH. Keep the installed SDK and its build/std assets together, as supplied in nightlies and the VSIX.
+if available, or `gflat` from PATH. Keep the installed SDK and its build/Standard assets together, as supplied in nightlies and the VSIX.
 
 ### Incremental CLI builds
 
@@ -382,7 +382,7 @@ Build and install the VSIX, restart Visual Studio, and open the solution for the
 work you want to do:
 
 - `gflat.slnx` contains the compiler, command-line tools, language server, and tests.
-- `std/std.slnx` contains the source standard library and platform providers.
+- `Standard/Standard.slnx` contains the source standard library and platform providers.
 - `examples/examples.slnx` contains runnable examples; choose a startup project.
 
 Use **Add > Existing Project** to add another `.gfproj` to a solution.
@@ -503,7 +503,7 @@ accept the same override. The compiler API uses `CompilationOptions.NoBuiltins`.
 
 This is not a guarantee of runtime-independent output. Explicit external calls,
 explicit LLVM intrinsics, and other target lowering requirements can still need
-libc or compiler runtime helpers. It neither excludes std sources nor changes
+libc or compiler runtime helpers. It neither excludes Standard sources nor changes
 startup/linker settings; use `NoStdLib` and an appropriate native link setup
 separately when building freestanding code.
 

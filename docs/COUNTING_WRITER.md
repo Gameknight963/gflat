@@ -1,6 +1,6 @@
 # Count writer output without storing it
 
-`std::Text::CountingWriter` implements `ITextWriter` by counting bytes. It has no output
+`Standard::Text::CountingWriter` implements `ITextWriter` by counting bytes. It has no output
 buffer or destination. Its data pointer argument is never read or retained:
 only the supplied count matters. `Length` counts bytes, including embedded NUL,
 not Unicode characters or C-string length.
@@ -8,8 +8,8 @@ not Unicode characters or C-string length.
 ## Validate and measure a decoded file
 
 ```csharp
-using std::Text;
-using std; using std::IO; using std::Encoding;
+using Standard::Text;
+using Standard; using Standard::IO; using Standard::Encoding;
 
 int main()
 {

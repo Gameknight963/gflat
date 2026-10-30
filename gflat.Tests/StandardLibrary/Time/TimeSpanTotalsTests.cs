@@ -76,7 +76,7 @@ public sealed class TimeSpanTotalsTests
         }
 
         string program = """
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             int attempts=0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++; return null; }
@@ -98,7 +98,7 @@ public sealed class TimeSpanTotalsTests
                 return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("time-span-totals.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);

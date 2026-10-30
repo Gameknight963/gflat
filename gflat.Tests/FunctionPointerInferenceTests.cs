@@ -21,11 +21,11 @@ public sealed class FunctionPointerInferenceTests
     public void ExtensionInfersResultFromTypedSpanCallback()
     {
         var result = CompilerTestHelper.Run([
-            new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
-            new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Queries/Enumerable.gf"))),
-            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Memory/Span.gf"))),
+            new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Collections/IEnumerable.gf"))),
+            new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Queries/Enumerable.gf"))),
+            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Memory/Span.gf"))),
             new SourceFile("main.gf", """
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 U Select<T, U>(Span<T> source, U(T)* callback) => callback(source[(nuint)0]);
                 extension<T> Span<T> { public U Select<U>(U(T)* callback) => callback((*this)[(nuint)0]); }
                 int main() {

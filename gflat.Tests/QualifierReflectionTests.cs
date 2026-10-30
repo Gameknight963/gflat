@@ -8,7 +8,7 @@ public sealed class QualifierReflectionTests
     public void RecursiveMetadataDistinguishesShallowStorageAndDeepViews(int optimization)
     {
         const string source = """
-            using std;
+            using Standard;
             struct Box { public int* data; }
             const bool deep = typeof(immutable(Box)).IsImmutable;
             const bool shallow = typeof(readonly(Box)).IsImmutable;

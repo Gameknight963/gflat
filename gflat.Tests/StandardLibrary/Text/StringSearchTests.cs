@@ -11,7 +11,7 @@ public sealed class StringSearchTests
     {
         var random = new Random(82914);
         byte[] alphabet = [0, (byte)'a', (byte)'b', 255];
-        var code = new StringBuilder("using std; using std::Text; int main() { char[96] input; char[32] pattern;\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; int main() { char[96] input; char[32] pattern;\n");
         for (int sample = 0; sample < 96; sample++)
         {
             byte[] input = new byte[random.Next(97)], pattern = new byte[random.Next(33)];
@@ -39,7 +39,7 @@ public sealed class StringSearchTests
     [InlineData(2)]
     public void LongNearMatchesAndAliasedPatternsKeepSentinelsAndAllocateNothingDuringSearch(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void*? malloc(nuint count);
             extern void free(void* storage);
             int allocations = 0;
@@ -81,7 +81,7 @@ public sealed class StringSearchTests
     private static void Run(string code, int optimization)
     {
         var sources = new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }

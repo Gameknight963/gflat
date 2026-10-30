@@ -23,7 +23,7 @@ public class SignedBinaryTests
     [InlineData(2)]
     public void SignedBuffersMatchDotNetForUnalignedBoundaryValuesAndShortCapacity(int optimization)
     {
-        var program = new StringBuilder("using std; using std::IO; using std::Binary; int main(){byte[10] data; short small=0; int medium=0; long large=0l;");
+        var program = new StringBuilder("using Standard; using Standard::IO; using Standard::Binary; int main(){byte[10] data; short small=0; int medium=0; long large=0l;");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool little in new[] { true, false })
         foreach (long original in Values)
@@ -54,7 +54,7 @@ public class SignedBinaryTests
     [InlineData(2)]
     public void SuccessfulReadsPermitOutputToAliasInputWithoutZeroingBytesFirst(int optimization)
     {
-        var program = new StringBuilder("using std; using std::IO; using std::Binary; int main(){");
+        var program = new StringBuilder("using Standard; using Standard::IO; using Standard::Binary; int main(){");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool signed in new[] { true, false })
         foreach (bool little in new[] { true, false })
@@ -72,7 +72,7 @@ public class SignedBinaryTests
 
     private static void RunCore(string program, int optimization)
     {
-        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BinaryPrimitives.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "@malloc", "gflat$Memory$" }) Assert.DoesNotContain(forbidden, ir);
         RunNative(ir, optimization);
@@ -92,7 +92,7 @@ public class SignedBinaryTests
             string source = Path.Combine(directory, "source.bin"), target = Path.Combine(directory, "target.bin"), partial = Path.Combine(directory, "partial.bin");
             var expected = new List<byte>();
             string order = little ? "LittleEndian" : "BigEndian";
-            var program = new StringBuilder($"using std; using std::IO; using std::Binary; int main(){{File input=File::OpenRead({Literal(source)}); File output=File::OpenWrite({Literal(target)});");
+            var program = new StringBuilder($"using Standard; using Standard::IO; using Standard::Binary; int main(){{File input=File::OpenRead({Literal(source)}); File output=File::OpenWrite({Literal(target)});");
             foreach (int width in new[] { 2, 4, 8 })
             foreach (long original in Values)
             {
@@ -116,7 +116,7 @@ public class SignedBinaryTests
             program.Append("return 0;}");
             File.WriteAllBytes(source, expected.ToArray()); File.WriteAllBytes(partial, [255]);
             var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
-                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program.ToString()));
             RunNative(Compiler.Emit(sources), optimization);
             Assert.Equal(expected.ToArray(), File.ReadAllBytes(target));

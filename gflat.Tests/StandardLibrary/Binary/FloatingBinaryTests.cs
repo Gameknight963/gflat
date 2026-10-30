@@ -11,8 +11,8 @@ public sealed class FloatingBinaryTests
     {
         if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64) return;
         SourceFile[] sources = [
-            new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))),
-            new("main.gf", "int main() { byte[4] data; if (!std::Binary::BinaryPrimitives::TryWriteUInt32BigEndian(data, 4, 123u)) return 1; return 0; }")
+            new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BinaryPrimitives.gf"))),
+            new("main.gf", "int main() { byte[4] data; if (!Standard::Binary::BinaryPrimitives::TryWriteUInt32BigEndian(data, 4, 123u)) return 1; return 0; }")
         ];
         string directory = Path.Combine(Path.GetTempPath(), "gflat-ieee-marker-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -103,7 +103,7 @@ public sealed class FloatingBinaryTests
     private static void Run(string program, int optimization, bool cursors = false)
     {
         string[] names = cursors ? ["Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf"] : ["Binary/BinaryPrimitives.gf"];
-        SourceFile[] sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        SourceFile[] sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$Allocate", "gflat$Memory$Free", "@malloc", "@free" })
@@ -116,7 +116,7 @@ public sealed class FloatingBinaryTests
     [InlineData(2)]
     public void UnalignedPrimitiveReadsAndWritesMatchDotNetForEveryIeeeCategoryAndRandomBits(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Binary; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Binary; int main() {\n");
         foreach (bool wide in new[] { false, true })
         foreach (bool little in new[] { false, true })
         {
@@ -163,7 +163,7 @@ public sealed class FloatingBinaryTests
     [InlineData(2)]
     public void CursorsPreserveBitsAndOnlyAdvanceForCompleteValues(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Binary; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Binary; int main() {\n");
         foreach (bool wide in new[] { false, true })
         foreach (bool little in new[] { false, true })
         {

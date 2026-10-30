@@ -1,12 +1,12 @@
 # Linked lists
 
-`std::Collections::LinkedList<T>` owns a doubly linked sequence of separately allocated nodes.
+`Standard::Collections::LinkedList<T>` owns a doubly linked sequence of separately allocated nodes.
 Use `Vector<T>` when contiguous storage and indexed access matter; a linked list
 is useful when existing node addresses must remain stable during insertion and
 you need constant-time insertion or removal at a known node.
 
 ```csharp
-using std; using std::Collections;
+using Standard; using Standard::Collections;
 
 int main()
 {

@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryReverseTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocations=0;int releases=0;int failAt=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny||(failAt!=0&&attempts==failAt))return null;void*? value=malloc(count);if(value!=null)allocations++;return value;}
@@ -47,7 +47,7 @@ public sealed class StandardQueryReverseTests
                     }
                     if(seen!=view.Length||allocations!=releases)return 7;
                 }
-                int[3] items=[1,2,3];Span<int> span=new(items,3);std::Collections::Reverse<int>(span);if(items[0]!=3||items[1]!=2||items[2]!=1)return 8;
+                int[3] items=[1,2,3];Span<int> span=new(items,3);Standard::Collections::Reverse<int>(span);if(items[0]!=3||items[1]!=2||items[2]!=1)return 8;
                 return 0;
             }
             """,optimization);
@@ -161,7 +161,7 @@ public sealed class StandardQueryReverseTests
     [InlineData(2)]
     public void FreshManagedProjectionResultsStayRootedByTheReverseBuffer(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;class Item{public int Value;public Item(int value){Value=value;}}
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;class Item{public int Value;public Item(int value){Value=value;}}
             Item^ Make(int value){Item^ result=new^ Item(value);GC::Collect();return result;}
             int main(){
                 IntRange range=new(1,4);var query=range.AsEnumerable().Select(&Make).Reverse();
@@ -179,7 +179,7 @@ public sealed class StandardQueryReverseTests
 
     private static void Run(string source,int optimization,bool managed=false)
     {
-        string root=Path.Combine(AppContext.BaseDirectory,"Std");
+        string root=Path.Combine(AppContext.BaseDirectory,"Standard");
         IEnumerable<string> paths=Directory.GetFiles(Path.Combine(root,"core"),"*.gf",SearchOption.AllDirectories);
         if(managed)paths=paths.Concat(new[]{Path.Combine(root,"libc/GC.gf"),Path.Combine(root,"libc/TracingCollector.gf")});
         var sources=paths.Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-reverse.gf",source));

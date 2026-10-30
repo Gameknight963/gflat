@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryEndpointTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -25,7 +25,7 @@ public sealed class StandardQueryEndpointTests
         }
         data.Add(0);
         Run($$"""
-            using std; using std::Text; using std::Memory; using std::Queries;int attempts=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;int attempts=0;
             namespace Memory{public replace void*? Allocate(nuint count){attempts++;return null;}public replace void Free(void* storage)nothrow{} }
             bool Even(int value)=>value%2==0;int Twice(int value)=>value*2;
             int main(){
@@ -54,7 +54,7 @@ public sealed class StandardQueryEndpointTests
     [InlineData(2)]
     public void SourceEffectsAndStickyMoveFailuresDifferFromRetryableCurrentFailures(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries;int length=3;int mode=0;int starts=0;int ends=0;int moves=0;int reads=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;int length=3;int mode=0;int starts=0;int ends=0;int moves=0;int reads=0;
             struct Source{
                 public struct Iterator{
                     private int position;public Iterator(){position=0;starts++;}
@@ -165,7 +165,8 @@ public sealed class StandardQueryEndpointTests
                             if(!caught||allocated-released!=currentBalance)return 17;
                             {Item value=iterator.Current;if(value.Id!=99||!CString::Equals(value.Text.Data,"tail"))return 18;}
                         }
-                        if(query.Take(0).Count()!=0||query.Take(1).Count()!=1||live!=owners||starts!=ends||allocated-released!=baseline)return 19;
+                        nuint emptyCount=query.Take(0).Count();nuint oneCount=query.Take(1).Count();
+                        if(emptyCount!=0||oneCount!=1||live!=owners||starts!=ends||allocated-released!=baseline)return 19;
                         caught=false;try{query.Where(&Fail).Count();}catch(ref Exception error){if(error.GetCode()!=79)return 20;caught=true;}
                         if(!caught||live!=owners||starts!=ends||allocated-released!=baseline)return 21;
                         Item moving=new(77,s"moved");var moved=source.Prepend(move moving);moving=new Item(88,s"replacement");
@@ -183,7 +184,7 @@ public sealed class StandardQueryEndpointTests
     [InlineData(2)]
     public void ManagedEndpointsRemainRootedAndRawPointerEndpointsDoNotOwnTheirPointees(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries;int dead=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;int dead=0;
             class Node{public int Value;public Node(int value){Value=value;}}
             struct Raw{public int Value;public Raw(int value){Value=value;}~Raw(){dead++;}}
             Node^ Make(int value){Node^ result=new^ Node(value);GC::Collect();return result;}
@@ -204,7 +205,7 @@ public sealed class StandardQueryEndpointTests
 
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-endpoint.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Query endpoint exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }

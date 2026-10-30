@@ -116,16 +116,16 @@
       <Link>Sdk/build/tasks/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="../../std/std.gfproj">
-      <Link>Sdk/std/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    <Content Include="../../Standard/Standard.gfproj">
+      <Link>Sdk/Standard/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="../../std/core/**/*.gf">
-      <Link>Sdk/std/core/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    <Content Include="../../Standard/core/**/*.gf">
+      <Link>Sdk/Standard/core/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="../../std/libc/**/*.gf">
-      <Link>Sdk/std/libc/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    <Content Include="../../Standard/libc/**/*.gf">
+      <Link>Sdk/Standard/libc/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="../../libraries/platform/**/*.gf;../../libraries/platform/**/*.gfproj;../../libraries/platform/**/README.md">

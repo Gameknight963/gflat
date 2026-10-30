@@ -1,5 +1,5 @@
-using std::IO;
-using std::Net;
+using Standard::IO;
+using Standard::Net;
 namespace Windows;
 
 namespace tcp_detail
@@ -35,7 +35,7 @@ public struct TcpClient : ITextWriter, IByteReader
             int error = tcp_detail::WSAStartup((ushort)514, (void*)&data[0]);
             if (error != 0) throw new SocketException("WinSock startup failed", error);
             result.active = true;
-            ushort* version = (ushort*)&data[0];
+            ushort* version = (&data[0]).reinterpret<ushort*>();
             if (*version != (ushort)514)
                 throw new SocketException("WinSock 2.2 is unavailable", 10092);
             return move result;
@@ -80,9 +80,9 @@ public struct TcpClient : ITextWriter, IByteReader
         // also satisfies their native 4-byte requirement. Unused fields stay zero.
         nuint[4] storage;
         for (nuint i = 0; i < 4; i++) storage[i] = 0;
-        ushort* nativeFamily = (ushort*)&storage[0];
+        ushort* nativeFamily = (&storage[0]).reinterpret<ushort*>();
         *nativeFamily = (ushort)family;
-        byte* bytes = (byte*)&storage[0];
+        byte* bytes = (&storage[0]).reinterpret<byte*>();
         ushort port = endpoint.Port;
         bytes[2] = (byte)(port >> 8);
         bytes[3] = (byte)port;

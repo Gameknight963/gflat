@@ -1,11 +1,11 @@
 # HMAC-SHA256 over counted bytes
 
-`std::Hashing::HMACSHA256` provides keyed message authentication using HMAC and SHA-256.
+`Standard::Hashing::HMACSHA256` provides keyed message authentication using HMAC and SHA-256.
 It composes the existing SHA256 implementation with the inner/outer pads defined
 by [RFC 2104](https://www.rfc-editor.org/rfc/rfc2104).
 
 ```csharp
-using std; using std::Encoding; using std::Hashing;
+using Standard; using Standard::Encoding; using Standard::Hashing;
 
 int main()
 {
@@ -15,7 +15,7 @@ int main()
     byte[32] digest = authentication.GetHash();
     char[64] hex;
     nuint written = 0;
-    Hex::TryEncode((readonly(char)*)(byte*)digest, 32, hex, 64, ref written, false);
+    Hex::TryEncode(((byte*)digest).reinterpret<readonly(char)*>(), 32, hex, 64, ref written, false);
     Console::WriteLine(hex, written);
     Console::Flush();
     return 0;

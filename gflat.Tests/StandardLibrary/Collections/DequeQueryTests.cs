@@ -9,7 +9,7 @@ public sealed class DequeQueryTests
     [InlineData(2)]
     public void WrappedRingQueriesAreLazyReusableAndObserveElementReplacement(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int predicates=0;int selections=0;
             bool Even(int value){predicates++;return value%2==0;}
             int Twice(int value){selections++;return value*2;}
@@ -44,7 +44,7 @@ public sealed class DequeQueryTests
     [InlineData(2)]
     public void NoncopyableOwnerQueriesBorrowWithoutAllocatingOrConsumingElements(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int made=0;int dead=0;int allocations=0;int releases=0;bool deny=false;
             extern void*? malloc(nuint bytes);extern void free(void* storage);
             namespace Memory{
@@ -84,7 +84,7 @@ public sealed class DequeQueryTests
     public void ProtectedOwnersCannotProduceWritableQueries(string qualifier)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources($$"""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){Deque<int> values=new();{{qualifier}}(Deque<int>)* view=&values;view.AsEnumerable();return 0;}
             """)));
         Assert.Contains("non-" + qualifier, error.Message);
@@ -93,7 +93,7 @@ public sealed class DequeQueryTests
     [Fact]
     public void CapturedViewConstructorDoesNotExposeRawRingMetadata()
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){Deque<int>::View view=new Deque<int>::View(null,0,0,0);return 0;}
             """)));
 
@@ -101,7 +101,7 @@ public sealed class DequeQueryTests
     {
         string[] names = ["Collections/Deque.gf", "Memory/Span.gf", "Collections/Vector.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf", "Queries/WhereSource.gf", "Queries/SelectSource.gf", "Queries/SliceSource.gf", "Queries/TakeWhileSource.gf", "Queries/SkipWhileSource.gf"];
-        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("deque-queries.gf", program));
     }
     private static void Run(string program, int optimization)

@@ -16,7 +16,7 @@ public sealed class FileFailureTests
     {
         var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileLines.gf" };
         if (strings) names.AddRange(["libc/IO/FileText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
-        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files));
@@ -33,7 +33,7 @@ public sealed class FileFailureTests
         {
             string path = Path.Combine(directory, "mode-errors.bin");
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 int main() {
                     File output = File::OpenWrite({{Literal(path)}});
                     try { output.ReadByte(); return 1; }
@@ -65,7 +65,7 @@ public sealed class FileFailureTests
             string path = Path.Combine(directory, "allocation.bin");
             File.WriteAllText(path, new string('x', 9000));
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 static class State { public static void*? First; public static int Released; }
@@ -101,7 +101,7 @@ public sealed class FileFailureTests
             string path = Path.Combine(directory, "writer-failure.txt");
             File.WriteAllText(path, new string('x', 300) + "\nnext\n");
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 struct FailingWriter : ITextWriter {
                     public void Write(readonly(char)* text, nuint count) { throw new Exception("writer rejected bytes"); }
                 }
@@ -127,7 +127,7 @@ public sealed class FileFailureTests
             string path = Path.Combine(directory, "line-allocation.txt");
             File.WriteAllText(path, new string('x', 300) + "\nnext\n");
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 static class State { public static bool Fail; }
@@ -160,7 +160,7 @@ public sealed class FileFailureTests
         // errors deferred by libc buffering until flush/close on Linux CI.
         if (!OperatingSystem.IsLinux()) return;
         WithDirectory(directory => Run(directory, """
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 File output = File::OpenWrite("/dev/full");
                 bool buffered = false;
@@ -192,7 +192,7 @@ public sealed class FileFailureTests
             File.WriteAllText(source, "source");
             File.WriteAllText(target, "target");
             Run(directory, $$"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(source)}});
                     File output = File::OpenRead({{Literal(target)}});

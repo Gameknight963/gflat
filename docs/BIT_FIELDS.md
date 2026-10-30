@@ -1,7 +1,7 @@
 # Bit fields in byte buffers
 
-`std::Binary::BitPrimitives` reads and writes unsigned fields of 0 through 64 bits
-in borrowed byte buffers. It allocates nothing and requires no other std sources.
+`Standard::Binary::BitPrimitives` reads and writes unsigned fields of 0 through 64 bits
+in borrowed byte buffers. It allocates nothing and requires no other Standard sources.
 
 | API | Effect |
 | --- | --- |
@@ -16,7 +16,7 @@ becomes the value's most significant requested bit. Results use only their low
 `bitCount` bits. This choice controls both within-byte order and field significance.
 
 ```csharp
-using std::Binary;
+using Standard::Binary;
 
 int main() nothrow
 {
@@ -42,4 +42,4 @@ readable as well as writable because writes preserve surrounding bits. The read
 output must not overlap the input bytes. Operations are ordinary byte accesses;
 they provide no synchronization. Time is bounded by 64 bit iterations, with
 constant temporary storage. With `NoStdLib`, include only
-`std/core/Binary/BitPrimitives.gf` alongside the caller.
+`Standard/core/Binary/BitPrimitives.gf` alongside the caller.

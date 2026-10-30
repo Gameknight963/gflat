@@ -136,9 +136,9 @@ public sealed class BitPrimitivesTests
 
     private static void Run(string program, int optimization)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BitPrimitives.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitPrimitives.gf");
         string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)),
-            new SourceFile("bit-primitives.gf", "using std::Binary;\n" + program)],
+            new SourceFile("bit-primitives.gf", "using Standard::Binary;\n" + program)],
             options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "invoke ", "personality", "__gflat_eh_", "gflat$Memory$", "@malloc", "@free", "__gflat_gc" })
             Assert.DoesNotContain(forbidden, ir);

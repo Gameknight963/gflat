@@ -11,7 +11,7 @@ public sealed class SettingsJsonExampleTests
     [InlineData(2)]
     public async Task ActualToolOwnsAcceptedTextAndRejectsInvalidInputBeforeOutput(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("settings-json.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/settings-json.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_settings_json_" + Guid.NewGuid().ToString("N"));

@@ -4,7 +4,7 @@ public sealed class StandardBinarySearchTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf", "Memory/Span.gf", "Collections/Vector.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Theory]
@@ -13,7 +13,7 @@ public sealed class StandardBinarySearchTests
     public void SortedSearchMatchesLinearFirstMatchInEitherOrdering(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int calls = 0;
             int direction = 1;
             int Compare(readonly(int)* left, readonly(int)* right) {
@@ -62,7 +62,7 @@ public sealed class StandardBinarySearchTests
     public void BorrowedOwnersSurviveEveryThrowingComparisonAndAliasedKey(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int calls = 0; int failAt = 0;
             struct Item {
                 private int* destroyed;

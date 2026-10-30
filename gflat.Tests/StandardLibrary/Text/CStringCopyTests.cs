@@ -21,7 +21,7 @@ public sealed class CStringCopyTests
             expected.AddRange(bytes);
         }
         string program = $$"""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 nuint[{{cases.Length}}] sources = [{{string.Join(",", cases.Select(item => "(nuint)" + item.source))}}];
                 nuint[{{cases.Length}}] targets = [{{string.Join(",", cases.Select(item => "(nuint)" + item.target))}}];
@@ -58,7 +58,7 @@ public sealed class CStringCopyTests
     public void EmptyZeroCapacityEmbeddedNullsAndDisjointHighBytesHaveExactBounds(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char*? absent = null;
                 if (CString::TryCopy(absent!, absent!, 0)) return 1;
@@ -84,7 +84,7 @@ public sealed class CStringCopyTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = [
-            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/CString.gf"))),
+            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf"))),
             new("main.gf", program)
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });

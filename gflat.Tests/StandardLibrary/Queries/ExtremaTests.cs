@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Queries;
 public sealed class ExtremaTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -90,11 +90,11 @@ public sealed class ExtremaTests
                 int[{{indices.Count}}] indices=[{{string.Join(',',indices)}}];int[{{rows.Count}}] rows=[{{string.Join(',',rows)}}];
                 for(nuint row=0;row<{{rows.Count}};row+=4){
                     {
-                        Vector<String> words=new();for(nuint i=0;i<(nuint)rows[row+1];i++){int index=indices[(nuint)rows[row]+i];words.Add(String::From((readonly(char)*)&blob[(nuint)offsets[(nuint)index]],(nuint)lengths[(nuint)index]));}
+                        Vector<String> words=new();for(nuint i=0;i<(nuint)rows[row+1];i++){int index=indices[(nuint)rows[row]+i];words.Add(String::From((&blob[(nuint)offsets[(nuint)index]]).reinterpret<readonly(char)*>(),(nuint)lengths[(nuint)index]));}
                         String low=words.AsEnumerable().Min();String high=words.AsEnumerable().Max();
                         int minIndex=rows[row+2];int maxIndex=rows[row+3];
-                        if(!low.Equals((readonly(char)*)&blob[(nuint)offsets[(nuint)minIndex]],(nuint)lengths[(nuint)minIndex])||!high.Equals((readonly(char)*)&blob[(nuint)offsets[(nuint)maxIndex]],(nuint)lengths[(nuint)maxIndex]))return 1;
-                        words.Clear();if(!low.Equals((readonly(char)*)&blob[(nuint)offsets[(nuint)minIndex]],(nuint)lengths[(nuint)minIndex])||!high.Equals((readonly(char)*)&blob[(nuint)offsets[(nuint)maxIndex]],(nuint)lengths[(nuint)maxIndex]))return 2;
+                        if(!low.Equals((&blob[(nuint)offsets[(nuint)minIndex]]).reinterpret<readonly(char)*>(),(nuint)lengths[(nuint)minIndex])||!high.Equals((&blob[(nuint)offsets[(nuint)maxIndex]]).reinterpret<readonly(char)*>(),(nuint)lengths[(nuint)maxIndex]))return 1;
+                        words.Clear();if(!low.Equals((&blob[(nuint)offsets[(nuint)minIndex]]).reinterpret<readonly(char)*>(),(nuint)lengths[(nuint)minIndex])||!high.Equals((&blob[(nuint)offsets[(nuint)maxIndex]]).reinterpret<readonly(char)*>(),(nuint)lengths[(nuint)maxIndex]))return 2;
                     }
                     if(allocated!=released)return 3;
                 }
@@ -111,7 +111,7 @@ public sealed class ExtremaTests
     [InlineData(2)]
     public void EachCurrentAndComparisonHasExactOrderAndIteratorFailuresPreserveTheSource(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int mode=0;int length=5;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int[8] pairs;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int mode=0;int length=5;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int[8] pairs;
             struct Source{
                 private int* values;public Source(int* data){values=data;}
                 public struct Iterator{
@@ -196,17 +196,17 @@ public sealed class ExtremaTests
     [Fact]
     public void ExplicitComparisonDoesNotRequireTheDefaultComparableContract()
     {
-        const string declarations="using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;struct Plain{public int Key;public Plain(int key){Key=key;}}int Compare(immutable(Plain)* left,immutable(Plain)* right)=>left.Key-right.Key;";
+        const string declarations="using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;struct Plain{public int Key;public Plain(int key){Key=key;}}int Compare(immutable(Plain)* left,immutable(Plain)* right)=>left.Key-right.Key;";
         const string setup="int main(){Plain[2] values=[new Plain(2),new Plain(1)];Span<Plain> view=new(values,2);";
         Compiler.Check(Sources(declarations+setup+"Plain low=view.AsEnumerable().Min(&Compare);Plain high=view.AsEnumerable().Max(&Compare);return low.Key+high.Key;}"));
         foreach(string operation in new[]{"Min","Max"}){
-            var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(declarations+setup+$"std::Queries::{operation}(view.AsEnumerable());return 0;}}")));
+            var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(declarations+setup+$"Standard::Queries::{operation}(view.AsEnumerable());return 0;}}")));
             Assert.Contains($"No matching overload for '{operation}'",error.Message);
         }
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-extrema.gf",source));
     private static void Run(string source,int optimization)
     {

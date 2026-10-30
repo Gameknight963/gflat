@@ -1,8 +1,8 @@
-using std::Text;
-using std::Net;
-using std::Memory;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Net;
+using Standard::Memory;
+using Standard::Collections;
+using Standard;
 
 // Keep owned address values as keys; the input buffer is reused for every line.
 int main(int argc, char** argv)

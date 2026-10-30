@@ -8,7 +8,7 @@ public class InterpolationTests
     {
         var files = new List<SourceFile>();
         foreach (string file in new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf" }.Concat(libc ? new[] { "libc/floating_format.gf" } : Array.Empty<string>()))
-            files.Add(new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))));
+            files.Add(new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", file))));
         files.Add(new SourceFile("main.gf", program));
         return files.ToArray();
     }
@@ -20,7 +20,7 @@ public class InterpolationTests
     public void FormatsSigned128WithoutNarrowingIncludingGenericHoles(int optimization)
     {
         var sources = Sources("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern int printf(readonly(char)* text, ...);
             String Render<T>(T value) => s$"{value}";
             int main() {
@@ -32,7 +32,7 @@ public class InterpolationTests
                 return 0;
             }
             """).Concat(new[] { "Text/IntegerFormatting.gf", "extra_long_format.gf" }
-                .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file)))));
+                .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file)))));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("-170141183460469231731687303715884105728|170141183460469231731687303715884105727", result.StandardOutput);
@@ -42,18 +42,18 @@ public class InterpolationTests
     public void Signed128InterpolationNamesItsMissingFormatterSources()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             String Render(extralong value) => s$"{value}";
             """)));
-        Assert.Contains("std::Format(extralong, ITextWriter*)", error.Message);
-        Assert.Contains("std/core/Text/IntegerFormatting.gf and std/core/extra_long_format.gf", error.Message);
+        Assert.Contains("Standard::Format(extralong, ITextWriter*)", error.Message);
+        Assert.Contains("Standard/core/Text/IntegerFormatting.gf and Standard/core/extra_long_format.gf", error.Message);
     }
 
     [Fact]
     public void FormatsPrimitivesAndNestedStrings()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern int printf(readonly(char)* text, ...);
             int main() {
                 String text = s$"{{{42}}} {true} {false} {'!'} {s$"nested {7}"} {-9223372036854775807l - 1l} {18446744073709551615ul} {1.5f} {2.25d}";
@@ -69,9 +69,9 @@ public class InterpolationTests
     public void QualifiedPrefixesGenericCloningAndLiteralByteLengths()
     {
         var result = Run("""
-            std::Text::String Format<T>(T value) { return std::Text::s$"é\0{value}{{}}"; }
+            Standard::Text::String Format<T>(T value) { return Standard::Text::s$"é\0{value}{{}}"; }
             int main() {
-                std::Text::String text = Format<int>(12);
+                Standard::Text::String text = Format<int>(12);
                 if (text.Length != (nuint)7) return 1;
                 if (text[(nuint)2] != '\0') return 2;
                 if (text[(nuint)3] != '1' || text[(nuint)6] != '}') return 3;
@@ -85,7 +85,7 @@ public class InterpolationTests
     public void HolesSupportQuotedBracesCommentsAndAdjacentInterpolations()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern int printf(readonly(char)* text, ...);
             int Read(readonly(char)* p) { return (int)p[0]; }
             int main() {
@@ -104,12 +104,12 @@ public class InterpolationTests
     public void ReceiverLifetimeAndHoleEvaluationOrder()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern int printf(readonly(char)* text, ...);
             struct Value : IFormattable {
                 public int n;
                 public Value(int id) { n = id; printf("C%d;", n); }
-                public immutable void Format(ITextWriter* output) { printf("F%d;", n); std::Format(n, output); }
+                public immutable void Format(ITextWriter* output) { printf("F%d;", n); Standard::Format(n, output); }
                 ~Value() { printf("D%d;", n); }
             }
             Value Make(int n) { return new Value(n); }
@@ -123,7 +123,7 @@ public class InterpolationTests
     public void ReadonlyInterfaceManagedReceiverAndShortCircuit()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             alias GC = TestCollector;
@@ -133,7 +133,7 @@ public class InterpolationTests
                 public static void ReferenceRemoved(void* slot) nothrow {}
             }
             struct Value : IFormattable {
-                public immutable void Format(ITextWriter* output) { std::Format(3, output); }
+                public immutable void Format(ITextWriter* output) { Standard::Format(3, output); }
             }
             int main() {
                 Value value = new Value();
@@ -155,7 +155,7 @@ public class InterpolationTests
     [InlineData("s$\"{null}\"", "IFormattable")]
     public void UnsupportedValuesProduceDiagnostics(string expression, string expected)
     {
-        var ex = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; using std::Text; int main() { " + expression + "; return 0; }")));
+        var ex = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using Standard; using Standard::Text; int main() { " + expression + "; return 0; }")));
         Assert.Contains(expected, ex.Message);
     }
 
@@ -166,7 +166,7 @@ public class InterpolationTests
     [InlineData("s$\"unterminated")]
     [InlineData("s$\"bad\\q\"")]
     public void MalformedInterpolationProducesCompilerErrors(string expression)
-        => Assert.ThrowsAny<TypeCheckException>(() => Compiler.Check(Sources("using std; using std::Text; int main() { " + expression + "; return 0; }")));
+        => Assert.ThrowsAny<TypeCheckException>(() => Compiler.Check(Sources("using Standard; using Standard::Text; int main() { " + expression + "; return 0; }")));
 
     [Fact]
     public void DestinationMustOptIn()
@@ -182,7 +182,7 @@ public class InterpolationTests
     public void UnhandledInterpolationConversionTerminatesAtNonThrowingBoundary()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern int putchar(int c);
             struct Broken : IFormattable {
                 public immutable void Format(ITextWriter* output) { throw new Exception(); }
@@ -196,12 +196,12 @@ public class InterpolationTests
 
     [Fact]
     public void HoleReadsParticipateInDefiniteAssignment()
-        => Assert.Contains("unassigned", Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; using std::Text; int main() { int value; s$\"{value}\"; return 0; }"))).Message, StringComparison.OrdinalIgnoreCase);
+        => Assert.Contains("unassigned", Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using Standard; using Standard::Text; int main() { int value; s$\"{value}\"; return 0; }"))).Message, StringComparison.OrdinalIgnoreCase);
     [Fact]
     public void StringHolesPreserveEmbeddedNullBytes()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 String value = s"a\0b";
                 String text = s$"[{value}]";
@@ -217,7 +217,7 @@ public class InterpolationTests
     public void FormattingExistingValuesDoesNotAllocateTextTemporaries()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void* malloc(nuint size);
             extern void free(void* p);
             extern int printf(readonly(char)* text, ...);
@@ -231,10 +231,10 @@ public class InterpolationTests
             }
             int main() {
                 Counter writer = new Counter();
-                std::Format(-42, &writer);
-                std::Format(true, &writer);
-                std::Format('x', &writer);
-                std::Format(1.5d, &writer);
+                Standard::Format(-42, &writer);
+                Standard::Format(true, &writer);
+                Standard::Format('x', &writer);
+                Standard::Format(1.5d, &writer);
                 if (writer.count != (nuint)11) return 1;
                 return 0;
             }

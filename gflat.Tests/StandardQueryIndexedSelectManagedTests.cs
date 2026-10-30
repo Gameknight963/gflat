@@ -7,7 +7,7 @@ public sealed class StandardQueryIndexedSelectManagedTests
     [InlineData(2)]
     public void ManagedProjectionResultsRemainRootedWithoutCachingAcrossGetterRetry(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("indexed-select-managed.gf", Program));
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -15,7 +15,7 @@ public sealed class StandardQueryIndexedSelectManagedTests
     }
 
     private const string Program = """
-        using std; using std::Queries;
+        using Standard; using Standard::Queries;
         class Cell
         {
             public int Value;

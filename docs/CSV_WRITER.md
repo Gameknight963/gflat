@@ -1,11 +1,11 @@
 # CSV writer
 
-`std::Csv::CsvWriter` writes counted byte fields to a borrowed `ITextWriter*`.
+`Standard::Csv::CsvWriter` writes counted byte fields to a borrowed `ITextWriter*`.
 It does not build a table or allocate temporary strings. The destination can
 allocate or perform IO; the writer itself needs no heap storage.
 
 ```csharp
-using std; using std::Csv; using std::IO;
+using Standard; using Standard::Csv; using Standard::IO;
 
 int main()
 {

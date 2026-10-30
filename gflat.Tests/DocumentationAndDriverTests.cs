@@ -8,7 +8,7 @@ public class DocumentationAndDriverTests
     public void EveryNormativeExampleCompiles()
     {
         string document = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "LANGUAGE_SPEC.md"));
-        var examples = Regex.Matches(document, @"```(?:gflat|csharp)(?<stdlib> std)?\r?\n(?<code>.*?)```", RegexOptions.Singleline);
+        var examples = Regex.Matches(document, @"```(?:gflat|csharp)(?<stdlib> Standard)?\r?\n(?<code>.*?)```", RegexOptions.Singleline);
         Assert.NotEmpty(examples);
         foreach (Match example in examples)
         {

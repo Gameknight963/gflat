@@ -1,6 +1,6 @@
 # Counted byte wildcard matching
 
-`std::Text::MatchesWildcard(text, length, pattern, count)` matches the complete
+`Standard::Text::MatchesWildcard(text, length, pattern, count)` matches the complete
 counted input, using ordinal, case-sensitive bytes. It returns a Boolean and is
 `nothrow`. The core source is `core/Text/wildcard_matching.gf`, with no other
 standard-library source dependency.
@@ -33,7 +33,7 @@ the suffix after a star can take O(length * count) work in the worst case; there
 is no linear-time guarantee for adversarial patterns.
 
 ```csharp
-using std::Text;
+using Standard::Text;
 int main()
 {
     if (!MatchesWildcard("report-01.csv", 13, "report-??.csv", 13)) return 1;

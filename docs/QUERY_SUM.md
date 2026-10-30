@@ -5,7 +5,7 @@
 it does not cast or truncate values.
 
 ```csharp
-using std; using std::Memory; using std::Queries;
+using Standard; using Standard::Memory; using Standard::Queries;
 int main()
 {
     int[3] data = [2147483647, 1, -2];

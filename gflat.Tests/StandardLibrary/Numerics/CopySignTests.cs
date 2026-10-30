@@ -56,7 +56,7 @@ public sealed class CopySignTests
         // Keep data compact: expanded pair/expected arrays create thousands of
         // local initializer stores and make LLVM's optimization unnecessarily slow.
         var code = new StringBuilder("""
-            using std; using std::Numerics;
+            using Standard; using Standard::Numerics;
             ulong Next(ref ulong state) nothrow {
                 state = state ^ (state << 13);
                 state = state ^ (state >> 7);
@@ -109,7 +109,7 @@ public sealed class CopySignTests
         }
         code.AppendLine("return 0; }");
         var result = CompilerTestHelper.Run([
-            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
+            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
             new SourceFile("main.gf", code.ToString())
         ], optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

@@ -47,12 +47,12 @@ public sealed class SHA512Tests
                         input[0]=(char)165;input[count+1]=(char)90;
                         if(fread((void*)&input[1],1,count,file!)!=count||fread((void*)&expected[0],1,64,file!)!=64)return 4;
                         char[8195] original=input;
-                        std::Hashing::SHA512 whole=new();
+                        Standard::Hashing::SHA512 whole=new();
                         if(!whole.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!whole.TryAppend(&input[1],count))return 5;
                         if(!Matches(whole.GetHash(),expected)||!Matches(whole.GetHash(),expected))return 6;
                         // Try different boundaries, including one byte at a time and partial blocks.
                         for(int mode=0;mode<3;mode++){
-                            std::Hashing::SHA512 chunked=new();nuint position=0;
+                            Standard::Hashing::SHA512 chunked=new();nuint position=0;
                             while(position<count){
                                 nuint take=1;if(mode==1)take=position%193+1;if(mode==2)take=128;
                                 if(take>count-position)take=count-position;
@@ -90,10 +90,10 @@ public sealed class SHA512Tests
             int main(){
                 const byte[64] firstExpected={{Bytes(first)}};const byte[64] secondExpected={{Bytes(second)}};
                 const byte[64] millionExpected={{Bytes(million)}};
-                std::Hashing::SHA512 hash=new();byte[139] prefix={{Bytes(prefix)}};
-                if(!hash.TryAppend((readonly(char)*)(byte*)prefix,139))return 1;
+                Standard::Hashing::SHA512 hash=new();byte[139] prefix={{Bytes(prefix)}};
+                if(!hash.TryAppend(((byte*)prefix).reinterpret<readonly(char)*>(),139))return 1;
                 for(nuint i=0;i<139;i++)prefix[i]=(byte)0;
-                std::Hashing::SHA512 branch=hash;immutable(std::Hashing::SHA512) frozen=hash;
+                Standard::Hashing::SHA512 branch=hash;immutable(Standard::Hashing::SHA512) frozen=hash;
                 byte[64] prefixHash=hash.GetHash();if(!Equal(prefixHash,frozen.GetHash()))return 2;
                 byte[64] changed=prefixHash;changed[0]=(byte)(changed[0]^(byte)255);
                 if(!Equal(prefixHash,hash.GetHash())||Equal(changed,hash.GetHash()))return 3;
@@ -102,7 +102,7 @@ public sealed class SHA512Tests
                 hash.Reset();char[1000] block;for(nuint i=0;i<1000;i++)block[i]='a';
                 for(int i=0;i<1000;i++)if(!hash.TryAppend(block,1000))return 6;
                 if(!Equal(hash.GetHash(),millionExpected))return 7;
-                hash.Reset();std::Hashing::SHA512 empty=new();
+                hash.Reset();Standard::Hashing::SHA512 empty=new();
                 if(!Equal(hash.GetHash(),empty.GetHash())||!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0))return 8;
                 return 0;
             }
@@ -120,13 +120,13 @@ public sealed class SHA512Tests
             bool Same(byte[64] first,byte[64] second) nothrow{
                 for(nuint i=0;i<64;i++)if(first[i]!=second[i])return false;return true;
             }
-            bool SameState(readonly(std::Hashing::SHA512)* first,readonly(std::Hashing::SHA512)* second) nothrow{
-                readonly(byte)* a=(readonly(byte)*)first;readonly(byte)* b=(readonly(byte)*)second;
-                for(nuint i=0;i<(nuint)sizeof(std::Hashing::SHA512);i++)if(a[i]!=b[i])return false;
+            bool SameState(readonly(Standard::Hashing::SHA512)* first,readonly(Standard::Hashing::SHA512)* second) nothrow{
+                readonly(byte)* a=first.reinterpret<readonly(byte)*>();readonly(byte)* b=second.reinterpret<readonly(byte)*>();
+                for(nuint i=0;i<(nuint)sizeof(Standard::Hashing::SHA512);i++)if(a[i]!=b[i])return false;
                 return true;
             }
             int main(){
-                std::Hashing::SHA512 hash=new();char[127] input;
+                Standard::Hashing::SHA512 hash=new();char[127] input;
                 for(nuint i=0;i<127;i++)input[i]=(char)i;
                 if(!hash.TryAppend(input,124))return 1;
                 hash.lengthLow=0xfffffffffffffffcul;hash.lengthHigh=7ul;
@@ -135,7 +135,7 @@ public sealed class SHA512Tests
                 hash.Reset();if(hash.lengthLow!=0ul||hash.lengthHigh!=0ul)return 4;
                 if(!hash.TryAppend(input,127))return 5;
                 hash.lengthLow=0xfffffffffffffffful;hash.lengthHigh=0x1ffffffffffffffful;
-                std::Hashing::SHA512 before=hash;byte[64] digest=hash.GetHash();
+                Standard::Hashing::SHA512 before=hash;byte[64] digest=hash.GetHash();
                 if(hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),1)||!SameState(&hash,&before)||!Same(hash.GetHash(),digest))return 6;
                 if(!hash.TryAppend(((nuint)1).reinterpret<readonly(char)*>(),0)||!SameState(&hash,&before))return 7;
                 // Keep pending bytes consistent with the seeded length modulo 128.
@@ -154,7 +154,7 @@ public sealed class SHA512Tests
     private static IEnumerable<SourceFile> Sources(string code,bool exposeCounters)
     {
         foreach(string name in new[]{"Hashing/SHA512.gf","Numerics/BitOperations.gf"}) {
-            string path=Path.Combine(AppContext.BaseDirectory,"Std/core",name);
+            string path=Path.Combine(AppContext.BaseDirectory,"Standard/core",name);
             string source=File.ReadAllText(path);
             if(exposeCounters&&name=="Hashing/SHA512.gf") {
                 const string low="private ulong lengthLow;",high="private ulong lengthHigh;";

@@ -12,7 +12,7 @@ public sealed class TranscodeAllocationTests
         var utf8 = new UTF8Encoding(false, true);
         var utf16 = new UnicodeEncoding(false, false, true);
         var code = new StringBuilder("""
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             extern void*? malloc(nuint bytes); extern void free(void* storage);
             int allocations = 0; int releases = 0;
             namespace Memory {
@@ -59,7 +59,7 @@ public sealed class TranscodeAllocationTests
         Assert.Equal(1, tool.Split(entry).Length - 1);
         // Keep the actual conversion functions; only rename the CLI entry point.
         tool = tool.Replace(entry, "int TranscodeToolMain(int argc,char** argv)");
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("transcode.gf", tool))
             .Append(new SourceFile("allocations.gf", code.ToString()));

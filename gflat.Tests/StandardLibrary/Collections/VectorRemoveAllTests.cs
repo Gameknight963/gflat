@@ -8,7 +8,7 @@ public sealed class VectorRemoveAllTests
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf"];
         return names.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("vector-remove-all.gf", program));
     }
 
@@ -30,7 +30,7 @@ public sealed class VectorRemoveAllTests
             oracle.AddRange(expected);
         }
         string program = $$"""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint bytes);extern void free(void* pointer);
             bool deny=false;int attempts=0;int divisor=1;int calls=0;
             namespace Memory{
@@ -61,7 +61,7 @@ public sealed class VectorRemoveAllTests
     public void NoncopyableOwnersStayInitializedDuringPredicatesAndAreDestroyedExactlyOnce(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int dead=0;int calls=0;int next=0;bool bad=false;Vector<Owner>*? watched=null;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
             bool Match(immutable(Owner)* value){
@@ -95,7 +95,7 @@ public sealed class VectorRemoveAllTests
     public void EachThrowPositionRemovesOnlyPriorMatchesAndPreservesFailingAndUnvisitedOwners(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             class PredicateFailure:Exception{public int Index;public PredicateFailure(int index):base("predicate failed",77){Index=index;}}
             int failAt=0;int calls=0;int dead=0;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
@@ -129,7 +129,7 @@ public sealed class VectorRemoveAllTests
     public void PredicateAndDestructorCollectionsKeepEveryLiveManagedOwnerRooted(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             class PredicateFailure:Exception{public PredicateFailure():base("predicate failed",77){}}
             int dead=0;int calls=0;int failAt=-1;int expectedLive=12;bool bad=false;

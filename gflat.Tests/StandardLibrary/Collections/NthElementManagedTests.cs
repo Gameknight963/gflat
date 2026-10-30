@@ -12,8 +12,8 @@ public sealed class NthElementManagedTests
             "core/Collections/span_algorithms.gf", "core/Collections/nth_element.gf",
             "core/Collections/Vector.gf", "core/Memory/Span.gf", "libc/GC.gf", "libc/TracingCollector.gf"
         ];
-        var sources = files.Select(file => new SourceFile("std/" + file,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))
+        var sources = files.Select(file => new SourceFile("Standard/" + file,
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", file))))
             .Append(new SourceFile("nth-element-managed.gf", Program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -21,7 +21,7 @@ public sealed class NthElementManagedTests
 
     private const string Program =
     """
-    using std; using std::Memory; using std::Queries; using std::Collections;
+    using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
     
     class Node
     {

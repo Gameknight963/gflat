@@ -1,7 +1,7 @@
 # UTF-8 codec
 
 `core/Text/utf8.gf` provides allocation-free, strict UTF-8 operations in
-`std::Text::Utf8`. It can be compiled with `NoStdLib`; it does not depend on libc,
+`Standard::Text::Utf8`. It can be compiled with `NoStdLib`; it does not depend on libc,
 String, GC, or exception support.
 
 | Function | Result |
@@ -56,7 +56,7 @@ int main()
     nuint length = 5;
     uint scalar = 0u;
     nuint consumed = 0;
-    if (!std::Text::Utf8::TryDecodeLast(text, length, &scalar, &consumed)) return 1;
+    if (!Standard::Text::Utf8::TryDecodeLast(text, length, &scalar, &consumed)) return 1;
     if (scalar != 0x1f600u || consumed != (nuint)4) return 2;
     length -= consumed;
     if (length != (nuint)1 || text[0] != 'A') return 3;

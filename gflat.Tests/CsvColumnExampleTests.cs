@@ -13,7 +13,7 @@ public sealed class CsvColumnExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile("csv-column.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/csv-column.gf"))));
             string ir=Path.Combine(directory,"main.ll"),exe=Path.Combine(directory,"csv-column.exe");

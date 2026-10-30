@@ -12,7 +12,7 @@ public sealed class ClosedGenericInterfaceDisplayTests
         var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         const string text = """
-            using std; using std::Memory; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Collections;
             nuint Hash<T : IHashable>(ref immutable(T) value) => value.GetHashCode();
             bool Equal<T : IEquatable<T>>(ref immutable(T) value, immutable(T)* other) => value.Equals(other);
             Iterator Enumerate<T, Iterator>(IEnumerable<T, Iterator>* sequence) => sequence.GetEnumerator();

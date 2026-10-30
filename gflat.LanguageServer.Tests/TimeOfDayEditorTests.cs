@@ -10,7 +10,7 @@ public sealed class TimeOfDayEditorTests
     [Fact]
     public void TimeOfDayTypeOptionalConstructorAndMetadataRetainTheirConcreteSourceContracts()
     {
-        const string text="using std; using std::Time;int Probe(){TimeOfDay value=new(12,34);TimeOfDay midnight=new();int hour=value.Hour;long ticks=value.Ticks;return hour;}";
+        const string text="using Standard; using Standard::Time;int Probe(){TimeOfDay value=new(12,34);TimeOfDay midnight=new();int hour=value.Hour;long ticks=value.Ticks;return hour;}";
         var (model,source,library,_)=Analyze(text);
         int type=text.IndexOf("TimeOfDay",StringComparison.Ordinal);
         string typeHover=Hover(model,source,type);Assert.Contains("struct",typeHover);Assert.Contains("TimeOfDay",typeHover);Assert.DoesNotContain('$',typeHover);
@@ -41,7 +41,7 @@ public sealed class TimeOfDayEditorTests
     [Fact]
     public void CountedAndCStringParsingSelectTheirDistinctNoThrowOverloads()
     {
-        const string text="using std; using std::Time;void Probe(){TimeOfDay output=new();bool counted=TimeOfDay::TryParse(\"12:34:56\",8,&output);bool terminated=TimeOfDay::TryParse(\"12:34:56\",&output);}";
+        const string text="using Standard; using Standard::Time;void Probe(){TimeOfDay output=new();bool counted=TimeOfDay::TryParse(\"12:34:56\",8,&output);bool terminated=TimeOfDay::TryParse(\"12:34:56\",&output);}";
         var (model,source,library,snapshot)=Analyze(text);
         int counted=text.IndexOf("TryParse",StringComparison.Ordinal),terminated=text.LastIndexOf("TryParse",StringComparison.Ordinal);
         Assert.Single(Json(model.Completion(source.Path,counted)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="TryParse");
@@ -65,7 +65,7 @@ public sealed class TimeOfDayEditorTests
     [Fact]
     public void ImmutableArithmeticSelectsBothAddOverloadsAndNavigatesToTheirDeclarations()
     {
-        const string text="using std; using std::Time;void Probe(){TimeOfDay value=new(23,30);immutable(TimeOfDay)* view=&value;TimeSpan duration=TimeSpan::FromHours(2);int days=99;TimeOfDay first=view.Add(duration);TimeOfDay second=view.Add(duration,ref days);bool inside=view.IsBetween(first,second);}";
+        const string text="using Standard; using Standard::Time;void Probe(){TimeOfDay value=new(23,30);immutable(TimeOfDay)* view=&value;TimeSpan duration=TimeSpan::FromHours(2);int days=99;TimeOfDay first=view.Add(duration);TimeOfDay second=view.Add(duration,ref days);bool inside=view.IsBetween(first,second);}";
         var (model,source,library,snapshot)=Analyze(text);
         int first=text.IndexOf("Add(duration)",StringComparison.Ordinal),second=text.IndexOf("Add(duration,",StringComparison.Ordinal);
         foreach(var row in new[]{(Use:first,Arity:1),(Use:second,Arity:2)})

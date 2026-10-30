@@ -105,7 +105,7 @@ public class ExceptionReserveTests
             class Widget { public Widget() { printf("constructed"); } }
             int main() {
                 try { Widget* p = new* Widget(); delete p; }
-                catch (ref std::BadAllocException error) {
+                catch (ref Standard::BadAllocException error) {
                     if (error.GetCode() != 1) return 1;
                     return 42;
                 }
@@ -151,11 +151,11 @@ public class ExceptionReserveTests
                 struct Widget { int value; }
                 int main() {
                     try { Widget* p = new* Widget(); delete p; }
-                    catch (ref std::BadAllocException error) { return 42; }
+                    catch (ref Standard::BadAllocException error) { return 42; }
                     return 1;
                 }
                 """),
-            new("std/core/BadAllocException.gf", "namespace std; public class BadAllocException : Exception { public BadAllocException() {} }")
+            new("Standard/core/BadAllocException.gf", "namespace Standard; public class BadAllocException : Exception { public BadAllocException() {} }")
         };
         Assert.Equal(42, CompilerTestHelper.Run(sources).ExitCode);
     }

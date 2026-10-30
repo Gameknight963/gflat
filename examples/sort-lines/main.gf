@@ -1,6 +1,6 @@
-using std::Text;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Collections;
+using Standard;
 
 int main(int argc, char** argv)
 {

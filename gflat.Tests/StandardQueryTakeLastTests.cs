@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryTakeLastTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocations = 0; int releases = 0; int failAt = 0;
         bool deny = false; nuint largest = 0;
@@ -23,7 +23,7 @@ public sealed class StandardQueryTakeLastTests
         """;
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std", "core"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard", "core"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("query-take-last.gf", program));
 
@@ -173,7 +173,7 @@ public sealed class StandardQueryTakeLastTests
             """, optimization);
 
         const string borrowed = """
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Unique { public int Id; public Unique(int id) { Id = id; } ~Unique() {} }
             int main() {
                 Vector<Unique> input = new(); input.Add(new Unique(1));

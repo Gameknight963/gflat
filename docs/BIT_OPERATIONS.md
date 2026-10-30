@@ -1,6 +1,6 @@
 # Integer bit operations
 
-`std::Numerics::BitOperations` provides overloads for `uint` and `ulong`:
+`Standard::Numerics::BitOperations` provides overloads for `uint` and `ulong`:
 
 | Method | Result |
 | --- | --- |

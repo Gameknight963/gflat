@@ -11,8 +11,8 @@ Each operation also accepts a `Span<readonly(char)>`, for example
 `JsonStringText::Unquote(reader.RawToken)`.
 
 ```csharp
-using std::Text;
-using std; using std::Json;
+using Standard::Text;
+using Standard; using Standard::Json;
 
 int main()
 {
@@ -44,18 +44,18 @@ codec remains independent of owning strings and allocation.
 
 ## Caller-owned buffers
 
-`std::Json::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
+`Standard::Json::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
 is a string primitive, not a JSON parser, object model, or serializer. Its only
-std source dependency is `Text/utf8.gf`; it performs no allocation and calls neither
+Standard source dependency is `Text/utf8.gf`; it performs no allocation and calls neither
 libc nor the exception runtime. All counted-buffer methods are `nothrow`.
 
 ```csharp
-using std::Json;
+using Standard::Json;
 nuint needed = 0;
-if (std::Json::JsonString::TryGetQuotedLength(input, length, ref needed))
+if (Standard::Json::JsonString::TryGetQuotedLength(input, length, ref needed))
 {
     nuint written = 0;
-    bool success = std::Json::JsonString::TryQuote(input, length, output, capacity, ref written);
+    bool success = Standard::Json::JsonString::TryQuote(input, length, output, capacity, ref written);
 }
 ```
 
@@ -161,10 +161,10 @@ source dependencies beyond the existing `JsonString` and `Utf8` files.
 
 ## Writing through ITextWriter
 
-The optional `std/core/Json/json_string_writer.gf` adapter adds:
+The optional `Standard/core/Json/json_string_writer.gf` adapter adds:
 
 ```csharp
-using std::Json;
+using Standard::Json;
 extension ITextWriter {
     public void WriteJsonString(readonly(char)* input, nuint length);
 }
@@ -173,9 +173,9 @@ extension ITextWriter {
 Include it alongside `Json/JsonString.gf` and `Text/utf8.gf`. For example:
 
 ```csharp
-using std::Json;
+using Standard::Json;
 char[128] storage;
-std::Text::BufferWriter buffer = new(storage, 128);
+Standard::Text::BufferWriter buffer = new(storage, 128);
 ITextWriter* output = &buffer;
 output.WriteJsonString("hello", 5);
 ```

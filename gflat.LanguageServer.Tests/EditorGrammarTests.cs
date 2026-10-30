@@ -11,12 +11,17 @@ public class EditorGrammarTests
 {
     [Theory]
     [InlineData("namespace Console;", "namespace", "keyword")]
-    [InlineData("throw new std::IOException();", "new", "keyword")]
-    [InlineData("throw new std::IOException();", "throw", "keyword - control")]
+    [InlineData("throw new Standard::IOException();", "new", "keyword")]
+    [InlineData("throw new Standard::IOException();", "throw", "keyword - control")]
     [InlineData("if (ready) return;", "if", "keyword - control")]
     [InlineData("managed<int, Collector> item;", "managed", "keyword")]
     [InlineData("public expect alias GC : ICollector;", "expect", "keyword")]
     [InlineData("implementation int {", "implementation", "keyword")]
+    [InlineData("extension int {", "extension", "keyword")]
+    [InlineData("extension implementation int {", "extension", "keyword")]
+    [InlineData("extension implementation int {", "implementation", "keyword")]
+    [InlineData("extension<T : IFormattable> Box<T> {", "extension", "keyword")]
+    [InlineData("public static explicit operator int(Value value)", "explicit", "keyword")]
     public void KeywordScopesSelectTheCorrectVisualStudioClassification(string line, string word, string expected)
     {
         int offset = line.IndexOf(word, StringComparison.Ordinal);
@@ -28,18 +33,31 @@ public class EditorGrammarTests
         Assert.Equal(expected, mapping.Descendants("key").Single(k => k.Value == "vsclassificationtype").ElementsAfterSelf("string").First().Value);
     }
 
+    [Theory]
+    [InlineData("int extension = 1;", "extension")]
+    [InlineData("int explicit = 1;", "explicit")]
+    [InlineData("int implementation = 1;", "implementation")]
+    [InlineData("return extension + explicit + implementation;", "extension")]
+    public void ContextualKeywordsLeaveOrdinaryLocalsUnclassifiedAsKeywords(string line, string word)
+    {
+        int offset=line.IndexOf(word,StringComparison.Ordinal);
+        var token=Assert.Single(Grammar().TokenizeLine(line).Tokens,t=>t.StartIndex<=offset&&t.EndIndex>offset);
+        Assert.DoesNotContain(token.Scopes,scope=>scope.StartsWith("storage.modifier",StringComparison.Ordinal));
+        Assert.DoesNotContain(token.Scopes,scope=>scope.StartsWith("keyword.",StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ConsoleQualifiersRemainNeutralAcrossTheWholeFile()
     {
         string root = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(root, "std", "libc", "Console", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
+        while (!File.Exists(Path.Combine(root, "Standard", "libc", "Console", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
         var grammar = Grammar();
         ITokenizeLineResult? previous = null;
         int qualifiers = 0;
-        foreach (string line in File.ReadLines(Path.Combine(root, "std", "libc", "Console", "Console.gf")))
+        foreach (string line in File.ReadLines(Path.Combine(root, "Standard", "libc", "Console", "Console.gf")))
         {
             var result = grammar.TokenizeLine(line, previous?.RuleStack, TimeSpan.FromSeconds(2));
-            foreach (Match match in Regex.Matches(line, @"\bstd(?=::)"))
+            foreach (Match match in Regex.Matches(line, @"\bStandard(?=::)"))
             {
                 var token = Assert.Single(result.Tokens, t => t.StartIndex <= match.Index && t.EndIndex > match.Index);
                 Assert.Contains("entity.name.qualifier.gflat", token.Scopes);
@@ -52,13 +70,13 @@ public class EditorGrammarTests
     }
 
     [Theory]
-    [InlineData("throw new std::IOException(\"Console flush failed\");")]
-    [InlineData("std::IOException error;")]
-    [InlineData("public std::IOException Read();")]
+    [InlineData("throw new Standard::IOException(\"Console flush failed\");")]
+    [InlineData("Standard::IOException error;")]
+    [InlineData("public Standard::IOException Read();")]
     public void TypeQualifiersDoNotReceiveFallbackTypeColors(string line)
     {
         var token = Assert.Single(Grammar().TokenizeLine(line).Tokens,
-            t => t.StartIndex <= line.IndexOf("std", StringComparison.Ordinal) && t.EndIndex > line.IndexOf("std", StringComparison.Ordinal));
+            t => t.StartIndex <= line.IndexOf("Standard", StringComparison.Ordinal) && t.EndIndex > line.IndexOf("Standard", StringComparison.Ordinal));
         Assert.Contains(token.Scopes, s => s.StartsWith("entity.name.qualifier", StringComparison.Ordinal));
         Assert.DoesNotContain(token.Scopes, s => s.StartsWith("entity.name.type", StringComparison.Ordinal));
         AssertScope(Grammar().TokenizeLine(line), line.IndexOf("IOException", StringComparison.Ordinal), "entity.name.type");
@@ -167,15 +185,15 @@ public class EditorGrammarTests
     [InlineData("'\\n'", "\\n", "constant.character.escape")]
     [InlineData("// return \"text\"", "return", "comment.line")]
     [InlineData("get => value;", "get", "keyword.other.accessor")]
-    [InlineData("namespace std::Collections;", "namespace", "keyword.other")]
-    [InlineData("namespace std::Collections;", "::", "keyword.operator")]
+    [InlineData("namespace Standard::Collections;", "namespace", "keyword.other")]
+    [InlineData("namespace Standard::Collections;", "::", "keyword.operator")]
     [InlineData("public int this[int i] { immutable get => data[i]; }", "this", "constant.language")]
     [InlineData("public int this[int i] { immutable get => data[i]; }", "get", "keyword.other.accessor")]
     [InlineData("public static String operator+() {", "String", "entity.name.type")]
     [InlineData("public static String operator s\"\"(readonly(char)* data, nuint length) {", "String", "entity.name.type")]
     [InlineData("String operator s\"\"(", "s\"\"", "entity.name.function.literal")]
     [InlineData("public static String operator+(", "operator", "keyword.other")]
-    [InlineData("public static immutable(std::String)* operator+(", "String", "entity.name.type")]
+    [InlineData("public static immutable(Standard::String)* operator+(", "String", "entity.name.type")]
     [InlineData("public static List<Pair<int, String>> operator+(", "String", "entity.name.type")]
     [InlineData("public static int operator+(", "int", "storage.type")]
     [InlineData("// String operator+(", "String", "comment.line")]
@@ -198,7 +216,7 @@ public class EditorGrammarTests
     [InlineData("private String name;", "String", "entity.name.type")]
     [InlineData("void Use(immutable(String)* text, String* output)", "String", "entity.name.type")]
     [InlineData("public List<String> Make()", "String", "entity.name.type")]
-    [InlineData("public std::String Make()", "String", "entity.name.type")]
+    [InlineData("public Standard::String Make()", "String", "entity.name.type")]
     [InlineData("public immutable(String)* Data {", "String", "entity.name.type")]
     [InlineData("return new String();", "String", "entity.name.type")]
     [InlineData("public String Name { immutable get => name; }", "String", "entity.name.type")]

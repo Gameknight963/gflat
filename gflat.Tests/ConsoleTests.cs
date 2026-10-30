@@ -10,7 +10,7 @@ public class ConsoleTests
         string[] names = strings
             ? ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "libc/Console/console_string.gf"]
             : ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf"];
-        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }
 
@@ -98,11 +98,11 @@ public class ConsoleTests
             int main() {
                 char[4] buffer; nuint length = 0;
                 try { Console::TryReadLine(buffer, 4, ref length); return 1; }
-                catch (ref std::Text::BufferTooSmallException error) { }
+                catch (ref Standard::Text::BufferTooSmallException error) { }
                 if (length != (nuint)3 || buffer[0] != 'a' || buffer[2] != 'c' || buffer[3] != '\0') return 2;
                 if (Console::ReadLine(buffer, 4) != (nuint)2 || buffer[0] != 'o' || buffer[1] != 'k') return 3;
                 try { Console::ReadLine(buffer, 4); return 4; }
-                catch (ref std::IO::EndOfStreamException error) { return 42; }
+                catch (ref Standard::IO::EndOfStreamException error) { return 42; }
             }
             """, "abcdef\nok\n");
         Assert.Equal(42, result.ExitCode);
@@ -115,7 +115,7 @@ public class ConsoleTests
             int main() {
                 char sentinel = '?'; nuint length = 99;
                 try { Console::TryReadLine(&sentinel, 0, ref length); return 1; }
-                catch (ref std::Text::BufferTooSmallException error) { }
+                catch (ref Standard::Text::BufferTooSmallException error) { }
                 if (sentinel != '?' || length != (nuint)0) return 2;
                 char[8] buffer;
                 if (Console::ReadLine(buffer, 8) != (nuint)3 || buffer[0] != 'a' || buffer[2] != 'c') return 3;
@@ -129,7 +129,7 @@ public class ConsoleTests
     public void StringAllocationFailurePreservesValueAndAllowsReadingRemainingInput()
     {
         var result = Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             extern void*? malloc(nuint size);
             extern void free(void* data);
             static class State { public static bool Fail; }
@@ -175,7 +175,7 @@ public class ConsoleTests
     public void StringOverloadsBorrowOutputAndReuseReadCapacity()
     {
         var result = Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 String text = s"A\0B";
                 Console::Write(ref text); Console::WriteLine(ref text);
@@ -210,10 +210,10 @@ public class ConsoleTests
                     if (freopen({{literal}}, "w", __gflat_stdio_stdin()) == null) return 1;
                     char[8] buffer; nuint length = 0;
                     try { Console::TryReadLine(buffer, 8, ref length); return 2; }
-                    catch (ref std::IO::IOException error) { }
+                    catch (ref Standard::IO::IOException error) { }
                     if (freopen({{literal}}, "r", __gflat_stdio_stdout()) == null) return 3;
                     try { Console::Write("text"); return 4; }
-                    catch (ref std::IO::IOException error) { }
+                    catch (ref Standard::IO::IOException error) { }
                     return 42;
                 }
                 """);
@@ -273,7 +273,7 @@ public class ConsoleTests
     {
         string input = new string('x', 255) + "\r";
         var result = Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 String line = Console::ReadLine();
                 if (line.Length != (nuint)256 || line[(nuint)255] != '\r') return 1;
@@ -284,7 +284,7 @@ public class ConsoleTests
         Assert.Equal(input, result.StandardOutput);
         string longLine = new('x', 1200);
         var large = Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() { String line = Console::ReadLine(); Console::Write(ref line); return 42; }
             """, longLine + "\n", true);
         Assert.Equal(42, large.ExitCode);

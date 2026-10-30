@@ -21,7 +21,7 @@ public sealed class BitSetOverlapTests
             expected.Add(((BitArray)left.Clone()).And(right).Cast<bool>().Any(v=>v));
         }
         Run($$"""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint size);extern void free(void* value);
             bool deny=false;int attempts=0;
             namespace Memory{
@@ -67,7 +67,7 @@ public sealed class BitSetOverlapTests
     [InlineData(2)]
     public void ShrinkRegrowthClearsPaddingAndLengthMismatchesLeaveInputsUnchanged(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main(){
                 BitSet left=new(65);BitSet right=new(65);left[64]=true;right[64]=true;
                 if(!left.Overlaps(&right))return 1;
@@ -95,7 +95,7 @@ public sealed class BitSetOverlapTests
     private static void Run(string program,int optimization)
     {
         string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("bitset-overlaps.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat-bitset-overlap-"+Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);

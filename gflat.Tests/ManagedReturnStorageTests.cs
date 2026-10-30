@@ -76,7 +76,7 @@ public sealed class ManagedReturnStorageTests
             string executable = Path.Combine(directory, OperatingSystem.IsWindows() ? "program.exe" : "program");
             string emitted = vector
                 ? Compiler.Emit(new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf" }
-                    .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                    .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                     .Append(new SourceFile("main.gf", Runtime + source)))
                 : Compiler.Emit(Runtime + source);
             File.WriteAllText(ir, emitted);
@@ -393,7 +393,7 @@ public sealed class ManagedReturnStorageTests
     public void NativeVectorOwnsElementsThroughGrowthPopClearAndDestruction() => Succeeds("""
         int main() {
             {
-                std::Collections::Vector<int^> values = new std::Collections::Vector<int^>();
+                Standard::Collections::Vector<int^> values = new Standard::Collections::Vector<int^>();
                 for (int i = 0; i < 20; i++) values.Add(new^ int(i));
                 if (rc_live_count() != 20) return 101;
                 for (nuint i = 0; i < values.Count; i++) if (*values[i] != (int)i) return 102;

@@ -1,11 +1,11 @@
 # BigInteger
 
-`std::Numerics::BigInteger` is an owning signed integer whose precision is limited by
+`Standard::Numerics::BigInteger` is an owning signed integer whose precision is limited by
 available storage. It is an ordinary library value, using `Vector<uint>` decimal
 limbs; it requires no GC or compiler-specific arithmetic support.
 
 ```csharp
-using std; using std::Numerics;
+using Standard; using Standard::Numerics;
 
 int main()
 {
@@ -90,8 +90,8 @@ which replacement can then release. This does not permit corrupting owner
 metadata or passing uninitialized result storage.
 
 ```csharp
-using std::Text;
-using std; using std::Numerics;
+using Standard::Text;
+using Standard; using Standard::Numerics;
 int main()
 {
     BigInteger value = new(42l);
@@ -205,8 +205,8 @@ reads finish before this commit. This permits ordinary complete owning objects,
 not fabricated output references inside owner metadata or limb storage.
 
 ```csharp
-using std::Text;
-using std; using std::Numerics;
+using Standard::Text;
+using Standard; using Standard::Numerics;
 int main()
 {
     BigInteger dividend = BigInteger::Parse("-100000000000000000001");
@@ -255,7 +255,7 @@ ordinary bit-truncation rules. No conversion operator or implicit conversion is
 introduced.
 
 ```csharp
-using std; using std::Numerics;
+using Standard; using Standard::Numerics;
 int main()
 {
     BigInteger integer = BigInteger::Parse("18446744073709551615");
@@ -285,8 +285,8 @@ clean up intermediate owners, and preserve the receiver and any existing
 assignment target.
 
 ```csharp
-using std::Text;
-using std; using std::Numerics;
+using Standard::Text;
+using Standard; using Standard::Numerics;
 int main()
 {
     BigInteger baseValue = new(-12l);
@@ -320,8 +320,8 @@ String and collection operations; this is an ordinary helper, not a built-in
 formatting mode:
 
 ```csharp
-using std::Text;
-using std; using std::Numerics; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Numerics; using Standard::Collections;
 
 String ToRadix(immutable(BigInteger)* input, int radix)
 {
@@ -369,7 +369,7 @@ therefore always produces zero for valid exponents. This agrees with
 [.NET BigInteger.ModPow](https://learn.microsoft.com/en-us/dotnet/api/system.numerics.biginteger.modpow).
 
 ```csharp
-using std; using std::Numerics;
+using Standard; using Standard::Numerics;
 int main()
 {
     BigInteger value = new(4l);

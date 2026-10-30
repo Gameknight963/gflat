@@ -13,7 +13,7 @@ public sealed class PathEndingEditorTests
     {
         string pointerResult=name=="EndsInDirectorySeparator"?"bool":"String";
         string spanResult=name=="EndsInDirectorySeparator"?"bool":"Span<readonly(char)>";
-        string text="using std; using std::Text; using std::IO; using std::Memory;void Probe(){Span<readonly(char)> path=new(\"folder/\",7);"
+        string text="using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;void Probe(){Span<readonly(char)> path=new(\"folder/\",7);"
             +pointerResult+" pointerResult=Paths::"+name+"(\"folder/\",PathStyle::Unix);"
             +spanResult+" spanResult=Paths::"+name+"(path,PathStyle::Unix);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
@@ -46,12 +46,12 @@ public sealed class PathEndingEditorTests
             string label=selected.GetProperty("label").GetString()!;
             Assert.Contains(name,label);Assert.Contains("PathStyle",label);Assert.DoesNotContain('$',label);
             // Both overloads have two arguments: receiver input and return identify selection.
-            if(row.Span)Assert.Matches(@"(?:std::Memory::)?Span<readonly\(char\)>\s+path",label);
+            if(row.Span)Assert.Matches(@"(?:Standard::Memory::)?Span<readonly\(char\)>\s+path",label);
             else {Assert.DoesNotContain("Span<",label);Assert.Contains('*',label);}
-            const string owner=@"(?:std::IO::)?Paths::";
-            if(row.Return=="String")Assert.Matches(@"\b(?:std::Text::)?String\s+"+owner+name,label);
+            const string owner=@"(?:Standard::IO::)?Paths::";
+            if(row.Return=="String")Assert.Matches(@"\b(?:Standard::Text::)?String\s+"+owner+name,label);
             else if(row.Return=="bool")Assert.Matches(@"\bbool\s+"+owner+name,label);
-            else Assert.Matches(@"(?:std::Memory::)?Span<readonly\(char\)>\s+"+owner+name,label);
+            else Assert.Matches(@"(?:Standard::Memory::)?Span<readonly\(char\)>\s+"+owner+name,label);
             if(name=="EndsInDirectorySeparator")Assert.Contains("nothrow",label);
             else Assert.DoesNotContain("nothrow",label);
 

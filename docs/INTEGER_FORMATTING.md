@@ -1,6 +1,6 @@
 # Integer formatting into caller buffers
 
-`std/core/Text/IntegerFormatting.gf` supplies `std::Text::IntegerFormatting::TryFormat`
+`Standard/core/Text/IntegerFormatting.gf` supplies `Standard::Text::IntegerFormatting::TryFormat`
 overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
 `nint`, `nuint`, and signed 128-bit `extralong`. The functions are `nothrow` and
 require no String, libc,
@@ -9,7 +9,7 @@ allocation, exception runtime, or writer interface.
 ```csharp
 char[20] buffer;
 nuint written = 0;
-bool success = std::Text::IntegerFormatting::TryFormat(-123, buffer, 20, ref written);
+bool success = Standard::Text::IntegerFormatting::TryFormat(-123, buffer, 20, ref written);
 // success == true; the first written bytes are "-123".
 ```
 
@@ -31,7 +31,7 @@ exactly `written` bytes change; bytes outside that range remain unchanged.
 The caller supplies writable storage for the stated capacity and must keep
 `written` storage disjoint from the output buffer.
 
-The existing writer-based `std::Format` functions remain independently usable
+The existing writer-based `Standard::Format` functions remain independently usable
 with their existing source dependencies. This optional source is intended for
 caller-buffer and freestanding code that does not need writer dispatch.
 
@@ -43,7 +43,7 @@ caller-buffer and freestanding code that does not need writer dispatch.
 ```csharp
 char[16] address;
 nuint written = 0;
-std::Text::IntegerFormatting::TryFormatHex(4660ul, address, 16, ref written, 16, false);
+Standard::Text::IntegerFormatting::TryFormatHex(4660ul, address, 16, ref written, 16, false);
 // The counted result is "0000000000001234".
 ```
 
@@ -77,7 +77,7 @@ by ten. Its signed minimum is supported using complement and carry; it does not
 use 128-bit division or introduce a compiler-runtime dependency. Counting and
 writing use scalar locals, with no temporary-buffer copy.
 
-The optional `std/core/extra_long_format.gf` supplies writer-based
+The optional `Standard/core/extra_long_format.gf` supplies writer-based
 `Format(extralong, ITextWriter*)`. Include `Text/IntegerFormatting.gf` and the normal
 `ITextWriter` contract when selecting sources explicitly. It writes the counted
 result once using a 40-byte local buffer; destination exceptions propagate

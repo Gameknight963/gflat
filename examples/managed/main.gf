@@ -1,5 +1,5 @@
-using std::Collections;
-using std;
+using Standard::Collections;
+using Standard;
 
 class Node
 {
@@ -32,11 +32,11 @@ int main()
     Vector<Node^> roots = new Vector<Node^>();
     BuildGraph(&roots);
     GC::Collect();
-    if (std::TracingCollector::ManagedCount != 20 || CheckGraph(&roots) != 190) return 1;
+    if (Standard::TracingCollector::ManagedCount != 20 || CheckGraph(&roots) != 190) return 1;
     Console::WriteLine("20 cyclic nodes survive through a native Vector.");
 
     roots.Clear();
-    if (GC::Collect() != 20 || std::TracingCollector::ManagedCount != 0) return 2;
+    if (GC::Collect() != 20 || Standard::TracingCollector::ManagedCount != 0) return 2;
     Console::WriteLine("Removing the roots reclaims all 20 cycles.");
     return 0;
 }

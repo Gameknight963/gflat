@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringRepeatTests
 {
     private const string Allocator = """
-        using std; using std::Text;
+        using Standard; using Standard::Text;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocations = 0; int releases = 0;
         bool deny = false; bool failNext = false; nuint failedSize = 0;
@@ -166,7 +166,7 @@ public sealed class StringRepeatTests
 
     private static void Run(string source, int optimization)
     {
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("string-repeat.gf", source));
         string ir = Compiler.Emit(files, options: new() { InternalizeFunctions = true });

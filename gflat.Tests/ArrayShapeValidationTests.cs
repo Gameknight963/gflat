@@ -17,9 +17,9 @@ public sealed class ArrayShapeValidationTests
     [InlineData("int main() { int[][] values = [[1, 2], [3, 4]]; return 0; }")]
     [InlineData("extern int[] Make();")]
     [InlineData("int[]()* callback;")]
-    [InlineData("int main() { int[]* pointer = (int[]*)1; *pointer; return 0; }")]
-    [InlineData("int main() { int[]* pointer = (int[]*)1; pointer[0]; return 0; }")]
-    [InlineData("int main() { int[]* pointer = (int[]*)1; pointer + 1; return 0; }")]
+    [InlineData("int main() { int[]* pointer = ((nuint)1).reinterpret<int[]*>(); *pointer; return 0; }")]
+    [InlineData("int main() { int[]* pointer = ((nuint)1).reinterpret<int[]*>(); pointer[0]; return 0; }")]
+    [InlineData("int main() { int[]* pointer = ((nuint)1).reinterpret<int[]*>(); pointer + 1; return 0; }")]
     [InlineData("int main() { default(int[]); return 0; }")]
     [InlineData("int main() { sizeof(int[]); return 0; }")]
     public void ArrayValueStorageRequiresEveryBound(string source)

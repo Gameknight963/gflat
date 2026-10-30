@@ -1,8 +1,0 @@
-namespace std::Collections;
-
-// Equality uses the type's declared contract, including primitive implementations.
-static class EqualityComparer<T : IEquatable<T>>
-{
-    public static bool Equals(immutable(T)* left, immutable(T)* right)
-        => left.Equals(right);
-}

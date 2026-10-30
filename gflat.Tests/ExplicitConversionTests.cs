@@ -100,7 +100,7 @@ public sealed class ExplicitConversionTests
     private static void Run(string source,int optimization)
     {
         string[] names=["core/Exception.gf","libc/Memory/allocation.gf","libc/Exceptions/unhandled.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("explicit-conversion-tests.gf",source));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         _=CompilerTestHelper.RunIr(ir,optimization,expectedExitCode:0);

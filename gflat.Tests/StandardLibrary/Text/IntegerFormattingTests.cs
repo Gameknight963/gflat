@@ -7,7 +7,7 @@ public sealed class IntegerFormattingTests
 {
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/IntegerFormatting.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/IntegerFormatting.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "__gflat_eh", "@malloc", "@free", "gflat$Memory$", "ITextWriter" })
             Assert.DoesNotContain(forbidden, ir);
@@ -55,14 +55,14 @@ public sealed class IntegerFormattingTests
                     for (nuint i = 0; i < 23; i++) output[i] = 'Z';
                     for (nuint capacity = 0; capacity < lengths[test]; capacity++) {
                         written = 99;
-                        if (std::Text::IntegerFormatting::TryFormat(values[test], &output[1], capacity, ref written) || written != 0) return 1;
+                        if (Standard::Text::IntegerFormatting::TryFormat(values[test], &output[1], capacity, ref written) || written != 0) return 1;
                         for (nuint i = 0; i < 23; i++) if (output[i] != 'Z') return 2;
                     }
-                    if (!std::Text::IntegerFormatting::TryFormat(values[test], &output[1], lengths[test], ref written) || written != lengths[test]) return 3;
+                    if (!Standard::Text::IntegerFormatting::TryFormat(values[test], &output[1], lengths[test], ref written) || written != lengths[test]) return 3;
                     if (output[0] != 'Z') return 4;
                     for (nuint i = 0; i < written; i++) if (output[i + 1] != expected[test][i]) return 5;
                     for (nuint i = written + 1; i < 23; i++) if (output[i] != 'Z') return 6;
-                    if (!std::Text::IntegerFormatting::TryFormat(values[test], &output[1], 21, ref written) || written != lengths[test]) return 8;
+                    if (!Standard::Text::IntegerFormatting::TryFormat(values[test], &output[1], 21, ref written) || written != lengths[test]) return 8;
                     for (nuint i = written + 1; i < 23; i++) if (output[i] != 'Z') return 9;
                     }
                 }
@@ -70,7 +70,7 @@ public sealed class IntegerFormattingTests
         }
         code.AppendLine("""
             char*? absent = null;
-            if (std::Text::IntegerFormatting::TryFormat(0, absent!, 0, ref written) || written != 0) return 7;
+            if (Standard::Text::IntegerFormatting::TryFormat(0, absent!, 0, ref written) || written != 0) return 7;
             return 0;
             }
             """);

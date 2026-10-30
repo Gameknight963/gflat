@@ -8,7 +8,7 @@ public sealed class HexTests
     {
         var names = new List<string> { "core/Encoding/Hex.gf" };
         if (text) names.AddRange(["core/Encoding/HexText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
-        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -23,7 +23,7 @@ public sealed class HexTests
         string expected = Convert.ToHexString(input);
         if (!uppercase) expected = expected.ToLowerInvariant();
         Run($$"""
-            using std; using std::Text; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::Encoding;
             int main() {
                 char[256] input; char[513] output;
                 for (int i = 0; i < 256; i++) input[i] = (char)i;
@@ -48,7 +48,7 @@ public sealed class HexTests
     public void MalformedInputDoesNotWriteOutput(string malformed)
     {
         Run($$"""
-            using std; using std::Text; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::Encoding;
             int main() {
                 char[8] output;
                 for (int i = 0; i < 8; i++) output[i] = '?';
@@ -65,7 +65,7 @@ public sealed class HexTests
     public void EmptyMixedCaseCapacityAndLengthOverflowAreHandled()
     {
         Run("""
-            using std; using std::Text; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::Encoding;
             int main() {
                 char[8] output;
                 for (int i = 0; i < 8; i++) output[i] = '?';
@@ -88,7 +88,7 @@ public sealed class HexTests
     public void OwningConveniencesRetainBinaryZerosAndThrowOnInvalidText()
     {
         Run("""
-            using std; using std::Text; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::Encoding;
             int main() {
                 String text = HexText::Encode("A\0B", 3);
                 if (text.Length != (nuint)6 || text.Data[0] != '4' || text.Data[1] != '1' || text.Data[2] != '0' || text.Data[3] != '0' || text.Data[4] != '4' || text.Data[5] != '2') return 1;

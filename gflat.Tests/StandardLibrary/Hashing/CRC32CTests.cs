@@ -49,7 +49,7 @@ public sealed class CRC32CTests
             }
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
-            using std; using std::Hashing;
+            using Standard; using Standard::Hashing;
             nuint ReadByte(readonly(char)* text, ref nuint offset) nothrow {
                 nuint result = 0;
                 for (int i = 0; i < 2; i++) {
@@ -85,7 +85,7 @@ public sealed class CRC32CTests
                         if (first.GetValue() != expected || second.GetValue() != expected || first.GetValue() != expected) return 4;
                         second.Reset();
                         if (second.GetValue() != 0u) return 5;
-                        second.Append((readonly(char)*)4096, 0);
+                        second.Append(((nuint)4096).reinterpret<readonly(char)*>(), 0);
                         if (second.GetValue() != 0u) return 6;
                         second.Append(&storage[1], count);
                         if (second.GetValue() != expected) return 7;
@@ -103,7 +103,7 @@ public sealed class CRC32CTests
     [InlineData(2)]
     public void LegalOwnStateInputMatchesCapturedInitializedBytes(int optimization)
         => Run("""
-            using std; using std::Hashing;
+            using Standard; using Standard::Hashing;
             int main() {
                 for (int seeded = 0; seeded < 2; seeded++) {
                     for (nuint offset = 0; offset <= (nuint)sizeof(CRC32C); offset++) {
@@ -111,7 +111,7 @@ public sealed class CRC32CTests
                         if (seeded != 0) original.Append("123456789", 9);
                         CRC32C captured = original;
                         char[sizeof(CRC32C)] bytes;
-                        readonly(char)* view = (readonly(char)*)&original;
+                        readonly(char)* view = (&original).reinterpret<readonly(char)*>();
                         for (nuint i = 0; i < (nuint)sizeof(CRC32C); i++) bytes[i] = view[i];
                         nuint count = (nuint)sizeof(CRC32C) - offset;
                         captured.Append((readonly(char)*)bytes + offset, count);
@@ -125,7 +125,7 @@ public sealed class CRC32CTests
 
     private static void Run(string code, int optimization)
     {
-        var library = new SourceFile("CRC32C.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Hashing/CRC32C.gf")));
+        var library = new SourceFile("CRC32C.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Hashing/CRC32C.gf")));
         var sources = new[] { library, new SourceFile("crc32c-test.gf", code) };
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "@malloc", "@free", "gflat$Memory$", "@__gflat_gc_" })

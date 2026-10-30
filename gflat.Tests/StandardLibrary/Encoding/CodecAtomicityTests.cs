@@ -18,7 +18,7 @@ public sealed class CodecAtomicityTests
     private static void Run(string code, int optimization)
     {
         var sources = new[] { "Encoding/Base64.gf", "Encoding/Hex.gf", "Encoding/PercentEncoding.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -41,7 +41,7 @@ public sealed class CodecAtomicityTests
     [InlineData(2)]
     public void EveryInsufficientInPlaceCapacityPreservesEncodedBytesAndGuards(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Encoding; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Encoding; int main() {\n");
         foreach (var item in Cases())
         {
             code.AppendLine("{").AppendLine(Buffer(item.Encoded));
@@ -63,7 +63,7 @@ public sealed class CodecAtomicityTests
     [InlineData(2)]
     public void MalformedSuffixAfterLongValidPrefixPreservesInPlaceInputAndGuards(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Encoding; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Encoding; int main() {\n");
         foreach (var item in Cases())
         foreach (string suffix in item.Suffixes)
         {

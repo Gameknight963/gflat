@@ -1,8 +1,8 @@
-using std;
-using std::Binary;
-using std::Collections;
-using std::IO;
-using std::Text;
+using Standard;
+using Standard::Binary;
+using Standard::Collections;
+using Standard::IO;
+using Standard::Text;
 
 // Example-local file offsets and remaining file-backed bytes, never process addresses.
 struct MappedBytes
@@ -60,7 +60,7 @@ void PrintMachine(ushort machine)
 void PrintName(BinaryBufferReader* input, readonly(char)* label, ulong offset, ulong extent)
 {
     nuint start = FileRange(input, offset, extent); nuint length = 0;
-    if (extent == 0ul || !CString::TryGetLength((readonly(char)*)(input.Data! + start), (nuint)extent, ref length))
+    if (extent == 0ul || !CString::TryGetLength((input.Data! + start).reinterpret<readonly(char)*>(), (nuint)extent, ref length))
         throw new IOException("Unterminated metadata name");
     readonly(char)* hex = "0123456789abcdef";
     Console::Write(label); Console::Write("\"");

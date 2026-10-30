@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DisjointSetResetTests
 {
     private const string Counters = """
-        using std::Collections;
+        using Standard::Collections;
         extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
@@ -138,7 +138,7 @@ public sealed class DisjointSetResetTests
     [InlineData("readonly")]
     public void ProtectedPartitionViewsCannotReset(string protection)
     {
-        string program = "using std::Collections;void Probe(){DisjointSet sets=new(3);" +
+        string program = "using Standard::Collections;void Probe(){DisjointSet sets=new(3);" +
             protection + "(DisjointSet)* view=&sets;view.Reset();}";
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(program)));
         Assert.Contains($"Cannot call non-{protection}", error.Message, StringComparison.OrdinalIgnoreCase);
@@ -151,7 +151,7 @@ public sealed class DisjointSetResetTests
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/Span.gf",
             "Collections/Vector.gf", "Collections/DisjointSet.gf"];
         return files.Select(file => new SourceFile(file,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("disjoint-set-reset.gf", program));
     }
 

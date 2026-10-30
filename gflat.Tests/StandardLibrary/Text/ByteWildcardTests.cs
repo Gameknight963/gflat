@@ -44,7 +44,7 @@ public sealed class ByteWildcardTests
         }
         string hex = Convert.ToHexString(packet.ToArray());
         string program = $$"""
-            using std::Text;
+            using Standard::Text;
             int Digit(char value)nothrow{if(value<='9')return value-'0';return value-'A'+10;}
             byte ReadByte(readonly(char)* data,ref nuint at)nothrow{
                 byte value=(byte)((Digit(data[at])<<4)|Digit(data[at+1]));at+=2;return value;
@@ -72,7 +72,7 @@ public sealed class ByteWildcardTests
                 return 0;
             }
             """;
-        string path = Path.Combine(AppContext.BaseDirectory, "Std/core/Text/wildcard_matching.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/wildcard_matching.gf");
         string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)), new SourceFile("byte-wildcard-core.gf", program)],
             options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "invoke ", "personality", "__gflat_eh_", "gflat$Memory$", "@malloc", "@free", "__gflat_gc" })
@@ -89,7 +89,7 @@ public sealed class ByteWildcardTests
     public void BorrowedAdaptersHandleEmptySpansOverlapAndCountedZerosWithoutAllocation(int optimization)
     {
         string program = """
-            using std;using std::Text;using std::Memory;
+            using Standard;using Standard::Text;using Standard::Memory;
             int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){attempts++;return null;}
@@ -113,7 +113,7 @@ public sealed class ByteWildcardTests
                 if(attempts!=0)return 11;return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("byte-wildcard-adapters.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

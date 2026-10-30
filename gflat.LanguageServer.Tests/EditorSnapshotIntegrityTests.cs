@@ -31,7 +31,7 @@ public sealed class EditorSnapshotIntegrityTests
         Assert.Contains(name,hover);Assert.Contains("int",hover);
         Assert.DoesNotContain("$",hover);
         CheckSpans("hover");
-        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span(text.IndexOf(name+"<T>",StringComparison.Ordinal),name.Length))),
+        Assert.Equal(new Location(Workspace.FileUri(source.Path),Workspace.ToRange(source.Span((extension?EditorSourceDeclarations.ExtensionMethod(source,name):text.IndexOf(name+"<T>",StringComparison.Ordinal)),name.Length))),
             Assert.IsType<Location>(model.Definition(source.Path,use)));
         CheckSpans("definition");
         var completion=Json(model.Completion(source.Path,use));

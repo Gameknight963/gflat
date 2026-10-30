@@ -45,7 +45,7 @@ public sealed class Base32Tests
         string encoded=string.Concat(cases.Select(Encode));
         string lengths=string.Join(',',cases.Select(value=>value.Length.ToString(CultureInfo.InvariantCulture)));
         await Run($$"""
-            using std; using std::Encoding;
+            using Standard; using Standard::Encoding;
             int Digit(char value) nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             int main(){
                 int[{{cases.Count}}] lengths=[{{lengths}}];readonly(char)* data="{{data}}";
@@ -130,7 +130,7 @@ public sealed class Base32Tests
         string blob=string.Concat(values.Select(value=>Convert.ToHexString(value.Select(character=>(byte)character).ToArray())));
         string lengths=string.Join(',',values.Select(value=>value.Length.ToString(CultureInfo.InvariantCulture)));
         await Run($$"""
-            using std; using std::Encoding;
+            using Standard; using Standard::Encoding;
             int Digit(char value) nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             int main(){
                 readonly(char)* blob="{{blob}}";int[{{values.Length}}] lengths=[{{lengths}}];nuint offset=0;
@@ -159,7 +159,7 @@ public sealed class Base32Tests
     [InlineData(2)]
     public async Task OverflowAndCountPreflightsDoNotReadInputAndPureCodecNeedsNoRuntime(int optimization)
         =>await Run("""
-            using std; using std::Encoding;
+            using Standard; using Standard::Encoding;
             int main(){
                 nuint maximum=(nuint)0-1;nuint boundary=(maximum/8)*5;nuint written=99;
                 if(!Base32::TryGetEncodedLength(boundary,ref written)||written!=maximum-7)return 1;
@@ -182,7 +182,7 @@ public sealed class Base32Tests
 
     private static async Task Run(string program,int optimization)
     {
-        SourceFile[] files=[new("Base32.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Encoding/Base32.gf"))),new("main.gf",program)];
+        SourceFile[] files=[new("Base32.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Encoding/Base32.gf"))),new("main.gf",program)];
         string ir=Compiler.Emit(files,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         Assert.DoesNotContain("@__gflat_eh_",ir);Assert.DoesNotContain("@malloc",ir);Assert.DoesNotContain("@__gflat_gc_",ir);
         foreach(string name in new[]{"TryGetEncodedLength","TryEncode","TryGetDecodedLength","TryDecode"})

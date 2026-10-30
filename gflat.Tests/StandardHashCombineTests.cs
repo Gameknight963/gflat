@@ -49,12 +49,12 @@ public sealed class StandardHashCombineTests
                     defer{fclose(file!);}char[20] row;
                     for(int i=0;i<4096;i++){
                         if(fread((void*)&row[0],1,12,file!)!=12)return 2;
-                        if(std::Hashing::Integer(Word(row,8))!=(nuint)Word(&row[8],4))return 3;
+                        if(Standard::Hashing::Integer(Word(row,8))!=(nuint)Word(&row[8],4))return 3;
                     }
                     for(int i=0;i<{{pairs.Count}};i++){
                         if(fread((void*)&row[0],1,20,file!)!=20)return 4;
                         nuint first=(nuint)Word(row,8);nuint second=(nuint)Word(&row[8],8);
-                        if(std::Hashing::Combine(first,second)!=(nuint)Word(&row[16],4))return 5;
+                        if(Standard::Hashing::Combine(first,second)!=(nuint)Word(&row[16],4))return 5;
                     }
                     if(fread((void*)&row[0],1,1,file!)!=0)return 6;return 0;
                 }
@@ -76,12 +76,12 @@ public sealed class StandardHashCombineTests
     public void CompositeKeysAndStructuredPairsDistributeWithoutQuadraticEquality(int optimization)
     {
         string code="""
-            using std; using std::Collections;
+            using Standard; using Standard::Collections;
             static class State{public static int Comparisons;}
             struct Point:IHashable,IEquatable<Point>{
                 public ulong X;public ulong Y;
                 public Point(ulong x,ulong y){X=x;Y=y;}
-                public immutable nuint GetHashCode()=>std::Hashing::Combine(std::Hashing::Integer(X),std::Hashing::Integer(Y));
+                public immutable nuint GetHashCode()=>Standard::Hashing::Combine(Standard::Hashing::Integer(X),Standard::Hashing::Integer(Y));
                 public immutable bool Equals(immutable(Point)* other){State::Comparisons++;return X==other.X&&Y==other.Y;}
             }
             Point Make(int i,int family){
@@ -101,7 +101,7 @@ public sealed class StandardHashCombineTests
                     Point value=Make(i,family);nuint hash=value.GetHashCode();bool seen=false;
                     for(int j=0;j<i;j++)if(hashes[j]==hash)seen=true;
                     if(!seen)unique++;hashes[i]=hash;buckets[hash%256]++;
-                    if(family==1&&hash==std::Hashing::Combine(std::Hashing::Integer(value.Y),std::Hashing::Integer(value.X)))swapped++;
+                    if(family==1&&hash==Standard::Hashing::Combine(Standard::Hashing::Integer(value.Y),Standard::Hashing::Integer(value.X)))swapped++;
                 }
                 int occupied=0;int maximum=0;
                 for(int i=0;i<256;i++){if(buckets[i]!=0)occupied++;if(buckets[i]>maximum)maximum=buckets[i];}
@@ -131,6 +131,6 @@ public sealed class StandardHashCombineTests
             .Select(name=>new SourceFile(name,Read(name))).Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
     }
-    private static string Read(string name)=>File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name));
+    private static string Read(string name)=>File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name));
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
 }

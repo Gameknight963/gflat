@@ -7,7 +7,7 @@ public sealed class StandardRotationTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf", "Memory/Span.gf", "Collections/Vector.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Theory]
@@ -31,7 +31,7 @@ public sealed class StandardRotationTests
                     """);
             }
         var result=CompilerTestHelper.Run(Sources($$"""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){
                 Span<int> empty=new();Rotate<int>(empty,0);
                 {{checks}}
@@ -52,7 +52,7 @@ public sealed class StandardRotationTests
     public void RotationRelocatesNoncopyableOwnersWithoutAllocationsOrDestructors(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint size);extern void free(void* storage);
             int allocations=0;
             replace void*? Memory::Allocate(nuint bytes){allocations++;return malloc(bytes);}
@@ -86,7 +86,7 @@ public sealed class StandardRotationTests
     [Fact]
     public void ReadonlyElementsCannotBeRotated()
         => Assert.Throws<TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){int[2] values=[1,2];Span<readonly(int)> view=new(values,2);Rotate<readonly(int)>(view,1);return 0;}
             """)));
 
@@ -96,7 +96,7 @@ public sealed class StandardRotationTests
     public void ManagedElementRootsFollowTheirNewSlotsAndAreReleased(int optimization)
     {
         var sources=Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;Next=null;}}
             void Check(){
                 Vector<Node^> values=new();
@@ -110,8 +110,8 @@ public sealed class StandardRotationTests
                 if(GC::Collect()!=31)throw new Exception("rotated roots survived");
             }
             int main(){Check();GC::Collect();return (int)TracingCollector::ManagedCount;}
-            """).Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(name=>new SourceFile("std/libc/"+name,
-                File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",name)))));
+            """).Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(name=>new SourceFile("Standard/libc/"+name,
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",name)))));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

@@ -24,7 +24,7 @@ public sealed class FileFloatingBinaryTests
         WithDirectory(directory=>{
             string source=Path.Combine(directory,"input.bin"),target=Path.Combine(directory,"output.bin");File.WriteAllBytes(source,input);
             Run($$"""
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 int main(){
                     uint[{{floats.Length}}] floatBits=[{{string.Join(",",floats.Select(v=>v.ToString(CultureInfo.InvariantCulture)+"u"))}}];
                     ulong[{{doubles.Length}}] doubleBits=[{{string.Join(",",doubles.Select(v=>v.ToString(CultureInfo.InvariantCulture)+"ul"))}}];
@@ -58,7 +58,7 @@ public sealed class FileFloatingBinaryTests
             string shortFloat=Path.Combine(directory,"short4.bin"),shortDouble=Path.Combine(directory,"short8.bin"),target=Path.Combine(directory,"output.bin");
             File.WriteAllBytes(shortFloat,[1,2,3]);File.WriteAllBytes(shortDouble,[1,2,3,4,5,6,7]);
             Run($$"""
-                using std; using std::IO;
+                using Standard; using Standard::IO;
                 int main(){
                     File first=File::OpenRead({{Literal(shortFloat)}});
                     try{FileBinary::ReadFloat{{order}}(&first);return 1;}catch(ref EndOfStreamException error){}
@@ -91,7 +91,7 @@ public sealed class FileFloatingBinaryTests
     {
         // Select the facade and its core binary helpers explicitly; do not rely on implicit std loading.
         var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("main.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

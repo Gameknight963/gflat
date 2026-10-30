@@ -151,7 +151,7 @@ public sealed class ZipListExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("zip-list.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/zip-list.gf"))));
             string ir = Path.Combine(directory, "zip-list.ll"), executable = Path.Combine(directory, "zip-list.exe");

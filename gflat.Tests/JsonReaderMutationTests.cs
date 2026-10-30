@@ -37,7 +37,7 @@ public sealed class JsonReaderMutationTests
                 }
             }
 
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("json-mutations.gf", NativeProgram));
             string ir = Path.Combine(directory, "reader.ll");
@@ -190,7 +190,7 @@ public sealed class JsonReaderMutationTests
     }
 
     private const string NativeProgram = """
-        using std; using std::Text; using std::Json; using std::IO;
+        using Standard; using Standard::Text; using Standard::Json; using Standard::IO;
         int Report(int row,readonly(char)* message) {
             Console::Error.Write("Row ",4);
             row.Format(Console::Error);

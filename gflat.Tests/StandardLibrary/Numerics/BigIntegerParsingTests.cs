@@ -214,7 +214,7 @@ public sealed class BigIntegerParsingTests
             """, [], optimization));
 
     private const string Counters = """
-        using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
         extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;nuint capturedBytes=0;void*? watched=null;int watchedFrees=0;
@@ -241,7 +241,7 @@ public sealed class BigIntegerParsingTests
     }
     private static void Run(string directory,string program,string[] arguments,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-try-parse.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

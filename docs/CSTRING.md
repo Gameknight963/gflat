@@ -1,6 +1,6 @@
 # Borrowed C strings
 
-`std/core/Text/CString.gf` provides standalone `std::Text::CString` helpers for raw
+`Standard/core/Text/CString.gf` provides standalone `Standard::Text::CString` helpers for raw
 null-terminated strings. Its source has no String, Span, allocation, libc, or
 exception-runtime calls. Every operation is `nothrow`.
 
@@ -14,13 +14,13 @@ have separate lowering rules; source independence alone is not a proof that a
 final binary has no runtime imports.
 
 ```csharp
-using std::Text;
-nuint length = std::Text::CString::Length("hello");
-bool same = std::Text::CString::Equals("hello", "hello");
-int order = std::Text::CString::Compare("apple", "pear");
-bool prefix = std::Text::CString::StartsWith("hello", "hell");
-bool suffix = std::Text::CString::EndsWith("hello", "llo");
-bool empty = std::Text::CString::IsNullOrEmpty(null);
+using Standard::Text;
+nuint length = Standard::Text::CString::Length("hello");
+bool same = Standard::Text::CString::Equals("hello", "hello");
+int order = Standard::Text::CString::Compare("apple", "pear");
+bool prefix = Standard::Text::CString::StartsWith("hello", "hell");
+bool suffix = Standard::Text::CString::EndsWith("hello", "llo");
+bool empty = Standard::Text::CString::IsNullOrEmpty(null);
 ```
 
 Input parameters are borrowed `readonly(char)*` pointers; `IsNullOrEmpty` accepts
@@ -52,7 +52,7 @@ always returns `NotFound`, including in empty strings. This differs from C's
 NUL are never searched. Both helpers are `nothrow` and need only `CString.gf`.
 
 ```csharp
-using std::Text;
+using Standard::Text;
 
 int main()
 {
@@ -81,9 +81,9 @@ unterminated regions safe.
 ## Bounded length
 
 ```csharp
-using std::Text;
+using Standard::Text;
 nuint length = 0;
-bool terminated = std::Text::CString::TryGetLength(buffer, capacity, ref length);
+bool terminated = Standard::Text::CString::TryGetLength(buffer, capacity, ref length);
 ```
 
 `capacity` is the number of readable bytes beginning at `buffer`, including
@@ -100,9 +100,9 @@ the method does not promise to preserve bytes overlapping its explicit output.
 ## Bounded copy
 
 ```csharp
-using std::Text;
+using Standard::Text;
 char[16] output;
-bool copied = std::Text::CString::TryCopy("hello", output, 16);
+bool copied = Standard::Text::CString::TryCopy("hello", output, 16);
 ```
 
 `TryCopy(text, output, capacity)` copies through the first null, including that
@@ -121,15 +121,15 @@ Input must be readable through its first terminator, or for `capacity` bytes if
 there is no terminator in that range. Output must designate writable storage for
 the stated capacity. Keep both regions stable during validation and copying;
 the method retains no pointer. There is no allocation, exception, `strcpy`, or
-mandatory additional std source. The native-optimizer caveats above still apply.
+mandatory additional Standard source. The native-optimizer caveats above still apply.
 
 ## Bounded append
 
 ```csharp
-using std::Text;
+using Standard::Text;
 char[16] output;
-std::Text::CString::TryCopy("hello", output, 16);
-bool appended = std::Text::CString::TryAppend("!", output, 16); // hello!
+Standard::Text::CString::TryCopy("hello", output, 16);
+bool appended = Standard::Text::CString::TryAppend("!", output, 16); // hello!
 ```
 
 `TryAppend(text, output, capacity)` appends to an existing terminated string.
@@ -150,5 +150,5 @@ itself or appending one of its suffixes is supported. The input must be readable
 through its first terminator, or for the remaining capacity if no terminator is
 found. Output must be readable and writable for the full capacity. Keep both
 regions stable during the call. Like `TryCopy`, this operation allocates nothing,
-is `nothrow`, and uses no additional std source; the optimizer caveats above
+is `nothrow`, and uses no additional Standard source; the optimizer caveats above
 remain applicable.

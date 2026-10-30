@@ -26,7 +26,7 @@ public sealed class CountedPathTests
                 record[38]=Rooted(value,true)?(byte)1:(byte)0;record[39]=Qualified(value,true)?(byte)1:(byte)0;stream.Write(record);
             }
             Run($$"""
-                using std; using std::Text; using std::IO; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
                 int main(){
@@ -63,7 +63,7 @@ public sealed class CountedPathTests
     public void ClassificationAndEmptyJoinNeedNoAllocationOrMissingStorageReads(int optimization)
     {
         const string code="""
-            using std; using std::Text; using std::IO; using std::Memory;int allocations=0;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
                 public replace void Free(void* storage) nothrow{}
@@ -100,7 +100,7 @@ public sealed class CountedPathTests
                 stream.Write(left);stream.Write(right);stream.Write(expected);
             }
             Run($$"""
-                using std; using std::Text; using std::IO; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
                 int main(){
@@ -133,7 +133,7 @@ public sealed class CountedPathTests
     [InlineData(2)]
     public void JoinAllocationFailuresAtEachGrowthPreserveInputsAndExistingDestination(int optimization)
         =>Run("""
-            using std; using std::Text; using std::IO; using std::Memory;extern void*? malloc(nuint bytes);extern void free(void* storage);
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern void*? malloc(nuint bytes);extern void free(void* storage);
             int attempts=0;int failAt=0;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){
@@ -187,7 +187,7 @@ public sealed class CountedPathTests
         try{action(path);}finally{File.Delete(path);}
     }
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("counted-paths.gf",code));
     private static void Run(string code,int optimization)
     {

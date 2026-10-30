@@ -30,7 +30,7 @@ public sealed class StandardSquareRootTests
     [InlineData(2)]
     public void FloatingSquareRootMatchesDotNetAtBoundariesAndRandomBitPatterns(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Numerics; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Numerics; int main() {\n");
         foreach (bool wide in new[] { false, true })
         {
             ulong[] input = Inputs(wide);
@@ -59,7 +59,7 @@ public sealed class StandardSquareRootTests
         }
         code.AppendLine("return 0; }");
         var sources = new[] {
-            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
+            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
             new SourceFile("main.gf", code.ToString())
         };
         string ir = Compiler.Emit(sources);

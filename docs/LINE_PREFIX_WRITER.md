@@ -1,6 +1,6 @@
 # Prefix streamed lines
 
-`std::Text::LinePrefixWriter` is an `ITextWriter` adapter. It borrows an output writer
+`Standard::Text::LinePrefixWriter` is an `ITextWriter` adapter. It borrows an output writer
 and either a counted byte prefix or an immutable IFormattable view. It inserts the prefix when the first input byte of each
 LF-delimited line arrives. It preserves every source byte, including NUL, high
 bytes, CR, and LF. It neither validates encoding nor normalizes line endings.
@@ -13,8 +13,8 @@ even when the prefix itself contains LF. An empty prefix forwards unchanged
 bytes. Zero-length writes read no source or prefix storage and emit no calls.
 
 ```csharp
-using std::Text;
-using std; using std::IO;
+using Standard::Text;
+using Standard; using Standard::IO;
 
 int main()
 {
@@ -58,8 +58,8 @@ of writes, including none; its emitted LF bytes never affect input line state.
 The counted constructor keeps its existing behavior and does not invoke Format.
 
 ```csharp
-using std::Text;
-using std; using std::Time;
+using Standard::Text;
+using Standard; using Standard::Time;
 
 struct TimestampPrefix : IFormattable
 {

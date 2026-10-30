@@ -27,7 +27,7 @@ public sealed class BinaryCursorSeekTests
             Number(row.Length), Number(row.Target), row.Success ? "(nuint)1" : "(nuint)0", Number(row.Position)
         }));
         Run($$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main()
             {
                 nuint[{{rows.Count * 4}}] table = [{{table}}];
@@ -71,7 +71,7 @@ public sealed class BinaryCursorSeekTests
     [InlineData(2)]
     public void CopiesAndChildrenKeepIndependentPositionsAndCapturedBounds(int optimization)
         => Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main()
             {
                 byte[18] bytes;
@@ -117,7 +117,7 @@ public sealed class BinaryCursorSeekTests
             expected.AddRange(packet);
         }
         Run($$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main()
             {
                 int[{{lengths.Length}}] lengths = [{{string.Join(',', lengths)}}];
@@ -159,7 +159,7 @@ public sealed class BinaryCursorSeekTests
         string[] names = ["Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf"];
         var sources = names.Select(name =>
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "Std", "core", name);
+            string path = Path.Combine(AppContext.BaseDirectory, "Standard", "core", name);
             return new SourceFile(path, File.ReadAllText(path));
         }).Append(new SourceFile("binary-cursor-seek.gf", program));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

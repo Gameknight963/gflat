@@ -1,9 +1,9 @@
-using std::Text;
-using std::IO;
-using std::Encoding;
-using std::Binary;
-using std::Hashing;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard::Encoding;
+using Standard::Binary;
+using Standard::Hashing;
+using Standard;
 
 // Format the numeric checksum in a fixed byte order, independent of this CPU.
 void WriteChecksum(uint value)
@@ -11,7 +11,7 @@ void WriteChecksum(uint value)
     byte[4] storage;
     byte* bytes = storage;
     BinaryPrimitives::TryWriteUInt32BigEndian(bytes, 4, value);
-    Console::Out.WriteHex((readonly(char)*)bytes, 4, false);
+    Console::Out.WriteHex(bytes.reinterpret<readonly(char)*>(), 4, false);
 }
 
 void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
@@ -100,11 +100,11 @@ int main(int argc, char** argv)
             }
             if (sha512)
             {
-                Console::Out.WriteHex((readonly(char)*)(byte*)digest512, 64, false);
+                Console::Out.WriteHex(((byte*)digest512).reinterpret<readonly(char)*>(), 64, false);
             }
             else if (sha256)
             {
-                Console::Out.WriteHex((readonly(char)*)(byte*)digest, 32, false);
+                Console::Out.WriteHex(((byte*)digest).reinterpret<readonly(char)*>(), 32, false);
             }
             else if (crc32c) WriteChecksum(crc);
             else

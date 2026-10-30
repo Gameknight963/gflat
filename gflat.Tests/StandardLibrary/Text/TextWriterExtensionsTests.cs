@@ -8,7 +8,7 @@ public sealed class TextWriterExtensionsTests
         if (strings) names.AddRange(["core/Text/String.gf", "core/Text/ByteSearch.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf"]);
         if (console) names.AddRange(["libc/Console/Console.gf", "libc/Console/standard_writers.gf"]);
         if (path != null) program = program.Replace("$PATH", "\"" + path.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"");
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(sources);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -19,7 +19,7 @@ public sealed class TextWriterExtensionsTests
     public void BorrowedBufferWriterUsesAllOverloadsWithoutAllocation()
     {
         Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             static class State { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { State::Allocations++; return null; }
@@ -48,7 +48,7 @@ public sealed class TextWriterExtensionsTests
         try
         {
             Run("""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 int main() {
                     File file = File::OpenWrite($PATH);
                     ITextWriter* output = &file;
@@ -71,7 +71,7 @@ public sealed class TextWriterExtensionsTests
     public void ConsolePropertiesProvideLineWritingWithoutIntermediateStrings()
     {
         var result = Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             int main() {
                 Console::Out.WriteLine("out");
                 Console::Error.WriteLine("E\0R", 3);
@@ -89,7 +89,7 @@ public sealed class TextWriterExtensionsTests
     public void FailingBodyDoesNotWriteNewlineAndFailingNewlinePreservesBody()
     {
         Run("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             struct RejectingWriter : ITextWriter {
                 public int Calls; public int FailAt; public nuint Accepted;
                 public RejectingWriter(int failAt) { Calls = 0; FailAt = failAt; Accepted = 0; }

@@ -13,7 +13,7 @@ public sealed class WindowsTcpClientTests
     internal static string ProjectPath => Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot,"libraries","platform","windows-network","WindowsNetwork.gfproj");
 
     internal static IEnumerable<SourceFile> SourceFiles(string client,string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile(CopiedException,File.ReadAllText(CopiedException)))
             .Append(new SourceFile(CopiedClient,client))
@@ -27,13 +27,13 @@ public sealed class WindowsTcpClientTests
         var library=Assert.Single(graph.NativeLinkInputs.Libraries);
         Assert.Equal("Name",library.Kind);Assert.Equal("ws2_32",library.Value);
         string repository=TestSupport.ProjectFileFixture.RepositoryRoot;
-        foreach(string relative in new[]{"std/std.gfproj","libraries/platform/windows/Windows.gfproj","libraries/platform/windows-random/WindowsRandom.gfproj"})
+        foreach(string relative in new[]{"Standard/Standard.gfproj","libraries/platform/windows/Windows.gfproj","libraries/platform/windows-random/WindowsRandom.gfproj"})
             Assert.DoesNotContain(ProjectGraph.Load(Path.Combine(repository,relative)).NativeLinkInputs.Libraries,
                 item=>item.Value.Equals("ws2_32",StringComparison.OrdinalIgnoreCase));
         Assert.Equal(File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(ProjectPath)!,"TcpClient.gf")),File.ReadAllBytes(CopiedClient));
         Assert.Equal(File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(ProjectPath)!,"SocketException.gf")),File.ReadAllBytes(CopiedException));
         string ir=Compiler.Emit(SourceFiles(File.ReadAllText(CopiedClient),"""
-            using Windows;using std::Net;
+            using Windows;using Standard::Net;
             int main(){
                 TcpClient empty=new();empty.Close();
                 TcpClient client=TcpClient::Connect(IpEndpoint::Parse("127.0.0.1:12345"));
@@ -172,7 +172,7 @@ public sealed class WindowsTcpClientTests
     }
 
     private const string LoopbackProgram="""
-        using Windows;using std::Net;using std::IO;
+        using Windows;using Standard::Net;using Standard::IO;
         extern nuint socket(int family,int kind,int protocol)nothrow;
         extern int WSAGetLastError()nothrow;
         extern int closesocket(nuint socket)nothrow;
@@ -183,7 +183,7 @@ public sealed class WindowsTcpClientTests
             for(nuint index=0;index<4096;index++)request[index+1]=(char)(index%251);
             ITextWriter* output=&client;output.Write(&request[1],4096);client.ShutdownSend();
             char[4098] response;response[0]='Q';response[4097]='R';client.ReadExactly(&response[1],2048);
-            IByteReader* input=&client;std::IO::ReadExactly(input,&response[2049],2048);
+            IByteReader* input=&client;Standard::IO::ReadExactly(input,&response[2049],2048);
             if(request[0]!='A'||request[4097]!='Z'||response[0]!='Q'||response[4097]!='R')return 2;
             for(nuint index=0;index<4096;index++)if((byte)response[index+1]!=(byte)((index*17+23)%256))return 3;
             char tail='\0';if(client.Read(&tail,1)!=0||!client.IsOpen)return 4;

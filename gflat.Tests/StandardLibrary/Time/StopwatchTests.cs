@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Time;
 public sealed class StopwatchTests
 {
     private const string Support="""
-        using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -77,7 +77,7 @@ public sealed class StopwatchTests
             int Digit(char value)nothrow{if(value<='9')return value-'0';return value-'A'+10;}
             int ReadByte(readonly(char)* text,ref nuint at)nothrow{int value=(Digit(text[at])<<4)|Digit(text[at+1]);at+=2;return value;}
             long ReadLong(readonly(char)* text,ref nuint at)nothrow{ulong value=0ul;for(int shift=0;shift<64;shift+=8)value=value|((ulong)ReadByte(text,ref at)<<shift);return (long)value;}
-            double ReadDouble(readonly(char)* text,ref nuint at)nothrow{long bits=ReadLong(text,ref at);return *(double*)&bits;}
+            double ReadDouble(readonly(char)* text,ref nuint at)nothrow{long bits=ReadLong(text,ref at);return bits.reinterpret<double>();}
             int main(){readonly(char)* data="{{hex}}";nuint at=0;
                 for(int row=0;row<{{rows.Count}};row++){
                     frequency=ReadLong(data,ref at);long ticks=ReadLong(data,ref at);double seconds=ReadDouble(data,ref at);
@@ -147,12 +147,12 @@ public sealed class StopwatchTests
     public void SelectedCoreSourcesNeedNoStringLibcOrWideDivisionAndResetHasNoExceptionBoundary()
     {
         string[] names=["Time/IMonotonicClock.gf","Time/Stopwatch.gf","Time/TimeSpan.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("stopwatch-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
-                static class Clock:std::Time::IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}
-                bool ResetProbe(std::Time::Stopwatch<Clock>* value)nothrow{value.Reset();return value.IsRunning;}
-                std::Time::TimeSpan Observe(immutable(std::Time::Stopwatch<Clock>)* value)=>value.Elapsed;
+                static class Clock:Standard::Time::IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}
+                bool ResetProbe(Standard::Time::Stopwatch<Clock>* value)nothrow{value.Reset();return value.IsRunning;}
+                Standard::Time::TimeSpan Observe(immutable(Standard::Time::Stopwatch<Clock>)* value)=>value.Elapsed;
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         Assert.DoesNotContain("$String",ir);Assert.False(NativeToolchain.RequiresWideIntegerRuntime(ir));
@@ -162,7 +162,7 @@ public sealed class StopwatchTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("stopwatch.gf",program));
     private static void Run(string program,int optimization)
     {

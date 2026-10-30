@@ -10,7 +10,7 @@ public sealed class ByteReaderTests
         byte[] bytes = Enumerable.Range(0, 513).Select(index => (byte)(index * 73 + 19)).ToArray();
         string values = string.Join(",", bytes.Select(value => "(char)" + value));
         Run("""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){attempts++;return null;}
@@ -67,7 +67,7 @@ public sealed class ByteReaderTests
     [InlineData(2)]
     public void FailureBoundariesPreserveGuardsAndDoNotRetryConsumedPrefixes(int optimization)
         => Run("""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             struct Source:IByteReader{
                 public nuint Calls;public nuint Position;public int Mode;
                 public Source(int mode){Calls=0;Position=0;Mode=mode;}
@@ -135,7 +135,7 @@ public sealed class ByteReaderTests
             File.WriteAllText(path, Convert.ToHexString(expected));
             string wanted = string.Join(",", expected.Select(value => "(char)" + value));
             Run("""
-                using std;using std::IO;using std::Text;using std::Encoding;
+                using Standard;using Standard::IO;using Standard::Text;using Standard::Encoding;
                 int attempts=0;
                 namespace Memory{
                     public replace void*? Allocate(nuint size){attempts++;return null;}
@@ -170,7 +170,7 @@ public sealed class ByteReaderTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("byte-reader-tests.gf", code));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

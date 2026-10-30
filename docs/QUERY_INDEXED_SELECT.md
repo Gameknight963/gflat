@@ -4,7 +4,7 @@ The optional indexed `Select` overload accepts a `U(T, nuint)*` selector. It is
 useful for numbered records and diagnostics without a separate index sequence.
 
 ```csharp
-using std; using std::Memory; using std::Queries; using std::Collections;
+using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
 int main()
 {
     int[3] data = [8, 4, 9];

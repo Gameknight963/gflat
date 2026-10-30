@@ -145,7 +145,7 @@ public sealed class BigIntegerModPowTests
     }
 
     private const string Counters = """
-        using std; using std::Text; using std::Numerics;
+        using Standard; using Standard::Text; using Standard::Numerics;
         extern void*? malloc(nuint count); extern void free(void* value);
         int allocated = 0; int released = 0; int attempts = 0; int denied = 0; int failAfter = -1;
         bool capture = false; void*? captured = null;
@@ -168,7 +168,7 @@ public sealed class BigIntegerModPowTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("bigint-modpow.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);

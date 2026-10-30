@@ -10,7 +10,7 @@ public sealed class UuidBytesEditorTests
     [Fact]
     public void StaticByteImportExposesItsBooleanNoThrowResultAndUuidOutputArgument()
     {
-        const string text="using std;void Probe(readonly(byte)* data,nuint count,Uuid* result){bool valid=Uuid::TryFromBytes(data,count,result);}";
+        const string text="using Standard;void Probe(readonly(byte)* data,nuint count,Uuid* result){bool valid=Uuid::TryFromBytes(data,count,result);}";
         var (model,source,library,snapshot)=Analyze(text);int call=text.IndexOf("TryFromBytes",StringComparison.Ordinal);
         string hover=Hover(model,source,call);
         Assert.Contains("bool",hover);Assert.Contains("static",hover);Assert.Contains("nothrow",hover);Assert.Contains("TryFromBytes",hover);
@@ -22,7 +22,7 @@ public sealed class UuidBytesEditorTests
     [Fact]
     public void ImmutableByteExportExposesItsNoThrowRefCountAndActualSourceDefinition()
     {
-        const string text="using std;void Probe(immutable(Uuid)* value,byte* output,nuint capacity,ref nuint written) nothrow{bool valid=value.TryWriteBytes(output,capacity,ref written);}";
+        const string text="using Standard;void Probe(immutable(Uuid)* value,byte* output,nuint capacity,ref nuint written) nothrow{bool valid=value.TryWriteBytes(output,capacity,ref written);}";
         var (model,source,library,snapshot)=Analyze(text);int call=text.IndexOf("TryWriteBytes",StringComparison.Ordinal);
         string hover=Hover(model,source,call);
         Assert.Contains("bool",hover);Assert.Contains("immutable",hover);Assert.Contains("nothrow",hover);Assert.Contains("TryWriteBytes",hover);

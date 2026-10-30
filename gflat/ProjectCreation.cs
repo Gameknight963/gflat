@@ -13,7 +13,7 @@ public static class ProjectCreation
         if (args is ["--help"] or ["-h"])
         {
             Console.WriteLine(Usage);
-            Console.WriteLine("Create a project in a new or empty directory. --library creates a source library; --no-stdlib omits the std reference.");
+            Console.WriteLine("Create a project in a new or empty directory. --library creates a source library; --no-stdlib omits the Standard reference.");
             return 0;
         }
         string? directory = null, name = null;

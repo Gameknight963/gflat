@@ -41,7 +41,7 @@ public sealed class Utf16DecodeLastTests
                     ushort[{{units.Length + 2}}] storage = [{{Units([0xa5a5, ..units, 0xa5a5])}}];
                     uint scalar = 99u;
                     nuint consumed = 99;
-                    bool valid = std::Text::Utf16::TryDecodeLast(&storage[1], {{units.Length}}, &scalar, &consumed);
+                    bool valid = Standard::Text::Utf16::TryDecodeLast(&storage[1], {{units.Length}}, &scalar, &consumed);
                     if (valid != {{(valid ? "true" : "false")}}) return 1;
                     if (scalar != {{(valid ? (uint)rune.Value : 0u)}}u || consumed != (nuint){{(valid ? consumed : 0)}}) return 2;
                     ushort[{{units.Length + 2}}] expected = [{{Units([0xa5a5, ..units, 0xa5a5])}}];
@@ -64,7 +64,7 @@ public sealed class Utf16DecodeLastTests
         foreach (Rune rune in expected)
         {
             checks.AppendLine($$"""
-                if (!std::Text::Utf16::TryDecodeLast(input, length, &scalar, &consumed)) return 1;
+                if (!Standard::Text::Utf16::TryDecodeLast(input, length, &scalar, &consumed)) return 1;
                 if (scalar != {{rune.Value}}u || consumed != (nuint){{rune.Utf16SequenceLength}}) return 2;
                 length -= consumed;
                 """);
@@ -77,7 +77,7 @@ public sealed class Utf16DecodeLastTests
                 nuint consumed = 0;
                 {{checks}}
                 if (length != (nuint)0) return 3;
-                if (std::Text::Utf16::TryDecodeLast(((nuint)1).reinterpret<readonly(ushort)*>(), 0, &scalar, &consumed)) return 4;
+                if (Standard::Text::Utf16::TryDecodeLast(((nuint)1).reinterpret<readonly(ushort)*>(), 0, &scalar, &consumed)) return 4;
                 if (scalar != 0u || consumed != (nuint)0) return 5;
                 return 0;
             }
@@ -101,7 +101,7 @@ public sealed class Utf16DecodeLastTests
                     ushort* input = (&storage[1]).reinterpret<ushort*>();
                     {{initialize}}
                     nuint consumed = 99;
-                    if (!std::Text::Utf16::TryDecodeLast(input, {{units.Length}}, &storage[1], &consumed)) return 1;
+                    if (!Standard::Text::Utf16::TryDecodeLast(input, {{units.Length}}, &storage[1], &consumed)) return 1;
                     if (storage[1] != {{scalar}}u || consumed != (nuint){{units.Length}}) return 2;
                     if (storage[0] != 165u || storage[2] != 165u) return 3;
                 }
@@ -110,7 +110,7 @@ public sealed class Utf16DecodeLastTests
                     ushort* input = (&storage[1]).reinterpret<ushort*>();
                     {{initialize}}
                     uint scalar = 99u;
-                    if (!std::Text::Utf16::TryDecodeLast(input, {{units.Length}}, &scalar, &storage[1])) return 4;
+                    if (!Standard::Text::Utf16::TryDecodeLast(input, {{units.Length}}, &scalar, &storage[1])) return 4;
                     if (scalar != {{scalar}}u || storage[1] != (nuint){{units.Length}}) return 5;
                     if (storage[0] != (nuint)165 || storage[2] != (nuint)165) return 6;
                 }
@@ -123,14 +123,14 @@ public sealed class Utf16DecodeLastTests
                 ushort* input = (&scalarStorage[1]).reinterpret<ushort*>();
                 input[0] = (ushort)65; input[1] = (ushort)0xdc00;
                 nuint consumed = 99;
-                if (std::Text::Utf16::TryDecodeLast(input, 2, &scalarStorage[1], &consumed)) return 7;
+                if (Standard::Text::Utf16::TryDecodeLast(input, 2, &scalarStorage[1], &consumed)) return 7;
                 if (scalarStorage[1] != 0u || consumed != (nuint)0) return 8;
                 if (scalarStorage[0] != 165u || scalarStorage[2] != 165u) return 9;
                 nuint[3] countStorage = [165, 0, 165];
                 input = (&countStorage[1]).reinterpret<ushort*>();
                 input[0] = (ushort)0xd800; input[1] = (ushort)0xd800;
                 uint scalar = 99u;
-                if (std::Text::Utf16::TryDecodeLast(input, 2, &scalar, &countStorage[1])) return 10;
+                if (Standard::Text::Utf16::TryDecodeLast(input, 2, &scalar, &countStorage[1])) return 10;
                 if (scalar != 0u || countStorage[1] != (nuint)0) return 11;
                 if (countStorage[0] != (nuint)165 || countStorage[2] != (nuint)165) return 12;
                 return 0;
@@ -143,7 +143,7 @@ public sealed class Utf16DecodeLastTests
 
     private static void Run(string code, int optimization)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Std", "core", "Text", "utf16.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Text", "utf16.gf");
         SourceFile[] sources = [new(path, File.ReadAllText(path)), new("utf16-decode-last.gf", code)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotContain("@__gflat_eh_", ir);

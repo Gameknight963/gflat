@@ -32,7 +32,7 @@ public sealed class PathEdgeTests
             ("Unix", "C:folder/", "", "C:folder", "", "", ""),
             ("Unix", "...", "...", "", "", "..", "")
         ];
-        var code = new StringBuilder("using std; using std::Text; using std::IO; using std::Memory; using std::Queries; using std::Collections; int main() {\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections; int main() {\n");
         foreach (var item in cases)
         {
             string[] methods = ["GetFileName", "GetDirectoryName", "GetExtension", "GetFileNameWithoutExtension", "GetRoot"];
@@ -52,7 +52,7 @@ public sealed class PathEdgeTests
     [InlineData(2)]
     public void OwnedResultsPreserveSpellingAndDoNotAliasInputOrEachOther(int optimization)
         => Run("""
-            using std; using std::Text; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 char[10] input = ['a', '/', 'b', '.', 'c', '\0', 'x', '.', 'y', '\0'];
                 String name = Paths::GetFileName(input, PathStyle::Unix);
@@ -83,7 +83,7 @@ public sealed class PathEdgeTests
     private static void Run(string code, int optimization)
     {
         var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Memory/Span.gf", "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/IO/PathStyle.gf", "core/IO/Paths.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", code));
         var result = CompilerTestHelper.Run(files, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

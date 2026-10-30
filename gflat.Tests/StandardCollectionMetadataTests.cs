@@ -8,14 +8,14 @@ public sealed class StandardCollectionMetadataTests
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/Queue.gf",
             "Collections/Stack.gf", "Collections/PriorityQueue.gf", "Collections/BitSet.gf", "Collections/HashMap.gf", "Collections/HashSet.gf", "Collections/LinkedList.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("metadata.gf", program));
 
     [Fact]
     public void MetadataGettersUseOrdinaryCallsAndHaveNonthrowingContracts()
     {
         string ir = Compiler.Emit(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             bool ReadMetadata(immutable(Vector<int>)* vector, Span<int>* span, immutable(Queue<int>)* queue,
                 immutable(Stack<int>)* stack, immutable(PriorityQueue<int>)* priority, immutable(BitSet)* bits,
                 immutable(HashMap<int,int>)* map, immutable(HashSet<int>)* set, immutable(LinkedList<int>)* list) nothrow {
@@ -46,7 +46,7 @@ public sealed class StandardCollectionMetadataTests
     public void EmptyAndPopulatedMetadataWorkWhileInvalidAccessesStillThrow()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             int main() {
                 Vector<int> vector = new(); Span<int> span = new(); Queue<int> queue = new(); Stack<int> stack = new();

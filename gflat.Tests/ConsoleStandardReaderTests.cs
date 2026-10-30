@@ -12,7 +12,7 @@ public sealed class ConsoleStandardReaderTests
         try
         {
             string executable = Compile(directory, """
-                using std::IO;
+                using Standard::IO;
                 struct Sink:ITextWriter{
                     private char* data;public nuint Count;public nuint Calls;
                     public Sink(char* output){data=output;Count=0;Calls=0;}
@@ -23,16 +23,16 @@ public sealed class ConsoleStandardReaderTests
                 }
                 int main(){
                     IByteReader* input=Console::In;if(input!=Console::In)return 1;
-                    if(input.Read(((nuint)1).reinterpret<char*>(),0)!=0)return 2;std::IO::ReadExactly(input,((nuint)1).reinterpret<char*>(),0);
+                    if(input.Read(((nuint)1).reinterpret<char*>(),0)!=0)return 2;Standard::IO::ReadExactly(input,((nuint)1).reinterpret<char*>(),0);
                     char[4] header=['?','?','?','?'];if(input.Read(&header[1],2)!=2||header[0]!='?'||header[1]!='A'||header[2]!='\0'||header[3]!='?')return 3;
                     if(Console::PeekByte()!=255||Console::PeekByte()!=255||Console::ReadByte()!=255)return 4;
-                    if(std::IO::ReadUInt32BigEndian(input)!=305419896u)return 5;
-                    if(std::IO::ReadVarUInt32(input)!=300u||std::IO::ReadZigZagInt64(input)!=-42l)return 6;
+                    if(Standard::IO::ReadUInt32BigEndian(input)!=305419896u)return 5;
+                    if(Standard::IO::ReadVarUInt32(input)!=300u||Standard::IO::ReadZigZagInt64(input)!=-42l)return 6;
                     char value='\0';if(Console::Read(&value,1)!=1||value!='B')return 7;
-                    char[4] next=['?','?','?','?'];std::IO::ReadExactly(input,&next[1],2);
+                    char[4] next=['?','?','?','?'];Standard::IO::ReadExactly(input,&next[1],2);
                     if(next[0]!='?'||next[1]!='C'||next[2]!='\0'||next[3]!='?')return 8;
                     char[4] output=['?','?','?','?'];char[4] scratch=['!','!','!','!'];Sink sink=new(&output[1]);
-                    if(std::IO::CopyTo(input,&sink,&scratch[1],2)!=2||sink.Count!=2||sink.Calls!=1)return 9;
+                    if(Standard::IO::CopyTo(input,&sink,&scratch[1],2)!=2||sink.Count!=2||sink.Calls!=1)return 9;
                     if((byte)output[1]!=(byte)254||output[2]!='Z'||output[0]!='?'||output[3]!='?'||scratch[0]!='!'||scratch[3]!='!')return 10;
                     if(input.Read(&value,1)!=0||Console::ReadByte()!=-1||input!=Console::In)return 11;
                     if(attempts!=0)return 12;return 0;
@@ -67,7 +67,7 @@ public sealed class ConsoleStandardReaderTests
             File.WriteAllBytes(replacement, [68, 69]);
             byte[] textExpected = OperatingSystem.IsWindows() ? [65, 0, 66, 10] : [65, 0, 66, 13, 10, 26, 255, 90, 67];
             string executable = Compile(directory, $$"""
-                using std::IO;
+                using Standard::IO;
                 extern void* __gflat_stdio_stdin();
                 extern void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
@@ -77,7 +77,7 @@ public sealed class ConsoleStandardReaderTests
                 int main(){
                     IByteReader* input=Console::In;void* stream=__gflat_stdio_stdin();
                     if(freopen({{Literal(original)}},"rb",stream)==null)return 21;
-                    char[10] bytes;for(nuint i=0;i<10;i++)bytes[i]='?';std::IO::ReadExactly(input,&bytes[1],8);
+                    char[10] bytes;for(nuint i=0;i<10;i++)bytes[i]='?';Standard::IO::ReadExactly(input,&bytes[1],8);
                     byte[8] expected=[(byte)65,(byte)0,(byte)66,(byte)13,(byte)10,(byte)26,(byte)255,(byte)90];
                     for(nuint i=0;i<8;i++)if((byte)bytes[i+1]!=expected[i])return 22;
                     if(bytes[0]!='?'||bytes[9]!='?'||input.Read(&bytes[1],1)!=0||feof(stream)==0)return 23;
@@ -87,7 +87,7 @@ public sealed class ConsoleStandardReaderTests
                     if(input.Read(&bytes[1],1)!=0||input!=Console::In)return 27;
                     if(freopen({{Literal(replacement)}},"rb",stream)==null)return 28;
                     if(input!=Console::In||Console::PeekByte()!=68||input.Read(&bytes[1],1)!=1||bytes[1]!='D')return 29;
-                    std::IO::ReadExactly(input,&bytes[1],1);if(bytes[1]!='E'||input.Read(&bytes[1],1)!=0)return 30;
+                    Standard::IO::ReadExactly(input,&bytes[1],1);if(bytes[1]!='E'||input.Read(&bytes[1],1)!=0)return 30;
                     if(freopen({{Literal(replacement)}},"wb",stream)==null)return 31;
                     for(int attempt=0;attempt<2;attempt++){
                         bool caught=false;
@@ -136,7 +136,7 @@ public sealed class ConsoleStandardReaderTests
             "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/byte_reader.gf",
             "core/Binary/BinaryPrimitives.gf", "core/Binary/VarInt.gf", "core/IO/byte_reader_binary.gf",
             "core/IO/byte_reader_var_int.gf", "libc/Console/Console.gf", "libc/Console/standard_readers.gf", "libc/Memory/allocation.gf"];
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("console-standard-reader-tests.gf", program)).ToList();
         if (denyAllocation) sources.Add(new SourceFile("allocation-hooks.gf", """
             int attempts=0;

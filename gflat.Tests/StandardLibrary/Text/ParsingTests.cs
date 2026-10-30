@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Text;
 public class ParsingTests
 {
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(new[] {
-        new SourceFile("Parsing.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/parsing.gf"))),
+        new SourceFile("Parsing.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/parsing.gf"))),
         new SourceFile("main.gf", source)
     });
 
@@ -30,7 +30,7 @@ public class ParsingTests
     public void ParsesOnlyCompleteDecimalIntegers(string text, bool success, int expected)
     {
         var result = Run($$"""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 int value = 99;
                 bool success = TryParseInt("{{text}}", &value);
@@ -62,7 +62,7 @@ public class ParsingTests
     public void CountedInputNeedsNoTerminatorAndRejectsEmbeddedNulls()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char[3] buffer = ['1', '2', 'x'];
                 int value = 99;

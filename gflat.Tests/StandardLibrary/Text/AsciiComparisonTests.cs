@@ -6,7 +6,7 @@ public sealed class AsciiComparisonTests
 {
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = [new("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ascii.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ascii.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         Assert.DoesNotContain("__gflat_eh", ir);
         Assert.DoesNotContain("@malloc", ir);
@@ -32,11 +32,11 @@ public sealed class AsciiComparisonTests
                         int expected = 0;
                         if (folded[i] < folded[j]) expected = -1;
                         if (folded[i] > folded[j]) expected = 1;
-                        if (std::Text::Ascii::CompareIgnoreCase(&left, 1, &right, 1) != expected) return 1;
-                        if (std::Text::Ascii::EqualsIgnoreCase(&left, 1, &right, 1) != (expected == 0)) return 2;
+                        if (Standard::Text::Ascii::CompareIgnoreCase(&left, 1, &right, 1) != expected) return 1;
+                        if (Standard::Text::Ascii::EqualsIgnoreCase(&left, 1, &right, 1) != (expected == 0)) return 2;
                         cLeft[0]=left;cRight[0]=right;
-                        if (std::Text::Ascii::CompareIgnoreCase(cLeft,cRight) != expected) return 3;
-                        if (std::Text::Ascii::EqualsIgnoreCase(cLeft,cRight) != (expected == 0)) return 4;
+                        if (Standard::Text::Ascii::CompareIgnoreCase(cLeft,cRight) != expected) return 3;
+                        if (Standard::Text::Ascii::EqualsIgnoreCase(cLeft,cRight) != (expected == 0)) return 4;
                     }
                 }
                 return 0;
@@ -68,21 +68,21 @@ public sealed class AsciiComparisonTests
             for (int i = 0; i < left.Length; i++) code.AppendLine($"left[{i}] = (char){(int)left[i]};");
             for (int i = 0; i < right.Length; i++) code.AppendLine($"right[{i}] = (char){(int)right[i]};");
             int expected = Math.Sign(string.Compare(left, right, StringComparison.OrdinalIgnoreCase));
-            code.AppendLine($"if (std::Text::Ascii::CompareIgnoreCase(left, {left.Length}, right, {right.Length}) != {expected}) return 3;");
-            code.AppendLine($"if (std::Text::Ascii::EqualsIgnoreCase(left, {left.Length}, right, {right.Length}) != {(expected == 0 ? "true" : "false")}) return 4;");
+            code.AppendLine($"if (Standard::Text::Ascii::CompareIgnoreCase(left, {left.Length}, right, {right.Length}) != {expected}) return 3;");
+            code.AppendLine($"if (Standard::Text::Ascii::EqualsIgnoreCase(left, {left.Length}, right, {right.Length}) != {(expected == 0 ? "true" : "false")}) return 4;");
             code.AppendLine($"left[{left.Length}]='\\0';right[{right.Length}]='\\0';");
             int cExpected=Math.Sign(string.Compare(left.Split('\0')[0],right.Split('\0')[0],StringComparison.OrdinalIgnoreCase));
-            code.AppendLine($"if(std::Text::Ascii::CompareIgnoreCase(left,right)!={cExpected})return 10;");
-            code.AppendLine($"if(std::Text::Ascii::EqualsIgnoreCase(left,right)!={(cExpected==0 ? "true" : "false")})return 11;");
+            code.AppendLine($"if(Standard::Text::Ascii::CompareIgnoreCase(left,right)!={cExpected})return 10;");
+            code.AppendLine($"if(Standard::Text::Ascii::EqualsIgnoreCase(left,right)!={(cExpected==0 ? "true" : "false")})return 11;");
         }
         code.AppendLine("""
             readonly(char)*? absent = null;
             readonly(char)* nowhere = absent!;
-            if (std::Text::Ascii::CompareIgnoreCase(nowhere, 0, nowhere, 0) != 0) return 5;
-            if (!std::Text::Ascii::EqualsIgnoreCase(nowhere, 0, nowhere, 0)) return 6;
-            if (std::Text::Ascii::CompareIgnoreCase(nowhere, 0, left, 1) != -1) return 7;
-            if (std::Text::Ascii::CompareIgnoreCase(right, 1, nowhere, 0) != 1) return 8;
-            if (std::Text::Ascii::EqualsIgnoreCase(nowhere, 0, left, 1)) return 9;
+            if (Standard::Text::Ascii::CompareIgnoreCase(nowhere, 0, nowhere, 0) != 0) return 5;
+            if (!Standard::Text::Ascii::EqualsIgnoreCase(nowhere, 0, nowhere, 0)) return 6;
+            if (Standard::Text::Ascii::CompareIgnoreCase(nowhere, 0, left, 1) != -1) return 7;
+            if (Standard::Text::Ascii::CompareIgnoreCase(right, 1, nowhere, 0) != 1) return 8;
+            if (Standard::Text::Ascii::EqualsIgnoreCase(nowhere, 0, left, 1)) return 9;
             return 0;
             }
             """);

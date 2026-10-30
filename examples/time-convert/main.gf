@@ -1,6 +1,6 @@
-using std::Text;
-using std::Time;
-using std;
+using Standard::Text;
+using Standard::Time;
+using Standard;
 
 int main(int argc, char** argv)
 {
@@ -36,8 +36,8 @@ int main(int argc, char** argv)
                 DateTimeOffset utc = value.ToOffset(TimeSpan::FromTicks(0l));
                 utc.Format(Console::Out);
             }
-            else if (operation == 1) std::Format(value.ToUnixTimeSeconds(), Console::Out);
-            else std::Format(value.ToUnixTimeMilliseconds(), Console::Out);
+            else if (operation == 1) Standard::Format(value.ToUnixTimeSeconds(), Console::Out);
+            else Standard::Format(value.ToUnixTimeMilliseconds(), Console::Out);
         }
         else
         {

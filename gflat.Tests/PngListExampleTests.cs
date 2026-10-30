@@ -22,7 +22,7 @@ public sealed class PngListExampleTests
             Assert.Equal(0xcbf43926u, Crc("123456789"u8.ToArray()));
             Assert.Equal(0xae426082u, Crc(Type("IEND")));
             Assert.Equal(0x1f15c489u, Crc([.. Type("IHDR"), .. Header().Data]));
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("png-list.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/png-list.gf"))))
                 .Append(new SourceFile("no-allocations.gf", """

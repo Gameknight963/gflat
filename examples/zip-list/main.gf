@@ -1,8 +1,8 @@
-using std;
-using std::Binary;
-using std::Collections;
-using std::IO;
-using std::Text;
+using Standard;
+using Standard::Binary;
+using Standard::Collections;
+using Standard::IO;
+using Standard::Text;
 
 // Example-local metadata. Name borrows the stable complete input image.
 struct Entry
@@ -108,7 +108,7 @@ void ListFile(readonly(char)* path, bool filtered, readonly(char)* pattern, nuin
         TryReadEntry(ref directory, ref entry);
         if (filtered) {
             readonly(char)* name = "";
-            if (entry.Name.Length != 0) name = (readonly(char)*)entry.Name.Data!;
+            if (entry.Name.Length != 0) name = (entry.Name.Data!).reinterpret<readonly(char)*>();
             if (!MatchesWildcard(name, entry.Name.Length, pattern, count)) continue;
         }
         entry.Compressed.Format(Console::Out); Console::Write(" ");

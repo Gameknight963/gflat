@@ -11,12 +11,12 @@ public sealed class PlatformClockTests
         string provider = windows ? "Linux::MonotonicClock" : "Windows::PerformanceCounter";
         string symbol = windows ? "clock_gettime" : "QueryPerformanceCounter";
         string path = Path.Combine(AppContext.BaseDirectory, "Platform", folder, filename);
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(file => new SourceFile(file, File.ReadAllText(file)))
             .Append(new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("other-platform-clock.gf", $$"""
-                alias Timer=std::Time::Stopwatch<{{provider}}>;
-                int main(){Timer value=Timer::StartNew();value.Stop();std::Time::TimeSpan elapsed=value.Elapsed;return 0;}
+                alias Timer=Standard::Time::Stopwatch<{{provider}}>;
+                int main(){Timer value=Timer::StartNew();value.Stop();Standard::Time::TimeSpan elapsed=value.Elapsed;return 0;}
                 """));
         // Emit only: declarations and generic specialization are checked without
         // linking or executing the other operating system's native functions.
@@ -35,9 +35,9 @@ public sealed class PlatformClockTests
         string provider=windows?"Windows::PerformanceCounter":"Linux::MonotonicClock";
         string path=Path.Combine(AppContext.BaseDirectory,"Platform",folder,filename);
         string program=$$"""
-            using std; using std::Time;
+            using Standard; using Standard::Time;
             alias Clock={{provider}};
-            alias Timer=std::Time::Stopwatch<Clock>;
+            alias Timer=Standard::Time::Stopwatch<Clock>;
             int main(){
                 if(sizeof(long)!=8||sizeof(nint)!=8)return 1;
                 long frequency=Clock::GetFrequency();if(frequency<=0l)return 2;
@@ -73,7 +73,7 @@ public sealed class PlatformClockTests
                 return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(file=>new SourceFile(file,File.ReadAllText(file)))
             .Append(new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("platform-clock.gf",program));

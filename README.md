@@ -22,8 +22,8 @@ This means you should expect:
  - Breaking changes
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 
 extern int printf(readonly(char)* text, ...);
 
@@ -35,7 +35,7 @@ int main()
 }
 ```
 
-This example uses std; see the runnable
+This example uses Standard; see the runnable
 [interpolation project](examples/interpolation/interpolation.gfproj).
 
 ## What works
@@ -47,14 +47,14 @@ This example uses std; see the runnable
 - Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
   non-moving tracing collector. See the [managed example](examples/managed/README.md).
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
-- Custom string literal prefixes and string interpolation. For example, create a `std::Text::String` with the 's' prefix as shown in the example above
+- Custom string literal prefixes and string interpolation. For example, create a `Standard::Text::String` with the 's' prefix as shown in the example above
 - Multiple source files and MSBuild `.gfproj` projects.
 - Project creation with `gflat new`, configurable optimization, and `inline` hints.
 - Compile-time `typeof(T)` metadata for names, layout, and recursive type structure.
 - A language server and Visual Studio integration with diagnostics, completion,
   syntax highlighting, reference and symbol searches, document outlines, and rich hovers.
 - A growing source standard library with owning strings and containers, borrowed
-  spans, lazy queries, binary codecs, and console/file IO. See the [library index](std/README.md).
+  spans, lazy queries, binary codecs, and console/file IO. See the [library index](Standard/README.md).
 - Native Windows x64 and Linux x64 builds
 
 
@@ -73,7 +73,7 @@ These links select the latest successful `master` workflow using
 
 | Download | Contents |
 | --- | --- |
-| [Windows x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-win-x64.zip) | Compiler, language server, std, project files, examples, and docs |
+| [Windows x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-win-x64.zip) | Compiler, language server, Standard, project files, examples, and docs |
 | [Linux x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-linux-x64.zip) | The same bundle, wrapped in a `.tar.gz` to preserve executable permissions |
 | [Visual Studio extension](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-visual-studio.zip) | VSIX for Visual Studio 2022 17.14+ / Visual Studio 2026, x64 |
 
@@ -110,7 +110,7 @@ also disables the automatic runtime sources. See
 [standard library selection](docs/PROJECTS.md#standard-library-selection).
 
 Add the bundle's `compiler` directory to PATH to use `gflat` anywhere.
-Keep std and the `build` directory together. The CLI and language server support
+Keep Standard and the `build` directory together. The CLI and language server support
 both `<Project Sdk="Gflat.Sdk">` and explicit imports of `Gflat.props` and
 `Gflat.targets`, without SDK registration. SDK-style projects in Visual Studio
 use the extension's Windows setup scripts.
@@ -147,7 +147,7 @@ dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
 The solutions separate compiler development from gflat programs:
 
 - [gflat.slnx](gflat.slnx): compiler, command-line tools, language server, and tests.
-- [std/std.slnx](std/std.slnx): the source standard library.
+- [Standard/Standard.slnx](Standard/Standard.slnx): the source standard library.
 - [examples/examples.slnx](examples/examples.slnx): runnable examples; choose a startup project in Visual Studio.
 - [editors/VisualStudio/gflat.VisualStudio.slnx](editors/VisualStudio/gflat.VisualStudio.slnx): the Visual Studio extension.
 
@@ -165,7 +165,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./editors/VisualStudio/t
 - [Language specification](docs/LANGUAGE_SPEC.md)
 - [Projects and build commands](docs/PROJECTS.md)
 - [Editor support](docs/EDITOR_SUPPORT.md)
-- [Standard library core](std/core/README.md) and [libc integration](std/libc/README.md)
+- [Standard library core](Standard/core/README.md) and [libc integration](Standard/libc/README.md)
 
 Bug reports and small examples are welcome. Include your OS, the source program,
 and the commit from `BUILD-INFO.json` in the downloaded bundle (also inside the VSIX).

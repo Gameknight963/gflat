@@ -457,7 +457,7 @@ public sealed class ServerTests
     [InlineData("int main() { int*? p = null; return *p; }", "return *p;", "int* q = (int*)p; return *q;")]
     [InlineData("enum E { A = 1 } int main() => E::A;", "=> E::A;", "=> (int)E::A;")]
     [InlineData("struct S { public static S operator s\"\"(readonly(char)* p, ulong n) => new S(); }", "ulong n", "nuint n")]
-    [InlineData("alias GC = Collector; static class Collector { public static void* Allocate(ulong n, nuint alignment) => (void*)1; public static void ReferenceAdded(void* slot) nothrow {} public static void ReferenceRemoved(void* slot) nothrow {} } int main() { int^ value = new^ int(); return 0; }", "ulong n", "nuint n")]
+    [InlineData("alias GC = Collector; static class Collector { public static void* Allocate(ulong n, nuint alignment) => ((nuint)1).reinterpret<void*>(); public static void ReferenceAdded(void* slot) nothrow {} public static void ReferenceRemoved(void* slot) nothrow {} } int main() { int^ value = new^ int(); return 0; }", "ulong n", "nuint n")]
     public async Task ContractDiagnosticsRecoverAfterAnEdit(string source, string before, string after)
     {
         await using var session = new Session();
@@ -715,9 +715,9 @@ public sealed class ServerTests
     [InlineData("int main() { int x = new")]
     [InlineData("struct S<T")]
     [InlineData("using A::")]
-    [InlineData("namespace std::")]
-    [InlineData("namespace std; struct S { public int this[")]
-    [InlineData("namespace std::Collections { struct S { public int this[int i] { get")]
+    [InlineData("namespace Standard::")]
+    [InlineData("namespace Standard; struct S { public int this[")]
+    [InlineData("namespace Standard::Collections { struct S { public int this[int i] { get")]
     [InlineData("struct S { public int this[int i] => i; } int main() { S s = new S(); return s[0,")]
     public void IncompleteCodeReturnsSourceDiagnostics(string source)
     {

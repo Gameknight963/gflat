@@ -1,7 +1,7 @@
-﻿using std::Text;
-using std::Memory;
-using std::Collections;
-using std;
+﻿using Standard::Text;
+using Standard::Memory;
+using Standard::Collections;
+using Standard;
 
 void ReportLine(nuint line, readonly(char)* message)
 {

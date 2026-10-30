@@ -20,7 +20,7 @@ public sealed class HexWriterTests
                 string upper=Convert.ToHexString(input);writer.Write(Encoding.ASCII.GetBytes(upper));writer.Write(Encoding.ASCII.GetBytes(upper.ToLowerInvariant()));
             }
             Run($$"""
-                using std; using std::Text; using std::Encoding;int allocations=0;
+                using Standard; using Standard::Text; using Standard::Encoding;int allocations=0;
                 namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);extern int ferror(void* file);
                 struct Sink:ITextWriter{
@@ -55,7 +55,7 @@ public sealed class HexWriterTests
     [InlineData(2)]
     public void WriterFailuresKeepOnlyAcceptedPrefixesAndLaterCallsStartFresh(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::Encoding;
             struct Sink:ITextWriter{
                 private char* output;public nuint Length;public int Calls;public int FailAt;
                 public Sink(char* data,int failure){output=data;Length=0;Calls=0;FailAt=failure;}
@@ -88,7 +88,7 @@ public sealed class HexWriterTests
     public async Task EmptyAndImpossibleLengthsNeverTouchInputOrWriterWithOnlyCoreContracts(int optimization)
     {
         const string program="""
-            using std; using std::Text; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::Encoding;
             namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
             struct Sink:ITextWriter{public int Calls;public Sink(){Calls=0;}public void Write(readonly(char)* data,nuint count){Calls++;throw new Exception("touched writer",77);}}
             int main(){
@@ -105,7 +105,7 @@ public sealed class HexWriterTests
             }
             """;
         string[] names=["Encoding/Hex.gf","Encoding/hex_writer.gf","ITextWriter.gf", "IFormattable.gf","Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("hex-writer-contract.gf",program));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,InternalizeFunctions=true});
         Assert.DoesNotContain("gflat$String$",ir);
@@ -120,7 +120,7 @@ public sealed class HexWriterTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("hex-writer.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Hex writer exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }

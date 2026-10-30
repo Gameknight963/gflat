@@ -84,7 +84,7 @@ public sealed class ThrowTemporaryLifetimeTests
     [InlineData(2)]
     public void FreshManagedPayloadRemainsRootedWhenReceiverDestructorCollects(int optimization)
         => Run("""
-            using std;
+            using Standard;
             bool bad=false;int holders=0;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             class Failure:Exception{
@@ -108,7 +108,7 @@ public sealed class ThrowTemporaryLifetimeTests
     {
         var sources=new List<SourceFile>();
         if(managed)foreach(string name in new[]{"libc/GC.gf","libc/TracingCollector.gf"})
-            sources.Add(new SourceFile("std/"+name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))));
+            sources.Add(new SourceFile("Standard/"+name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))));
         sources.Add(new SourceFile("throw-temporary.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Throw temporary exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

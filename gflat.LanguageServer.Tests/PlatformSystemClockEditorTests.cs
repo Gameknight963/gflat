@@ -15,7 +15,7 @@ public sealed class PlatformSystemClockEditorTests
                 .Concat(Directory.GetFiles(providerDirectory, "*.gf"))
                 .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
             var provider = files.Single(file => Path.GetFileName(file.Path) == "SystemClock.gf");
-            string text = $"void Probe(){{std::Time::DateTime utc={platform}::SystemClock::GetUtcNow();long ticks=utc.Ticks;}}";
+            string text = $"void Probe(){{Standard::Time::DateTime utc={platform}::SystemClock::GetUtcNow();long ticks=utc.Ticks;}}";
             var source = new SourceFile(Path.GetFullPath("system-clock-editor.gf"), text);
             files.Add(source);
             var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

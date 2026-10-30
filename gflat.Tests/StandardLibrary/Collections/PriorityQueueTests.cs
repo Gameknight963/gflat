@@ -5,14 +5,14 @@ public sealed class PriorityQueueTests
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf", "IHashable.gf",
         "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/PriorityQueue.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
     public void HeapOrdersDuplicatesAndAlternatingInsertionsAndRemovals()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int Compare(readonly(int)* left, readonly(int)* right) {
                 if (*left < *right) return -1;
                 if (*left > *right) return 1;
@@ -45,7 +45,7 @@ public sealed class PriorityQueueTests
     public void OwningElementsSurviveSiftingAndDestroyExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public int Priority;
@@ -80,7 +80,7 @@ public sealed class PriorityQueueTests
     public void FailedComparisonDestroysAnOwningInsertionArgumentOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             bool fail = false;
             struct Item {
                 private int* destroyed;
@@ -114,7 +114,7 @@ public sealed class PriorityQueueTests
     public void ThrowingComparisonPreservesBothInsertionAndRemovalState()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             bool fail = false;
             int Compare(readonly(int)* left, readonly(int)* right) {
                 if (fail) throw new Exception("comparison failed");

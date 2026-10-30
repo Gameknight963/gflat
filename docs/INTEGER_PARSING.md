@@ -3,11 +3,11 @@
 These APIs parse decimal text. Explicit unsigned hexadecimal alternatives are
 documented in [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md).
 
-`std::Text` provides strict decimal parsers for `Byte`, `SByte`, `Short`, `UShort`,
+`Standard::Text` provides strict decimal parsers for `Byte`, `SByte`, `Short`, `UShort`,
 `Int`, `UInt`, `Long`, `ULong`, `ExtraLong`, `NInt`, and `NUInt`. Each name has four forms:
 
 ```cpp
-using std::Text;
+using Standard::Text;
 bool TryParseLong(readonly(char)* text, long* result) nothrow;
 bool TryParseLong(readonly(char)* text, nuint count, long* result) nothrow;
 long ParseLong(readonly(char)* text);
@@ -50,7 +50,7 @@ in `core/Text/integer_parsing.gf`; neither file depends on libc. Optional
 immutable String extension methods:
 
 ```cpp
-using std::Text;
+using Standard::Text;
 String text = s"18446744073709551615";
 ulong number = text.ParseULong();
 ulong attempted = 0ul;
@@ -68,8 +68,8 @@ also explicitly `nothrow`; the `Parse...` wrappers retain their exceptions.
 extensions live in `core/Text/span_integer_parsing_throwing.gf`:
 
 ```csharp
-using std::Text;
-using std::Memory;
+using Standard::Text;
+using Standard::Memory;
 char[4] buffer = ['x', '1', '2', 'x'];
 Span<readonly(char)> text = new(&buffer[1], 2);
 long value = text.ParseLong(); // 12; neither surrounding byte is read.

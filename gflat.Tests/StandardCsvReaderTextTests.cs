@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardCsvReaderTextTests
 {
     private const string Counters="""
-        using std; using std::Text; using std::Csv; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Csv; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int failAfter=-1;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {
@@ -136,10 +136,10 @@ public sealed class StandardCsvReaderTextTests
     {
         string[] names=["core/Csv/CsvReader.gf","core/Csv/CsvParseException.gf","core/Memory/Span.gf",
             "core/Collections/IEnumerable.gf","core/Queries/Enumerable.gf","core/Exception.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("csv-value-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint bytes){return null;}public void Free(void* storage)nothrow{}}
-                bool Observe(immutable(std::Csv::CsvReader)* reader)nothrow=>reader.HasValue;
+                bool Observe(immutable(Standard::Csv::CsvReader)* reader)nothrow=>reader.HasValue;
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Observe\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
@@ -148,7 +148,7 @@ public sealed class StandardCsvReaderTextTests
     }
 
     private static void Run(string program,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("csv-reader-text.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"CsvReaderText exit {result.ExitCode}: {result.StandardError}");

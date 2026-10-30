@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class HashSetMutationTests
 {
     private const string Owners="""
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
         int made=0;int dead=0;int copies=0;int hashCalls=0;int equalityCalls=0;
         int failCopy=0;int failHash=0;int failEquality=0;int allocations=0;int releases=0;bool failLarge=false;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
@@ -30,7 +30,7 @@ public sealed class HashSetMutationTests
     {
         var random=new Random(81119);HashSet<int>[] sets=[[],[]];
         var source=new StringBuilder("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;extern int puts(immutable(char*) text);
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern int puts(immutable(char*) text);
             bool Matches(immutable(HashSet<int>)* values,readonly(int)* expected,nuint count){
                 if(values.Count!=count)return false;for(nuint i=0;i<count;i++)if(!values.Contains(expected+i))return false;return true;
             }
@@ -132,7 +132,7 @@ public sealed class HashSetMutationTests
     [InlineData(2)]
     public void ManagedKeyFieldsRemainRootedByTheirActualOwningSets(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             struct Key:IHashable,IEquatable<Key>{
                 public int Id;public immutable(Node^) Value;
@@ -159,8 +159,8 @@ public sealed class HashSetMutationTests
     private static void Run(string program,int optimization,bool managed=false)
     {
         string[] files=["IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Collections/HashMap.gf","Collections/HashSet.gf","Collections/hash_set_algebra.gf","IStringConvertable.gf","Text/String.gf", "Text/ByteSearch.gf"];
-        IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))));
-        if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file)))));
+        IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",file))));
+        if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",file)))));
         sources=sources.Append(new SourceFile("set-mutations.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_set_mutation_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{

@@ -13,7 +13,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         sources.Add(new SourceFile(Path.GetFullPath("std-editor/allocation.gf"), """
-            using std; using std::Text; using std::Csv; using std::Json; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Csv; using Standard::Json; using Standard::IO; using Standard::Encoding; using Standard::Time; using Standard::Net; using Standard::Memory; using Standard::Binary; using Standard::Hashing; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             int main() {
                 Vector<int> values = new(); values.Add(42);
                 HashMap<String,int> map = new(); map.Add(s"key",42);
@@ -43,7 +43,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         var sources=Directory.GetFiles(directory,"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         const string text="""
-            using std; using std::Text; using std::Csv; using std::Json; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Csv; using Standard::Json; using Standard::IO; using Standard::Encoding; using Standard::Time; using Standard::Net; using Standard::Memory; using Standard::Binary; using Standard::Hashing; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             private extern void*? malloc(nuint bytes);
             private extern void free(void* storage);
             bool Contains(int value) => value == 42;
@@ -344,7 +344,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
                 SortedSet<int> unique=new(Comparer<int>::Compare); unique.Add(42);
                 SortedSet<int>::Enumerator uniqueItems=unique.GetEnumerator();
                 ushort[2] units=[(ushort)65,(ushort)0];
-                std::Text::Utf16::TryDecode(units,1,&scalar,&consumed);
+                Standard::Text::Utf16::TryDecode(units,1,&scalar,&consumed);
                 Utf16Decoder wideDecoder=new(); wideDecoder.Read(units,1,true,&scalar,&consumed); wideDecoder.Reset();
                 uint reversed=BitOperations::ReverseEndianness(42u);
                 uint roundedBits=BitOperations::RoundUpToPowerOfTwo(42u);

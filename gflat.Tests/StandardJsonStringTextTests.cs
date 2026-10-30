@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonStringTextTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Json; using std::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
+        using Standard; using Standard::Text; using Standard::Json; using Standard::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
         int allocations=0;int releases=0;int large=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){if(size>1024)large++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocations++;return result;}
@@ -115,7 +115,7 @@ public sealed class StandardJsonStringTextTests
 
     private static string Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("json-string-text.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");return result.StandardOutput;

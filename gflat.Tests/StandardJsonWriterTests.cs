@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonWriterTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("json-writer.gf", program));
 
@@ -21,7 +21,7 @@ public sealed class StandardJsonWriterTests
     [InlineData(2)]
     public void InvalidStructuralOperationsAreRetryableAndCompleteOnlyValidates(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json;
+            using Standard; using Standard::Text; using Standard::Json;
             extern int puts(readonly(char)* text);
             int main(){
                 String text=s"";JsonWriter writer=new(&text);int caught=0;
@@ -56,7 +56,7 @@ public sealed class StandardJsonWriterTests
     {
         string[] invalid = ["", " ", " 1", "1 ", "+1", "01", "-", "1.", "1e", "1e+", "1 2", "1,", "1]", "NaN", "Infinity", "null", "true", "[]", "{}", "\"1\""];
         var code = new System.Text.StringBuilder("""
-            using std; using std::Text; using std::Json;
+            using Standard; using Standard::Text; using Standard::Json;
             extern int puts(readonly(char)* text);
             int main(){String text=s"";JsonWriter writer=new(&text);writer.WriteStartObject();
                 char[2] invalid=[(char)192,(char)128];int caught=0;
@@ -87,7 +87,7 @@ public sealed class StandardJsonWriterTests
     [InlineData(2)]
     public void DestinationExceptionsRemainOriginalAndLatchAfterPartialOutput(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json;
+            using Standard; using Standard::Text; using Standard::Json;
             class SinkFailure:Exception{public SinkFailure():base("destination failed",77){}}
             struct Sink:ITextWriter{
                 private String* text;public int Budget;public int Calls;
@@ -142,7 +142,7 @@ public sealed class StandardJsonWriterTests
     [InlineData(2)]
     public void FailedNestingAllocationDoesNotEmitDelimiterOrConsumeParentAndCanRetry(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json;
+            using Standard; using Standard::Text; using Standard::Json;
             extern int puts(readonly(char)* text);
             private extern void*? malloc(nuint bytes);private extern void free(void* pointer);
             bool deny=false;
@@ -166,7 +166,7 @@ public sealed class StandardJsonWriterTests
     [InlineData(2)]
     public void MovingPreservesStateAndDestructionDoesNotWriteOrDisposeDestination(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json;
+            using Standard; using Standard::Text; using Standard::Json;
             extern int puts(readonly(char)* text);
             int main(){String text=s"";
                 {JsonWriter writer=new(&text);writer.WriteStartArray();JsonWriter moved=move writer;
@@ -180,7 +180,7 @@ public sealed class StandardJsonWriterTests
     public void OwningWriterCannotBeImplicitlyCopied()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Text; using std::Json;int main(){String output=s"";JsonWriter writer=new(&output);JsonWriter copy=writer;return 0;}
+            using Standard; using Standard::Text; using Standard::Json;int main(){String output=s"";JsonWriter writer=new(&output);JsonWriter copy=writer;return 0;}
             """)));
         Assert.Contains("copy", error.Message, StringComparison.OrdinalIgnoreCase);
     }

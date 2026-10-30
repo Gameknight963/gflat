@@ -8,7 +8,7 @@ public sealed class RationalParsingEditorTests
     [Fact]
     public void CStringAndCountedParsersNavigateTheirOverloadsAndExposeTheirReferenceOutputs()
     {
-        const string text="using std; using std::Numerics;void Probe(){Rational parsed=Rational::Parse(\"2/4\");Rational counted=Rational::Parse(\"2/4tail\",3);Rational output=new();bool ok=Rational::TryParse(\"2/4\",ref output);bool countedOk=Rational::TryParse(\"2/4tail\",3,ref output);}";
+        const string text="using Standard; using Standard::Numerics;void Probe(){Rational parsed=Rational::Parse(\"2/4\");Rational counted=Rational::Parse(\"2/4tail\",3);Rational output=new();bool ok=Rational::TryParse(\"2/4\",ref output);bool countedOk=Rational::TryParse(\"2/4tail\",3,ref output);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="Rational.gf");
@@ -35,7 +35,7 @@ public sealed class RationalParsingEditorTests
             var signatures=help.GetProperty("signatures");Assert.Equal(2,signatures.GetArrayLength());
             var selected=signatures[help.GetProperty("activeSignature").GetInt32()];
             Assert.Equal(row.Arity,selected.GetProperty("parameters").GetArrayLength());
-            if(row.Name=="TryParse")Assert.Contains("ref std::Numerics::Rational result",selected.GetProperty("label").GetString());
+            if(row.Name=="TryParse")Assert.Contains("ref Standard::Numerics::Rational result",selected.GetProperty("label").GetString());
         }
     }
     private static JsonElement Json(object? value)=>JsonSerializer.SerializeToElement(value,Protocol.JsonOptions);

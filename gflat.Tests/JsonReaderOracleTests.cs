@@ -11,10 +11,10 @@ public sealed class JsonReaderOracleTests
     [InlineData(2)]
     public async Task ReaderMatchesIndependentTokenOffsetsAndDepthsAndRejectsInvalidDocuments(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("json-reader-oracle.gf", """
-                using std; using std::Text; using std::Json; using std::IO;
+                using Standard; using Standard::Text; using Standard::Json; using Standard::IO;
                 int main(int argc, char** argv) {
                     if (argc != 2) return 2;
                     String text=FileText::ReadAll(argv[1]);

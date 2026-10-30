@@ -98,7 +98,7 @@ public sealed class GenericExtensionOverloadTests
     {
         string first=predicateFirst?"if(!source.AsEnumerable().Any(&IsTwo)||calls!=2)return 1;calls=0;":"if(!source.AsEnumerable().Any()||calls!=0)return 1;";
         Run($$"""
-            using std; using std::Memory; using std::Queries;
+            using Standard; using Standard::Memory; using Standard::Queries;
             int calls=0;
             bool IsTwo(int value){calls++;return value==2;}
             bool Missing(int value){calls++;return false;}
@@ -140,7 +140,7 @@ public sealed class GenericExtensionOverloadTests
     private static void Run(string source,int optimization,bool standardLibrary=false)
     {
         if(!standardLibrary){AssertSuccess(CompilerTestHelper.Run(source,optimization));return;}
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("generic-extension.gf",source));
         AssertSuccess(CompilerTestHelper.Run(files,optimization));
     }

@@ -1,11 +1,11 @@
 # Unique ownership
 
-`std::Memory::Unique<T>` owns one separately allocated object and deletes it when its owner
+`Standard::Memory::Unique<T>` owns one separately allocated object and deletes it when its owner
 is destroyed. It has no copy constructor. Move the owner to transfer its deletion
 responsibility, without moving the pointed-to object or allocating another buffer.
 
 ```csharp
-using std; using std::Memory;
+using Standard; using Standard::Memory;
 class Widget {
     public int Count;
     public Widget(int count) { Count = count; }
@@ -89,7 +89,7 @@ address, but its lifetime is controlled by whoever takes responsibility next.
 Releasing a base pointer retains ordinary dynamic-class destruction behavior.
 
 ```csharp
-using std; using std::Memory;
+using Standard; using Standard::Memory;
 
 class Widget
 {

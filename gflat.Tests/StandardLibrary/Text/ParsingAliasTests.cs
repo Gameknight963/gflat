@@ -9,7 +9,7 @@ public class ParsingAliasTests
     {
         (string Type,string Suffix)[] types=[("sbyte","SByte"),("byte","Byte"),("short","Short"),("ushort","UShort"),
             ("int","Int"),("uint","UInt"),("long","Long"),("ulong","ULong"),("nint","NInt"),("nuint","NUInt")];
-        var source=new System.Text.StringBuilder("using std; using std::Text; int main(){");
+        var source=new System.Text.StringBuilder("using Standard; using Standard::Text; int main(){");
         foreach(var (type,suffix) in types)
         {
             source.Append($$"""
@@ -30,7 +30,7 @@ public class ParsingAliasTests
             return 0;}
             """);
         var files=new[]{"Text/parsing.gf","Text/integer_parsing.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("main.gf",source.ToString()));
         Assert.Equal(0,CompilerTestHelper.Run(files,optimization).ExitCode);
     }

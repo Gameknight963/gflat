@@ -1,10 +1,10 @@
 # Repeated values
 
-`std::Queries::Repeated<T>` stores one captured value and a `nuint` count. It describes a
+`Standard::Queries::Repeated<T>` stores one captured value and a `nuint` count. It describes a
 sequence without allocating a buffer of repeated elements.
 
 ```csharp
-using std; using std::Queries;
+using Standard; using Standard::Queries;
 int main()
 {
     Repeated<int> values = new(7, 4);

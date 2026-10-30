@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class SortedSetTests
 {
     private const string Owners = """
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
         int made=0;int dead=0;int budget=-1;int allocations=0;int releases=0;bool fail=false;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
         namespace Memory {
@@ -39,7 +39,7 @@ public sealed class SortedSetTests
     public void MixedMutationsAndReadonlyIterationMatchDotNetInBothOrders(int optimization)
     {
         var source=new StringBuilder("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             int Ascending(readonly(int)* a,readonly(int)* b)=>*a-*b;
             int Descending(readonly(int)* a,readonly(int)* b)=>*b-*a;
             bool Matches(immutable(SortedSet<int>)* values,readonly(int)* expected,nuint length){
@@ -147,7 +147,7 @@ public sealed class SortedSetTests
 
     private static IEnumerable<SourceFile> Sources(string program)
         => new[]{"Collections/IEnumerable.gf","Queries/Enumerable.gf","Memory/Span.gf","Collections/Vector.gf","Collections/SortedMap.gf","Collections/SortedSet.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf", "Text/ByteSearch.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("sorted-set.gf",program));
 
     private static void Run(string program,int optimization)

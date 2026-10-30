@@ -1,13 +1,13 @@
 # Civil timestamps with an explicit UTC offset
 
-`std::Time::DateTimeOffset` pairs a civil DateTime with a fixed whole-minute TimeSpan
+`Standard::Time::DateTimeOffset` pairs a civil DateTime with a fixed whole-minute TimeSpan
 offset from UTC. Construction accepts offsets from `-14:00` through `+14:00`,
 inclusive, and requires both wall-clock and UTC values within years 1 through 9999.
 The default value is 0001-01-01 at midnight UTC. Values contain no named time zone,
 daylight-saving rules, local-machine settings or clock/provider ownership.
 
 ```csharp
-using std; using std::Time;
+using Standard; using Standard::Time;
 
 int main()
 {
@@ -66,7 +66,7 @@ its destination; throwing errors use normal exception storage. No operators or
 floating-point unit conversions are added.
 
 ```csharp
-using std; using std::Time;
+using Standard; using Standard::Time;
 
 int main()
 {
@@ -95,7 +95,7 @@ nothing internally. These are fixed-offset calendar operations, with no named
 time zone or daylight-saving adjustment.
 
 ```csharp
-using std; using std::Time;
+using Standard; using Standard::Time;
 
 int main()
 {

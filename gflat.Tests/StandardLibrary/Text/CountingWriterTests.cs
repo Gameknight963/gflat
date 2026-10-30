@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class CountingWriterTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("counting-writer.gf",program));
 
@@ -17,7 +17,7 @@ public sealed class CountingWriterTests
     }
 
     private const string DenyAllocation="""
-        using std; using std::Text; using std::IO; using std::Encoding;int attempts=0;
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Encoding;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -54,7 +54,7 @@ public sealed class CountingWriterTests
     [InlineData(2)]
     public void ThrowingOverflowPreservesPreviousCountAndDoesNotPoisonWriter(int optimization)
         => Run("""
-            using std; using std::Text; using std::IO; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Encoding;
             int main(){
                 CountingWriter writer=new();nuint maximum=(nuint)0-(nuint)1;
                 writer.Write(((nuint)1).reinterpret<readonly(char)*>(),maximum-1);int caught=0;
@@ -74,7 +74,7 @@ public sealed class CountingWriterTests
     public void TryOnlyCodeHasNoExceptionBoundary()
     {
         string ir=Compiler.Emit(Sources("""
-            using std; using std::Text; using std::IO; using std::Encoding;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Encoding;
             bool Inspect(nuint count) nothrow {
                 CountingWriter writer=new();
                 bool accepted=writer.TryWrite(((nuint)1).reinterpret<readonly(char)*>(),count);

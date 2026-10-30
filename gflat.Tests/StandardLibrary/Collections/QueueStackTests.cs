@@ -6,14 +6,14 @@ public sealed class QueueStackTests
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf",
         "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf",
         "Collections/Vector.gf", "Memory/Span.gf", "Collections/Stack.gf", "Collections/Queue.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
     public void QueueWrapsGrowsAndEnumeratesInFifoOrder()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Queue<int> items = new();
                 items.Reserve(4);
@@ -51,7 +51,7 @@ public sealed class QueueStackTests
     public void StackEnumeratesAndPopsFromTheTop()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Stack<int> items = new(); items.Reserve(100);
                 for (int i = 0; i < 100; i++) items.Push(i);
@@ -73,7 +73,7 @@ public sealed class QueueStackTests
     public void StringsAreCopiedOnInsertionAndTransferredOnRemoval()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 String original = s"original";
                 Queue<String> queue = new(); Stack<String> stack = new();
@@ -102,7 +102,7 @@ public sealed class QueueStackTests
     public void EachOwnedElementIsDestroyedExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Item {
                 private int* destroyed;
                 public Item(int* counter) { destroyed = counter; }
@@ -129,7 +129,7 @@ public sealed class QueueStackTests
     public void RawPointerElementsNeverTransferPointeeDestructionToContainers()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Resource {
                 private int* destroyed;
                 public Resource(int* counter) { destroyed = counter; }
@@ -158,7 +158,7 @@ public sealed class QueueStackTests
     public void ZeroSizedElementsAndCapacityOverflowRemainWellDefined()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             struct Empty {}
             int main() {
                 Queue<Empty> queue = new(); Stack<Empty> stack = new();
@@ -180,7 +180,7 @@ public sealed class QueueStackTests
     public void TryRemovalPreservesEmptyOutputsAndReplacesOwningValues()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Queue<String> queue = new(); Stack<String> stack = new();
                 String output = s"unchanged";
@@ -199,7 +199,7 @@ public sealed class QueueStackTests
     public void FailedQueueGrowthPreservesExistingElementsAndDestroysArgument()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint bytes);
             extern void free(void* address);
             namespace Memory {
@@ -232,7 +232,7 @@ public sealed class QueueStackTests
     public void EmptyOperationsAndUnpositionedEnumeratorsThrow()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Queue<int> queue = new(); Stack<int> stack = new(); int caught = 0;
                 try { queue.Dequeue(); } catch (ref Exception error) { caught++; }

@@ -33,7 +33,7 @@ public sealed class StandardEditDistanceTests
         Assert.Equal(225, rows);
         string hex = Convert.ToHexString(packet.ToArray());
         string program = $$$"""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int attempts = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { attempts++; return null; }
@@ -122,7 +122,7 @@ public sealed class StandardEditDistanceTests
     public void ReachableDistanceKernelIsNothrowAndHasNoAllocatorCollectorOrExceptionCalls()
     {
         string ir = Compiler.Emit(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Span<readonly(char)> first = new("kitten", 6);
                 Span<readonly(char)> second = new("sitting", 7);
@@ -155,7 +155,7 @@ public sealed class StandardEditDistanceTests
 
     private static IEnumerable<SourceFile> Sources(string program)
         => new[] { "Text/EditDistance.gf", "Memory/Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf" }
-            .Select(relative => Path.Combine(AppContext.BaseDirectory, "Std", "core", relative))
+            .Select(relative => Path.Combine(AppContext.BaseDirectory, "Standard", "core", relative))
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("edit-distance.gf", program));
 

@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonPrettyPrintTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Json; using std::IO;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Json; using Standard::IO;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny||failAfter==0){denied++;return null;}if(failAfter>0)failAfter--;
@@ -100,7 +100,7 @@ public sealed class StandardJsonPrettyPrintTests
             int main(){
                 byte[{{blob.Count}}] blob=[{{string.Join(',',blob.Select(value=>"(byte)"+value))}}];int[{{rows.Count}}] rows=[{{string.Join(',',rows)}}];Sink sink=new();
                 for(nuint row=0;row<{{rows.Count}};row+=2){
-                    bool caught=false;try{JsonText::PrettyPrint((readonly(char)*)&blob[(nuint)rows[row]],(nuint)rows[row+1],&sink);}catch(ref JsonParseException error){if(error.Offset>(nuint)rows[row+1])return 1;caught=true;}
+                    bool caught=false;try{JsonText::PrettyPrint((&blob[(nuint)rows[row]]).reinterpret<readonly(char)*>(),(nuint)rows[row+1],&sink);}catch(ref JsonParseException error){if(error.Offset>(nuint)rows[row+1])return 1;caught=true;}
                     if(!caught||sink.Calls!=0||allocated!=released)return 2;
                 }
                 bool caught=false;try{JsonText::PrettyPrint(((nuint)1).reinterpret<readonly(char)*>(),0,&sink);}catch(ref JsonParseException error){if(error.Offset!=0)return 3;caught=true;}if(!caught||sink.Calls!=0)return 4;
@@ -161,7 +161,7 @@ public sealed class StandardJsonPrettyPrintTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("json-pretty.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"JSON PrettyPrint exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }

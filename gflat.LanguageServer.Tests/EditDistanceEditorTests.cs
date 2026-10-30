@@ -9,7 +9,7 @@ public sealed class EditDistanceEditorTests
     public void CountedByteKernelNavigatesAndShowsCallerScratchAndRefOutput()
     {
         const string text = """
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             void Observe() {
                 Span<readonly(char)> first = new("ab", 2);
                 Span<readonly(char)> second = new("ba", 2);

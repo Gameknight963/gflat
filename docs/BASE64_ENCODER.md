@@ -1,6 +1,6 @@
 # Streaming Base64 output
 
-`std::Encoding::Base64Encoder` implements `ITextWriter` and encodes counted binary input
+`Standard::Encoding::Base64Encoder` implements `ITextWriter` and encodes counted binary input
 to one borrowed destination. It emits standard padded Base64 with the `+` and
 `/` alphabet, without whitespace, line wrapping, a BOM, or a trailing newline.
 It reuses the existing [Base64 codec](BINARY_CODECS.md).
@@ -10,7 +10,7 @@ It reuses the existing [Base64 codec](BINARY_CODECS.md).
 This complete program writes `input.bin` as Base64 in `output.txt`:
 
 ```csharp
-using std; using std::IO; using std::Encoding;
+using Standard; using Standard::IO; using Standard::Encoding;
 
 int main()
 {

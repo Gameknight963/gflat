@@ -1,6 +1,6 @@
 # Borrowed binary buffer cursors
 
-`std::Binary::BinaryBufferReader` and `std::Binary::BinaryBufferWriter` track a position within
+`Standard::Binary::BinaryBufferReader` and `Standard::Binary::BinaryBufferWriter` track a position within
 caller-owned bytes. They do not own storage, allocate, or directly call libc. All
 constructors, properties, and methods are `nothrow`. Include their respective
 source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/bytes.gf`.
@@ -8,7 +8,7 @@ The reader also requires the interface definition `core/IO/IByteReader.gf`; defi
 the cursor itself does not require the throwing IO helpers or exception runtime.
 
 ```csharp
-using std; using std::Binary;
+using Standard; using Standard::Binary;
 byte[16] bytes;
 BinaryBufferWriter writer = new(bytes, 16);
 writer.TryWriteUInt16BigEndian((ushort)7);
@@ -118,7 +118,7 @@ without adding that dependency to the cursor source files. Include it and
 `Binary/VarInt.gf` when selecting sources individually.
 
 ```csharp
-using std::Binary;
+using Standard::Binary;
 extension BinaryBufferWriter {
     public bool TryWriteVarUInt32(uint value) nothrow;
 }
@@ -163,7 +163,7 @@ their previous output and position on `NeedMore` or `Invalid`, and signed writes
 leave every byte and position unchanged when capacity is insufficient.
 
 ```csharp
-using std::Binary;
+using Standard::Binary;
 byte[10] buffer;
 BinaryBufferWriter writer = new(buffer, 10);
 bool written = writer.TryWriteVarUInt32(300u);
@@ -182,7 +182,7 @@ unsigned metadata before committing the signed result, with the same output
 alias restrictions as the unsigned helpers.
 
 ```csharp
-using std; using std::Binary;
+using Standard; using Standard::Binary;
 int main()
 {
     byte[10] bytes;
@@ -200,7 +200,7 @@ int main()
 ## Example: header backfill and parser checkpoints
 
 ```csharp
-using std; using std::Binary;
+using Standard; using Standard::Binary;
 
 int main()
 {
@@ -257,7 +257,7 @@ if (reader.TryPeekSlice(8, ref header))
 
 ## Shared counted-reader consumers
 
-`BinaryBufferReader` also implements `std::IO::IByteReader`. Its ordinary `Read(char*,
+`BinaryBufferReader` also implements `Standard::IO::IByteReader`. Its ordinary `Read(char*,
 nuint)` method is `nothrow`: it consumes at most the remaining bytes, returns a short
 prefix if needed, and returns zero at EOF. A zero request does not access input or
 output storage or change position. Unlike the overlap-permitting `TryReadBytes`, this

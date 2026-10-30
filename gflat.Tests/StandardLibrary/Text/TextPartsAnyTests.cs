@@ -42,7 +42,7 @@ public sealed class TextPartsAnyTests
         }
         string hex = Convert.ToHexString(manifest.ToArray());
         Run($$"""
-            using std; using std::Text; using std::Memory; using std::Queries;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
             int attempts=0;
             namespace Memory {
                 public replace void*? Allocate(nuint count){attempts++;return null;}
@@ -84,7 +84,7 @@ public sealed class TextPartsAnyTests
     public void SnapshotsIndependentCursorsBorrowSourceAndComposeWithoutAllocation(int optimization)
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
             extern void*? malloc(nuint count);extern void free(void* value);
             int attempts=0;bool deny=false;
             namespace Memory {
@@ -135,7 +135,7 @@ public sealed class TextPartsAnyTests
     public void CurrentStateAndReadonlyPartsFollowTextPartsContract(int optimization)
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
             int main(){
                 TextPartsAny parts=new(new Span<readonly(char)>("a",1),",");
                 TextPartsAny::Enumerator iterator=parts.GetEnumerator();bool caught=false;
@@ -149,7 +149,7 @@ public sealed class TextPartsAnyTests
             }
             """, optimization);
         const string prefix="""
-            using std; using std::Text; using std::Memory; using std::Queries;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
             void Inspect(immutable(TextPartsAny::Enumerator)* value){Span<readonly(char)> part=value.Current;
             """;
         Compiler.Check(Sources(prefix+"char byteValue=part[0];}"));
@@ -157,7 +157,7 @@ public sealed class TextPartsAnyTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("text-parts-any.gf",program));
     private static void Run(string program,int optimization)

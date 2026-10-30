@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardWhileQueryTests
 {
     private const string CounterSource = """
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
         int moves = 0; int reads = 0; int calls = 0;
         struct Source {
             private int count;
@@ -90,7 +90,7 @@ public sealed class StandardWhileQueryTests
     [InlineData(2)]
     public void OwningPredicatesAndIteratorsCleanUpOnShortCircuitAndThrow(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             private extern void*? malloc(nuint bytes); private extern void free(void* storage);
             int allocations=0;int releases=0;int created=0;int destroyed=0;int calls=0;int failAt=0;
             namespace Memory {
@@ -134,7 +134,7 @@ public sealed class StandardWhileQueryTests
         string[] files=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf",
             "Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf",
             "Collections/Vector.gf","Memory/Span.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf", "Text/ByteSearch.gf"];
-        var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
+        var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",file))))
             .Append(new SourceFile("while.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_while_query_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try {

@@ -67,7 +67,7 @@ foreach ($case in $cases) {
     $ir = Join-Path $output ($case.Name + '.ll')
     if (-not $case.Project) {
         $inputs = @((Join-Path $PSScriptRoot 'Runtime.gf'), (Join-Path $PSScriptRoot ('probes/' + $case.Source)))
-        $inputs += @($case.Library | ForEach-Object { Join-Path $repo ('std/' + $_) })
+        $inputs += @($case.Library | ForEach-Object { Join-Path $repo ('Standard/' + $_) })
         Invoke-Checked dotnet (@($Compiler, '--no-stdlib', '--emit-ir', '-o', $ir) + $inputs)
     }
     foreach ($optimization in @(0, 2)) {

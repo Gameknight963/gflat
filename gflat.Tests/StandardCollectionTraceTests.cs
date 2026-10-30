@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardCollectionTraceTests
 {
     private const string OwnedPrelude = """
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
         extern int puts(immutable(char*) message);
         int made = 0;
         int destroyed = 0;
@@ -207,7 +207,7 @@ public sealed class StandardCollectionTraceTests
         int[] lengths = [0, 1, 2, 7, 31, 32, 33, 63, 64, 65, 95, 96, 97, 127, 128, 129];
         var reference = new BitArray(0);
         var trace = new Trace("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             extern int puts(immutable(char*) message);
             bool MatchesBits(immutable(BitSet)* values, readonly(uint)* words, nuint length, nuint count) {
                 if (values.Length != length || values.CountSetBits() != count) return false;
@@ -372,7 +372,7 @@ public sealed class StandardCollectionTraceTests
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/Queue.gf",
             "Collections/PriorityQueue.gf", "Collections/BitSet.gf", "Collections/HashMap.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf",
             "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf"];
-        var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+        var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("trace.gf", program));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_collection_trace_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);

@@ -1,0 +1,16 @@
+<Solution>
+  <Configurations>
+    <ProjectType Extension="gfproj" TypeId="6423f711-946a-41ab-b95b-0f9b5911f803" />
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Standard.gfproj" />
+  <Folder Name="/Platform providers/">
+    <Project Path="../libraries/platform/windows/Windows.gfproj" />
+    <Project Path="../libraries/platform/windows-random/WindowsRandom.gfproj" />
+    <Project Path="../libraries/platform/windows-network/WindowsNetwork.gfproj" />
+    <Project Path="../libraries/platform/linux/Linux.gfproj" />
+    <Project Path="../libraries/platform/linux-random/LinuxRandom.gfproj" />
+  </Folder>
+</Solution>

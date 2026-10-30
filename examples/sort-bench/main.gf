@@ -1,10 +1,10 @@
-using std::Text;
-using std::Time;
-using std::Numerics;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Time;
+using Standard::Numerics;
+using Standard::Collections;
+using Standard;
 
-alias Timer = std::Time::Stopwatch<NativeClock>;
+alias Timer = Standard::Time::Stopwatch<NativeClock>;
 
 int CompareValues(immutable(int)* left, immutable(int)* right) nothrow
 {

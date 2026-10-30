@@ -26,7 +26,7 @@ public sealed class StandardLibraryGuideTests
     {
         string path = Path.Combine(AppContext.BaseDirectory, "Guides", guide);
         var example = Programs(File.ReadAllText(path)).ElementAt(index);
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(file => new SourceFile(file, File.ReadAllText(file)));
         // Retain the guide's line numbers in compiler errors. Only complete
         // programs with an entry point are checked; contextual fragments remain

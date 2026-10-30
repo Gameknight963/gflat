@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardDefaultIfEmptyTests
 {
     private const string Counters="""
-        using std; using std::Text; using std::Queries;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Queries;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;void*? p=malloc(bytes);if(p!=null)allocated++;return p;}
@@ -145,7 +145,8 @@ public sealed class StandardDefaultIfEmptyTests
                     beforeStarts=starts;failIterator=true;caught=false;
                     try{query.GetEnumerator();}catch(ref Exception error){if(error.GetCode()!=75)return 11;caught=true;}failIterator=false;
                     if(!caught||starts!=beforeStarts||starts!=ends||live!=owners||allocated-released!=balance)return 12;
-                    if(query.Take(0).Count()!=0||live!=owners||fallbackLive!=captured||starts!=ends||allocated-released!=balance)return 13;
+                    nuint emptyCount=query.Take(0).Count();
+                    if(emptyCount!=0||live!=owners||fallbackLive!=captured||starts!=ends||allocated-released!=balance)return 13;
                     {
                         var detached=Detached();if(!detached.MoveNext())return 14;
                         Item first=detached.Current;Item second=detached.Current;
@@ -168,8 +169,8 @@ public sealed class StandardDefaultIfEmptyTests
     [InlineData(2)]
     public void ManagedSourceAndFallbackCapturesRemainRootedAfterQueryScopeEndsUntilIteratorCleanup(int optimization)
         =>Run("""
-            using std; using std::Text; using std::Queries;
-            public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
+            using Standard; using Standard::Text; using Standard::Queries;
+            public static replace nuint Standard::TracingCollector::CollectionThreshold()=>0;
             class Box {public Box^? Self;public int Id;public Box(int id){Self=null;Id=id;}}
             alias Cursor=DefaultIfEmptySource<Box^,Repeated<Box^>,Repeated<Box^>::Enumerator>::Enumerator;
             Box^ Make(int id){Box^ value=new^ Box(id);value.Self=value;return value;}
@@ -200,7 +201,7 @@ public sealed class StandardDefaultIfEmptyTests
             """,optimization);
 
     private static void Run(string program,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("default-if-empty.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"DefaultIfEmpty exit {result.ExitCode}: {result.StandardError}");

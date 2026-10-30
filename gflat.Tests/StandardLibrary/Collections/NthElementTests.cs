@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class NthElementTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("nth-element.gf",code));
 
@@ -177,7 +177,7 @@ public sealed class NthElementTests
             """,optimization);
 
     private const string Memory="""
-        using std; using std::Memory; using std::Collections;
+        using Standard; using Standard::Memory; using Standard::Collections;
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory{

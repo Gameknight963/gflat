@@ -11,7 +11,7 @@ public sealed class SpanWindowsTests
     public void FullWindowsMatchIndependentSmallSequenceOracle(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern int printf(readonly(char)* format,...);
             int main(){
                 int[9] data;for(nuint i=0;i<9;i++)data[i]=(int)(2*i+1);
                 for(nuint length=0;length<=9;length++)for(nuint width=1;width<=11;width++)for(nuint step=1;step<=12;step++){
@@ -40,7 +40,7 @@ public sealed class SpanWindowsTests
     [InlineData(2)]
     public void AdjacentDifferencesAndLazySmoothingBorrowCapturedStorageWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint bytes);extern void free(void* pointer);
             int allocations=0;int selected=0;
             namespace Memory{public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             int Average(Span<readonly(int)> window){selected++;return (window[0]+window[1]+window[2])/3;}
@@ -65,7 +65,7 @@ public sealed class SpanWindowsTests
     [InlineData(2)]
     public void NoncopyableElementsAndShallowOrDeepQualifiedDataStayBorrowed(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;int copies=0;int dead=0;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;int copies=0;int dead=0;
             struct Owner{
                 public int Id;public int* Pointer;
                 public Owner(int id,int* pointer){Id=id;Pointer=pointer;}
@@ -93,7 +93,7 @@ public sealed class SpanWindowsTests
     [InlineData(2)]
     public void EmptyInvalidAndMaximumStepIteratorBoundariesAreChecked(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main(){
                 Span<int> empty=new();if(empty.Windows(1).GetEnumerator().MoveNext())return 1;
                 int value=42;Span<int> one=new(&value,1);int errors=0;
@@ -122,7 +122,7 @@ public sealed class SpanWindowsTests
     public void WindowElementQualifiersRejectForbiddenWrites(bool deep)
     {
         string setup="""
-            using std; using std::Memory; using std::Queries; using std::Collections;struct Item{public int Value;public int* Pointer;public Item(int* pointer){Value=0;Pointer=pointer;}}
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;struct Item{public int Value;public int* Pointer;public Item(int* pointer){Value=0;Pointer=pointer;}}
             int main(){int pointed=0;Item item=new(&pointed);Span<Item> source=new(&item,1);
             """;
         string loop=deep?"foreach(Span<immutable(Item)> window in source.AsImmutable().Windows(1)){BODY}":
@@ -137,7 +137,7 @@ public sealed class SpanWindowsTests
     {
         string[] names=["Memory/Span.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Collections/SpanWindows.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"];
-        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("span-windows.gf",program));
     }
     private static void Run(string program,int optimization)

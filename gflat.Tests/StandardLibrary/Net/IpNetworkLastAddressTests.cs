@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Net;
 public sealed class IpNetworkLastAddressTests
 {
     private const string Allocator="""
-        using std; using std::Net;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;
+        using Standard; using Standard::Net;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;return malloc(count);}
             public replace void Free(void* storage)nothrow{free(storage);}
@@ -120,5 +120,5 @@ public sealed class IpNetworkLastAddressTests
             """,optimization);
 
     private static byte[] FixedBytes(BigInteger value,int count){byte[] encoded=value.ToByteArray(isUnsigned:true,isBigEndian:true);var result=new byte[count];encoded.CopyTo(result,count-encoded.Length);return result;}
-    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("ip-network-last-address.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"IP network endpoint exit {result.ExitCode}: {result.StandardError}");}
+    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("ip-network-last-address.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"IP network endpoint exit {result.ExitCode}: {result.StandardError}");}
 }

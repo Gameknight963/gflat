@@ -81,8 +81,8 @@ public sealed class NestedEnumeratorEditorTests
     public void ActualStdVectorNestedTypesAndIndexerAreClassifiedWithoutACaller()
     {
         string root = AppContext.BaseDirectory;
-        while (!Directory.Exists(Path.Combine(root, "std", "core", "Collections"))) root = Directory.GetParent(root)!.FullName;
-        var files = Directory.GetFiles(Path.Combine(root, "std", "core"), "*.gf", SearchOption.AllDirectories)
+        while (!Directory.Exists(Path.Combine(root, "Standard", "core", "Collections"))) root = Directory.GetParent(root)!.FullName;
+        var files = Directory.GetFiles(Path.Combine(root, "Standard", "core"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
         var source = Assert.Single(files, f => Path.GetFileName(f.Path) == "Vector.gf");
         var snapshot = new AnalysisSnapshot(files);

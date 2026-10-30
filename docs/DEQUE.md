@@ -1,11 +1,11 @@
 # Deque
 
-`std::Collections::Deque<T>` is an owning double-ended queue backed by a growable ring
+`Standard::Collections::Deque<T>` is an owning double-ended queue backed by a growable ring
 buffer. It supports noncopyable owning values without per-element allocations.
 
 ```csharp
-using std::Text;
-using std; using std::Collections;
+using Standard::Text;
+using Standard; using Standard::Collections;
 
 int main()
 {
@@ -85,7 +85,7 @@ copy constructor throws, the deque remains unchanged. Structural mutation
 invalidates existing borrowed elements and iterators, as with other deque methods.
 
 ```csharp
-using std; using std::Collections;
+using Standard; using Standard::Collections;
 
 int main()
 {

@@ -7,7 +7,7 @@ public sealed class StandardDefaultArrangementTests
     [InlineData(2)]
     public void PrimitiveDefaultsAndExplicitNonComparableCallbacksKeepTheirContracts(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             struct Plain { public int Value; public Plain(int value) { Value = value; } }
             int Compare(immutable(Plain)* first, immutable(Plain)* second) {
                 if (first.Value < second.Value) return -1;
@@ -42,7 +42,7 @@ public sealed class StandardDefaultArrangementTests
     [InlineData(2)]
     public void DeclaredComparableForwardingRelocatesOwnersAndPreservesOriginalFailures(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             extern void*? malloc(nuint count); extern void free(void* value);
             int attempts = 0; int allocated = 0; int freed = 0;
             int made = 0; int dead = 0; bool deny = false; bool fail = false;
@@ -107,7 +107,7 @@ public sealed class StandardDefaultArrangementTests
     public void MissingComparisonContractsRejectOnlyTheDefaultForms()
     {
         const string declarations = """
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             struct Plain { public int Value; public Plain(int value) { Value = value; } }
             int Compare(immutable(Plain)* first, immutable(Plain)* second) => first.Value - second.Value;
             """;
@@ -122,7 +122,7 @@ public sealed class StandardDefaultArrangementTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("default-arrangement.gf", code));
 

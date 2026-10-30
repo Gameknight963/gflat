@@ -8,8 +8,8 @@ public sealed class GarbageCollectorOwnerCacheLifecycleTests
     public void TypedManagedFieldsReclassifyAcrossAdoptionAndRetiredOwnerSlotReuse(int optimization)
     {
         const string program = """
-            using std;
-            public static replace nuint std::TracingCollector::CollectionThreshold() => 0;
+            using Standard;
+            public static replace nuint Standard::TracingCollector::CollectionThreshold() => 0;
             struct Holder { public int^? item; }
 
             int AdoptNativeField(int value) {
@@ -59,7 +59,7 @@ public sealed class GarbageCollectorOwnerCacheLifecycleTests
                 return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("collector-owner-cache-lifecycle.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);

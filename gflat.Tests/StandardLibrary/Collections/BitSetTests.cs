@@ -4,14 +4,14 @@ public sealed class BitSetTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
     public void WordBoundariesShrinkRegrowAndClonePreserveOnlyLiveBits()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 BitSet bits = new(65);
                 if (bits.CountSetBits() != 0) return 1;
@@ -44,7 +44,7 @@ public sealed class BitSetTests
     public void SetOperationsAndEnumerationRespectLogicalLength()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 BitSet a = new(70); BitSet b = new(70);
                 a[1] = true; a[32] = true; b[32] = true; b[69] = true;
@@ -77,7 +77,7 @@ public sealed class BitSetTests
     public void InvalidIndicesAndMismatchedLengthsThrowWithoutChanges()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             int main() {
                 BitSet a = new(33); BitSet b = new(32); a[32] = true; int caught = 0;
                 try { a[33] = true; } catch (ref Exception error) { caught++; }
@@ -98,7 +98,7 @@ public sealed class BitSetTests
     public void FailedResizePreservesBitsAndLength()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint bytes);
             extern void free(void* address);
             namespace Memory {

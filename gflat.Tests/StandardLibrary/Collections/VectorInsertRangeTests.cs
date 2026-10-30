@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class VectorInsertRangeTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("main.gf", code));
 
@@ -39,7 +39,7 @@ public sealed class VectorInsertRangeTests
                 }
             }
             Run("""
-                using std; using std::Text; using std::Memory; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
                 extern void* fopen(readonly(char)* path, readonly(char)* mode);
                 extern nuint fread(void* buffer, nuint size, nuint count, void* stream);
                 extern int fclose(void* stream);
@@ -72,7 +72,7 @@ public sealed class VectorInsertRangeTests
     }
 
     private const string Owners = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         int made=0; int dead=0; int budget=-1; int copies=0;
         int allocations=0; int releases=0; bool deny=false;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
@@ -149,7 +149,7 @@ public sealed class VectorInsertRangeTests
     public void CopyRequirementAppliesOnlyWhenInsertRangeIsCalled()
     {
         const string program = """
-            using std; using std::Text; using std::Memory; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
             struct Unique {
                 private int* destroyed;
                 public Unique(int* counter){destroyed=counter;}

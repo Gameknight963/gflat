@@ -92,11 +92,11 @@ public sealed class DeclaredExtensionPrecedenceTests
     [InlineData(2)]
     public void GenericFormattableBorrowOfStringReturnsIndependentCountedOwner(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("generic-string-borrow.gf","""
-                using std;
-                using std::Text;
+                using Standard;
+                using Standard::Text;
                 String Borrow<T:IFormattable>(ref immutable(T) value)=>value.ToString();
                 int main(){
                     String original=String::From("a\0b",3);

@@ -20,7 +20,7 @@ public sealed class BufferedReaderTests
     {
         byte[] bytes = Enumerable.Range(0, 257).Select(index => (byte)(index * 71 + 23)).ToArray();
         Run($$"""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             struct Source:IByteReader{
                 private readonly(char)* data;private nuint length;private nuint chunk;
                 public nuint Position;public nuint Reads;public nuint ZeroReads;public nuint Maximum;
@@ -71,7 +71,7 @@ public sealed class BufferedReaderTests
     [InlineData(2)]
     public void UnknownConsumedPrefixesAndBadCountsPoisonWithoutReplayAndConstructorFailureDoesNotRead(int optimization)
         => Run("""
-            using std;using std::IO;
+            using Standard;using Standard::IO;
             class ReadFailure:IOException{public ReadFailure():base("buffered source failure"){code=81;}}
             struct Source:IByteReader{
                 public nuint Reads;public nuint ZeroReads;public nuint Position;public int Mode;
@@ -132,7 +132,7 @@ public sealed class BufferedReaderTests
             string path = Path.Combine(directory, "varints.bin");
             File.WriteAllBytes(path, [..packet, 90]);
             Run($$"""
-                using std;using std::IO;
+                using Standard;using Standard::IO;
                 struct CountedFile:IByteReader{
                     private File* file;public nuint Reads;
                     public CountedFile(File* input){file=input;Reads=0;}
@@ -160,12 +160,12 @@ public sealed class BufferedReaderTests
                     if(releases!=freed+1)return 56;
                     File direct=File::OpenRead("PATH");CountedFile directSource=new(&direct);
                     uint[64] expected=[{{string.Join(",", values.Select(value => value + "u"))}}];
-                    for(nuint i=0;i<64;i++)if(std::IO::ReadVarUInt32(&directSource)!=expected[i])return 47;
+                    for(nuint i=0;i<64;i++)if(Standard::IO::ReadVarUInt32(&directSource)!=expected[i])return 47;
                     if(directSource.Reads!=120||!direct.IsOpen)return 48;direct.Close();
                     File file=File::OpenRead("PATH");CountedFile counted=new(&file);allocated=allocations;freed=releases;
                     {
                         BufferedReader reader=new(&counted,17);
-                        for(nuint i=0;i<64;i++)if(std::IO::ReadVarUInt32(&reader)!=expected[i])return 49;
+                        for(nuint i=0;i<64;i++)if(Standard::IO::ReadVarUInt32(&reader)!=expected[i])return 49;
                         if(counted.Reads!=8||reader.BufferedCount!=1||!file.IsOpen)return 50;
                         char marker='\0';if(reader.Read(&marker,1)!=1||marker!='Z'||counted.Reads!=8)return 51;
                         if(reader.Read(&marker,1)!=0||counted.Reads!=9)return 52;
@@ -191,7 +191,7 @@ public sealed class BufferedReaderTests
     public void VectorOwnedReaderCannotBeCopiedImplicitly()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std::IO;
+            using Standard::IO;
             struct Source:IByteReader{public nuint Read(char* data,nuint count){return 0;}}
             void Probe(){Source source=new();BufferedReader first=new(&source,4);BufferedReader duplicate=first;}
             """), options: new() { NoStdLib = true }));
@@ -199,7 +199,7 @@ public sealed class BufferedReaderTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("buffered-reader-tests.gf", program));
 

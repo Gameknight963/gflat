@@ -10,7 +10,7 @@ public sealed class SearchExampleTests
     [InlineData(2)]
     public async Task ActualToolMatchesCountedLinesAcrossChunksAndPreservesInput(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("search.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/search.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-search-" + Guid.NewGuid().ToString("N"));

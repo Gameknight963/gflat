@@ -1,12 +1,12 @@
 # Sorted map
 
-`std::Collections::SortedMap<K,V>` owns keys and values in a sorted contiguous buffer. Supply
+`Standard::Collections::SortedMap<K,V>` owns keys and values in a sorted contiguous buffer. Supply
 a comparer borrowing two keys through `immutable(K)*`; return negative, zero, or
 positive according to their order. Zero identifies equivalent keys, regardless
 of other equality or hashing implementations.
 
 ```csharp
-using std; using std::Collections;
+using Standard; using Standard::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {
@@ -117,8 +117,8 @@ an empty map produce a default empty span (null `Data`, zero `Length`). With a
 descending comparer, the lower bound comes first in that descending order.
 
 ```csharp
-using std::Collections;
-using std::Memory;
+using Standard::Collections;
+using Standard::Memory;
 
 int Compare(immutable(int)* left, immutable(int)* right)
 {
@@ -153,7 +153,7 @@ insertion, removal, growth, clearing, destruction, or moving the map invalidate
 the view. Replacing a mapped value with `Set` retains its entry address while
 destroying the previous value's resources, so do not retain derived resource
 borrows across replacement. Keep the owning map alive throughout use of the span.
-No additional std source files are required beyond the ordinary SortedMap/Span
+No additional Standard source files are required beyond the ordinary SortedMap/Span
 dependencies.
 
 

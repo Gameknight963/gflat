@@ -66,12 +66,12 @@ public sealed class UniqueReleaseTests
     [InlineData("immutable")]
     public void ReleaseRequiresMutableOwner(string qualifier)
         => Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources($$"""
-            using std; using std::Memory;
+            using Standard; using Standard::Memory;
             void Invalid({{qualifier}}(Unique<int>)* owner){owner.Release();}
             """)));
 
     private const string Counters="""
-        using std; using std::Memory;
+        using Standard; using Standard::Memory;
         extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int dead=0;int baseDead=0;int derivedDead=0;
         void*? watched=null;int watchedFrees=0;bool deny=false;
@@ -81,7 +81,7 @@ public sealed class UniqueReleaseTests
         }
         """;
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("unique-release.gf",source));
     private static void Run(string source,int optimization)
     {

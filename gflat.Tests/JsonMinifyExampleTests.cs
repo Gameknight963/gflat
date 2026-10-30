@@ -11,7 +11,7 @@ public sealed class JsonMinifyExampleTests
     [InlineData(2)]
     public async Task ActualToolPreservesOrderedTokensAndValidatesBeforeOutput(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("json-minify.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/json-minify.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat-json-minify-"+Guid.NewGuid().ToString("N"));

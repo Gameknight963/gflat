@@ -9,7 +9,7 @@ public sealed class BinaryBufferByteReaderTests
     {
         byte[] expected = Enumerable.Range(0, 257).Select(index => (byte)(index * 37 + 11)).ToArray();
         string code = $$"""
-            using std::Binary;
+            using Standard::Binary;
             int main()nothrow{
                 BinaryBufferReader empty=new();nuint maximum=(nuint)0-(nuint)1;
                 if(empty.Read(((nuint)1).reinterpret<char*>(),0)!=0||empty.Read(((nuint)1).reinterpret<char*>(),maximum)!=0||empty.Position!=0)return 1;
@@ -57,26 +57,26 @@ public sealed class BinaryBufferByteReaderTests
     public void InterfaceBinaryVarIntAndExactReadHelpersShareTheExistingCursorAndCopyKeepsItsOwnPosition(int optimization)
     {
         string code = """
-            using std::Binary;using std::IO;
+            using Standard::Binary;using Standard::IO;
             int main(){
                 byte[12] data=[(byte)0x12,(byte)0x34,(byte)0x56,(byte)0x78,(byte)0xac,(byte)0x02,(byte)0x53,(byte)0xef,(byte)0xbe,(byte)0,(byte)255,(byte)90];
                 BinaryBufferReader reader=new(data,12);IByteReader* input=&reader;
-                if(std::IO::ReadUInt32BigEndian(input)!=305419896u||reader.Position!=4)return 21;
-                if(std::IO::ReadVarUInt32(input)!=300u||reader.Position!=6)return 22;
-                if(std::IO::ReadZigZagInt64(input)!=-42l||reader.Position!=7)return 23;
+                if(Standard::IO::ReadUInt32BigEndian(input)!=305419896u||reader.Position!=4)return 21;
+                if(Standard::IO::ReadVarUInt32(input)!=300u||reader.Position!=6)return 22;
+                if(Standard::IO::ReadZigZagInt64(input)!=-42l||reader.Position!=7)return 23;
                 ushort word=0;if(!reader.TryReadUInt16LittleEndian(ref word)||word!=(ushort)48879||reader.Position!=9)return 24;
-                char[5] tail;for(nuint i=0;i<5;i++)tail[i]='?';std::IO::ReadExactly(input,&tail[1],3);
+                char[5] tail;for(nuint i=0;i<5;i++)tail[i]='?';Standard::IO::ReadExactly(input,&tail[1],3);
                 if(reader.Position!=12||tail[0]!='?'||tail[1]!='\0'||(byte)tail[2]!=(byte)255||tail[3]!='Z'||tail[4]!='?')return 25;
                 if(input.Read(((nuint)1).reinterpret<char*>(),1)!=0||input.Read(((nuint)1).reinterpret<char*>(),0)!=0)return 26;
-                if(!reader.TrySeek(4)||std::IO::ReadVarUInt32(input)!=300u||reader.Position!=6)return 27;
-                reader.Reset();if(std::IO::ReadUInt32BigEndian(input)!=305419896u||reader.Position!=4)return 28;
+                if(!reader.TrySeek(4)||Standard::IO::ReadVarUInt32(input)!=300u||reader.Position!=6)return 27;
+                reader.Reset();if(Standard::IO::ReadUInt32BigEndian(input)!=305419896u||reader.Position!=4)return 28;
                 BinaryBufferReader duplicate=reader;IByteReader* copied=&duplicate;
-                if(std::IO::ReadVarUInt32(copied)!=300u||duplicate.Position!=6||reader.Position!=4)return 29;
+                if(Standard::IO::ReadVarUInt32(copied)!=300u||duplicate.Position!=6||reader.Position!=4)return 29;
                 byte[2] raw;if(!reader.TryReadBytes(raw,2)||raw[0]!=(byte)0xac||raw[1]!=(byte)2||reader.Position!=6||duplicate.Position!=6)return 30;
                 if(!reader.TrySeek(10))return 31;
                 if(reader.TryReadBytes(((nuint)1).reinterpret<byte*>(),3)||reader.Position!=10)return 32;
                 for(nuint i=0;i<5;i++)tail[i]='?';bool caught=false;
-                try{std::IO::ReadExactly(input,&tail[1],3);}catch(ref EndOfStreamException error){caught=true;}
+                try{Standard::IO::ReadExactly(input,&tail[1],3);}catch(ref EndOfStreamException error){caught=true;}
                 if(!caught||reader.Position!=12||tail[0]!='?'||(byte)tail[1]!=(byte)255||tail[2]!='Z'||tail[3]!='?'||tail[4]!='?')return 33;
                 if(duplicate.Position!=6)return 34;
                 byte[12] original=[(byte)0x12,(byte)0x34,(byte)0x56,(byte)0x78,(byte)0xac,(byte)0x02,(byte)0x53,(byte)0xef,(byte)0xbe,(byte)0,(byte)255,(byte)90];
@@ -96,7 +96,7 @@ public sealed class BinaryBufferByteReaderTests
         if (sharedHelpers) names.AddRange(["core/Exception.gf", "core/ITextWriter.gf", "core/IO/IOException.gf",
             "core/IO/EndOfStreamException.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf",
             "core/Binary/VarInt.gf", "core/IO/byte_reader_var_int.gf", "libc/Memory/allocation.gf"]);
-        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("binary-buffer-byte-reader-tests.gf", code));
     }
 }

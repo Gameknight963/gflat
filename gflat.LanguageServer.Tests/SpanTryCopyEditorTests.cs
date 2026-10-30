@@ -9,7 +9,7 @@ public sealed class SpanTryCopyEditorTests
     public void ImmutableSourceSelectsConcreteTypedCopyAndNavigatesActualExtension()
     {
         const string text = """
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             void Observe() {
                 int[2] input = [1, 2]; int[3] output = [3, 4, 5];
                 Span<int> source = new(input, 2);
@@ -36,7 +36,7 @@ public sealed class SpanTryCopyEditorTests
         Assert.Contains("TryCopyTo", hover);
         Assert.Contains("Span<int>", hover.Replace(" ", ""));
         Assert.DoesNotContain('$', hover);
-        int declaration = library.Text.IndexOf("TryCopyTo<T>(", StringComparison.Ordinal);
+        int declaration = EditorSourceDeclarations.ExtensionMethod(library,"TryCopyTo");
         Assert.True(declaration >= 0);
         var expected = model.Definition(library.Path, declaration);
         Assert.NotNull(expected);

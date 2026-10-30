@@ -40,7 +40,7 @@ public sealed class AsciiSubstringSearchTests
         }
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$"""
-            using std::Text;
+            using Standard::Text;
             int Digit(char value) nothrow { if (value <= '9') return value - '0'; return value - 'A' + 10; }
             int ReadByte(readonly(char)* data, ref nuint at) nothrow {
                 int value = (Digit(data[at]) << 4) | Digit(data[at + 1]); at += 2; return value;
@@ -73,7 +73,7 @@ public sealed class AsciiSubstringSearchTests
         string toggled = string.Join(',', Enumerable.Range(0, 256)
             .Select(value => Fold((byte)value) == Fold((byte)(value ^ 32)) ? "(byte)0" : "(byte)1"));
         Run($$"""
-            using std::Text;
+            using Standard::Text;
             int main() nothrow {
                 readonly(char)* nowhere = ((nuint)1).reinterpret<readonly(char)*>(); nuint maximum = (nuint)0 - (nuint)1;
                 if (Ascii::IndexOfIgnoreCase(nowhere, 0, nowhere, 0) != 0 || Ascii::LastIndexOfIgnoreCase(nowhere, 0, nowhere, 0) != 0) return 1;
@@ -104,7 +104,7 @@ public sealed class AsciiSubstringSearchTests
 
     private static void Run(string program, int optimization)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Std", "core", "Text", "ascii.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Text", "ascii.gf");
         string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)), new SourceFile("ascii-substring-search.gf", program)],
             options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "invoke ", "personality", "__gflat_eh_", "gflat$Memory$", "@malloc", "@free", "__gflat_gc" })

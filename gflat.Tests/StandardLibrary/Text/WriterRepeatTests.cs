@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class WriterRepeatTests
 {
     private const string Probe = """
-        using std; using std::Text;
+        using Standard; using Standard::Text;
         int destroyed=0;
         struct Sink : ITextWriter {
             private char* data;
@@ -109,7 +109,7 @@ public sealed class WriterRepeatTests
     private static void Run(string program,int optimization)
     {
         SourceFile[] sources=[new("text_writer_repeated.gf",File.ReadAllText(
-            Path.Combine(AppContext.BaseDirectory,"Std/core/Text/text_writer_repeated.gf"))),new("main.gf",program)];
+            Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/text_writer_repeated.gf"))),new("main.gf",program)];
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Writer repeat exit {result.ExitCode}: {result.StandardError}");
     }

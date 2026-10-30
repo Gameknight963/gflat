@@ -8,7 +8,7 @@ public sealed class RationalEditorTests
     [Fact]
     public void OwningFractionMembersAndBorrowedTextConversionHaveTheirActualDefinitions()
     {
-        const string text="using std; using std::Text; using std::Numerics;void Probe(){Rational first=new Rational(1l,2l);Rational second=new(1l,3l);BigInteger top=first.Numerator;BigInteger bottom=first.Denominator;Rational sum=first.Add(&second);String rendered=sum.ToString();}";
+        const string text="using Standard; using Standard::Text; using Standard::Numerics;void Probe(){Rational first=new Rational(1l,2l);Rational second=new(1l,3l);BigInteger top=first.Numerator;BigInteger bottom=first.Denominator;Rational sum=first.Add(&second);String rendered=sum.ToString();}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var rational=files.Single(file=>Path.GetFileName(file.Path)=="Rational.gf");
@@ -26,7 +26,7 @@ public sealed class RationalEditorTests
             Assert.Contains(items.EnumerateArray(),item=>item.GetProperty("label").GetString()==row.Name);
             string hover=Json(model.Hover(source.Path,member)).GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains(row.Type,hover);Assert.Contains(row.Name,hover);Assert.DoesNotContain('$',hover);
-            int declaration=row.Library.Text.IndexOf(row.Name,StringComparison.Ordinal);Assert.True(declaration>=0);
+            int declaration=row.Name=="ToString"?EditorSourceDeclarations.ExtensionMethod(row.Library,row.Name):row.Library.Text.IndexOf(row.Name,StringComparison.Ordinal);Assert.True(declaration>=0);
             var expected=model.Definition(row.Library.Path,declaration);Assert.NotNull(expected);
             Assert.Equal(expected,model.Definition(source.Path,member));
         }

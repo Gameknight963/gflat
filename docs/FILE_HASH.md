@@ -8,7 +8,7 @@ input String, Vector, or digest object.
 This complete program prints a file's digest as lowercase hexadecimal:
 
 ```csharp
-using std; using std::IO; using std::Encoding; using std::Hashing;
+using Standard; using Standard::IO; using Standard::Encoding; using Standard::Hashing;
 
 int main(int argc, char** argv)
 {
@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     byte[32] digest = FileHash::SHA256(argv[1]);
     char[64] hex;
     nuint written = 0;
-    if (!Hex::TryEncode((readonly(char)*)(byte*)digest, 32, hex, 64, ref written, false))
+    if (!Hex::TryEncode(((byte*)digest).reinterpret<readonly(char)*>(), 32, hex, 64, ref written, false))
         return 1;
     Console::WriteLine(hex, written);
     Console::Flush();

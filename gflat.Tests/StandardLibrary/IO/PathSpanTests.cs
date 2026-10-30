@@ -9,7 +9,7 @@ public sealed class PathSpanTests
     {
         string[] paths=["", ".", "..", "...", ".config", "file.", "dir/file.tar.gz", "dir/", "a//b", "/", "//", "///leaf", "C:", "C:.", "C:..", "C:folder", "C:/", "C:/dir/file.ext", "//host", "//host/", "//host/share", "//host/share/", "//host/share//leaf", "//host/share/../file.tar", @"dir\leaf.ext", @"\/host\share/sub//file."];
         string[] methods=["GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot"];
-        var program=new System.Text.StringBuilder("using std; using std::Text; using std::IO; using std::Memory; int main(){\n");
+        var program=new System.Text.StringBuilder("using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; int main(){\n");
         foreach(string style in new[]{"Unix","Windows"})foreach(string path in paths)
         {
             string literal="\""+path.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
@@ -34,7 +34,7 @@ public sealed class PathSpanTests
     [InlineData(2)]
     public void CountedInteriorViewsPreserveZeroAndHighBytesWithoutAllocation(int optimization)
         =>Run("""
-            using std; using std::Text; using std::IO; using std::Memory;int allocations=0;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -66,14 +66,14 @@ public sealed class PathSpanTests
     public void BorrowedPathResultsProtectCharacters()
     {
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::Text; using std::IO; using std::Memory;int main(){char[3] bytes=['a','/','b'];Span<readonly(char)> path=new(bytes,3);
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;int main(){char[3] bytes=['a','/','b'];Span<readonly(char)> path=new(bytes,3);
                 var name=Paths::GetFileName(path,PathStyle::Unix);name[0]='c';return 0;}
             """)));
         Assert.Contains("readonly",error.Message,StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("path-span.gf",program));
     private static void Run(string program,int optimization)
     {

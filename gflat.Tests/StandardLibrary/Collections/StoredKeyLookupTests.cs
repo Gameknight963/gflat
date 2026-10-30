@@ -12,7 +12,7 @@ public sealed class StoredKeyLookupTests
         ("SortedSet<Key> values = new(Compare);", "Find", false, false, "iterator.Current")
     ];
     private const string Allocator = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocations = 0; int releases = 0; bool deny = false;
         namespace Memory {
@@ -188,7 +188,7 @@ public sealed class StoredKeyLookupTests
         {
             string insert = form.Map ? "values.TryAdd(new Key(1,&payload),1);" : "values.Add(new Key(1,&payload));";
             string source = $$"""
-                using std; using std::Collections;
+                using Standard; using Standard::Collections;
                 struct Key : IHashable, IEquatable<Key> {
                     public int Id; public int* Payload;
                     public Key(int id, int* payload) { Id = id; Payload = payload; }
@@ -210,7 +210,7 @@ public sealed class StoredKeyLookupTests
     private static string Insert((string Declaration, string Method, bool Map, bool Hash, string StoredKey) form, string id, string payload)
         => form.Map ? $"values.TryAdd(new Key({id},{payload}),{id})" : $"values.Add(new Key({id},{payload}))";
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("stored-key-lookup.gf", program));
     private static void Run(string program, int optimization)
     {

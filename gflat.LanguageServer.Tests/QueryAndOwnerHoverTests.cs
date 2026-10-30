@@ -25,12 +25,12 @@ public sealed class QueryAndOwnerHoverTests
         var hover = Hover("void F() { typeof(int).Element|Type; }");
         string text = Text(hover);
         Assert.Contains("TypeInfo.ElementType", text);
-        Assert.DoesNotContain("std::TypeInfo.ElementType", text);
+        Assert.DoesNotContain("Standard::TypeInfo.ElementType", text);
         Assert.DoesNotContain("readonly readonly", text);
         var runs = Runs(hover);
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "std" && r.GetProperty("ClassificationTypeName").GetString() == "namespace name");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Standard" && r.GetProperty("ClassificationTypeName").GetString() == "namespace name");
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "TypeInfo" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
-        Assert.DoesNotContain(runs, r => r.GetProperty("Text").GetString()!.Contains("std::TypeInfo"));
+        Assert.DoesNotContain(runs, r => r.GetProperty("Text").GetString()!.Contains("Standard::TypeInfo"));
     }
 
     [Fact]
@@ -38,13 +38,13 @@ public sealed class QueryAndOwnerHoverTests
         => Assert.Contains("immutable readonly(int)*", Text(Hover("struct S { public immutable readonly(int)* R|ead() => (readonly(int)*)0; }")));
 
     [Theory]
-    [InlineData("void F() { std|::TypeInfo info; }")]
-    [InlineData("void F() { std:|:TypeInfo info; }")]
+    [InlineData("void F() { Standard|::TypeInfo info; }")]
+    [InlineData("void F() { Standard:|:TypeInfo info; }")]
     public void EitherColonShowsTheQualifiedType(string source)
-        => Assert.Contains("struct std::TypeInfo", Text(Hover(source)));
+        => Assert.Contains("struct Standard::TypeInfo", Text(Hover(source)));
 
     [Theory]
-    [InlineData("void F() { name|of(std::TypeInfo); }", "(readonly(char)*)\"TypeInfo\"")]
+    [InlineData("void F() { name|of(Standard::TypeInfo); }", "(readonly(char)*)\"TypeInfo\"")]
     [InlineData("void F() { align|of(int); }", "(int)4")]
     [InlineData("void F() { size|of(long); }", "(int)8")]
     public void ScalarQueryKeywordsShowCheckedValues(string source, string expected)

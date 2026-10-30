@@ -31,7 +31,7 @@ public sealed class PathChangeExtensionTests
         ];
         string Values(IEnumerable<string> values) => string.Join(",", values.Select(Literal));
         Run($$"""
-            using std::Text; using std::IO; using std::Memory;
+            using Standard::Text; using Standard::IO; using Standard::Memory;
             int main() {
                 readonly(char)*[{{rows.Length}}] paths=[{{Values(rows.Select(r=>r.Path))}}];
                 readonly(char)*[{{rows.Length}}] suffixes=[{{Values(rows.Select(r=>r.Extension))}}];
@@ -56,7 +56,7 @@ public sealed class PathChangeExtensionTests
     [InlineData(2)]
     public void CountedBytesOverlappingInputsAndSelfAssignmentKeepIndependentOwnership(int optimization)
         =>Run("""
-            using std::Text; using std::IO; using std::Memory;
+            using Standard::Text; using Standard::IO; using Standard::Memory;
             int main() {
                 char[11] bytes=['!','d','/','f','\0',(char)255,'.','x','.', 'z','!'];
                 char[5] suffix=['!','q','\0',(char)254,'!'];
@@ -88,7 +88,7 @@ public sealed class PathChangeExtensionTests
     [InlineData(2)]
     public void EmptyRangesUnusedReplacementAndLengthOverflowDoNotTouchInputs(int optimization)
         =>Run("""
-            using std::Text; using std::IO; using std::Memory;
+            using Standard::Text; using Standard::IO; using Standard::Memory;
             int main() {
                 Span<readonly(char)> empty=new(((nuint)1).reinterpret<readonly(char)*>(),0);
                 Span<readonly(char)> suffix=new("txt",3);
@@ -120,7 +120,7 @@ public sealed class PathChangeExtensionTests
     [InlineData(2)]
     public void AllocationFailuresPreserveBorrowedInputsAndExistingDestination(int optimization)
         =>Run("""
-            using std; using std::Text; using std::IO; using std::Memory;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;
             extern void*? malloc(nuint bytes);extern void free(void* storage);
             int attempts=0;int failAt=0;int allocations=0;int releases=0;
             namespace Memory {
@@ -157,7 +157,7 @@ public sealed class PathChangeExtensionTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("path-change-extension.gf",code));
     private static void Run(string code,int optimization) {
         var result=CompilerTestHelper.Run(Sources(code),optimization);

@@ -1,12 +1,12 @@
 # Borrowed text lines
 
-`std::Text::TextLines` iterates counted text in memory without allocating a string per
+`Standard::Text::TextLines` iterates counted text in memory without allocating a string per
 line. It uses the same line endings as `FileLines` and `Console`: LF and CRLF
 terminate lines; a bare CR remains text. Embedded null bytes are preserved.
 
 ```csharp
-using std::Text;
-using std; using std::Memory;
+using Standard::Text;
+using Standard; using Standard::Memory;
 
 Span<readonly(char)> text = new("first\r\nsecond\n", 14);
 TextLines lines = new(text);
@@ -26,12 +26,14 @@ counted buffer, or from `String.Data` and `String.Length`. The input does not
 need a null terminator, and no encoding conversion or validation is performed.
 
 The optional `text_lines_span.gf` provides `.Lines()` for mutable and immutable
-character spans. `string_lines.gf` provides `.Lines()` for a named `String`,
-borrowing it through an immutable reference without copying its allocation.
-Temporary owning strings cannot be receivers of this convenience: retain the
-owner in a variable for as long as the line views are used. These optional
-files keep the owning string and general span implementations independent of
-line enumeration.
+character spans. `string_lines.gf` provides `.Lines()` for `String`, borrowing
+its bytes through an immutable receiver without copying its allocation. The
+extension accepts temporary owners, whose lifetime ends with the full
+expression. A returned view does not extend that lifetime: consume it immediately
+or retain the owner in a variable before storing the view. The compiler does not
+check borrowed-view lifetimes. The explicit free `Lines(ref text)` overload
+requires existing storage. These optional files keep the owning string and
+general span implementations independent of line enumeration.
 
 `GetEnumerator()` returns a fresh independent nested `Enumerator`.
 `MoveNext()` remains false after completion. `Current` throws before the first

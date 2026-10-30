@@ -7,7 +7,7 @@ negative result places the first argument earlier; zero preserves original
 encounter order. For descending order, supply a comparator with reversed order.
 
 ```csharp
-using std; using std::Memory; using std::Queries;
+using Standard; using Standard::Memory; using Standard::Queries;
 
 int Descending(immutable(int)* first, immutable(int)* second)
 {

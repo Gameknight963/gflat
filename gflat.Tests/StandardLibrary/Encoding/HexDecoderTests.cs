@@ -62,7 +62,7 @@ public sealed class HexDecoderTests
             byte[] encoded = TextEncoding.ASCII.GetBytes(Convert.ToHexString(original).ToLowerInvariant());
             File.WriteAllBytes(input, encoded);
             Run(directory, $$"""
-                using std; using std::IO; using std::Encoding;
+                using Standard; using Standard::IO; using Standard::Encoding;
                 int attempts=0;
                 namespace Memory {
                     public replace void*? Allocate(nuint count){attempts++;return null;}
@@ -123,7 +123,7 @@ public sealed class HexDecoderTests
                 catch (FormatException) { return -1; }
             }).ToArray();
             Run(directory, $$"""
-                using std;using std::Encoding;
+                using Standard;using Standard::Encoding;
                 struct Sink:ITextWriter {
                     public int Count;public int Calls;public int Last;
                     public Sink(){Count=0;Calls=0;Last=-1;}
@@ -181,7 +181,7 @@ public sealed class HexDecoderTests
     [InlineData(2)]
     public async Task PartialSinkErrorsPropagateUnchangedAndPermanentlyLatchFailure(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std;using std::Encoding;
+            using Standard;using Standard::Encoding;
             class SinkFailure:Exception{public SinkFailure():base("partial sink",77){}}
             struct Sink:ITextWriter {
                 public int Budget;public int Count;public int Calls;
@@ -212,9 +212,9 @@ public sealed class HexDecoderTests
     public void SelectiveCodecSourcesDoNotRequireStringOrCollector()
     {
         string[] names = ["Encoding/Hex.gf", "Encoding/HexDecoder.gf", "ITextWriter.gf", "IFormattable.gf", "Exception.gf"];
-        var sources = names.Select(name => Path.Combine(AppContext.BaseDirectory, "Std/core", name))
+        var sources = names.Select(name => Path.Combine(AppContext.BaseDirectory, "Standard/core", name))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("selective-hex.gf", """
-                using std::Encoding;
+                using Standard::Encoding;
                 namespace Memory { public void*? Allocate(nuint count)=>null;public void Free(void* value)nothrow{} }
                 struct Sink:ITextWriter { public void Write(readonly(char)* data,nuint count){} }
                 void Decode(Sink* sink,readonly(char)* text,nuint count){HexDecoder decoder=new(sink);decoder.Write(text,count);decoder.Complete();}
@@ -239,7 +239,7 @@ public sealed class HexDecoderTests
 
     private static void Run(string directory, string program, int optimization, string[]? arguments = null)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("hex-decoder.gf", program));
         string input = Path.Combine(directory, "main.ll"), output = Path.Combine(directory, "main.exe");
         File.WriteAllText(input, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));

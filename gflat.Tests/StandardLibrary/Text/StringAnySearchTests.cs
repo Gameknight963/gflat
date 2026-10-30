@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringAnySearchTests
 {
     private const string Counters="""
-        using std; using std::Text;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;if(deny)return null;void*? p=malloc(bytes);if(p!=null)allocated++;return p;}
@@ -125,7 +125,7 @@ public sealed class StringAnySearchTests
     private static void WriteIndex(BinaryWriter writer,int value)=>writer.Write(value<0?ushort.MaxValue:(ushort)value);
     private static IEnumerable<SourceFile> Sources(string program){
         string[] names=["Text/String.gf","Text/ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Text/CString.gf"];
-        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("string-any-search.gf",program));
     }
     private static void Run(string program,int optimization){

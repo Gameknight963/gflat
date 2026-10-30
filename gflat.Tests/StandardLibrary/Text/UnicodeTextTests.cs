@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class UnicodeTextTests
 {
     private const string Prelude="""
-        using std; using std::Text; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocations=0;int releases=0;int largeAllocations=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){if(count>1024)largeAllocations++;if(deny)return null;allocations++;return malloc(count);}
@@ -105,7 +105,7 @@ public sealed class UnicodeTextTests
     }
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }

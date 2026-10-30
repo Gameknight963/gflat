@@ -18,15 +18,15 @@ public class BitOperationsTests
     public void UIntValuesMatchDotNetCountsAndMaskedRotations(uint value)
     {
         string rotations = string.Join("\n", Offsets.Select(offset => $$"""
-            if (std::Numerics::BitOperations::RotateLeft({{value}}u, {{Offset(offset)}}) != {{BitOperations.RotateLeft(value, offset)}}u) return 5;
-            if (std::Numerics::BitOperations::RotateRight({{value}}u, {{Offset(offset)}}) != {{BitOperations.RotateRight(value, offset)}}u) return 6;
+            if (Standard::Numerics::BitOperations::RotateLeft({{value}}u, {{Offset(offset)}}) != {{BitOperations.RotateLeft(value, offset)}}u) return 5;
+            if (Standard::Numerics::BitOperations::RotateRight({{value}}u, {{Offset(offset)}}) != {{BitOperations.RotateRight(value, offset)}}u) return 6;
             """));
         Run($$"""
             int main() {
-                if (std::Numerics::BitOperations::PopCount({{value}}u) != {{BitOperations.PopCount(value)}}) return 1;
-                if (std::Numerics::BitOperations::LeadingZeroCount({{value}}u) != {{BitOperations.LeadingZeroCount(value)}}) return 2;
-                if (std::Numerics::BitOperations::TrailingZeroCount({{value}}u) != {{BitOperations.TrailingZeroCount(value)}}) return 3;
-                if (std::Numerics::BitOperations::IsPowerOfTwo({{value}}u) != {{BitOperations.IsPow2(value).ToString().ToLowerInvariant()}}) return 4;
+                if (Standard::Numerics::BitOperations::PopCount({{value}}u) != {{BitOperations.PopCount(value)}}) return 1;
+                if (Standard::Numerics::BitOperations::LeadingZeroCount({{value}}u) != {{BitOperations.LeadingZeroCount(value)}}) return 2;
+                if (Standard::Numerics::BitOperations::TrailingZeroCount({{value}}u) != {{BitOperations.TrailingZeroCount(value)}}) return 3;
+                if (Standard::Numerics::BitOperations::IsPowerOfTwo({{value}}u) != {{BitOperations.IsPow2(value).ToString().ToLowerInvariant()}}) return 4;
                 {{rotations}}
                 return 0;
             }
@@ -45,15 +45,15 @@ public class BitOperationsTests
     public void ULongValuesMatchDotNetCountsAndMaskedRotations(ulong value)
     {
         string rotations = string.Join("\n", Offsets.Select(offset => $$"""
-            if (std::Numerics::BitOperations::RotateLeft({{value}}ul, {{Offset(offset)}}) != {{BitOperations.RotateLeft(value, offset)}}ul) return 5;
-            if (std::Numerics::BitOperations::RotateRight({{value}}ul, {{Offset(offset)}}) != {{BitOperations.RotateRight(value, offset)}}ul) return 6;
+            if (Standard::Numerics::BitOperations::RotateLeft({{value}}ul, {{Offset(offset)}}) != {{BitOperations.RotateLeft(value, offset)}}ul) return 5;
+            if (Standard::Numerics::BitOperations::RotateRight({{value}}ul, {{Offset(offset)}}) != {{BitOperations.RotateRight(value, offset)}}ul) return 6;
             """));
         Run($$"""
             int main() {
-                if (std::Numerics::BitOperations::PopCount({{value}}ul) != {{BitOperations.PopCount(value)}}) return 1;
-                if (std::Numerics::BitOperations::LeadingZeroCount({{value}}ul) != {{BitOperations.LeadingZeroCount(value)}}) return 2;
-                if (std::Numerics::BitOperations::TrailingZeroCount({{value}}ul) != {{BitOperations.TrailingZeroCount(value)}}) return 3;
-                if (std::Numerics::BitOperations::IsPowerOfTwo({{value}}ul) != {{BitOperations.IsPow2(value).ToString().ToLowerInvariant()}}) return 4;
+                if (Standard::Numerics::BitOperations::PopCount({{value}}ul) != {{BitOperations.PopCount(value)}}) return 1;
+                if (Standard::Numerics::BitOperations::LeadingZeroCount({{value}}ul) != {{BitOperations.LeadingZeroCount(value)}}) return 2;
+                if (Standard::Numerics::BitOperations::TrailingZeroCount({{value}}ul) != {{BitOperations.TrailingZeroCount(value)}}) return 3;
+                if (Standard::Numerics::BitOperations::IsPowerOfTwo({{value}}ul) != {{BitOperations.IsPow2(value).ToString().ToLowerInvariant()}}) return 4;
                 {{rotations}}
                 return 0;
             }
@@ -65,7 +65,7 @@ public class BitOperationsTests
     private static void Run(string program)
     {
         var sources = new[] {
-            new SourceFile("BitOperations.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/BitOperations.gf"))),
+            new SourceFile("BitOperations.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/BitOperations.gf"))),
             new SourceFile("main.gf", program)
         };
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

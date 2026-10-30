@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DequeTests
 {
     private const string Owner="""
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
         extern int puts(immutable(char*) text);
         int made=0;int dead=0;
         struct Owned{
@@ -94,7 +94,7 @@ public sealed class DequeTests
     [Fact]
     public void EmptyIndexAndIteratorErrorsDoNotCorruptTheDeque()
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             int main(){Deque<int> values=new();int caught=0;
                 try{values.RemoveFirst();}catch{caught++;}try{values.RemoveLast();}catch{caught++;}
                 try{values.Front;}catch{caught++;}try{values.Back;}catch{caught++;}try{values[0];}catch{caught++;}
@@ -128,7 +128,7 @@ public sealed class DequeTests
     [InlineData(2)]
     public void ManagedElementsSurviveBothEndGrowthAndReleaseOnRemoval(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             void Fill(Deque<Node^>* values){for(int i=0;i<32;i++){Node^ value=new^ Node(i);value.Next=value;if(i%2==0)values.AddFirst(value);else values.AddLast(value);GC::Collect();}}
             int main(){Deque<Node^> values=new();Fill(&values);values.Reserve(1000);GC::Collect();
@@ -145,8 +145,8 @@ public sealed class DequeTests
     {
         string[] files=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Collections/Deque.gf","Memory/Span.gf","Collections/Vector.gf","Text/String.gf", "Text/ByteSearch.gf",
             "IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf"];
-        IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))));
-        if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file)))));
+        IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",file))));
+        if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",file)))));
         return sources.Append(new SourceFile("deque.gf",program));
     }
     private static void Run(string program,int optimization,bool managed=false)

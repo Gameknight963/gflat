@@ -10,7 +10,7 @@ public sealed class SortLinesExampleTests
     [InlineData(2)]
     public async Task ActualToolSortsCountedLinesByUnsignedBytes(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("sort-lines.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/sort-lines.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_sort_lines_" + Guid.NewGuid().ToString("N"));

@@ -6,7 +6,7 @@ public sealed class DateTimeArithmeticTests
 {
     private const long Maximum = 3155378975999999999L;
     private const string Support = """
-        using std; using std::Text; using std::Time;
+        using Standard; using Standard::Text; using Standard::Time;
         extern void*? malloc(nuint count); extern void free(void* storage);
         int attempts = 0; int allocated = 0; int released = 0; bool deny = false;
         namespace Memory {
@@ -124,7 +124,7 @@ public sealed class DateTimeArithmeticTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("date-time-arithmetic.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

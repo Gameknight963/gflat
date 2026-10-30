@@ -6,7 +6,7 @@ public sealed class CheckedCommonMultipleTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Numerics/Math.gf", "Text/CString.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("checked-lcm.gf",code));
 
     [Theory]
@@ -100,7 +100,7 @@ public sealed class CheckedCommonMultipleTests
     }
 
     private const string Memory="""
-        using std; using std::Text; using std::Numerics;
+        using Standard; using Standard::Text; using Standard::Numerics;
         bool deny=false;int attempts=0;int allocated=0;int released=0;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory {

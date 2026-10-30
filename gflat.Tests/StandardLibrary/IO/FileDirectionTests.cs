@@ -8,7 +8,7 @@ public sealed class FileDirectionTests
     public void TemporaryStreamsSupportExplicitFlushAndObservedEofDirectionTransitions(int optimization)
     {
         const string code="""
-            using std; using std::IO;
+            using Standard; using Standard::IO;
             extern void*? malloc(nuint size);extern void free(void* storage);
             bool deny=false;int attempts=0;
             namespace Memory{
@@ -42,7 +42,7 @@ public sealed class FileDirectionTests
                 stream.Close();deny=false;return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("file-direction.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"File direction exit {result.ExitCode}: {result.StandardError}");

@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Numerics;
 public sealed class RationalParsingTests
 {
     private const string Support="""
-        using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         bool capture=false;void*? captured=null;nuint capturedBytes=0;void*? watched=null;void*? retired=null;int watchedFrees=0;
         namespace Memory{
@@ -156,7 +156,7 @@ public sealed class RationalParsingTests
     private static void WriteText(BinaryWriter writer,BigInteger value)=>WriteText(writer,Text(value));
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.UTF8.GetBytes(text);writer.Write((ushort)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("rational-parsing.gf",program));
     private static void Run(string program,int optimization)
     {

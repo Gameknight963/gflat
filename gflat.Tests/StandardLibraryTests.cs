@@ -34,7 +34,7 @@ public class StandardLibraryTests
     public void ExplicitLibrarySnapshotOverridesBundledFile()
     {
         var original = StandardLibrary.Load("core/Attribute.gf");
-        var edited = new SourceFile("std/core/Attribute.gf", original.Text + "int LibraryAnswer() => 42;");
+        var edited = new SourceFile("Standard/core/Attribute.gf", original.Text + "int LibraryAnswer() => 42;");
         Assert.Equal(42, CompilerTestHelper.Run([edited, new("main.gf", "int main() => LibraryAnswer();")]).ExitCode);
     }
 
@@ -54,7 +54,7 @@ public class StandardLibraryTests
     [Fact]
     public void AllCoreSourcesTypeCheckWithoutLibcUsingOnlyExplicitMemoryBindings()
     {
-        string core = Path.Combine(AppContext.BaseDirectory, "Std", "core");
+        string core = Path.Combine(AppContext.BaseDirectory, "Standard", "core");
         string[] paths = Directory.GetFiles(core, "*.gf", SearchOption.AllDirectories);
         Assert.NotEmpty(paths);
         SourceFile[] sources = paths.Order(StringComparer.Ordinal)
@@ -89,7 +89,7 @@ public class StandardLibraryTests
     [Fact]
     public void ExplicitCoreTypesAreEmittedBeforeUserConstants()
     {
-        var sources = StandardLibrary.AutomaticFiles.Select(relative => new SourceFile("std/" + relative, StandardLibrary.Load(relative).Text))
+        var sources = StandardLibrary.AutomaticFiles.Select(relative => new SourceFile("Standard/" + relative, StandardLibrary.Load(relative).Text))
             .Prepend(new SourceFile("a.gf", "const Exception* failure = new* Exception(\"test\", 42); int main() => failure.GetCode();"));
         Assert.Equal(42, CompilerTestHelper.Run(sources).ExitCode);
     }

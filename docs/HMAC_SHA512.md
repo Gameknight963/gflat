@@ -1,12 +1,12 @@
 # HMAC-SHA512 over counted bytes
 
-`std::Hashing::HMACSHA512` composes SHA512 with the keyed inner and outer pads
+`Standard::Hashing::HMACSHA512` composes SHA512 with the keyed inner and outer pads
 defined by [RFC 2104](https://www.rfc-editor.org/rfc/rfc2104.html#section-2).
 It follows the same incremental value API as [HMACSHA256](HMAC_SHA256.md),
 returning the complete 64-byte authentication code.
 
 ```csharp
-using std; using std::Hashing;
+using Standard; using Standard::Hashing;
 
 int main()
 {

@@ -34,4 +34,4 @@ success exits `0`. File input is consumed and closed before output begins,
 so an input failure produces no stdout. An output failure can leave a prefix.
 
 See [file line sequences](../../docs/FILE_LINE_SEQUENCE.md) and
-[queues](../../std/core/Collections/OWNING_COLLECTIONS.md#queue-and-stack).
+[queues](../../Standard/core/Collections/OWNING_COLLECTIONS.md#queue-and-stack).

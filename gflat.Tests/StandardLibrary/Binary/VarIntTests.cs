@@ -15,7 +15,7 @@ public sealed class VarIntTests
     private static void Run(string program, int optimization)
     {
         var sources = new[] {
-            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Binary", "VarInt.gf"))),
+            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Binary", "VarInt.gf"))),
             new SourceFile("main.gf", program)
         };
         var result = CompilerTestHelper.Run(sources, optimizationLevel: optimization);
@@ -41,7 +41,7 @@ public sealed class VarIntTests
         byte[][] encoded = values.Select(Encode).ToArray();
         string type = wide ? "ulong" : "uint", suffix = wide ? "ul" : "u", name = wide ? "UInt64" : "UInt32";
         return $$"""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 {{type}}[{{values.Count}}] values = [{{string.Join(",", values.Select(v => v + suffix))}}];
                 byte[{{encoded.Sum(bytes => bytes.Length) + 1}}] expected = [{{string.Join(",", encoded.SelectMany(bytes => bytes).Append((byte)255).Select(value => "(byte)" + value))}}];
@@ -92,7 +92,7 @@ public sealed class VarIntTests
     public void OverflowNoncanonicalAndEmptyInputsPreserveValue(int optimization)
     {
         Run("""
-            using std; using std::Binary;
+            using Standard; using Standard::Binary;
             int main() {
                 byte[11] input;
                 for (nuint i = 0; i < 11; i++) input[i] = (byte)128;

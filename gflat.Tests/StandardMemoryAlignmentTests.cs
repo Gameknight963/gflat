@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardMemoryAlignmentTests
 {
     private const string Allocator="""
-        using std; using std::Text;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;
+        using Standard; using Standard::Text;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;return malloc(count);}
             public replace void Free(void* storage)nothrow{free(storage);}
@@ -65,5 +65,5 @@ public sealed class StandardMemoryAlignmentTests
     }
 
     private static string Bool(bool value)=>value?"true":"false";
-    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("memory-alignment.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Memory alignment exit {result.ExitCode}: {result.StandardError}");}
+    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("memory-alignment.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Memory alignment exit {result.ExitCode}: {result.StandardError}");}
 }

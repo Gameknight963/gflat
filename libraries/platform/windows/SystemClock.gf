@@ -1,4 +1,4 @@
-using std::Time;
+using Standard::Time;
 namespace Windows;
 
 namespace system_clock_detail
@@ -10,13 +10,13 @@ namespace system_clock_detail
     }
     private extern void GetSystemTimePreciseAsFileTime(FileTime* value);
 
-    internal std::Time::DateTime FromFileTime(uint low, uint high)
+    internal Standard::Time::DateTime FromFileTime(uint low, uint high)
     {
         ulong value = ((ulong)high << 32) | (ulong)low;
         // FILETIME starts at 1601-01-01; DateTime starts at 0001-01-01.
         if (value > 2650467743999999999ul)
             throw new Exception("System time is outside years 1 through 9999");
-        return std::Time::DateTime::FromTicks((long)value + 504911232000000000l);
+        return Standard::Time::DateTime::FromTicks((long)value + 504911232000000000l);
     }
 
     internal FileTime Read()
@@ -32,7 +32,7 @@ public static class SystemClock
     private static bool HasCompatibleLayout() nothrow
         => sizeof(nint) == 8 && sizeof(system_clock_detail::FileTime) == 8;
 
-    public static std::Time::DateTime GetUtcNow()
+    public static Standard::Time::DateTime GetUtcNow()
     {
         if (!HasCompatibleLayout())
             throw new Exception("SystemClock requires Windows 64-bit");

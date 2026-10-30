@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Net;
 public sealed class IpEndpointTests
 {
     private const string Counters = """
-        using std;using std::Net;
+        using Standard;using Standard::Net;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
@@ -180,7 +180,7 @@ public sealed class IpEndpointTests
     public void StringInterpolationAndHashMapUseFormattingEqualityAndHashInterfaces(int optimization)
     {
         const string program = """
-            using std;using std::Net;using std::Text;using std::Collections;
+            using Standard;using Standard::Net;using Standard::Text;using Standard::Collections;
             int main(){
                 IpEndpoint endpoint=IpEndpoint::Parse("[2001:0DB8:0:0:0:0:0:1]:00443");
                 String message=s$"Upstream: {endpoint}";
@@ -197,7 +197,7 @@ public sealed class IpEndpointTests
                 return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("ip-endpoint-integration.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -208,7 +208,7 @@ public sealed class IpEndpointTests
     public void SelectiveSourceTryObserversRemainNothrowWithoutStringCollectorOrNativeImplementation()
     {
         string ir = Compiler.Emit(Sources("""
-            using std;using std::Net;
+            using Standard;using Standard::Net;
             namespace Memory{public void*? Allocate(nuint bytes)=>null;public void Free(void* storage)nothrow{}}
             bool Observe(immutable(IpEndpoint)* source,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
                 IpEndpoint parsed=new();bool success=IpEndpoint::TryParse(text,count,&parsed);IpAddress address=source.Address;
@@ -224,7 +224,7 @@ public sealed class IpEndpointTests
     {
         string[] names = ["Net/IpEndpoint.gf", "Net/IpAddress.gf", "ITextWriter.gf", "IFormattable.gf", "IEquatable.gf", "IComparable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf", "Exception.gf"];
         return names.Select(name => {
-            string path = Path.Combine(AppContext.BaseDirectory, "Std/core", name);
+            string path = Path.Combine(AppContext.BaseDirectory, "Standard/core", name);
             return new SourceFile(path, File.ReadAllText(path));
         })
             .Append(new SourceFile("ip-endpoint-tests.gf", program));

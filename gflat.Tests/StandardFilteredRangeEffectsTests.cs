@@ -8,7 +8,7 @@ public sealed class StandardFilteredRangeEffectsTests
     public void FusedTakeSkipPreservePredicateEffectsAndZeroTakeShortCircuiting(int optimization)
     {
         const string program = """
-using std; using std::Queries;
+using Standard; using Standard::Queries;
 int calls=0; int mode=0; int failAt=0;
 bool Predicate(int value) {
     calls++;
@@ -95,7 +95,7 @@ int main() {
 
 
 """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("filtered-range-effects.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

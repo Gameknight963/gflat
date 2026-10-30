@@ -4,7 +4,7 @@ public sealed class StandardQueryIndexedWhereTests
 {
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("indexed-where.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -12,7 +12,7 @@ public sealed class StandardQueryIndexedWhereTests
     }
 
     private const string Memory = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes);
         extern void free(void* storage);
         int allocated = 0;

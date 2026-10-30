@@ -19,7 +19,7 @@ BOM has no special meaning. Output property order is unspecified.
 
 Each physical line has a 4095-byte payload limit after the host console stream's
 newline translation. CRLF and LF delimit lines; see the
-[console text-mode rules](../../std/libc/README.md). Overlong lines, malformed
+[console text-mode rules](../../Standard/libc/README.md). Overlong lines, malformed
 settings, duplicates, and invalid UTF-8 return 2 with a line diagnostic on stderr.
 No JSON is emitted until all input has passed validation. Allocation or I/O
 failures return 1; an output failure can leave partial JSON. Successful output

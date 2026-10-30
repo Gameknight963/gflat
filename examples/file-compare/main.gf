@@ -1,9 +1,9 @@
-using std;
-using std::IO;
-using std::Text;
-using std::Memory;
-using std::Collections;
-using std::Encoding;
+using Standard;
+using Standard::IO;
+using Standard::Text;
+using Standard::Memory;
+using Standard::Collections;
+using Standard::Encoding;
 
 void WriteToken(BufferWriter* output, readonly(char)* bytes, nuint count, nuint at)
 {
@@ -42,9 +42,9 @@ int CompareFiles(readonly(char)* leftPath, readonly(char)* rightPath)
     {
         nuint leftCount = left.Read(leftBuffer, 4096);
         nuint rightCount = right.Read(rightBuffer, 4096);
-        Span<immutable(byte)> first = new((immutable(byte)*)(char*)leftBuffer, leftCount);
-        Span<immutable(byte)> second = new((immutable(byte)*)(char*)rightBuffer, rightCount);
-        nuint common = std::Collections::CommonPrefixLength<byte>(first, second);
+        Span<immutable(byte)> first = new(((char*)leftBuffer).reinterpret<immutable(byte)*>(), leftCount);
+        Span<immutable(byte)> second = new(((char*)rightBuffer).reinterpret<immutable(byte)*>(), rightCount);
+        nuint common = Standard::Collections::CommonPrefixLength<byte>(first, second);
         if ((ulong)common > 18446744073709551615ul - offset)
             throw new IOException("File comparison offset overflow");
         if ((common < leftCount && common < rightCount) || leftCount != rightCount)

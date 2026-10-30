@@ -4,7 +4,7 @@ public sealed class StandardQueryConcatTests
 {
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("query-concat.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -33,7 +33,7 @@ public sealed class StandardQueryConcatTests
         }
         string hex = Convert.ToHexString(packet.ToArray()).ToLowerInvariant();
         Run($$$"""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int attempts = 0;
             int callbacks = 0;
             namespace Memory {
@@ -110,7 +110,7 @@ public sealed class StandardQueryConcatTests
     }
 
     private const string Owners = """
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int allocated = 0; int freed = 0;
         int starts = 0; int active = 0; int created = 0; int destroyed = 0;

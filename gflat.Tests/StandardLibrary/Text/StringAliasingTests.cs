@@ -7,7 +7,7 @@ public sealed class StringAliasingTests
     [InlineData(2)]
     public void SelfInsertionSnapshotsReadableStorageBeyondTrimmedLengthIncludingTerminators(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 for (int padded = 0; padded < 2; padded++) {
                     nuint maximum = 7;
@@ -40,7 +40,7 @@ public sealed class StringAliasingTests
     [InlineData(2)]
     public void CountedSelfAppendAndFromCopyEverySourceByteIncludingTheOldTerminator(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 for (int reserved = 0; reserved < 2; reserved++) {
                     for (nuint start = 0; start <= 5; start++) {
@@ -67,7 +67,7 @@ public sealed class StringAliasingTests
     [InlineData(2)]
     public void SnapshotFailureForTrimmedTailLeavesOriginalStorageAndInitializedBytesUntouched(int optimization)
         => Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {
@@ -94,7 +94,7 @@ public sealed class StringAliasingTests
 
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", code));
 
     private static void Run(string code, int optimization)

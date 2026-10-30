@@ -10,7 +10,7 @@ public sealed class BigIntegerLcmEditorTests
     public void StaticLcmBorrowsImmutableInputsAndPresentsItsOwningResultAndSourceSignature()
     {
         const string text="""
-            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             int Probe(){
                 immutable(BigInteger) first=new(12l);
                 immutable(BigInteger) second=new(18l);
@@ -46,8 +46,8 @@ public sealed class BigIntegerLcmEditorTests
         string label=signature.GetProperty("label").GetString()!;
         Assert.Contains("BigInteger",label);Assert.Contains("LeastCommonMultiple(",label);
         // Signature-help labels may qualify types that hover shortens in context.
-        Assert.Matches(@"immutable\((?:std::Numerics::)?BigInteger\)\* first",label);
-        Assert.Matches(@"immutable\((?:std::Numerics::)?BigInteger\)\* second",label);
+        Assert.Matches(@"immutable\((?:Standard::Numerics::)?BigInteger\)\* first",label);
+        Assert.Matches(@"immutable\((?:Standard::Numerics::)?BigInteger\)\* second",label);
         Assert.DoesNotContain('$',label);Assert.Equal(1,help.GetProperty("activeParameter").GetInt32());
         Assert.Equal(2,signature.GetProperty("parameters").GetArrayLength());
         int result=text.LastIndexOf("result",StringComparison.Ordinal);

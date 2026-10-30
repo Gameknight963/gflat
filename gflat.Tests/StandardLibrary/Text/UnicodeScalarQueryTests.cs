@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class UnicodeScalarQueryTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int allocations=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){allocations++;return null;}
             public replace void Free(void* pointer) nothrow{}
@@ -72,7 +72,7 @@ public sealed class UnicodeScalarQueryTests
         string[] names=["Text/utf8.gf","Text/utf16.gf","Text/Utf8Scalars.gf","Text/Utf16Scalars.gf","Memory/Span.gf","Collections/Vector.gf",
             "Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf",
             "Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("scalar-queries.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

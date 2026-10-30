@@ -1,7 +1,7 @@
-using std::Text;
-using std::Queries;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Queries;
+using Standard::Collections;
+using Standard;
 
 int main()
 {

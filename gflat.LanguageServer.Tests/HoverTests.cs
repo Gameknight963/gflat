@@ -148,7 +148,7 @@ public class HoverTests
     [Fact]
     public void NamespacedReturnTypesAreReadableAndNavigable()
     {
-        const string source = "namespace std { struct String { public static String Fr|om() => new String(); } }";
+        const string source = "namespace Standard { struct String { public static String Fr|om() => new String(); } }";
         var result = Hover(source, true);
         Assert.Contains("String String::From()", result.GetProperty("contents").GetProperty("value").GetString());
         Assert.DoesNotContain("$", result.GetProperty("contents").GetProperty("value").GetString());
@@ -162,7 +162,7 @@ public class HoverTests
     [InlineData("class", "class name")]
     public void ReturnTypeAndContainingTypeUseTheSameClassification(string kind, string classification)
     {
-        string source = $"namespace std {{ {kind} String {{ public static String Fr|om() => new String(); }} }}";
+        string source = $"namespace Standard {{ {kind} String {{ public static String Fr|om() => new String(); }} }}";
         var result = Hover(source, true);
         var header = result.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
         var text = header.EnumerateArray().Single(e => e.GetProperty("_vs_type").GetString() == "ClassifiedTextElement");

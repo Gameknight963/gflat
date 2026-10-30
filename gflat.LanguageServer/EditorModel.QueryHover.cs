@@ -45,7 +45,7 @@ public sealed partial class EditorModel
             {
                 details.Add(new("Name", typeName.Value));
                 if (descriptor.Fields.GetValueOrDefault("Kind") is ConstValue.Integer kind &&
-                    snapshot.Checker!.GetEnum("std$TypeKind")?.Members.FirstOrDefault(p => p.Value == kind.Value).Key is { } kindName)
+                    snapshot.Checker!.GetEnum("Standard$TypeKind")?.Members.FirstOrDefault(p => p.Value == kind.Value).Key is { } kindName)
                     details.Add(new("Kind", kindName));
                 if (showLayout && descriptor.Fields.GetValueOrDefault("HasLayout") is ConstValue.Boolean { Value: true })
                     foreach (string label in new[] { "Size", "Alignment" })

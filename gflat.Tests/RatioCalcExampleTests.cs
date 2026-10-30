@@ -36,7 +36,7 @@ public sealed class RatioCalcExampleTests
         }
         string directory=Path.Combine(Path.GetTempPath(),"gflat-ratio-calc-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile("ratio-calc.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/ratio-calc.gf"))));
             string ll=Path.Combine(directory,"tool.ll"),exe=Path.Combine(directory,"ratio-calc.exe");File.WriteAllText(ll,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

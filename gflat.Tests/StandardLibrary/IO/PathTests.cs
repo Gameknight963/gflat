@@ -7,14 +7,14 @@ public sealed class PathTests
     private static void Run(string program, int optimization = 0)
     {
         var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf", "core/Memory/Span.gf", "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/IO/PathStyle.gf", "core/IO/Paths.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
     }
 
     private const string Equal = """
-        using std; using std::Text; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         bool Equal(ref immutable(String) value, immutable(char*) expected) {
             nuint i = 0;
             while (expected[i] != '\0') {
@@ -31,7 +31,7 @@ public sealed class PathTests
     public void RootClassificationDistinguishesWindowsDriveRelativePathsWithoutAllocating(int optimization)
     {
         string[] paths = ["", "a", "C", ":", "1:", "C:", "c:child", "Z:..", "C:/", @"C:\child", "/", @"\", "/child", @"\child", "//", @"\\", @"\\server", @"\\server\share", @"\\?\C:\file", "a/b", "a\\b", "../a", "./", "C::", "C:/../x"];
-        var program = new System.Text.StringBuilder("using std; using std::Text; using std::IO; using std::Memory; using std::Queries; using std::Collections; namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* address) nothrow {} } int main(){");
+        var program = new System.Text.StringBuilder("using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections; namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* address) nothrow {} } int main(){");
         foreach (string path in paths)
         {
             bool drive = path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':';

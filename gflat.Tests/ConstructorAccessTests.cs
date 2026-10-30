@@ -92,6 +92,6 @@ public sealed class ConstructorAccessTests
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("constructor-access.gf",source));
 }

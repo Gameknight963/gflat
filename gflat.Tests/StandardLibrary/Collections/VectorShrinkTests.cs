@@ -8,12 +8,12 @@ public sealed class VectorShrinkTests
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf"];
         return names.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("vector-shrink.gf", program));
     }
 
     private const string Allocator = """
-        using std; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
         int allocations=0;int frees=0;nuint lastSize=0;bool deny=false;
         namespace Memory{
@@ -107,7 +107,7 @@ public sealed class VectorShrinkTests
     public void ShrinkingRelocatesManagedRootsAndEmptyReleaseDropsThem(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             void Fill(Vector<Node^>* values){for(int i=0;i<12;i++){Node^ node=new^ Node(i);node.Next=node;values.Add(node);}}
             int main(){Vector<Node^> values=new();values.Reserve(100);Fill(&values);

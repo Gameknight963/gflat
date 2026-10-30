@@ -8,7 +8,7 @@ public sealed class StringConversionTests
     public void StringConversionOwnsAnIndependentBufferAndPreservesNullBytes()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 String original = s"a\0b";
                 immutable(IStringConvertable)* view = &original;
@@ -26,7 +26,7 @@ public sealed class StringConversionTests
     public void ConversionOnlyValuesInterpolateThroughValuesAndInterfaceViews()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             struct Value : IStringConvertable {
                 public immutable String ToString() => s"a\0b";
             }
@@ -45,7 +45,7 @@ public sealed class StringConversionTests
     public void DirectFormattingTakesPrecedenceOverConversionAndBorrowedCString()
     {
         var result = Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             struct Value : IStringConvertable, IFormattable {
                 public immutable String ToString() { throw new Exception("unexpected conversion"); }
                 public immutable immutable(char*) ToCString() { throw new Exception("unexpected C string"); }
@@ -61,7 +61,7 @@ public sealed class StringConversionTests
     }
 
     private const string Tracking = """
-        using std; using std::Text;
+        using Standard; using Standard::Text;
         extern void*? malloc(nuint size);
         extern void free(void* storage);
         extern int printf(readonly(char)* text, ...);

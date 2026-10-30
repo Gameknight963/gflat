@@ -631,6 +631,11 @@ public sealed partial class EditorModel
         {
             if (token.Text == "implementation" && syntax.Node is PrimitiveImplementationDeclaration && token.Start == syntax.Span.Start) return true;
             if (token.Text == "extension" && syntax.Node is ExtensionDeclaration && token.Start == syntax.Span.Start) return true;
+            // The opt-in prefix is consumed before the implementation node's
+            // located span. Recognize only its immediately following declaration.
+            if (token.Text == "extension" && syntax.Node is PrimitiveImplementationDeclaration { ExposesExtensions: true } &&
+                tokens[path].FirstOrDefault(next => next.Start > token.Start) is { Text: "implementation" } implementation &&
+                implementation.Start == syntax.Span.Start) return true;
             if (token.Text == "explicit" && syntax.Node is MethodDeclaration { IsExplicitConversion: true } conversion &&
                 token.Start >= syntax.Span.Start && token.End < conversion.ReturnType.Span.Start) return true;
             if (token.Text == "var" && syntax.Node is VariableDeclaration { IsTypeInferred: true } &&

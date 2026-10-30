@@ -20,7 +20,7 @@ public sealed class ExtraLongParsingTests
             random.NextBytes(bytes);var value=new BigInteger(bytes,isUnsigned:false);
             texts.Add(value.ToString(CultureInfo.InvariantCulture));
         }
-        var code=new StringBuilder("using std; using std::Text;int main(){extralong value=(extralong)91;\n");
+        var code=new StringBuilder("using Standard; using Standard::Text;int main(){extralong value=(extralong)91;\n");
         foreach(string text in texts)
         {
             bool valid=Int128.TryParse(text,NumberStyles.AllowLeadingSign,CultureInfo.InvariantCulture,out var expected);
@@ -45,7 +45,7 @@ public sealed class ExtraLongParsingTests
     [InlineData(2)]
     public void CountedOverlapAndStringWrappersCommitOnlyAfterReadingWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Text;extern void*? malloc(nuint size);extern void free(void* pointer);bool deny=false;int calls=0;
+            using Standard; using Standard::Text;extern void*? malloc(nuint size);extern void free(void* pointer);bool deny=false;int calls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny){calls++;return null;}return malloc(size);}
                 public replace void Free(void* pointer) nothrow{free(pointer);}
@@ -81,13 +81,13 @@ public sealed class ExtraLongParsingTests
     [Fact]
     public void ExtraLongParserDoesNotIntroduceWideDivisionOrRemainder()
     {
-        string ir=Compiler.Emit(Sources("using std; using std::Text;bool Test(readonly(char)* text,nuint count,extralong* value)nothrow=>TryParseExtraLong(text,count,value);"));
+        string ir=Compiler.Emit(Sources("using Standard; using Standard::Text;bool Test(readonly(char)* text,nuint count,extralong* value)nothrow=>TryParseExtraLong(text,count,value);"));
         Assert.False(NativeToolchain.RequiresWideIntegerRuntime(ir));
     }
 
     private static IEnumerable<SourceFile> Sources(string code,bool strings=false)
-        => (strings?Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
-            :[Path.Combine(AppContext.BaseDirectory,"Std/core/Text/integer_parsing.gf")])
+        => (strings?Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
+            :[Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/integer_parsing.gf")])
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("extralong-parsing.gf",code));
     private static void Run(string code,int optimization,bool strings=false)
     {

@@ -5,7 +5,7 @@ public sealed class ShuffleTests
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_shuffle.gf",
         "Numerics/PseudoRandom.gf", "Memory/Span.gf", "Collections/Vector.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
         .Append(new SourceFile("main.gf", program));
 
     private static ulong Next(ref ulong state)
@@ -49,7 +49,7 @@ public sealed class ShuffleTests
         }
         ulong next = Next(ref state);
         var result = CompilerTestHelper.Run(Sources($$"""
-            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             int main() {
                 PseudoRandom random = new(0xfedcba9876543210ul);
                 {{checks}}
@@ -66,7 +66,7 @@ public sealed class ShuffleTests
     public void ShufflingNoncopyableValuesPreservesEveryOwnerAndDoesNotAllocate(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             extern void* malloc(nuint size);
             extern void free(void* storage);
             int allocations = 0;

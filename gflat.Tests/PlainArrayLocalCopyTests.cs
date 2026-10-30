@@ -77,7 +77,7 @@ public sealed class PlainArrayLocalCopyTests
 
     private const string Large =
     """
-    using std;
+    using Standard;
     int cleaned=0;int deferred=0;
     struct Guard {~Guard(){cleaned++;}}
     int Exercise(bool fail) {

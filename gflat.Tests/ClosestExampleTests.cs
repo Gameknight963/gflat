@@ -11,7 +11,7 @@ public sealed class ClosestExampleTests
     [InlineData(2)]
     public async Task ActualToolRanksBorrowedArgumentsAndPreservesAllClosestTies(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("closest.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/closest.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-closest-" + Guid.NewGuid().ToString("N"));

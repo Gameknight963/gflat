@@ -11,7 +11,7 @@ public sealed class QuoteLinesExampleTests
     [InlineData(2)]
     public async Task ActualToolProducesIndependentJsonLinesAndReportsInvalidInput(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("quote-lines.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/quote-lines.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat-quote-lines-"+Guid.NewGuid().ToString("N"));

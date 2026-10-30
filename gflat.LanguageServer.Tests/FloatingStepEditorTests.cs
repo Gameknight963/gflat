@@ -16,7 +16,7 @@ public sealed class FloatingStepEditorTests
     {
         string path=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core","Numerics","Math.gf");
         var library=new SourceFile(path,File.ReadAllText(path));
-        string text=type+" Probe() nothrow=>std::Numerics::Math::"+member+"("+literal+");";
+        string text=type+" Probe() nothrow=>Standard::Numerics::Math::"+member+"("+literal+");";
         var source=new SourceFile(Path.GetFullPath("floating-step-editor.gf"),text);
         SourceFile[] sources=[library,source];
         var snapshot=new AnalysisSnapshot(sources);

@@ -16,17 +16,17 @@ public sealed class StampLinesExampleTests
         string directory=Path.Combine(Path.GetTempPath(),"gflat-stamp-lines-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{
             string actualMain=File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/stamp-lines.gf"));
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile("stamp-lines.gf",actualMain))
                 .Append(new SourceFile("stamp-lines-test-clock.gf","""
                     int clockCalls=0;
                     static class TestClock{
-                        public static std::Time::DateTime GetUtcNow(){
+                        public static Standard::Time::DateTime GetUtcNow(){
                             clockCalls++;
-                            if(clockCalls==2&&std::Environment::GetVariable("GFLAT_TEST_STAMP_LINES_FAIL_SECOND")!=null)
+                            if(clockCalls==2&&Standard::Environment::GetVariable("GFLAT_TEST_STAMP_LINES_FAIL_SECOND")!=null)
                                 throw new Exception("test clock failure",71);
-                            return std::Time::DateTime::FromTicks(621355968000000000l+(long)(clockCalls-1)*10000000l);
+                            return Standard::Time::DateTime::FromTicks(621355968000000000l+(long)(clockCalls-1)*10000000l);
                         }
                     }
                     alias NativeClock=TestClock;

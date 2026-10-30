@@ -14,7 +14,7 @@ public sealed class ConsoleInputTests
         {
             program = program.Replace("$PATH", Literal(Path.Combine(directory, "write-only.bin")));
             var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf" }
-                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Path.Combine(directory, "input.ll"), executable = Path.Combine(directory, "input.exe");
             File.WriteAllText(ir, Compiler.Emit(sources));
@@ -70,10 +70,10 @@ public sealed class ConsoleInputTests
             int main() {
                 char[5] data = ['Z','Z','Z','Z','Z'];
                 try { Console::ReadExactly(&data[1], 3); return 1; }
-                catch (std::IO::EndOfStreamException* error) { }
+                catch (Standard::IO::EndOfStreamException* error) { }
                 if (data[0] != 'Z' || data[1] != 'A' || data[2] != '\0' || data[3] != 'Z' || data[4] != 'Z') return 2;
                 if (Console::ReadByte() != -1) return 3;
-                try { Console::ReadExactly(data, 1); return 4; } catch (std::IO::EndOfStreamException* error) { }
+                try { Console::ReadExactly(data, 1); return 4; } catch (Standard::IO::EndOfStreamException* error) { }
                 return 0;
             }
             """, [65, 0], optimization);
@@ -129,15 +129,15 @@ public sealed class ConsoleInputTests
                 if (freopen($PATH, "wb", stream) == null) return 1;
                 char data = 'Z';
                 try { Console::Read(&data, 1); return 2; }
-                catch (std::IO::EndOfStreamException* error) { return 3; }
-                catch (std::IO::IOException* error) { }
+                catch (Standard::IO::EndOfStreamException* error) { return 3; }
+                catch (Standard::IO::IOException* error) { }
                 if (data != 'Z' || Console::Read(&data, 0) != 0) return 4;
                 clearerr(stream);
-                try { Console::ReadByte(); return 5; } catch (std::IO::IOException* error) { }
+                try { Console::ReadByte(); return 5; } catch (Standard::IO::IOException* error) { }
                 clearerr(stream);
                 try { Console::ReadExactly(&data, 1); return 6; }
-                catch (std::IO::EndOfStreamException* error) { return 7; }
-                catch (std::IO::IOException* error) { }
+                catch (Standard::IO::EndOfStreamException* error) { return 7; }
+                catch (Standard::IO::IOException* error) { }
                 return 0;
             }
             """, [], optimization);

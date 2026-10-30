@@ -1,6 +1,6 @@
 # Borrowed stream varints
 
-Import `std::IO` for canonical variable-length integer extensions on borrowed
+Import `Standard::IO` for canonical variable-length integer extensions on borrowed
 `IByteReader*` / `ITextWriter*` endpoints. The endpoints can be a File, the optional
 Windows TcpClient, or a caller-defined reader/writer. No owner is copied or transferred.
 
@@ -26,7 +26,7 @@ then reads them back. Opening the output truncates an existing file at the suppl
 its optional network library is referenced, with no change to the parsing code.
 
 ```csharp
-using std::IO;
+using Standard::IO;
 
 uint ReadPayloadLength(IByteReader* input)
 {

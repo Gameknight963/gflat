@@ -7,7 +7,7 @@ public sealed class LinkedListReverseTests
     [InlineData(2)]
     public void ReversalPreservesBothLinksNodeValueIdentityAndNoncopyableOwnershipWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using Standard; using Standard::Queries; using Standard::Collections;
             private extern void*? malloc(nuint size);
             private extern void free(void* storage);
             int attempts = 0;
@@ -85,8 +85,8 @@ public sealed class LinkedListReverseTests
     [InlineData(2)]
     public void ManagedValuesKeepRootsAcrossReversalAndMoveAndReleaseAfterRemovalAndClear(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
-            public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
+            using Standard; using Standard::Queries; using Standard::Collections;
+            public static replace nuint Standard::TracingCollector::CollectionThreshold()=>0;
             void Populate(ref LinkedList<int^> values) {
                 for (int id = 0; id < 17; id++) values.AddLast(new^ int(id));
             }
@@ -129,7 +129,7 @@ public sealed class LinkedListReverseTests
         };
         if (gc) names.AddRange(["libc/GC.gf", "libc/TracingCollector.gf"]);
         var sources = names.Select(name => new SourceFile(name,
-                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("linked-list-reverse.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"LinkedList Reverse exit {result.ExitCode}: {result.StandardError}");

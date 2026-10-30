@@ -13,7 +13,7 @@ public sealed class ConsolePeekTests
             string path = Path.Combine(directory, "write-only.bin").Replace("\\", "\\\\").Replace("\"", "\\\"");
             program = program.Replace("$PATH", "\"" + path + "\"");
             var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf" }
-                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Path.Combine(directory, "peek.ll"), executable = Path.Combine(directory, "peek.exe");
             File.WriteAllText(ir, Compiler.Emit(sources));
@@ -112,8 +112,8 @@ public sealed class ConsolePeekTests
                 for (int i = 0; i < 2; i++) {
                     clearerr(stream);
                     try { Console::PeekByte(); return 2; }
-                    catch (std::IO::EndOfStreamException* error) { return 3; }
-                    catch (std::IO::IOException* error) { }
+                    catch (Standard::IO::EndOfStreamException* error) { return 3; }
+                    catch (Standard::IO::IOException* error) { }
                 }
                 return 0;
             }

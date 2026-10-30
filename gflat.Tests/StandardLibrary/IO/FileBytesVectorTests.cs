@@ -10,7 +10,7 @@ public sealed class FileBytesVectorTests
         await WithDirectory(directory =>
         {
             string executable = Compile(directory, """
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main(int argc,char** argv){
                     Vector<byte> bytes=FileBytes::ReadAll(argv[1]);nuint count=bytes.Count;nuint capacity=bytes.Capacity;
                     FileBytes::WriteAll(argv[2],ref bytes);FileBytes::AppendAll(argv[3],ref bytes);
@@ -51,7 +51,7 @@ public sealed class FileBytesVectorTests
         await WithDirectory(directory =>
         {
             string executable=Compile(directory,"""
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 extern void*? malloc(nuint size);extern void free(void* value);
                 int allocations=0;int frees=0;bool deny=false;
                 namespace Memory{
@@ -90,7 +90,7 @@ public sealed class FileBytesVectorTests
         await WithDirectory(directory =>
         {
             string executable=Compile(directory,"""
-                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main(int argc,char** argv){
                     Vector<byte> bytes=new();bytes.Add(0);bytes.Add(255);bytes.Add(128);nuint capacity=bytes.Capacity;
                     bool caught=false;try{FileBytes::WriteAll(argv[1],ref bytes);return 1;}catch(IOException* error){caught=true;}
@@ -125,7 +125,7 @@ public sealed class FileBytesVectorTests
         // Every native fixture selects only binary owning dependencies: no String or GC implementation.
         string[] names=["core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/Collections/IEnumerable.gf",
             "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","libc/IO/FileBytes.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("file-bytes-vector-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

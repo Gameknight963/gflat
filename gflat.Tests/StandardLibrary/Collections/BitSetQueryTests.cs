@@ -7,7 +7,7 @@ public sealed class BitSetQueryTests
     [InlineData(2)]
     public void ProtectedQueriesBorrowSetIndicesLazilyAndObserveContentEdits(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
@@ -43,7 +43,7 @@ public sealed class BitSetQueryTests
     [InlineData(2)]
     public void NestedViewCapturesBorrowedMetadataAndRejectsNonemptyNullStorage(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             nuint Sum(nuint total,nuint value)=>total+value;
             int main(){
                 uint[2] words=[(uint)2,(uint)1];
@@ -68,7 +68,7 @@ public sealed class BitSetQueryTests
     {
         string[] names=["Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf","Memory/Span.gf","Collections/Vector.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("bit-queries.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

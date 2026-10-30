@@ -38,8 +38,8 @@ with this optional source. Existing char-based splitting has no new dependency.
 There is no new mutable-receiver family or multi-part iterator in this change.
 
 ```csharp
-using std::Text;
-using std; using std::Memory;
+using Standard::Text;
+using Standard; using Standard::Memory;
 
 int main()
 {
@@ -67,16 +67,16 @@ reused as either output. Both result views are computed before either assignment
 The optional pattern file has the same source dependencies as first-match splitting.
 
 ```csharp
-using std::Text;
-using std::Memory;
+using Standard::Text;
+using Standard::Memory;
 
 int main()
 {
-    String qualified = s"std::Text::String";
+    String qualified = s"Standard::Text::String";
     Span<readonly(char)> owner = new();
     Span<readonly(char)> name = new();
     bool found = qualified.AsReadOnly().TrySplitLastOnce("::", ref owner, ref name);
-    // owner is "std::Text" and name is "String".
+    // owner is "Standard::Text" and name is "String".
     if (!found || owner.Length != 9 || name.Length != 6) return 1;
     return 0;
 }

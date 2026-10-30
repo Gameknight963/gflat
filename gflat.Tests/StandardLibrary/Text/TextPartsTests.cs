@@ -10,7 +10,7 @@ public sealed class TextPartsTests
     public void ProtectedSequencesAndCurrentObserversRetainIndependentBorrowedViews(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -40,7 +40,7 @@ public sealed class TextPartsTests
     public void ImmutableCurrentObserverCannotWriteBorrowedCharacters()
     {
         const string prefix="""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             void Test(immutable(TextParts::Enumerator)* observer){Span<readonly(char)> part=observer.Current;
             """;
         Compiler.Check(Sources(prefix+"char value=part[0];}"));
@@ -54,7 +54,7 @@ public sealed class TextPartsTests
         var names = new List<string> { "Memory/Span.gf", "Text/TextParts.gf", "Text/text_parts_span.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" };
         if (strings) names.AddRange(["Text/string_split.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "primitive_format.gf"]);
         if (formatting) names.AddRange(["Text/BufferWriter.gf", "Text/BufferTooSmallException.gf", "primitive_format.gf"]);
-        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }
 
@@ -79,7 +79,7 @@ public sealed class TextPartsTests
             string checks = string.Join(Environment.NewLine, expected.Select((part, i) =>
                 $"if (!Part(&iterator, {Literal(part)}, {part.Length})) return {i + 1};"));
             Run($$"""
-                using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 bool Part(TextParts::Enumerator* iterator, immutable(char*) expected, nuint count) {
                     if (!iterator.MoveNext()) return false;
                     Span<readonly(char)> part = iterator.Current;
@@ -103,7 +103,7 @@ public sealed class TextPartsTests
     public void CurrentBoundsAndDefaultEmptySpanHaveDefinedBehavior()
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 Span<readonly(char)> empty = new Span<readonly(char)>();
                 TextParts parts = new TextParts(empty, ',');
@@ -124,7 +124,7 @@ public sealed class TextPartsTests
     public void ViewsBorrowMutableStorageAndIteratorsAreIndependent()
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -158,7 +158,7 @@ public sealed class TextPartsTests
     public void CountedZeroDelimiterAndForeachUseViewsWithoutAllocating()
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -182,7 +182,7 @@ public sealed class TextPartsTests
     public void StringReceiverBorrowsWithoutCopyAndUsesCountedContents()
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* data);
             static class Calls { public static int Allocations; }
@@ -212,21 +212,54 @@ public sealed class TextPartsTests
             """, strings: true);
     }
 
-    [Fact]
-    public void TemporaryOwningStringCannotSupplyBorrowedParts()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void TemporaryOwnerLivesThroughImmediateBorrowedViewConsumption(int optimization)
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
-            int main() { TextParts parts = s"a,b".Split(','); return 0; }
+        const string program = """
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+            extern void*? malloc(nuint size); extern void free(void* data);
+            int allocated=0;int released=0;
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { void*? result=malloc(size);if(result!=null)allocated++;return result; }
+                public replace void Free(void* data) nothrow { released++;free(data); }
+            }
+            int Consume(TextParts view) {
+                if(allocated==0||released!=0)return 1;
+                TextParts::Enumerator iterator=view.GetEnumerator();
+                if(!iterator.MoveNext()||iterator.Current.Length!=1||iterator.Current[0]!='a')return 2;
+                if(!iterator.MoveNext()||iterator.Current.Length!=1||iterator.Current[0]!='b')return 3;
+                if(iterator.MoveNext()||released!=0)return 4;
+                return 0;
+            }
+            int main() {
+                int status=Consume(s"a,b".Split(','));
+                if(status!=0)return status;
+                // Borrowed view was consumed within the owner's full expression.
+                if(allocated==0||allocated!=released)return 5;
+                return 0;
+            }
+            """;
+        string ir = Compiler.Emit(Sources(program, strings: true), options: new() { InternalizeFunctions = true });
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
+    [Fact]
+    public void ExplicitRefFreeFunctionStillRejectsTemporaryOwners()
+    {
+        var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Check(Sources("""
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+            int main() { TextParts view=Split(ref s"a,b",','); return 0; }
             """, strings: true)));
-        Assert.Contains("Split", error.Message);
+        Assert.Contains("existing storage", error.Message);
     }
 
     [Fact]
     public void EnumerableInterfaceAndFormattingRemainAllocationFree()
     {
         Run("""
-            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }

@@ -171,7 +171,7 @@ public class StaticStorageTests
     public void ManagedGlobalsSurviveCollectionBeforeAndAfterMainStarts()
     {
         var sources = new[] { "libc/GC.gf", "libc/TracingCollector.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Prepend(new SourceFile("a.gf", """
                 class Node { public int value; public Node() { value = 42; } }
                 Node^ node = new^ Node();

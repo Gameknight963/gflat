@@ -1,6 +1,6 @@
-using std::Text;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Collections;
+using Standard;
 
 // Build: gflat build examples/tasks/tasks.gfproj
 // Run the resulting examples/tasks/bin/Debug/tasks.exe directly for console input.

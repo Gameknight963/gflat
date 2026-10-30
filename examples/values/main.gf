@@ -1,6 +1,6 @@
-using std::Text;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Collections;
+using Standard;
 
 extern int puts(readonly(char)* text);
 

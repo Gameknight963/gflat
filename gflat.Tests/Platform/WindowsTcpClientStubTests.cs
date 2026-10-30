@@ -128,7 +128,7 @@ public sealed class WindowsTcpClientStubTests
     };
 
     private const string Program="""
-        using Windows;using std::IO;using std::Net;
+        using Windows;using Standard::IO;using Standard::Net;
         public static class Probe{
             public static bool Bad;public static int Starts;public static int Active;public static int CleanupCalls;
             public static int Sockets;public static int Connects;public static int CloseCalls;public static int Reads;public static int Writes;public static int Shutdowns;
@@ -218,11 +218,11 @@ public sealed class WindowsTcpClientStubTests
                 if(buffer[0]!=(char)165||buffer[7]!=(char)165)return 23;
                 for(nuint index=0;index<8;index++)buffer[index]=(char)165;
                 Probe::Received=0;Probe::Reads=0;IByteReader* input=&value;
-                std::IO::ReadExactly(input,&buffer[1],6);
+                Standard::IO::ReadExactly(input,&buffer[1],6);
                 if(Probe::Reads!=3||Probe::Received!=6)return 37;
                 for(nuint index=0;index<6;index++)if(buffer[index+1]!=(char)(48+index))return 38;
                 if(buffer[0]!=(char)165||buffer[7]!=(char)165)return 39;
-                std::IO::ReadExactly(input,((nuint)1).reinterpret<char*>(),0);
+                Standard::IO::ReadExactly(input,((nuint)1).reinterpret<char*>(),0);
                 if(Probe::Reads!=3||Probe::Received!=6)return 40;
                 for(nuint index=0;index<8;index++)buffer[index]=(char)165;
                 Probe::Received=0;Probe::Reads=0;Probe::ReadMode=3;Probe::Total=5;caught=false;

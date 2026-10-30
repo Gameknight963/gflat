@@ -31,7 +31,7 @@ public sealed class TextSplitPatternTests
                     writer.Write(item.Text.AsSpan().IndexOf(item.Pattern));writer.Write(item.Text);writer.Write(item.Pattern);}
             }
             Run(directory,"""
-                using std; using std::Text; using std::IO; using std::Memory;int allocations=0;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;int allocations=0;
                 namespace Memory{
                     public replace void*? Allocate(nuint bytes){allocations++;return null;}
                     public replace void Free(void* value) nothrow{}
@@ -82,7 +82,7 @@ public sealed class TextSplitPatternTests
     [InlineData(2)]
     public void ConvenienceFormsSourceAliasesAndSeparatorAliasesKeepSnapshotMetadata(int optimization)
         => WithDirectory(directory=>Run(directory,"""
-            using std; using std::Text; using std::IO; using std::Memory;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;
             int main(){
                 char[16] bytes=['k','e','y',':',':','v','a','l','u','e',':',':','r','e','s','t'];
                 Span<readonly(char)> original=new(bytes,16);Span<readonly(char)> text=original;
@@ -110,7 +110,7 @@ public sealed class TextSplitPatternTests
     [InlineData(2)]
     public void EmptyAndImpossibleCountsPreflightWithoutReadingNullableOrFakePointers(int optimization)
         => WithDirectory(directory=>Run(directory,"""
-            using std; using std::Text; using std::IO; using std::Memory;int allocations=0;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
                 public replace void Free(void* value) nothrow{}
@@ -136,7 +136,7 @@ public sealed class TextSplitPatternTests
     }
     private static void Run(string directory,string program,string[] arguments,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("pattern-split.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

@@ -1,12 +1,12 @@
 # Time intervals
 
-`std::Time::TimeSpan` is a signed duration stored as one private `long` tick count.
+`Standard::Time::TimeSpan` is a signed duration stored as one private `long` tick count.
 One tick is 100 nanoseconds. Every signed 64-bit tick value is valid, and default
 construction represents zero. It has no calendar, clock, timezone, or OS dependency.
 
 ```csharp
-using std::Text;
-using std; using std::Time;
+using Standard::Text;
+using Standard; using Standard::Time;
 int main()
 {
     TimeSpan travel = TimeSpan::FromMinutes(90);
@@ -38,7 +38,7 @@ values can lose tick precision; use `Ticks` for exact storage or arithmetic.
 The natural approximate result is not clamped to a whole-unit integer range.
 
 ```cpp
-using std; using std::Time;
+using Standard; using Standard::Time;
 int main()
 {
     TimeSpan interval = TimeSpan::FromTicks(15000l);
@@ -111,8 +111,8 @@ nothing. The grammar is an explicit serialization format, without locale,
 floating point conversion, or clock dependencies.
 
 ```csharp
-using std::Text;
-using std; using std::Time;
+using Standard::Text;
+using Standard; using Standard::Time;
 int main()
 {
     TimeSpan interval = TimeSpan::Parse("-01.02:03:04.5");

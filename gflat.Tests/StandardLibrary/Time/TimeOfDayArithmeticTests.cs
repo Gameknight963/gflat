@@ -6,7 +6,7 @@ public sealed class TimeOfDayArithmeticTests
 {
     private const long Day=864000000000;
     private const string Helpers="""
-        using std; using std::Encoding; using std::Time;
+        using Standard; using Standard::Encoding; using Standard::Time;
         int attempts=0;bool deny=false;
         extern void*? malloc(nuint size);extern void free(void* value);
         namespace Memory {
@@ -116,7 +116,7 @@ public sealed class TimeOfDayArithmeticTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("time-of-day-arithmetic.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

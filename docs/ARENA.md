@@ -1,11 +1,11 @@
 # Arena storage
 
-`std::Memory::Arena` groups temporary raw allocations into backing blocks obtained from
+`Standard::Memory::Arena` groups temporary raw allocations into backing blocks obtained from
 `Memory::Allocate`. Each arena has independent state; it does not replace the
 program's default allocator. Growing an arena leaves earlier addresses valid.
 
 ```csharp
-using std; using std::Memory;
+using Standard; using Standard::Memory;
 
 int main()
 {
@@ -60,7 +60,7 @@ This includes compiler-generated cleanup for objects containing managed
 references, even when the type has no user-written destructor.
 
 ```csharp
-using std::Text;
+using Standard::Text;
 {
     String* text = new* String()
         at (String*)scratch.Allocate((nuint)sizeof(String), (nuint)alignof(String));

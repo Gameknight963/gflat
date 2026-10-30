@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Numerics;
 public sealed class PseudoRandomLongTests
 {
     private const string Reader = """
-        using std; using std::Text; using std::Numerics;
+        using Standard; using Standard::Text; using Standard::Numerics;
         int Digit(char value) nothrow {
             if (value <= '9') return value - '0';
             return value - 'A' + 10;
@@ -175,7 +175,7 @@ public sealed class PseudoRandomLongTests
     public void InvalidRangesPreserveTargetsAndStateAndCopiesRemainIndependent(int optimization)
     {
         Run("""
-            using std; using std::Text; using std::Numerics;
+            using Standard; using Standard::Text; using Standard::Numerics;
             int main() {
                 PseudoRandom random = new(42ul);
                 PseudoRandom copy = random;
@@ -258,8 +258,8 @@ public sealed class PseudoRandomLongTests
 
     private static void Run(string program, int optimization)
     {
-        var source = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/PseudoRandom.gf")));
-        var strings = new SourceFile("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/CString.gf")));
+        var source = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/PseudoRandom.gf")));
+        var strings = new SourceFile("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf")));
         var result = CompilerTestHelper.Run([source, strings, new SourceFile("pseudo-random-long.gf", program)], optimization);
         Assert.True(result.ExitCode == 0, $"NextLong exit {result.ExitCode}: {result.StandardError}");
     }

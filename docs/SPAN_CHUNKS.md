@@ -5,7 +5,7 @@ source element appears once, in order. The final chunk may contain fewer than
 `size` elements; no padding or element copying occurs.
 
 ```csharp
-using std; using std::Memory; using std::Collections;
+using Standard; using Standard::Memory; using Standard::Collections;
 int[7] bytes = [1, 2, 3, 4, 5, 6, 7];
 Span<int> source = new(bytes, 7);
 foreach (Span<int> chunk in source.Chunks(3)) {

@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryDistinctTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("query-distinct.gf",program));
 
@@ -16,7 +16,7 @@ public sealed class StandardQueryDistinctTests
     }
 
     private const string Allocator="""
-        using std; using std::Text; using std::IO; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failAt=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){
@@ -70,7 +70,7 @@ public sealed class StandardQueryDistinctTests
     [Fact]
     public void UnusedDistinctDefinitionsDoNotRequireHashImplementationInSelectiveCollectionFixtures()
     {
-        string root=Path.Combine(AppContext.BaseDirectory,"Std/core");
+        string root=Path.Combine(AppContext.BaseDirectory,"Standard/core");
         string[] files=["Memory/span_copy.gf","Memory/span_fill.gf","Memory/Span.gf","Text/String.gf","Text/ByteSearch.gf","IStringConvertable.gf",
             "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf"];
         var sources=Directory.GetFiles(Path.Combine(root,"Collections"),"*.gf")
@@ -78,7 +78,7 @@ public sealed class StandardQueryDistinctTests
             .Concat(files.Select(file=>Path.Combine(root,file)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("selective.gf","""
-                using std; using std::Text; using std::IO; using std::Memory; using std::Queries; using std::Collections;int Project(int value)=>value+1;
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;int Project(int value)=>value+1;
                 int main(){int[3] data=[1,2,3];Span<int> source=new(data,3);return (int)source.AsEnumerable().Select(Project).Take(1).Count();}
                 """));
         string ir=Compiler.Emit(sources);

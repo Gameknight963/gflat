@@ -9,7 +9,7 @@ public sealed class QueryIndexedSelectEditorTests
     public void CallbackAritySelectsConcreteProjectionAndNavigatesItsActualAdapter()
     {
         const string text = """
-            using std; using std::Memory; using std::Queries;
+            using Standard; using Standard::Memory; using Standard::Queries;
             void Observe()
             {
                 int[2] data = [4, 8];
@@ -38,12 +38,12 @@ public sealed class QueryIndexedSelectEditorTests
         Assert.Contains("IndexedSelectSource<int, int", hover);
         Assert.Contains("nuint", hover);
         Assert.DoesNotContain('$', hover);
-        int declaration = extension.Text.IndexOf("Select<T, U, S, E>(", StringComparison.Ordinal);
+        int declaration = EditorSourceDeclarations.ExtensionMethod(extension,"Select");
         Assert.True(declaration >= 0);
         var expected = model.Definition(extension.Path, declaration);
         Assert.NotNull(expected);
         Assert.Equal(expected, model.Definition(source.Path, indexed));
-        declaration = ordinary.Text.IndexOf("Select<T, U, S, E>(", StringComparison.Ordinal);
+        declaration = EditorSourceDeclarations.ExtensionMethod(ordinary,"Select");
         Assert.True(declaration >= 0);
         expected = model.Definition(ordinary.Path, declaration);
         Assert.NotNull(expected);

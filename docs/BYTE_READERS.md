@@ -1,6 +1,6 @@
 # Borrowed byte readers
 
-`std::IO::IByteReader` is a source of raw counted bytes. `Read(char* data, nuint count)`
+`Standard::IO::IByteReader` is a source of raw counted bytes. `Read(char* data, nuint count)`
 returns how many bytes were written into caller storage. Embedded zero and high-bit
 bytes have no special meaning. Nothing is decoded or zero-terminated.
 
@@ -16,7 +16,7 @@ length or ownership semantics.
 
 ## Helpers
 
-Import `std::IO` for these extensions on `IByteReader*`:
+Import `Standard::IO` for these extensions on `IByteReader*`:
 
 - `ReadExactly(data, count)` loops through short reads and throws `EndOfStreamException`
   if EOF arrives before `count`. A zero-byte operation calls the source once to preserve
@@ -45,8 +45,8 @@ and checks the final tail in `Complete`, so the consumer needs no entire-input s
 Use distinct source and destination files: opening the destination truncates it.
 
 ```csharp
-using std::IO;
-using std::Encoding;
+using Standard::IO;
+using Standard::Encoding;
 
 void DecodeHexFrom(IByteReader* input, ITextWriter* output)
 {

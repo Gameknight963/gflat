@@ -1,13 +1,13 @@
 # HKDF-SHA256 key extraction and expansion
 
-`std::Hashing::HKDFSHA256` composes the existing HMACSHA256 core according to
+`Standard::Hashing::HKDFSHA256` composes the existing HMACSHA256 core according to
 [RFC 5869](https://www.rfc-editor.org/rfc/rfc5869.html#section-2). It separates
 extracting a 32-byte pseudorandom key from expanding that key into caller storage.
 It is intended for suitable key material, not password hashing; HKDF does not
 provide the deliberate slowdown used against password guessing.
 
 ```csharp
-using std; using std::Hashing;
+using Standard; using Standard::Hashing;
 
 int main()
 {
@@ -20,7 +20,7 @@ int main()
     for (nuint i = 0; i < 10; i++) info[i] = (char)(240 + i);
     byte[32] prk = HKDFSHA256::Extract(salt, 13, input, 22);
     byte[42] key;
-    if (!HKDFSHA256::TryExpand((readonly(char)*)(byte*)prk, 32, info, 10, key, 42)) return 1;
+    if (!HKDFSHA256::TryExpand(((byte*)prk).reinterpret<readonly(char)*>(), 32, info, 10, key, 42)) return 1;
     if (key[0] != (byte)0x3c || key[41] != (byte)0x65) return 2;
     return 0;
 }

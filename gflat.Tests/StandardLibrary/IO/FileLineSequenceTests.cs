@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.IO;
 public sealed class FileLineSequenceTests
 {
     private const string Counters="""
-        using std; using std::Text; using std::IO; using std::Queries; using std::Collections;
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Queries; using Standard::Collections;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
         int allocations=0;int releases=0;bool failAllocation=false;
         namespace Memory{
@@ -186,16 +186,16 @@ public sealed class FileLineSequenceTests
     [InlineData("iterator.Current.Clear();")]
     public void CurrentCannotMutateTheIteratorsOwnedString(string invalid)
         => RunCompileFailure(path=>$$"""
-            using std; using std::Text; using std::IO; using std::Queries; using std::Collections;int main(){File input=File::OpenRead({{path}});File* source=&input;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Queries; using Standard::Collections;int main(){File input=File::OpenRead({{path}});File* source=&input;
                 var iterator=source.Lines().GetEnumerator();iterator.MoveNext();{{invalid}}return 0;}
             """);
 
     private static IEnumerable<SourceFile> Sources(string program)
     {
-        var core=Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Std/core"),"*.gf",SearchOption.AllDirectories)
+        var core=Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Standard/core"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)));
         var io=new[]{"IO/File.gf","IO/FileLines.gf","IO/FileLineSequence.gf"}
-            .Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file))));
+            .Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",file))));
         return core.Concat(io).Append(new SourceFile("lines.gf",program));
     }
     private static void RunCompileFailure(Func<string,string> program)

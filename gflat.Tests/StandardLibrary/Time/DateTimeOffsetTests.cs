@@ -7,7 +7,7 @@ public sealed class DateTimeOffsetTests
 {
     private const long Minute=600000000L,Maximum=3155378975999999999L;
     private const string Support="""
-        using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -156,7 +156,7 @@ public sealed class DateTimeOffsetTests
     }
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.UTF8.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-time-offset.gf",program));
     private static void Run(string program,int optimization)
     {

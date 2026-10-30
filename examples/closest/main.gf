@@ -1,7 +1,7 @@
-using std::Text;
-using std::Memory;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::Memory;
+using Standard::Collections;
+using Standard;
 
 // Rank borrowed command-line bytes; retain only indices of the closest matches.
 int main(int argc, char** argv)

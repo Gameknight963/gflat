@@ -6,7 +6,7 @@ Both inputs and the output have type `Span<readonly(char)>` and contain counted
 UTF-8 bytes. Success replaces the output span; false leaves it unchanged.
 
 ```csharp
-using std; using std::Json; using std::Memory;
+using Standard; using Standard::Json; using Standard::Memory;
 int main()
 {
     Span<readonly(char)> document = new("{\"users\":[{\"name\":\"Ada\"}]}", 26);
@@ -62,4 +62,4 @@ O(pointer length + document length × (pointer depth + 1)).
 
 Selective source users add `core/Json/JsonPointer.gf` with `JsonReader`, `JsonString`,
 `Utf8`, `String`, and `Span` and their normal dependencies, including JSON token
-and parse-exception definitions. Ordinary projects including std get it directly.
+and parse-exception definitions. Ordinary projects including Standard get it directly.

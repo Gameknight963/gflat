@@ -3,7 +3,7 @@
 `Text/text_split_once_span.gf` adds one operation to `Span<readonly(char)>`:
 
 ```csharp
-using std::Memory;
+using Standard::Memory;
 extension Span<readonly(char)> {
     public readonly bool TrySplitOnce(char separator, ref Span<readonly(char)> before, ref Span<readonly(char)> after);
 }
@@ -14,8 +14,8 @@ that separator. Further separators remain part of `after`, making it useful for
 key/value settings and command arguments.
 
 ```csharp
-using std::Text;
-using std; using std::Memory;
+using Standard::Text;
+using Standard; using Standard::Memory;
 String setting = s"mode=fast=checked";
 Span<readonly(char)> input = setting.AsReadOnly();
 Span<readonly(char)> key = new();

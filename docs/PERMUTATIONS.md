@@ -11,7 +11,7 @@ The number of arrangements can still grow factorially; the caller controls the
 input size and stopping policy.
 
 ```csharp
-using std; using std::Memory; using std::Collections;
+using Standard; using Standard::Memory; using Standard::Collections;
 int Compare(readonly(int)* left, readonly(int)* right)
 {
     if (*left < *right) return -1;

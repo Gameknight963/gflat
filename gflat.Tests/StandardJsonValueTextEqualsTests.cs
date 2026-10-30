@@ -27,16 +27,16 @@ public sealed class StandardJsonValueTextEqualsTests
                 bool[{{quoted.Length*text.Length}}] expected=[{{string.Join(",",matches)}}];
                 uint before=0u;for(nuint i=0;i<{{bytes.Count}};i++)before=before*31u+(uint)(byte)input[i];
                 for(nuint q=0;q<{{quoted.Length}};q++)for(nuint t=0;t<{{text.Length}};t++){
-                    bool equal=std::Json::JsonString::ValueTextEquals(&input[0]+quoted[q*2],quoted[q*2+1],&input[0]+text[t*2],text[t*2+1]);
+                    bool equal=Standard::Json::JsonString::ValueTextEquals(&input[0]+quoted[q*2],quoted[q*2+1],&input[0]+text[t*2],text[t*2+1]);
                     if(equal!=expected[q*{{text.Length}}+t])return 1;
                 }
                 uint after=0u;for(nuint i=0;i<{{bytes.Count}};i++)after=after*31u+(uint)(byte)input[i];
                 if(after!=before)return 2;
                 char[6] overlap=['"','n','a','m','e','"'];
-                if(!std::Json::JsonString::ValueTextEquals(overlap,6,&overlap[1],4))return 3;
-                if(!std::Json::JsonString::ValueTextEquals("\"\"",2,((nuint)1).reinterpret<readonly(char)*>(),0))return 4;
-                if(std::Json::JsonString::ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<readonly(char)*>(),100))return 5;
-                if(std::Json::JsonString::ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),1,((nuint)1).reinterpret<readonly(char)*>(),100))return 6;
+                if(!Standard::Json::JsonString::ValueTextEquals(overlap,6,&overlap[1],4))return 3;
+                if(!Standard::Json::JsonString::ValueTextEquals("\"\"",2,((nuint)1).reinterpret<readonly(char)*>(),0))return 4;
+                if(Standard::Json::JsonString::ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<readonly(char)*>(),100))return 5;
+                if(Standard::Json::JsonString::ValueTextEquals(((nuint)1).reinterpret<readonly(char)*>(),1,((nuint)1).reinterpret<readonly(char)*>(),100))return 6;
                 return 0;
             }
             """;
@@ -54,13 +54,13 @@ public sealed class StandardJsonValueTextEqualsTests
         byte[][] bad=[[],[34],[34,34,32],[32,34,34],"\"\\q\""u8.ToArray(),"\"\\uD800\""u8.ToArray(),"\"\\uDC00\""u8.ToArray(),
             "\"\\uD800\\u0041\""u8.ToArray(),[34,10,34],[34,0xff,34],[34,0xc0,0x80,34],[34,0xf0,0x9f,34]];
         var code=new StringBuilder("int main() nothrow {char[32] input;\n");
-        foreach(var value in bad){for(int i=0;i<value.Length;i++)code.AppendLine($"input[{i}]=(char){value[i]};");code.AppendLine($"if(std::Json::JsonString::ValueTextEquals(input,{value.Length},\"A\",1))return 1;");}
+        foreach(var value in bad){for(int i=0;i<value.Length;i++)code.AppendLine($"input[{i}]=(char){value[i]};");code.AppendLine($"if(Standard::Json::JsonString::ValueTextEquals(input,{value.Length},\"A\",1))return 1;");}
         code.AppendLine("""
             char[2] invalid=[(char)0xc0,(char)0x80];
-            if(std::Json::JsonString::ValueTextEquals("\"A\"",3,invalid,2))return 2;
+            if(Standard::Json::JsonString::ValueTextEquals("\"A\"",3,invalid,2))return 2;
             char[2] invalidSuffix=['A',(char)0xff];
-            if(std::Json::JsonString::ValueTextEquals("\"A\"",3,invalidSuffix,2))return 3;
-            if(std::Json::JsonString::ValueTextEquals("\"\"",2,invalid,2))return 4;
+            if(Standard::Json::JsonString::ValueTextEquals("\"A\"",3,invalidSuffix,2))return 3;
+            if(Standard::Json::JsonString::ValueTextEquals("\"\"",2,invalid,2))return 4;
             return 0;}
             """);
         Assert.Equal(0,CompilerTestHelper.Run([new("JsonString.gf",Read("Json/JsonString.gf")),new("Utf8.gf",Read("Text/utf8.gf")),new("main.gf",code.ToString())],optimization).ExitCode);
@@ -72,7 +72,7 @@ public sealed class StandardJsonValueTextEqualsTests
     public void ReaderMatchesEscapedPropertiesAndValuesThroughProtectedViews(int optimization)
     {
         string code="""
-            using std; using std::Json;
+            using Standard; using Standard::Json;
             extern void*? malloc(nuint size);extern void free(void* storage);
             int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* storage) nothrow{free(storage);}}
@@ -100,10 +100,10 @@ public sealed class StandardJsonValueTextEqualsTests
                 return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
     }
-    private static string Read(string name)=>File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name));
+    private static string Read(string name)=>File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name));
 }

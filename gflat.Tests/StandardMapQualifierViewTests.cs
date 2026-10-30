@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardMapQualifierViewTests
 {
     private const string Types="""
-        using std; using std::Memory; using std::Queries; using std::Collections;
+        using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int destroyed=0;
         int allocations=0;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
@@ -68,7 +68,7 @@ public sealed class StandardMapQualifierViewTests
                 "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf"];
         SourceFile[] library = managed.Concat(dependencies).Select(relative =>
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "Std", relative);
+            string path = Path.Combine(AppContext.BaseDirectory, "Standard", relative);
             return new SourceFile(path, File.ReadAllText(path));
         }).ToArray();
         string prefix = Types + $$"""
@@ -97,6 +97,6 @@ public sealed class StandardMapQualifierViewTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("views.gf",code));
 }

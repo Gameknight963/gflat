@@ -35,7 +35,7 @@ public sealed class UuidTests
                 }
             }
             Run($$"""
-                using std; using std::Text; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Collections;
                 extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* file);
                 extern int fclose(void* file);
@@ -85,7 +85,7 @@ public sealed class UuidTests
         const string canonical="00112233-4455-6677-8899-aabbccddeeff";
         string[] invalid=[""," ","{"+canonical+"}",canonical.Replace("-",""),"urn:uuid:"+canonical,
             " "+canonical,canonical+" ","\t"+canonical,canonical+"\n",canonical+"+"];
-        var code=new StringBuilder("using std; using std::Text; using std::Collections;int main(){Uuid value=new Uuid(1ul,2ul);\n");
+        var code=new StringBuilder("using Standard; using Standard::Text; using Standard::Collections;int main(){Uuid value=new Uuid(1ul,2ul);\n");
         foreach(string text in invalid)
             code.AppendLine($$"""
                 if(Uuid::TryParse({{Literal(text)}},{{text.Length}},&value)||!value.IsNil)return 1;
@@ -129,7 +129,7 @@ public sealed class UuidTests
     [InlineData(2)]
     public void UuidKeysInterpolationAndWriterExceptionsUseExistingContracts(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             struct Sink:ITextWriter{
                 private char* data;public int Calls;public bool Fail;
                 public Sink(char* output,bool fail){data=output;Calls=0;Fail=fail;}
@@ -154,9 +154,9 @@ public sealed class UuidTests
     {
         string[] names=["core/Uuid.gf","core/ITextWriter.gf", "core/IFormattable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf",
             "core/Exception.gf","libc/Memory/allocation.gf","libc/Exceptions/unhandled.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("nothrow.gf","""
-                using std; using std::Text; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Collections;
                 bool Convert(readonly(char)* input,nuint count,char* output,nuint capacity,Uuid* result,ref nuint written)nothrow{
                     if(!Uuid::TryParse(input,count,result))return false;
                     return result.TryFormat(output,capacity,ref written);
@@ -167,7 +167,7 @@ public sealed class UuidTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"").Replace("\t","\\t").Replace("\n","\\n")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("uuid.gf",code));
     private static void Run(string code,int optimization)
     {

@@ -5,14 +5,14 @@ public sealed class ConsoleWriterTests
     internal static SourceFile[] Sources(string program) => new[] {
         "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/primitive_format.gf",
         "libc/Console/Console.gf", "libc/Console/Writer.gf"
-    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+    }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
 
     [Fact]
     public void WriterPreservesCountedBytesAndFormatsWithoutAnIntermediateAllocation()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Text; using std::IO;
+            using Standard; using Standard::Text; using Standard::IO;
             extern int printf(immutable(char*) text, ...);
             extern void* malloc(nuint count);
             extern void free(void* storage);

@@ -11,7 +11,7 @@ public sealed class FileCompareExampleTests
     public async Task ActualToolMatchesFirstDifferenceOracleWithoutApplicationAllocation(int optimization)
         => await WithDirectory(async directory =>
         {
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile("file-compare.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/file-compare.gf"))))
                 .Append(new SourceFile("no-allocations.gf","""

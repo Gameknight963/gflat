@@ -8,7 +8,7 @@ public sealed class StandardJsonReaderTests
     public void OwningReaderCannotBeImplicitlyCopied()
     {
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::Json;int main(){JsonReader first=new("[]",2);JsonReader second=first;return 0;}
+            using Standard; using Standard::Json;int main(){JsonReader first=new("[]",2);JsonReader second=first;return 0;}
             """)));
         Assert.Contains("copy",error.Message,StringComparison.OrdinalIgnoreCase);
     }
@@ -23,7 +23,7 @@ public sealed class StandardJsonReaderTests
             "01"u8.ToArray(), "-"u8.ToArray(), "1."u8.ToArray(), "1e+"u8.ToArray(), "NaN"u8.ToArray(),
             "/*x*/0"u8.ToArray(), "\"\\uD800\""u8.ToArray(), "\"\\uDC00\""u8.ToArray(),
             [34, 0, 34], [34, 0xff, 34], [0xef, 0xbb, 0xbf, 48], "{\"x\":1,}"u8.ToArray()];
-        var code = new StringBuilder("using std; using std::Json;int main(){char[128] bytes;\n");
+        var code = new StringBuilder("using Standard; using Standard::Json;int main(){char[128] bytes;\n");
         foreach (byte[] bytes in invalid)
         {
             for (int i=0;i<bytes.Length;i++) code.AppendLine($"bytes[{i}]=(char){bytes[i]};");
@@ -46,7 +46,7 @@ public sealed class StandardJsonReaderTests
     [InlineData(2)]
     public void StringsDecodeUsingExistingHelpersAndMovedReaderRetainsIndependentTokenOffsets(int optimization)
         => Run("""
-            using std; using std::Json;
+            using Standard; using Standard::Json;
             int main(){
                 readonly(char)* input="{\"name\":\"a\\u0000\\uD83D\\uDE00\",\"name\":false}";
                 JsonReader original=new(input,43);
@@ -71,7 +71,7 @@ public sealed class StandardJsonReaderTests
     [InlineData(2)]
     public void StackGrowthFailureRequiresResetAndAllOwnedStorageIsReleased(int optimization)
         => Run("""
-            using std; using std::Json;
+            using Standard; using Standard::Json;
             extern void*? malloc(nuint size);extern void free(void* storage);
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
@@ -96,7 +96,7 @@ public sealed class StandardJsonReaderTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);

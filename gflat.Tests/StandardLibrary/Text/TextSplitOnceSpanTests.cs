@@ -14,7 +14,7 @@ public sealed class TextSplitOnceSpanTests
             ("=="u8.ToArray(),61),(" a = b = c "u8.ToArray(),61),("a\0b\0c"u8.ToArray(),0),
             ([255,120,128],255),([255,120,128],128),([0],0)];
         var code=new StringBuilder("""
-            using std; using std::Text; using std::Memory;int allocations=0;
+            using Standard; using Standard::Text; using Standard::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -52,7 +52,7 @@ public sealed class TextSplitOnceSpanTests
     [InlineData(2)]
     public void KeyValueViewsRetainRemainderAndAllowReceiverMetadataReuseWithoutCopyingOwner(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using Standard; using Standard::Text; using Standard::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int releases=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;if(deny)return null;return malloc(size);}
@@ -79,7 +79,7 @@ public sealed class TextSplitOnceSpanTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("split-once.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

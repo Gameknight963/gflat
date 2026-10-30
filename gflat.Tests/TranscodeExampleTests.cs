@@ -9,7 +9,7 @@ public sealed class TranscodeExampleTests
     [InlineData(2)]
     public void ActualToolMatchesDotNetPreservesMalformedOutputAndCanConvertInPlace(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("transcode.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/transcode.gf"))));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-transcode-" + Guid.NewGuid().ToString("N"));

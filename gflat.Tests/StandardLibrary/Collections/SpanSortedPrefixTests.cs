@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class SpanSortedPrefixTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Memory; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocations = 0; int releases = 0; bool deny = false;
         namespace Memory {
@@ -146,7 +146,7 @@ public sealed class SpanSortedPrefixTests
 
     private static void Run(string program, int optimization)
     {
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("span-sorted-prefix.gf", program));
         string ir = Compiler.Emit(files, options: new() { NoStdLib = true, InternalizeFunctions = true });

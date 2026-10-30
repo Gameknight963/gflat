@@ -1,6 +1,6 @@
-using std::Text;
-using std::Time;
-using std;
+using Standard::Text;
+using Standard::Time;
+using Standard;
 
 struct UtcPrefix : IFormattable
 {

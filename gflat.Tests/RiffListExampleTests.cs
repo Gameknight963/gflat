@@ -18,7 +18,7 @@ public sealed class RiffListExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("riff-list.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/riff-list.gf"))))
                 .Append(new SourceFile("no-allocations.gf", """

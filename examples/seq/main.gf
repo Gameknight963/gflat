@@ -1,6 +1,6 @@
-using std::Text;
-using std::Queries;
-using std;
+using Standard::Text;
+using Standard::Queries;
+using Standard;
 
 int main(int argc, char** argv)
 {
@@ -11,8 +11,8 @@ int main(int argc, char** argv)
     }
     try
     {
-        int start = std::Text::ParseInt(argv[1]);
-        int count = std::Text::ParseInt(argv[2]);
+        int start = Standard::Text::ParseInt(argv[1]);
+        int count = Standard::Text::ParseInt(argv[2]);
         bool(int)* predicate = (int n) => true;
         if (argc == 4) predicate = (int n) => n % 2 == 0;
         FilteredIntRange values = new IntRange(start, count).Where(predicate);

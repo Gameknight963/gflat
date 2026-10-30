@@ -8,7 +8,7 @@ Matching uses the standard String substring search. Removing a CRLF ending
 reuses the line's buffer instead of constructing another owning string.
 
 ```text
-gflat build examples/search/search.gfproj --run -- std/libc/IO/File.gf IOException
+gflat build examples/search/search.gfproj --run -- Standard/libc/IO/File.gf IOException
 ```
 
 You can also build without `--run`, then invoke

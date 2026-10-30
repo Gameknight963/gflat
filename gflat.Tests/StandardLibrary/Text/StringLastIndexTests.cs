@@ -7,7 +7,7 @@ public sealed class StringLastIndexTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","IStringConvertable.gf","Text/String.gf", "Text/ByteSearch.gf"}
-            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("main.gf",code));
 
     [Theory]
@@ -17,7 +17,7 @@ public sealed class StringLastIndexTests
     {
         var random=new Random(9761);
         var code=new StringBuilder("""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             extern void*? malloc(nuint size);extern void free(void* storage);
             int allocations=0;int releases=0;
             namespace Memory {
@@ -49,7 +49,7 @@ public sealed class StringLastIndexTests
     public void EmptyPeriodicInternalAndEveryByteSearchUseReadonlyNothrowContract(int optimization)
     {
         string code="""
-            using std; using std::Text; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Collections;
             bool Probe(immutable(String)* text,readonly(char)* key,nuint count,char value) nothrow {
                 return text.LastIndexOf(value)!=String::NotFound && text.LastIndexOf(key,count)!=String::NotFound && text.LastIndexOf(key)!=String::NotFound;
             }

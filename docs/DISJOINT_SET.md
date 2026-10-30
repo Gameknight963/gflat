@@ -1,11 +1,11 @@
 # Disjoint sets
 
-`std::Collections::DisjointSet` tracks groups of integer indices. It is useful for undirected
+`Standard::Collections::DisjointSet` tracks groups of integer indices. It is useful for undirected
 graph connectivity, cycle detection, and deciding which edges join separate
 components in Kruskal's minimum-spanning-tree algorithm.
 
 ```csharp
-using std; using std::Collections;
+using Standard; using Standard::Collections;
 int main()
 {
     DisjointSet groups = new(6);
@@ -66,7 +66,7 @@ This supports processing independent graph batches over the same vertex indices
 without reconstructing the owning value between batches:
 
 ```csharp
-using std::Collections;
+using Standard::Collections;
 
 int main()
 {

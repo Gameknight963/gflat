@@ -1,7 +1,7 @@
-using std;
-using std::Text;
-using std::IO;
-using std::Hashing;
+using Standard;
+using Standard::Text;
+using Standard::IO;
+using Standard::Hashing;
 
 bool TypeIs(readonly(char)* type, readonly(char)* expected) nothrow
 {

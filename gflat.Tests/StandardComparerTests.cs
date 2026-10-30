@@ -9,9 +9,9 @@ public sealed class StandardComparerTests
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/Comparer.gf", "Collections/EqualityComparer.gf",
             "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/PriorityQueue.gf"];
         var result = CompilerTestHelper.Run(files.Select(file => new SourceFile(file,
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))))
             .Append(new SourceFile("main.gf", """
-                using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
+                using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main() {
                     PriorityQueue<int> pending = new(Comparer<int>::Compare);
                     pending.Enqueue(9); pending.Enqueue(2); pending.Enqueue(5);

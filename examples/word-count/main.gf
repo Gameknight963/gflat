@@ -1,7 +1,7 @@
-using std::Text;
-using std::IO;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard::Collections;
+using Standard;
 
 // Count ASCII words without allocating for repeated occurrences.
 void RecordWord(HashMap<String, nuint>* counts, ref String word)

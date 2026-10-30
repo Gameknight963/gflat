@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Memory;
 public sealed class ArenaZeroedTests
 {
     private const string Allocator="""
-        using std; using std::Memory;
+        using Standard; using Standard::Memory;
         int allocations=0;int releases=0;bool fail=false;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
         namespace Memory{
@@ -28,7 +28,7 @@ public sealed class ArenaZeroedTests
                 for(nuint alignment=1;alignment<=4096;alignment*=2)
                 for(nuint index=0;index<7;index++){
                     nuint requested=(nuint)sizes[index];byte* zero=(byte*)arena.AllocateZeroed(requested,alignment);
-                    if((nuint)zero%alignment!=0)return 1;
+                    if(zero.reinterpret<nuint>()%alignment!=0)return 1;
                     nuint checked=requested;if(checked==0)checked=1;
                     for(nuint i=0;i<checked;i++)if(zero[i]!=(byte)0)return 2;
                     for(nuint i=0;i<8;i++)if(first[i]!=(byte)(i+1))return 3;
@@ -96,7 +96,7 @@ public sealed class ArenaZeroedTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=new[]{"Memory/Arena.gf"}.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=new[]{"Memory/Arena.gf"}.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("arena-zeroed.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_arena_zeroed_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try{

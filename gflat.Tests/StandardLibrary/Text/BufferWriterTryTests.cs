@@ -5,7 +5,7 @@ public sealed class BufferWriterTryTests
     private static void Run(string program, int optimization)
     {
         var sources = new[] { "Text/BufferTooSmallException.gf", "Text/BufferWriter.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
@@ -17,7 +17,7 @@ public sealed class BufferWriterTryTests
     public void OverflowIsAtomicAndExactCapacityPreservesEmbeddedZerosAndGuards(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint count) { Calls::Allocations++; return null; }
@@ -51,7 +51,7 @@ public sealed class BufferWriterTryTests
     public void EmptyAndTerminatorOnlyStorageNeedNoOutputAccessForEmptyWrites(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             bool TryOnly(char* storage) nothrow {
                 BufferWriter writer = new(storage, 0);
                 char*? absent = null;
@@ -78,7 +78,7 @@ public sealed class BufferWriterTryTests
     public void OverlapsIncludeTerminatorAndInitializedTailAfterClear(int optimization)
     {
         Run("""
-            using std; using std::Text;
+            using Standard; using Standard::Text;
             int main() {
                 char[18] storage;
                 for (nuint i = 0; i < 18; i++) storage[i] = '!';

@@ -1,13 +1,13 @@
 # Borrowed UTF-16 scalar iteration
 
-`std/core/Text/Utf16Scalars.gf` provides `std::Text::Utf16Scalars`, a repeatable borrowed view
+`Standard/core/Text/Utf16Scalars.gf` provides `Standard::Text::Utf16Scalars`, a repeatable borrowed view
 of counted host `ushort` code units. Include `Text/utf16.gf`, `Collections/IEnumerable.gf`,
 `Collections/IEnumerator.gf`, and `Queries/Enumerable.gf` alongside the view source.
 
 ```csharp
-using std::Text;
+using Standard::Text;
 ushort[4] units = [(ushort)65, (ushort)0, (ushort)0xd83d, (ushort)0xde00];
-std::Text::Utf16Scalars scalars = new(units, 4);
+Standard::Text::Utf16Scalars scalars = new(units, 4);
 foreach (uint scalar in scalars) {
     // U+0041, U+0000, U+1F600
 }
@@ -39,7 +39,7 @@ The adapter copies only borrowed pointer/count metadata; keep the same backing
 units live for every later enumeration. Repeating a query starts again from
 the beginning and observes subsequent changes to backing units. An early
 `Take` can stop before malformed input, preserving the iterator's existing lazy
-validation rules. See [lazy queries](../std/core/Queries/README.md).
+validation rules. See [lazy queries](../Standard/core/Queries/README.md).
 
 Like `Utf8Scalars`, this iterator validates lazily and throws on malformed input
 when `MoveNext()` reaches it. It does not replace isolated/truncated/incorrect

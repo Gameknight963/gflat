@@ -1,8 +1,8 @@
-using std::Text;
-using std::IO;
-using std::Numerics;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard::Numerics;
+using Standard::Collections;
+using Standard;
 
 int main(int argc, char** argv)
 {

@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class HashSetRemoveWhereTests
 {
     private const string Allocator = """
-        using std; using std::Text; using std::Collections;
+        using Standard; using Standard::Text; using Standard::Collections;
         private extern void*? malloc(nuint bytes);
         private extern void free(void* storage);
         bool denied = false;
@@ -199,8 +199,8 @@ public sealed class HashSetRemoveWhereTests
     [InlineData(2)]
     public void RemovedManagedKeyFieldsReleaseTheirRootsWhileSurvivorsStayAlive(int optimization)
         => Run("""
-            using std; using std::Text; using std::Collections;
-            public static replace nuint std::TracingCollector::CollectionThreshold() => 0;
+            using Standard; using Standard::Text; using Standard::Collections;
+            public static replace nuint Standard::TracingCollector::CollectionThreshold() => 0;
             class Node { public int Id; public Node^? Next; public Node(int id) { Id = id; } }
             struct Key : IHashable, IEquatable<Key> {
                 public int Id;
@@ -234,15 +234,15 @@ public sealed class HashSetRemoveWhereTests
     [InlineData("bool Match(int* value) => true; void Bad(ref HashSet<int> values) { values.RemoveWhere(Match); }")]
     [InlineData("bool Match(immutable(int)* value) => true; void Bad(immutable(HashSet<int>)* values) { values.RemoveWhere(Match); }")]
     public void MutablePredicatesAndImmutableReceiversAreRejected(string body)
-        => Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; using std::Text; using std::Collections; " + body)));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using Standard; using Standard::Text; using Standard::Collections; " + body)));
 
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {
         string[] files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf", "Collections/HashSet.gf",
             "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf"];
-        IEnumerable<SourceFile> sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))));
+        IEnumerable<SourceFile> sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", file))));
         if (managed) sources = sources.Concat(new[] { "GC.gf", "TracingCollector.gf" }
-            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc", file)))));
+            .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/libc", file)))));
         return sources.Append(new SourceFile("hashset-remove-where.gf", program));
     }
 

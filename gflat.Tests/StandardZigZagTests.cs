@@ -75,12 +75,12 @@ public sealed class StandardZigZagTests
     [InlineData(2)]
     public void SignedMappingMatchesIndependentArithmeticAndComposesWithUnsignedCodec(int optimization)
     {
-        var code = new StringBuilder("using std; using std::Binary; int main() nothrow {\n");
+        var code = new StringBuilder("using Standard; using Standard::Binary; int main() nothrow {\n");
         code.AppendLine(Corpus(false));
         code.AppendLine(Corpus(true));
         code.AppendLine("return 0; }");
         var sources = new[] {
-            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/VarInt.gf"))),
+            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/VarInt.gf"))),
             new SourceFile("main.gf", code.ToString())
         };
         // The complete source and these calls type-check/emit without implicit std

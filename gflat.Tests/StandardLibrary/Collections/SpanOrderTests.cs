@@ -11,7 +11,7 @@ public sealed class SpanOrderTests
     {
         var random=new Random(89071);
         var source=new StringBuilder("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;extern int puts(immutable(char*) text);int calls=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;extern int puts(immutable(char*) text);int calls=0;
             int Compare(readonly(int)* a,readonly(int)* b){calls++;if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             int main(){
             """);
@@ -44,7 +44,7 @@ public sealed class SpanOrderTests
     [InlineData(2)]
     public void NoncopyableOwnersAreBorrowedWithoutAllocationAndRemainIntactWhenComparisonThrows(int optimization)
         => Run("""
-            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
             private extern void*? malloc(nuint bytes);private extern void free(void* storage);
             int allocations=0;int releases=0;int made=0;int dead=0;int calls=0;int failAt=0;
             namespace Memory{
@@ -81,7 +81,7 @@ public sealed class SpanOrderTests
     {
         string[] files=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Collections/span_algorithms.gf","Collections/Vector.gf","Memory/Span.gf","Text/String.gf", "Text/ByteSearch.gf",
             "IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf"];
-        var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
+        var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",file))))
             .Append(new SourceFile("order.gf",program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

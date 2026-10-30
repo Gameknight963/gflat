@@ -42,7 +42,7 @@ public sealed class DoubleKeywordTests
     [InlineData("int main(){double value=new double();return (int)value;}")]
     [InlineData("int main(){double value=default(double);return (int)value;}")]
     [InlineData("const bool Layout=sizeof(double)==8&&alignof(double)==8;int main(){if(!Layout)return 1;return 0;}")]
-    [InlineData("int main(){std::TypeInfo info=typeof(double);return (int)info.Size-8;}")]
+    [InlineData("int main(){Standard::TypeInfo info=typeof(double);return (int)info.Size-8;}")]
     [InlineData("int main(){readonly(char)* name=nameof(double);return (int)name[0]-(int)'d';}")]
     [InlineData("int main(){int value=5;return (value)-1;}")]
     public void ExistingDoubleTypePathsRemainAvailable(string source)

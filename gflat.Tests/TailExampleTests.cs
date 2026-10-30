@@ -12,7 +12,7 @@ public sealed class TailExampleTests
     [InlineData(2)]
     public async Task ActualToolTailsBinaryFileLinesAndValidatesArguments(int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("tail.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/tail.gf"))));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_tail_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

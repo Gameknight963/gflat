@@ -14,7 +14,7 @@ public sealed class ConsoleInputStateTests
             File.WriteAllBytes(path, [65, 0, 66, 10]);
             program = program.Replace("$PATH", Literal(path));
             var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf" }
-                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+                .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Path.Combine(directory, "input.ll"), executable = Path.Combine(directory, "input.exe");
             File.WriteAllText(ir, Compiler.Emit(sources));
@@ -84,8 +84,8 @@ public sealed class ConsoleInputStateTests
                 if (freopen($PATH, "wb", stream) == null) return 1;
                 for (int i = 0; i < 2; i++) {
                     try { Console::ReadByte(); return 2; }
-                    catch (std::IO::EndOfStreamException* error) { return 3; }
-                    catch (std::IO::IOException* error) { }
+                    catch (Standard::IO::EndOfStreamException* error) { return 3; }
+                    catch (Standard::IO::IOException* error) { }
                     if (ferror(stream) == 0) return 4;
                     Console::ClearInputError();
                     if (ferror(stream) != 0 || feof(stream) != 0) return 5;

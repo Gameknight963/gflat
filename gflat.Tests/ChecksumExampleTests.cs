@@ -17,7 +17,7 @@ public class ChecksumExampleTests
         Directory.CreateDirectory(directory);
         try
         {
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
                 .Select(path=>new SourceFile(path,File.ReadAllText(path)))
                 .Append(new SourceFile(source,File.ReadAllText(source)))
                 .Append(new SourceFile("checksum-no-allocations.gf", """

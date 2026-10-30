@@ -1,7 +1,7 @@
-using std;
-using std::Text;
-using std::IO;
-using std::Encoding;
+using Standard;
+using Standard::Text;
+using Standard::IO;
+using Standard::Encoding;
 
 // Preserve all four identifier bytes without writing controls to the terminal.
 void WriteFourCC(BufferWriter* output, readonly(char)* id)

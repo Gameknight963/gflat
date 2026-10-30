@@ -8,7 +8,7 @@ public sealed class EnumerableToLookupEditorTests
     [Fact]
     public void BothGroupMaterializersInferNestedResultTypesAndSelectTheCorrectDeclaration()
     {
-        const string text="using std; using std::Memory; using std::Queries; using std::Collections;int Key(int value)=>value%2;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,Vector<int>> originals=values.AsEnumerable().ToLookup(Key);HashMap<int,Vector<long>> squares=values.AsEnumerable().ToLookup(Key,Square);}";
+        const string text="using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;int Key(int value)=>value%2;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,Vector<int>> originals=values.AsEnumerable().ToLookup(Key);HashMap<int,Vector<long>> squares=values.AsEnumerable().ToLookup(Key,Square);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_to_lookup.gf");
@@ -23,7 +23,7 @@ public sealed class EnumerableToLookupEditorTests
             Assert.Contains(completion.EnumerateArray(),item=>item.GetProperty("label").GetString()=="ToLookup");
             string hover=Json(model.Hover(source.Path,use)).GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains(row.Result,hover.Replace(" ",""));Assert.Contains("ToLookup",hover);Assert.DoesNotContain('$',hover);
-            int declaration=library.Text.IndexOf(row.Declaration,StringComparison.Ordinal);Assert.True(declaration>=0);
+            int declaration=EditorSourceDeclarations.ExtensionMethod(library,"ToLookup",row.Arity);Assert.True(declaration>=0);
             var expected=model.Definition(library.Path,declaration);Assert.NotNull(expected);
             Assert.Equal(expected,model.Definition(source.Path,use));
             int argument=use+"ToLookup(".Length;if(row.Arity==2)argument+="Key,".Length;

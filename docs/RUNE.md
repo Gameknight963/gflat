@@ -10,8 +10,8 @@ range U+D800 through U+DFFF; invalid input throws `Exception` with the message
 (1–2). All four getters are `nothrow`.
 
 ```csharp
-using std::Text;
-using std;
+using Standard::Text;
+using Standard;
 int main()
 {
     Rune face = new(0x1f600u);

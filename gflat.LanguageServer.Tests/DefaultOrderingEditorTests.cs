@@ -8,7 +8,7 @@ public sealed class DefaultOrderingEditorTests
     [Fact]
     public void DefaultAndExplicitSortingOverloadsNavigateWithoutHidingTheirSpanArguments()
     {
-        const string text="using std; using std::Memory; using std::Collections;int Desc(immutable(int)* a,immutable(int)* b){if(*a>*b)return -1;if(*a<*b)return 1;return 0;}void Probe(){int[4] data=[3,1,2,1];Span<int> values=new(data,4);Sort(values);Sort(values,Desc);StableSort(values);StableSort(values,Desc);}";
+        const string text="using Standard; using Standard::Memory; using Standard::Collections;int Desc(immutable(int)* a,immutable(int)* b){if(*a>*b)return -1;if(*a<*b)return 1;return 0;}void Probe(){int[4] data=[3,1,2,1];Span<int> values=new(data,4);Sort(values);Sort(values,Desc);StableSort(values);StableSort(values,Desc);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("default-ordering-editor.gf"),text);files.Add(source);

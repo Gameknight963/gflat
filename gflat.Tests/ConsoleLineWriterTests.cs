@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class ConsoleLineWriterTests
 {
     private const string DenyAllocation="""
-        using std; using std::Text; using std::IO;int attempts=0;
+        using Standard; using Standard::Text; using Standard::IO;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -95,7 +95,7 @@ public sealed class ConsoleLineWriterTests
         try
         {
             string executable=Compile(directory,"""
-                using std; using std::Text; using std::IO;
+                using Standard; using Standard::Text; using Standard::IO;
                 class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
                 struct Sink:ITextWriter {
                     public nuint Offered;public nuint Accepted;
@@ -132,7 +132,7 @@ public sealed class ConsoleLineWriterTests
 
     private static string Compile(string directory,string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("console-writer-line.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

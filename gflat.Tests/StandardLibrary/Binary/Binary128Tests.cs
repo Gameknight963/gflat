@@ -37,7 +37,7 @@ public sealed class Binary128Tests
                     writer.Write(bytes);
                 }
             string program = $$"""
-                using std; using std::Binary;
+                using Standard; using Standard::Binary;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
                 extern nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
                 extern int fclose(void* stream) nothrow;extern int ferror(void* stream) nothrow;
@@ -103,7 +103,7 @@ public sealed class Binary128Tests
         try
         {
             Run(directory, """
-                using std; using std::Binary;
+                using Standard; using Standard::Binary;
                 int main(){
                     readonly(byte)* unreadable=((nuint)1).reinterpret<readonly(byte)*>();byte* unwritable=((nuint)1).reinterpret<byte*>();
                     extralong value=(extralong)99;extralong[4] aligned;byte* raw=(&aligned[0]).reinterpret<byte*>();
@@ -142,7 +142,7 @@ public sealed class Binary128Tests
     {
         var sources = new[]
         {
-            new SourceFile("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))),
+            new SourceFile("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BinaryPrimitives.gf"))),
             new SourceFile("main.gf", program)
         };
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class RuneTests
 {
     private const string Allocator="""
-        using std; using std::Text; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failAt=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAt!=0&&attempts==failAt)return null;void*? value=malloc(count);if(value!=null)allocations++;return value;}
@@ -18,7 +18,7 @@ public sealed class RuneTests
     {
         uint[] scalars=Scalars(300);var encoded=Bytes(scalars);
         Run($$"""
-            using std; using std::Text; using std::Queries; using std::Collections;int allocations=0;
+            using Standard; using Standard::Text; using Standard::Queries; using Standard::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
             int main(){
                 uint[{{scalars.Length}}] scalars=[{{string.Join(',',scalars.Select(value=>value+"u"))}}];
@@ -131,7 +131,7 @@ public sealed class RuneTests
     }
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("rune.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Rune exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

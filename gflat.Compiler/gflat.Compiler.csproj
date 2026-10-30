@@ -5,11 +5,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="../std/core/Attribute.gf;../std/core/Exception.gf;../std/core/BadAllocException.gf;../std/core/ITextWriter.gf;../std/core/IFormattable.gf;../std/core/TypeInfo.gf;../std/core/IGarbageCollector.gf"
-          Link="Std/core/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../std/libc/Memory/allocation.gf" Link="Std/libc/Memory/%(Filename)%(Extension)"
+    <None Include="../Standard/core/Attribute.gf;../Standard/core/Exception.gf;../Standard/core/BadAllocException.gf;../Standard/core/ITextWriter.gf;../Standard/core/IFormattable.gf;../Standard/core/TypeInfo.gf;../Standard/core/IGarbageCollector.gf"
+          Link="Standard/core/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../Standard/libc/Memory/allocation.gf" Link="Standard/libc/Memory/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../std/libc/Exceptions/unhandled.gf" Link="Std/libc/Exceptions/%(Filename)%(Extension)"
+    <None Include="../Standard/libc/Exceptions/unhandled.gf" Link="Standard/libc/Exceptions/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

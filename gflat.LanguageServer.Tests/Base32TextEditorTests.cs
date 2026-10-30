@@ -11,7 +11,7 @@ public sealed class Base32TextEditorTests
     [InlineData("Decode","MY======",8)]
     public void OwningBase32MethodsExposeReadableStringResultsAndSourceServices(string member,string input,int count)
     {
-        string text="using std; using std::Text; using std::Encoding;int Probe(){String result=Base32Text::"+member+"(\""+input+"\","+count+");return (int)result.Length;}";
+        string text="using Standard; using Standard::Text; using Standard::Encoding;int Probe(){String result=Base32Text::"+member+"(\""+input+"\","+count+");return (int)result.Length;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf",
             "Text/ByteSearch.gf","Text/String.gf","Encoding/Base32.gf","Encoding/Base32Text.gf"];

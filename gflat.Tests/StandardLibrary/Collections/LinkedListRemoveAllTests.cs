@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class LinkedListRemoveAllTests
 {
     private const string Allocator="""
-        using std; using std::Queries; using std::Collections;
+        using Standard; using Standard::Queries; using Standard::Collections;
         private extern void*? malloc(nuint size);
         private extern void free(void* storage);
         int attempts=0;int allocated=0;int freed=0;bool deny=false;
@@ -162,8 +162,8 @@ public sealed class LinkedListRemoveAllTests
     public void RemovingManagedElementNodesRetiresRootsAndKeepsSurvivorAlive(int optimization)
     {
         const string program="""
-            using std; using std::Queries; using std::Collections;
-            public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
+            using Standard; using Standard::Queries; using Standard::Collections;
+            public static replace nuint Standard::TracingCollector::CollectionThreshold()=>0;
             void Populate(ref LinkedList<int^> values){
                 values.AddLast(new^ int(1));
                 values.AddLast(new^ int(2));
@@ -187,7 +187,7 @@ public sealed class LinkedListRemoveAllTests
         string[] names=["core/Collections/IEnumerable.gf","core/Queries/Enumerable.gf",
             "core/Collections/LinkedList.gf","libc/GC.gf","libc/TracingCollector.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(
-                Path.Combine(AppContext.BaseDirectory,"Std",name))))
+                Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("linked-list-remove-all-managed.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Managed LinkedList RemoveAll exit {result.ExitCode}: {result.StandardError}");
@@ -196,7 +196,7 @@ public sealed class LinkedListRemoveAllTests
     private static void Run(string program,int optimization)
     {
         string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Collections/LinkedList.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("linked-list-remove-all.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"LinkedList RemoveAll exit {result.ExitCode}: {result.StandardError}");

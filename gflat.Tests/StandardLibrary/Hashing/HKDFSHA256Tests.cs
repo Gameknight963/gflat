@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Hashing;
 public sealed class HKDFSHA256Tests
 {
     private const string DenyAllocation="""
-        using std;using std::Hashing;using std::IO;
+        using Standard;using Standard::Hashing;using Standard::IO;
         int attempts=0;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -64,7 +64,7 @@ public sealed class HKDFSHA256Tests
                         if(saltCount>256||inputCount>256||infoCount>256||count==0||count>8160)return 1;
                         for(nuint i=0;i<258;i++){salt[i]='S';material[i]='M';info[i]='I';}
                         input.ReadExactly(&salt[1],saltCount);input.ReadExactly(&material[1],inputCount);input.ReadExactly(&info[1],infoCount);
-                        input.ReadExactly((char*)(byte*)expectedPrk,32);input.ReadExactly((char*)(byte*)expected,count);
+                        input.ReadExactly(((byte*)expectedPrk).reinterpret<char*>(),32);input.ReadExactly(((byte*)expected).reinterpret<char*>(),count);
                         char[258] savedSalt=salt;char[258] savedInput=material;char[258] savedInfo=info;
                         byte[32] prk=HKDFSHA256::Extract(&salt[1],saltCount,&material[1],inputCount);
                         for(nuint i=0;i<32;i++)if(prk[i]!=expectedPrk[i])return 2;
@@ -73,7 +73,7 @@ public sealed class HKDFSHA256Tests
                         byte[32] original=prk;byte[32] changed=prk;changed[0]=(byte)(changed[0]^(byte)255);
                         if(changed[0]==prk[0])return 4;
                         for(nuint i=0;i<8162;i++)output[i]=(byte)165;
-                        if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)prk,32,&info[1],infoCount,&output[1],count))return 5;
+                        if(!HKDFSHA256::TryExpand(((byte*)prk).reinterpret<readonly(char)*>(),32,&info[1],infoCount,&output[1],count))return 5;
                         for(nuint i=0;i<count;i++)if(output[i+1]!=expected[i])return 6;
                         for(nuint i=count+1;i<8162;i++)if(output[i]!=(byte)165)return 7;
                         if(output[0]!=(byte)165)return 8;
@@ -102,18 +102,18 @@ public sealed class HKDFSHA256Tests
                 for(nuint mode=0;mode<3;mode++){
                     byte[128] storage;for(nuint i=0;i<128;i++)storage[i]=(byte)165;
                     for(nuint i=0;i<32;i++)storage[i+40]=prk[i];byte[128] saved=storage;nuint offset=offsets[mode];
-                    if(!HKDFSHA256::TryExpand((readonly(char)*)&storage[40],32,(readonly(char)*)(byte*)info,3,&storage[offset],65))return 1;
+                    if(!HKDFSHA256::TryExpand((&storage[40]).reinterpret<readonly(char)*>(),32,((byte*)info).reinterpret<readonly(char)*>(),3,&storage[offset],65))return 1;
                     for(nuint i=0;i<128;i++){
                         if(i>=offset&&i-offset<65){if(storage[i]!=expected[i-offset])return 2;}
                         else if(storage[i]!=saved[i])return 3;
                     }
                 }
                 byte[65] longPrk={{Bytes(longer)}};byte[33] longExpected={{Bytes(longExpected)}};byte[33] longOutput;
-                if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)longPrk,65,(readonly(char)*)(byte*)info,3,longOutput,33))return 4;
+                if(!HKDFSHA256::TryExpand(((byte*)longPrk).reinterpret<readonly(char)*>(),65,((byte*)info).reinterpret<readonly(char)*>(),3,longOutput,33))return 4;
                 for(nuint i=0;i<33;i++)if(longOutput[i]!=longExpected[i])return 5;
                 byte[80] longStorage;for(nuint i=0;i<80;i++)longStorage[i]=(byte)165;
                 for(nuint i=0;i<65;i++)longStorage[i+8]=longPrk[i];byte[80] savedLong=longStorage;
-                if(!HKDFSHA256::TryExpand((readonly(char)*)&longStorage[8],65,(readonly(char)*)(byte*)info,3,&longStorage[8],33))return 11;
+                if(!HKDFSHA256::TryExpand((&longStorage[8]).reinterpret<readonly(char)*>(),65,((byte*)info).reinterpret<readonly(char)*>(),3,&longStorage[8],33))return 11;
                 for(nuint i=0;i<80;i++){
                     if(i>=8&&i<41){if(longStorage[i]!=longExpected[i-8])return 12;}
                     else if(longStorage[i]!=savedLong[i])return 13;
@@ -121,17 +121,17 @@ public sealed class HKDFSHA256Tests
                 byte[96] storage;for(nuint i=0;i<96;i++)storage[i]=(byte)i;byte[96] saved=storage;
                 nuint[3] infoOffsets=[32,40,40];nuint[3] outputOffsets=[40,32,40];
                 for(nuint i=0;i<3;i++){
-                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,(readonly(char)*)&storage[infoOffsets[i]],10,&storage[outputOffsets[i]],33))return 6;
-                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,(readonly(char)*)&storage[infoOffsets[i]],10,&storage[outputOffsets[i]],16))return 14;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,(&storage[infoOffsets[i]]).reinterpret<readonly(char)*>(),10,&storage[outputOffsets[i]],33))return 6;
+                    if(HKDFSHA256::TryExpand(((nuint)1).reinterpret<readonly(char)*>(),32,(&storage[infoOffsets[i]]).reinterpret<readonly(char)*>(),10,&storage[outputOffsets[i]],16))return 14;
                     for(nuint j=0;j<96;j++)if(storage[j]!=saved[j])return 7;
                 }
                 // Adjacent, disjoint intervals within one allocation remain accepted.
                 byte[33] adjacentExpected={{Bytes(HKDF.Expand(HashAlgorithmName.SHA256,prk,33,Range(0,10)))}};
                 for(nuint i=0;i<10;i++)storage[i]=(byte)i;
-                if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)prk,32,(readonly(char)*)(byte*)storage,10,&storage[10],33))return 8;
+                if(!HKDFSHA256::TryExpand(((byte*)prk).reinterpret<readonly(char)*>(),32,((byte*)storage).reinterpret<readonly(char)*>(),10,&storage[10],33))return 8;
                 for(nuint i=0;i<33;i++)if(storage[i+10]!=adjacentExpected[i])return 9;
                 for(nuint i=0;i<10;i++)storage[i+33]=(byte)i;
-                if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)prk,32,(readonly(char)*)&storage[33],10,storage,33))return 15;
+                if(!HKDFSHA256::TryExpand(((byte*)prk).reinterpret<readonly(char)*>(),32,(&storage[33]).reinterpret<readonly(char)*>(),10,storage,33))return 15;
                 for(nuint i=0;i<33;i++)if(storage[i]!=adjacentExpected[i])return 16;
                 for(nuint i=0;i<10;i++)if(storage[i+33]!=(byte)i)return 17;
                 if(attempts!=0)return 10;return 0;
@@ -157,7 +157,7 @@ public sealed class HKDFSHA256Tests
                 for(nuint i=0;i<40;i++)if(output[i]!=(byte)165)return 7;
                 byte[32] empty=HKDFSHA256::Extract(((nuint)1).reinterpret<readonly(char)*>(),0,((nuint)1).reinterpret<readonly(char)*>(),0);
                 byte[1] result;
-                if(!HKDFSHA256::TryExpand((readonly(char)*)(byte*)empty,32,((nuint)1).reinterpret<readonly(char)*>(),0,result,1))return 8;
+                if(!HKDFSHA256::TryExpand(((byte*)empty).reinterpret<readonly(char)*>(),32,((nuint)1).reinterpret<readonly(char)*>(),0,result,1))return 8;
                 if(attempts!=0)return 9;return 0;
             }
             """,optimization);
@@ -167,7 +167,7 @@ public sealed class HKDFSHA256Tests
     [InlineData(2)]
     public void ExcessiveExtractionLengthsThrowBeforeEitherInputAndPreserveAssignment(int optimization)
         => Run("""
-            using std;using std::Hashing;
+            using Standard;using Standard::Hashing;
             int main(){
                 byte[32] result;for(nuint i=0;i<32;i++)result[i]=(byte)165;
                 if(sizeof(nuint)==8){
@@ -187,7 +187,7 @@ public sealed class HKDFSHA256Tests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("hkdf-sha256.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"HKDFSHA256 exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

@@ -14,7 +14,7 @@ public sealed class StandardJsonTextTests
             " { \"x\" : \"a b\\t\\u0061\\/\", \"x\" : 1.00e-0001, \"empty\" : [ ] } ",
             " [ \"\\\\\\\"  x\", \"\\u0000\", \"\ud83d\ude00 \u20ac\", false, null, {}, [] ] ",
             new string('[',70) + " \"x\" " + new string(']',70)];
-        var code = new StringBuilder("using std; using std::Text; using std::Json;extern int printf(readonly(char)* text,...);extern int putchar(int ch);int main(){\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; using Standard::Json;extern int printf(readonly(char)* text,...);extern int putchar(int ch);int main(){\n");
         for (int id=0; id<documents.Length; id++)
         {
             byte[] bytes=Encoding.UTF8.GetBytes(documents[id]);
@@ -41,7 +41,7 @@ public sealed class StandardJsonTextTests
     public void ValidationFailuresNeverCallOutputAndCountZeroDoesNotReadInput(int optimization)
     {
         byte[][] invalid=[[]," "u8.ToArray(),"[1,]"u8.ToArray(),"{} false"u8.ToArray(),"[\"\\uD800\"]"u8.ToArray(),[34,0xff,34],"["u8.ToArray()];
-        var code=new StringBuilder("using std; using std::Text; using std::Json;struct Sink:ITextWriter{public int Calls;public Sink(){Calls=0;}public void Write(readonly(char)* input,nuint count){Calls++;throw new Exception(\"unexpected output\",99);}}int main(){Sink sink=new();char[32] input;\n");
+        var code=new StringBuilder("using Standard; using Standard::Text; using Standard::Json;struct Sink:ITextWriter{public int Calls;public Sink(){Calls=0;}public void Write(readonly(char)* input,nuint count){Calls++;throw new Exception(\"unexpected output\",99);}}int main(){Sink sink=new();char[32] input;\n");
         foreach(byte[] bytes in invalid)
         {
             for(int i=0;i<bytes.Length;i++)code.AppendLine($"input[{i}]=(char){bytes[i]};");
@@ -56,7 +56,7 @@ public sealed class StandardJsonTextTests
     [InlineData(2)]
     public void ValidationStackIsReleasedBeforeOutputAndFailuresPreserveExceptions(int optimization)
         => Run("""
-            using std; using std::Text; using std::Json;extern void*? malloc(nuint count);extern void free(void* pointer);
+            using Standard; using Standard::Text; using Standard::Json;extern void*? malloc(nuint count);extern void free(void* pointer);
             int live=0;bool deny=false;int allowance=-1;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny||allowance==0)return null;if(allowance>0)allowance--;void*? result=malloc(count);if(result!=null)live++;return result;}
@@ -107,7 +107,7 @@ public sealed class StandardJsonTextTests
         return result.ToArray();
     }
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
+        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)
     {

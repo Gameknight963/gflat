@@ -11,7 +11,7 @@ public sealed class HexDumpExampleTests
     [InlineData(2)]
     public async Task ActualToolMatchesBinaryReferenceWithoutStringOrManagedAllocations(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
+        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("hexdump.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/hexdump.gf"))))
             .Append(new SourceFile("no-allocations.gf", """

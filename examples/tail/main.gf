@@ -1,7 +1,7 @@
-using std::Text;
-using std::IO;
-using std::Collections;
-using std;
+using Standard::Text;
+using Standard::IO;
+using Standard::Collections;
+using Standard;
 
 // Keep at most count owned lines, then print them in their original order.
 int main(int argc, char** argv)

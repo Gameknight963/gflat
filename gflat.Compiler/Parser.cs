@@ -1231,10 +1231,12 @@ namespace gflat
             else
             {
                 string name = "";
+                bool isGlobal = Match(TokenKind.Global);
+                if (isGlobal) Expect(TokenKind.DoubleColon);
                 Token nameToken = Current;
 
-                // handle built-in type keywords
-                if (IsBuiltInTypeKeyword(Current.Kind))
+                // Root qualification names declared types, not intrinsic spellings.
+                if (!isGlobal && IsBuiltInTypeKeyword(Current.Kind))
                 {
                     name = Current.Text;
                     Consume();
@@ -1258,12 +1260,12 @@ namespace gflat
                     Expect(TokenKind.Greater);
                 }
 
-                if (name == "managed")
+                if (!isGlobal && name == "managed")
                 {
                     if (typeArgs.Count != 2) throw new TypeCheckException("managed<T, Collector> requires an element type and a collector type", line);
                     type = new ManagedTypeExpression(typeArgs[0], Match(TokenKind.QuestionMark), line, collector: typeArgs[1]);
                 }
-                else type = new NamedTypeExpression(name, null, line, typeArgs) { NameSpan = nameToken.Span };
+                else type = new NamedTypeExpression(name, isGlobal ? "global" : null, line, typeArgs) { NameSpan = nameToken.Span };
 
                 if (Check(TokenKind.Dot))
                 {
@@ -1449,7 +1451,7 @@ namespace gflat
         }
 
         private bool IsTypeStart() => IsBuiltInTypeKeyword(Current.Kind) ||
-            Current.Kind is TokenKind.Identifier or TokenKind.Readonly or TokenKind.Immutable;
+            Current.Kind is TokenKind.Identifier or TokenKind.Global or TokenKind.Readonly or TokenKind.Immutable;
 
         private AstNode ParseVariableOrExpressionStatement()
         {

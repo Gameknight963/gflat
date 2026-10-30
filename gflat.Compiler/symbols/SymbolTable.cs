@@ -369,6 +369,7 @@ namespace gflat.symbols
 
         public TypeChecker.NamespaceScope? ResolveNamespaceByName(string nsName)
         {
+            if (TypeChecker.TryResolveGlobalNamespace(nsName, GlobalScope, out var rooted)) return rooted;
             if (nsName.Contains("::"))
             {
                 string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);

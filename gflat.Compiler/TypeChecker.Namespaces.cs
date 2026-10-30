@@ -59,6 +59,26 @@ public partial class TypeChecker
         }
     }
 
+    // A root-qualified source name uses the existing namespace component to keep
+    // its lookup anchor through nested syntax and generic AST cloning. This marker
+    // never becomes part of the resolved nominal identity.
+    internal static bool TryResolveGlobalNamespace(string name, NamespaceScope global, out NamespaceScope? scope)
+    {
+        scope = null;
+        if (name != "global" && !name.StartsWith("global::", StringComparison.Ordinal)) return false;
+        scope = global;
+        if (name == "global") return true;
+        foreach (string part in name[8..].Split("::", StringSplitOptions.None))
+        {
+            if (part.Length == 0 || scope == null || !scope.Children.TryGetValue(part, out var child))
+            {
+                scope = null;
+                return true;
+            }
+            scope = child;
+        }
+        return true;
+    }
     private string? ResolveTypeIdentity(string name, string? ns)
     {
         if (name.Contains('$')) return name;

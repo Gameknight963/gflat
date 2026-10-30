@@ -1263,7 +1263,7 @@ namespace gflat.comptime
         {
             CheckSteps(node.Line);
             TypeExpression targetType = _context.ResolveAlias(target);
-            if (targetType is NamedTypeExpression named &&
+            if (targetType is NamedTypeExpression { Namespace: null } named &&
                 !TypeChecker.IsPrimitive(named.Name) &&
                 _context.GetStruct(named.Name) == null &&
                 _context.GetClass(named.Name) == null &&

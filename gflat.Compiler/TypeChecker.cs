@@ -1161,6 +1161,11 @@ namespace gflat
                         if (local.TryGetValue(named.Name, out var localTarget))
                             return ResolveAliasBindingTarget(localTarget, publish);
                 string? identity = ResolveTypeIdentity(named.Name, named.Namespace);
+                if (identity == null && named.Namespace != null &&
+                    TryResolveGlobalNamespace(named.Namespace, _globalScope, out var rootedScope) &&
+                    (rootedScope == null || !rootedScope.Aliases.ContainsKey(named.Name) &&
+                        (named.TypeArguments.Count != 0 || !rootedScope.Children.ContainsKey(named.Name))))
+                    throw new TypeCheckException($"Unknown type '{named.Namespace}::{named.Name}'", named.Span);
                 if (named.TypeArguments.Count > 0)
                 {
                     List<TypeExpression> resolvedArgs = named.TypeArguments.Select(ResolveAlias).ToList();
@@ -1263,6 +1268,7 @@ namespace gflat
         private NamespaceScope? ResolveVisibleNamespaceByName(string nsName, NamespaceScope? start,
             IEnumerable<string> imports, bool reportAmbiguity = true)
         {
+            if (TryResolveGlobalNamespace(nsName, _globalScope, out var rooted)) return rooted;
             string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) return null;
             NamespaceScope? current = ResolveNamespaceByName(parts[0], start);
@@ -1287,6 +1293,7 @@ namespace gflat
 
         private NamespaceScope? ResolveNamespaceByName(string nsName, NamespaceScope? start)
         {
+            if (TryResolveGlobalNamespace(nsName, _globalScope, out var rooted)) return rooted;
             if (nsName.Contains("::"))
             {
                 string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
@@ -5445,7 +5452,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression targetType = ResolveAlias(target);
-            if (targetType is NamedTypeExpression named &&
+            if (targetType is NamedTypeExpression { Namespace: null } named &&
                 !IsPrimitive(named.Name) &&
                 !_structs.ContainsKey(named.Name) &&
                 !_classes.ContainsKey(named.Name) &&

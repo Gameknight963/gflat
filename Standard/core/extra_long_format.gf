@@ -7,7 +7,7 @@ void Format(extralong value, ITextWriter* output)
 
 extension extralong
 {
-    public void Format(ITextWriter* output)
+    public immutable void Format(ITextWriter* output)
     {
         char[40] buffer;
         nuint written = 0;

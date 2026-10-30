@@ -32,6 +32,9 @@ public sealed class StandardToStringExtensionTests
                     if (!CString::Equals(rendered.Data, "{{expected}}")) return 1;
                     rendered.Append("!", 1);
                     if (!CString::Equals(rendered.Data, "{{expected}}!")) return 2;
+                    rendered.Clear();
+                    number.Format(&rendered);
+                    if (!CString::Equals(rendered.Data, "{{expected}}")) return 4;
                     if (number != {{literal}}) return 3;
                 }
                 """);

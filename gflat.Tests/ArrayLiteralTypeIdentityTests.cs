@@ -89,6 +89,16 @@ public sealed class ArrayLiteralTypeIdentityTests
     public void MatchingStructuredTypesAliasesAndExplicitReadonlyTargetsKeepTheirActualCapabilities(int optimization)
     {
         const string source = """
+            struct Outer<T> {
+                public struct Item {
+                    public T Value;
+                    public Item(T value) { Value = value; }
+                }
+            }
+            T First<T>(Outer<T>::Item value) {
+                var rows = [value, value];
+                return rows[0].Value;
+            }
             alias Reader = readonly(int)*;
             alias ProtectedRow = readonly(Reader[1]);
             alias Callback = int(int)*;
@@ -130,6 +140,10 @@ public sealed class ArrayLiteralTypeIdentityTests
                 readonly(int)*[2] reverseReaders = [protectedPointer, firstPointer];
                 if (*readers[0] != 17 || *readers[1] != 7 || *reverseReaders[0] != 7 || *reverseReaders[1] != 17) return 6;
                 if (protectedValue != 7) return 7;
+                Outer<int>::Item item = new(42);
+                if (First<int>(item) != 42) return 8;
+                Outer<long>::Item wide = new(9000000000l);
+                if (First<long>(wide) != 9000000000l) return 9;
                 return 0;
             }
             """;

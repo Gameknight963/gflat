@@ -11,6 +11,13 @@ the runtime exits with status 1.
 digits respectively. Formatting follows the application's current C locale.
 The result is written from a stack buffer; there is no intermediate heap string.
 
+`Text/floating_parsing.gf` supplies `Standard::Text::TryParseFloat` and
+`TryParseDouble` using direct `strtof`/`strtod` conversion. Input must be a complete
+C string without surrounding whitespace; native grammar, current C locale and
+native range results apply. `Text/floating_parsing_throwing.gf` adds optional
+`ParseFloat`/`ParseDouble` syntax-error wrappers. No counted overload or temporary
+text allocation is introduced. See [hosted floating parsing](../../docs/FLOATING_PARSING.md).
+
 Supply only core sources when these facilities are unwanted. `Standard.gfproj`
 currently includes both directories.
 

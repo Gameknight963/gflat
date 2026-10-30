@@ -188,7 +188,7 @@ materialized buffers; see the [query ownership rules](core/Queries/README.md).
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |
 | Exceptions | Default unhandled exception termination |
-| Floating text | Floating-point formatting overloads |
+| Floating text | Floating-point formatting and [hosted C-string parsing](../docs/FLOATING_PARSING.md) |
 | Environment | Borrowed `Environment::GetVariable` and owning `EnvironmentText` conveniences |
 
 See [host APIs](libc/README.md). File and console operations accept caller-owned

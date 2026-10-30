@@ -53,6 +53,7 @@ int main()
 | `FindUnsortedIndex<T>(Span<immutable(T)>, compare)` | First right-hand element that breaks nondecreasing order, or Length when ordered; optional IComparable default. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `CommonPrefixLength<T>(first, second, equal)` | Count matching corresponding elements up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `CommonSuffixLength<T>(first, second, equal)` | Count matching trailing elements from right to left up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `StartsWith<T>(values, prefix, equal)` | Match the leading elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `EndsWith<T>(values, suffix, equal)` | Match the trailing elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
@@ -866,3 +867,12 @@ changes no elements; it checks children in increasing index order and stops at
 the first child that compares greater than its parent. Callback side effects
 are not rolled back. `PriorityQueue` owns a min-heap; these functions borrow a
 max-heap.
+
+`CommonSuffixLength` examines corresponding trailing elements from right to left,
+stopping at the first failed equality or the shorter span length. It borrows
+immutable element addresses without copying, allocating, mutating, or reversing
+storage. Either empty span returns zero without reading data or calling equality;
+exact aliases and overlapping views are supported. Keep storage alive and stable
+throughout callbacks. Exceptions propagate unchanged, without rolling back callback
+effects. To locate a changed middle, first obtain `CommonPrefixLength`, then find
+the common suffix of the remaining slices so the retained ends cannot overlap.

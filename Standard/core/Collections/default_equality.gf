@@ -14,6 +14,9 @@ public bool EndsWith<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutabl
 public nuint CommonPrefixLength<T : IEquatable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
     => Standard::Collections::CommonPrefixLength<T>(first, second, EqualityComparer<T>::Equals);
 
+public nuint CommonSuffixLength<T : IEquatable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
+    => Standard::Collections::CommonSuffixLength<T>(first, second, EqualityComparer<T>::Equals);
+
 public nuint AdjacentFind<T : IEquatable<T>>(Span<immutable(T)> values)
     => Standard::Collections::AdjacentFind<T>(values, EqualityComparer<T>::Equals);
 

@@ -304,6 +304,19 @@ public nuint CommonPrefixLength<T>(Span<immutable(T)> first, Span<immutable(T)> 
     return count;
 }
 
+/// Counts matching trailing elements from right to left, stopping at a difference or shorter length.
+/// Borrows elements without copies, allocation or mutation; empty input never calls equal.
+/// Keep both spans valid and stable. Callback exceptions and effects propagate unchanged.
+public nuint CommonSuffixLength<T>(Span<immutable(T)> first, Span<immutable(T)> second,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    nuint count = first.Length;
+    if (second.Length < count) count = second.Length;
+    for (nuint matched = 0; matched < count; matched++)
+        if (!equal(&first[first.Length - 1 - matched], &second[second.Length - 1 - matched])) return matched;
+    return count;
+}
+
 // Return Length for an empty span; strict comparisons keep the first equal item.
 public nuint MinIndex<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
 {

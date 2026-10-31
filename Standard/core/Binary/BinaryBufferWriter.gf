@@ -14,7 +14,7 @@ public struct BinaryBufferWriter
     }
 
     public nuint Capacity { immutable get nothrow => capacity; }
-    public byte*? Data { get nothrow => data; }
+    public byte*? Data { readonly get nothrow => data; }
     public nuint Position { immutable get nothrow => position; }
     public nuint Remaining { immutable get nothrow => capacity - position; }
     public void Reset() nothrow { position = 0; }

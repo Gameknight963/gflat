@@ -45,8 +45,11 @@ keep their existing behavior.
 
 
 `Data` exposes the start of the captured region, independently of the current
-position: a reader returns `readonly(byte)*?`, and a mutable writer returns
-`byte*?`. A default cursor has null data. This lets a bounded child feed another
+position: a reader returns `readonly(byte)*?`, and a mutable or shallow readonly
+writer returns `byte*?`. Inspecting that pointer does not change the cursor;
+shallow readonly protects the header, not the caller-owned bytes. Deep immutable
+writers cannot expose mutable storage through `Data`. A default cursor has null
+data. This lets a bounded child feed another
 counted API, such as UTF-8 decoding, without copying the payload or adding a Span
 dependency. Direct pointer use requires the caller to respect `Length` or
 `Capacity`; it does not advance the cursor or perform bounds checks.

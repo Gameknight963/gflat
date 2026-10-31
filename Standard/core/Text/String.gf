@@ -402,6 +402,66 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.Replace(oldText, oldCount, newText, newCount);
     }
 
+    /// Replaces each CRLF pair, bare CR, or LF with the counted replacement bytes.
+    /// Inputs may borrow this String. Inserted bytes are copied as supplied.
+    /// Replacing endings commits new storage. Failure leaves the original unchanged.
+    public void ReplaceLineEndings(readonly(char)* replacement, nuint replacementCount)
+    {
+        nuint endings = 0;
+        nuint removed = 0;
+        for (nuint position = 0; position < length; position++)
+        {
+            char value = data[position];
+            if (value == '\r' || value == '\n')
+            {
+                endings++;
+                removed++;
+                if (value == '\r' && position + 1 < length && data[position + 1] == '\n')
+                {
+                    position++;
+                    removed++;
+                }
+            }
+        }
+        if (endings == 0) return;
+
+        nuint required = length - removed;
+        nuint maximum = (nuint)0 - (nuint)1;
+        if (replacementCount > (maximum - 1 - required) / endings)
+            throw new Exception("String length overflow");
+        required += endings * replacementCount;
+
+        String result = new();
+        result.Reserve(required);
+        nuint start = 0;
+        nuint position = 0;
+        while (position < length)
+        {
+            char value = data[position];
+            if (value != '\r' && value != '\n')
+            {
+                position++;
+                continue;
+            }
+            result.AppendLiteral(data + start, position - start);
+            result.AppendLiteral(replacement, replacementCount);
+            if (value == '\r' && position + 1 < length && data[position + 1] == '\n')
+                position++;
+            position++;
+            start = position;
+        }
+        result.AppendLiteral(data + start, length - start);
+        *this = move result;
+    }
+
+    /// Uses bytes before the replacement's first zero, defaulting to LF.
+    public void ReplaceLineEndings(readonly(char)* replacement = "\n")
+    {
+        nuint replacementCount = 0;
+        while (replacement[replacementCount] != '\0') replacementCount++;
+        this.ReplaceLineEndings(replacement, replacementCount);
+    }
+
     /// Returns independent counted bytes repeated times, preserving embedded zeros.
     /// Empty input or zero repetitions returns an empty value without allocation.
     /// Length overflow or allocation failure leaves this String unchanged.

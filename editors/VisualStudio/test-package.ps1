@@ -131,6 +131,21 @@ int main() { Counter value=new(Pure()); return value.Value; }
     if ((Get-Content -Raw -LiteralPath $noThrowIr) -match '@__gflat_eh_|\bpersonality\b|\binvoke\b') {
         throw 'Known nothrow calls unexpectedly require exception support'
     }
+    $rawDeflate = Join-Path $extracted 'raw-deflate.gf'
+    @'
+using Standard::Compression;
+int main() nothrow {
+    byte[5] input = [0x4b, 0x4c, 0x4a, 0x06, 0x00];
+    byte[3] output; nuint consumed = 0; nuint written = 0;
+    if (Deflate::Decompress(input, 5, output, 3, ref consumed, ref written) != Deflate::Status::Done) return 1;
+    if (consumed != 5 || written != 3 || output[0] != 97 || output[1] != 98 || output[2] != 99) return 2;
+    return 0;
+}
+'@ | Set-Content -LiteralPath $rawDeflate
+    foreach ($optimization in @(0, 2)) {
+        & $compiler $rawDeflate (Join-Path $extracted 'Sdk/Standard/core/Compression/Deflate.gf') --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "raw-deflate-o$optimization.exe")
+        if ($LASTEXITCODE -ne 0) { throw "Packaged raw DEFLATE decoder failed at O$optimization" }
+    }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }

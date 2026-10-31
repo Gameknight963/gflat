@@ -57,6 +57,7 @@ launch page sets arguments and working directory; see [debugging projects](../do
 - [png-list](png-list/README.md): list PNG chunk offsets and lengths, checking framing and CRCs.
 - [binary-info](binary-info/README.md): inspect PE32+/ELF64LE declared dependency metadata.
 - [zip-list](zip-list/README.md): list ZIP32 central-directory sizes, methods, and escaped names.
+- [zip-verify](zip-verify/README.md): verify stored or DEFLATE-compressed ZIP32 entries and their CRCs without extracting files.
 
 ## Numbers, algorithms, and commands
 

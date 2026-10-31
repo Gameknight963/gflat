@@ -380,7 +380,7 @@ namespace gflat
             }
 
             ValidateFieldModifiers(fieldModifier, genericStart);
-            return Finish(ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line));
+            return Finish(ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, isImmutable, line));
         }
 
         private void ValidateFieldModifiers(Token? modifier, Token genericStart)
@@ -907,7 +907,7 @@ namespace gflat
             }
 
             ValidateFieldModifiers(fieldModifier, genericStart);
-            return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));
+            return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, isImmutable, line));
         }
 
         private PropertyDeclaration ParseProperty(TypeExpression type, string name, TokenKind accessibility,
@@ -1222,16 +1222,16 @@ namespace gflat
             return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, isNoThrow: isNoThrow, isImmutable: isImmutable);
         }
 
-        private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line) => Located(() => ParseFieldDeclarationCoreLocated(type, name, accessibility, isStatic, isConst, isReadonly, line));
+        private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, bool isImmutable, int line) => Located(() => ParseFieldDeclarationCoreLocated(type, name, accessibility, isStatic, isConst, isReadonly, isImmutable, line));
 
-        private FieldDeclaration ParseFieldDeclarationCoreLocated(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)
+        private FieldDeclaration ParseFieldDeclarationCoreLocated(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, bool isImmutable, int line)
         {
+            if (isReadonly)
+                type = isImmutable ? TypeQualifiers.Immutable(type) : TypeQualifiers.ReadOnly(type);
             AstNode? initializer = null;
             if (Match(TokenKind.Equals))
                 initializer = ParseExpression();
             Expect(TokenKind.Semicolon);
-            if (isReadonly)
-                throw new TypeCheckException("Use readonly(T) or immutable(T) for a field type; bare receiver modifiers apply to methods", line);
             return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, type.IsReadOnlyValue);
         }
 
@@ -1526,7 +1526,7 @@ namespace gflat
             int diagMark = _diagnostics.Count;
             try
             {
-                ParseTypeExpression();
+                ParseVariableType();
                 if (_diagnostics.Count == diagMark && !Check(TokenKind.Identifier))
                     missingName = Current;
                 bool isVar = _diagnostics.Count == diagMark && Check(TokenKind.Identifier);
@@ -1766,7 +1766,7 @@ namespace gflat
             int line = Current.Line;
             Expect(TokenKind.Foreach);
             Expect(TokenKind.OpenParen);
-            TypeExpression elementType = ParseTypeExpression();
+            TypeExpression elementType = ParseVariableType();
             if (Check(TokenKind.In))
             {
                 _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, $"Foreach loop requires an explicit type for loop variable on line {line}");
@@ -1781,10 +1781,23 @@ namespace gflat
 
         private VariableDeclaration ParseVariableDeclaration(bool isConst = false) => Located(() => ParseVariableDeclarationCoreLocated(isConst));
 
+        // A declaration modifier protects the complete type, including pointer/array suffixes.
+        // Type expressions elsewhere continue to use explicit readonly(T)/immutable(T).
+        private TypeExpression ParseVariableType() => Located(() =>
+        {
+            if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable && Peek().Kind != TokenKind.OpenParen)
+            {
+                bool immutable = Consume().Kind == TokenKind.Immutable;
+                TypeExpression type = ParseTypeExpression();
+                return immutable ? TypeQualifiers.Immutable(type) : TypeQualifiers.ReadOnly(type);
+            }
+            return ParseTypeExpression();
+        });
+
         private VariableDeclaration ParseVariableDeclarationCoreLocated(bool isConst = false)
         {
             int line = Current.Line;
-            TypeExpression type = ParseTypeExpression();
+            TypeExpression type = ParseVariableType();
             string name = Expect(TokenKind.Identifier).Text;
             AstNode? initializer = null;
             if (Match(TokenKind.Equals))

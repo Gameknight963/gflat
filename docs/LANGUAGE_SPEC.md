@@ -613,9 +613,16 @@ Adding a restriction to a view is permitted when representation and nested
 qualification allow it; an implicit conversion or borrowed parameter cannot
 discard deep protection to obtain a writable path through a shallow view.
 
-Both bare modifiers require an instance receiver. Namespace functions, static
-methods, and static accessors cannot use them. Fields use `readonly(T)` or
-`immutable(T)` type syntax, rather than a bare receiver modifier. Qualified fields
+On functions and accessors, both bare modifiers require an instance receiver.
+Namespace functions, static methods, and static accessors cannot use receiver
+modifiers. Fields and local declarations also accept bare `readonly` and
+`immutable` modifiers: these qualify the complete declared type. For example,
+`readonly int* p` means `readonly(int*) p` (a fixed pointer to a mutable integer),
+while `readonly(int)* p` protects the integer and leaves the pointer reassignable.
+The same rule applies to aliases, array types, and loop-variable declarations.
+Explicit `readonly(T)` and `immutable(T)` type syntax remains available, including
+for parameters, return types, and nested qualification. Property and indexer
+modifiers still qualify their receivers, independently of the result type. Qualified fields
 can be initialized by their declaration or assigned on `this` in their declaring
 constructor. Other instances and nested storage do not gain that exception.
 Normal destructor cleanup still runs for qualified values.

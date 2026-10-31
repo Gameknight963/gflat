@@ -7,6 +7,13 @@ to primitive, owning, and managed reference element types. The contract covers
 empty header initialization; operations on elements and collector hooks retain
 their own allocation and failure behavior.
 
+Empty `HashMap`, `HashSet`, `Queue`, `Deque`, `Stack`, `LinkedList`, and `BitSet`
+construction is also `nothrow`. `SortedMap`, `SortedSet`, and `PriorityQueue`
+construct empty headers and retain the supplied comparison function without
+calling it; these constructors are `nothrow` too. None allocates storage,
+constructs elements, hashes keys, or compares values. Constructors that request
+an initial size, and later operations that grow storage, may still throw.
+
 `Vector<T>` owns contiguous elements. `Add(value)` appends, `Insert(index, value)`
 inserts before an existing element (or appends at `Count`), and `RemoveAt(index)`
 transfers the removed value to the caller while preserving the order of survivors.

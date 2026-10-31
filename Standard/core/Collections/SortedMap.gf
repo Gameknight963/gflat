@@ -7,7 +7,7 @@ struct SortedMap<K, V>
     private Vector<Entry> storage;
     private int(immutable(K)*, immutable(K)*)* compare;
 
-    public SortedMap(int(immutable(K)*, immutable(K)*)* comparison)
+    public SortedMap(int(immutable(K)*, immutable(K)*)* comparison) nothrow
     {
         storage = new Vector<Entry>(); compare = comparison;
     }

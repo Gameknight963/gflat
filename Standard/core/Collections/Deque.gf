@@ -9,7 +9,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
     private nuint capacity;
     private nuint head;
 
-    public Deque() { data = null; count = 0; capacity = 0; head = 0; }
+    public Deque() nothrow { data = null; count = 0; capacity = 0; head = 0; }
     public nuint Count { immutable get nothrow => count; }
     public nuint Capacity { immutable get nothrow => capacity; }
     public bool IsEmpty { immutable get nothrow => count == 0; }

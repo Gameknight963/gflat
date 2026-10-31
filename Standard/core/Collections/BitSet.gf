@@ -8,7 +8,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
     private nuint length;
     private nuint words;
 
-    public BitSet() { data = null; length = 0; words = 0; }
+    public BitSet() nothrow { data = null; length = 0; words = 0; }
     public BitSet(nuint size) { data = null; length = 0; words = 0; this.Resize(size); }
     public copy BitSet(immutable(BitSet)* source)
     {

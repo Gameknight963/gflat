@@ -4,7 +4,7 @@ namespace Standard::Collections;
 struct SortedSet<T>
 {
     private SortedMap<T, byte> storage;
-    public SortedSet(int(immutable(T)*, immutable(T)*)* comparison)
+    public SortedSet(int(immutable(T)*, immutable(T)*)* comparison) nothrow
     {
         storage = new SortedMap<T, byte>(comparison);
     }

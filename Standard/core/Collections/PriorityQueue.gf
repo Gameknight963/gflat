@@ -8,7 +8,7 @@ struct PriorityQueue<T>
     private Vector<T> storage;
     private int(immutable(T)*, immutable(T)*)* compare;
 
-    public PriorityQueue(int(immutable(T)*, immutable(T)*)* comparison)
+    public PriorityQueue(int(immutable(T)*, immutable(T)*)* comparison) nothrow
     {
         storage = new Vector<T>();
         compare = comparison;

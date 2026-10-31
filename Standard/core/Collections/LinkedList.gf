@@ -37,7 +37,7 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         ~Node() {}
     }
 
-    public LinkedList() { state = null; }
+    public LinkedList() nothrow { state = null; }
     public nuint Count
     {
         immutable get nothrow

@@ -7,7 +7,7 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
 {
     private Vector<T> storage;
 
-    public Stack() { storage = new Vector<T>(); }
+    public Stack() nothrow { storage = new Vector<T>(); }
     public nuint Count { immutable get nothrow => storage.Count; }
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.Count == 0; }

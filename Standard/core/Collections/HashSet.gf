@@ -4,7 +4,7 @@ namespace Standard::Collections;
 struct HashSet<T : IHashable>
 {
     private HashMap<T, byte> storage;
-    public HashSet() { storage = new HashMap<T, byte>(); }
+    public HashSet() nothrow { storage = new HashMap<T, byte>(); }
     public nuint Count { immutable get nothrow => storage.Count; }
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }

@@ -9,7 +9,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     private nuint count;
     private nuint head;
 
-    public Queue() { data = null; capacity = 0; count = 0; head = 0; }
+    public Queue() nothrow { data = null; capacity = 0; count = 0; head = 0; }
     public nuint Count { immutable get nothrow => count; }
     public nuint Capacity { immutable get nothrow => capacity; }
     public bool IsEmpty { immutable get nothrow => count == 0; }

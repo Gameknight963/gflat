@@ -17,7 +17,7 @@ struct HashMap<K : IHashable, V>
     private nuint count;
     private nuint used;
 
-    public HashMap() { entries = null; states = null; capacity = 0; count = 0; used = 0; }
+    public HashMap() nothrow { entries = null; states = null; capacity = 0; count = 0; used = 0; }
     public nuint Count { immutable get nothrow => count; }
     public nuint Capacity { immutable get nothrow => capacity / 2; }
     public bool IsEmpty { immutable get nothrow => count == 0; }

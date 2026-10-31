@@ -27,7 +27,7 @@ namespace components. Both roots can contribute to the same namespace.
 | `Standard::IO` | Files, paths, borrowed byte readers, IO exceptions |
 | `Standard::Binary` | Binary cursors, byte-order operations, bit fields, variable-length integers |
 | `Standard::Encoding` | Base32, Base64, hexadecimal, percent encoding |
-| `Standard::Compression` | Bounded raw DEFLATE and gzip member decoding |
+| `Standard::Compression` | Bounded raw DEFLATE, gzip member, and zlib stream decoding |
 | `Standard::Json`, `Standard::Csv` | Format readers, writers, helpers, and exceptions |
 | `Standard::Time` | Dates, times, durations, clocks, timers |
 | `Standard::Net` | Numeric addresses, endpoints, and networks |
@@ -144,6 +144,7 @@ implementation lives in `libc`.
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`; owning `Base64Text`, `Base64UrlText`, `HexText` helpers and writer `WriteHex` | [Caller-buffer, owning, and writer codecs](../docs/BINARY_CODECS.md) |
 | Raw compression | `Deflate::Decompress` | [Stored, fixed-Huffman, and dynamic-Huffman decoding into caller-owned buffers](core/Compression/DEFLATE.md) |
 | Gzip members | `Gzip::DecompressMember` | [Optional headers, integrity checks, and exact first-member consumption](core/Compression/GZIP.md) |
+| Zlib streams | `Zlib::Decompress` | [Header checks, declared history windows, and Adler32 validation](core/Compression/ZLIB.md) |
 | Padded Base32 | `Base32`, `Base32Text` | [Strict canonical caller-buffer codecs and owning results](../docs/BASE32.md) |
 | Streaming Base32 | `Base32Encoder`, `Base32Decoder` | [Encoding](../docs/BASE32_ENCODER.md), [strict decoding](../docs/BASE32_DECODER.md) through borrowed writers |
 | Streaming Base64 | `Base64Encoder`, `Base64Decoder` | [Encoding](../docs/BASE64_ENCODER.md), [strict decoding](../docs/BASE64_DECODER.md) through borrowed writers |

@@ -131,8 +131,14 @@ public static class Deflate
     /// Accepts the common duplicate length-258 encoding (code 284 plus extra value 31).
     public static Status Decompress(readonly(byte)* source, nuint count, byte* output, nuint capacity,
         ref nuint consumed, ref nuint written) nothrow
+        => DecompressWithWindow(source, count, output, capacity, 32768, ref consumed, ref written);
+
+    // Container framing may declare a smaller history window; no extra storage is needed.
+    internal static Status DecompressWithWindow(readonly(byte)* source, nuint count, byte* output, nuint capacity,
+        nuint maximumDistance, ref nuint consumed, ref nuint written) nothrow
     {
         consumed = 0; written = 0;
+        if (maximumDistance == 0 || maximumDistance > 32768) return Status::InvalidData;
         BitReader input = new(source, count);
         nuint produced = 0;
         defer { consumed = input.Position; written = produced; }
@@ -149,13 +155,13 @@ public static class Deflate
             else if (kind == 1u)
             {
                 Fixed(ref literals, ref distances);
-                status = Codes(ref input, ref literals, ref distances, output, capacity, ref produced);
+                status = Codes(ref input, ref literals, ref distances, output, capacity, maximumDistance, ref produced);
             }
             else if (kind == 2u)
             {
                 status = Dynamic(ref input, ref literals, ref distances);
                 if (status == Status::Done)
-                    status = Codes(ref input, ref literals, ref distances, output, capacity, ref produced);
+                    status = Codes(ref input, ref literals, ref distances, output, capacity, maximumDistance, ref produced);
             }
             if (status != Status::Done) return status;
             if (final) return Status::Done;
@@ -256,7 +262,7 @@ public static class Deflate
     }
 
     private static Status Codes(ref BitReader input, ref Huffman literals, ref Huffman distances,
-        byte* output, nuint capacity, ref nuint produced) nothrow
+        byte* output, nuint capacity, nuint maximumDistance, ref nuint produced) nothrow
     {
         while (true)
         {
@@ -281,7 +287,7 @@ public static class Deflate
             index = (nuint)symbol;
             if (!input.Read((int)DistanceExtra[index], ref extra)) return Status::NeedInput;
             nuint distance = (nuint)DistanceBase[index] + (nuint)extra;
-            if (distance > produced) return Status::InvalidData;
+            if (distance > produced || distance > maximumDistance) return Status::InvalidData;
             if ((nuint)length > capacity - produced) return Status::OutputTooSmall;
             for (uint i = 0u; i < length; i++)
             {

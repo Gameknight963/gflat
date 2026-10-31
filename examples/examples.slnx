@@ -27,6 +27,7 @@
   <Project Path="number-stats/number-stats.gfproj" />
   <Project Path="pathfinding/pathfinding.gfproj" />
   <Project Path="png-list/png-list.gfproj" />
+  <Project Path="png-verify/png-verify.gfproj" />
   <Project Path="providers/providers.gfproj" />
   <Project Path="queries/queries.gfproj" />
   <Project Path="quote-lines/quote-lines.gfproj" />

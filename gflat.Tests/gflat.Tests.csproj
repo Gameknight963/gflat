@@ -42,6 +42,7 @@
     <None Include="../examples/zip-list/main.gf" Link="Examples/zip-list.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/zip-verify/main.gf" Link="Examples/zip-verify.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/png-list/main.gf" Link="Examples/png-list.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../examples/png-verify/main.gf" Link="Examples/png-verify.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/binary-info/main.gf" Link="Examples/binary-info.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/file-compare/main.gf" Link="Examples/file-compare.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\transcode\main.gf" Link="Examples\transcode.gf" CopyToOutputDirectory="PreserveNewest" />

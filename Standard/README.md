@@ -162,6 +162,7 @@ implementation lives in `libc`.
 | Bits | `BitOperations` | [Counts, rotations, power-of-two rounding, and byte reversal](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary scalars | `BinaryPrimitives` | [Checked byte-order integer and IEEE floating-point reads and writes](../docs/BINARY_PRIMITIVES.md) |
+| Delimited binary fields | `BinaryBufferReader::TryReadTo` | [Borrow fields through a required delimiter without unbounded reads](core/Binary/BINARY_READ_TO.md) |
 | Bit fields | `BitPrimitives`, `BitOrder` | [Borrowed-buffer fields with explicit bit order](../docs/BIT_FIELDS.md) |
 | Variable-length integers | `VarInt` | [Canonical unsigned base-128 encoding and signed ZigZag transforms](../docs/VARINT.md) |
 | Byte searches | `ByteSearch` | [Counted substring and byte-set searches](../docs/BYTE_SEARCH.md) |

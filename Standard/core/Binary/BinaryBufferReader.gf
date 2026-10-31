@@ -71,6 +71,24 @@ public struct BinaryBufferReader : IByteReader
         return true;
     }
 
+    /// Borrows bytes before the first delimiter and consumes through that delimiter.
+    /// Missing delimiter preserves Position and resets slice to default empty.
+    /// Empty fields also return an empty child with null Data; no terminator is retained.
+    /// Keep output disjoint from this reader and its entire captured input.
+    public bool TryReadTo(byte delimiter, ref BinaryBufferReader slice) nothrow
+    {
+        slice = new();
+        nuint remaining = length - position;
+        for (nuint offset = 0; offset < remaining; offset++)
+        {
+            if (data![position + offset] != delimiter) continue;
+            if (!this.TryReadSlice(offset, ref slice)) return false;
+            position++;
+            return true;
+        }
+        return false;
+    }
+
     public immutable bool TryPeekByte(ref byte value) nothrow
     {
         if (position == length) { value = (byte)0; return false; }

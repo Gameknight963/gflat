@@ -155,6 +155,7 @@ int main() nothrow {
     }
     @'
 using Standard::Compression;
+
 int main() nothrow {
     byte[5] input = [0x4b, 0x4c, 0x4a, 0x06, 0x00];
     byte[3] output; nuint consumed = 0; nuint written = 0;
@@ -170,6 +171,7 @@ int main() nothrow {
     $gzipMember = Join-Path $extracted 'gzip-member.gf'
     @'
 using Standard::Compression;
+
 int main() nothrow {
     byte[23] input = [31,139,8,0,0,0,0,0,0,255,0x4b,0x4c,0x4a,0x06,0,0xc2,0x41,0x24,0x35,3,0,0,0];
     byte[3] output; nuint consumed = 0; nuint written = 0;
@@ -187,6 +189,7 @@ int main() nothrow {
     $zlibStream = Join-Path $extracted 'zlib-stream.gf'
     @'
 using Standard::Compression;
+
 int main() nothrow {
     byte[11] input = [120,1,0x4b,0x4c,0x4a,0x06,0,2,77,1,39];
     byte[3] output; nuint consumed = 0; nuint written = 0;
@@ -313,6 +316,7 @@ int main() {
     $scopedCast = Join-Path $extracted 'imported-cast.gf'
     @'
 using PackageCast;
+
 namespace PackageCast {
     public struct Box<T> {
         public struct Item { public T Value; public Item(T value){Value=move value;} }
@@ -338,7 +342,10 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7
     $collections = Join-Path $extracted 'collections.gf'
     @'
 using Standard::Text;
-using Standard; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Queries;
+using Standard::Collections;
+
 int WordLength(String word) => (int)word.Length;
 int main() {
     Vector<String> words = new();
@@ -362,7 +369,21 @@ int main() {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
-using Standard; using Standard::Text; using Standard::Csv; using Standard::Json; using Standard::IO; using Standard::Encoding; using Standard::Time; using Standard::Net; using Standard::Memory; using Standard::Binary; using Standard::Hashing; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Text;
+using Standard::Csv;
+using Standard::Json;
+using Standard::IO;
+using Standard::Encoding;
+using Standard::Time;
+using Standard::Net;
+using Standard::Memory;
+using Standard::Binary;
+using Standard::Hashing;
+using Standard::Numerics;
+using Standard::Queries;
+using Standard::Collections;
+
 int smokeDestroyed = 0;
 long smokeTimestamp = 0l;
 static class SmokeClock : IMonotonicClock {
@@ -816,6 +837,23 @@ int SmokeBinaryAndQueries() {
 }
 int SmokeTextAndOwners() {
     {
+        String normalizedLines = s"a\r\nb\rc\n";
+        normalizedLines.ReplaceLineEndings();
+        if (!normalizedLines.Equals("a\nb\nc\n")) return 9050;
+        normalizedLines.ReplaceLineEndings("\r\n");
+        if (!normalizedLines.Equals("a\r\nb\r\nc\r\n")) return 9051;
+        byte[5] remainingBytes = [65, 0, 66, 13, 10];
+        BinaryBufferReader remainingInput = new(remainingBytes, 5);
+        String remainingText = remainingInput.ReadToEnd(5);
+        if (!remainingText.Equals("A\0B\r\n", 5) || remainingInput.Position != 5) return 9052;
+        remainingInput = new(remainingBytes, 5);
+        remainingInput.ReadToEnd(ref remainingText, 5);
+        if (!remainingText.Equals("A\0B\r\n", 5)) return 9053;
+        remainingInput = new(remainingBytes, 5);
+        bool remainingLimitCaught = false;
+        try { remainingInput.ReadToEnd(ref remainingText, 2); }
+        catch (ref IOException error) { remainingLimitCaught = true; }
+        if (!remainingLimitCaught || remainingInput.Position != 3 || remainingText.Length != 0) return 9054;
         String batchResized = s"x"; batchResized.Resize(4, 'y');
         if (batchResized.Length != 4 || batchResized[0] != 'x' || batchResized[3] != 'y'
             || batchResized.Data[4] != '\0') return 101;

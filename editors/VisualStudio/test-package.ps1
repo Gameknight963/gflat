@@ -132,6 +132,27 @@ int main() { Counter value=new(Pure()); return value.Value; }
         throw 'Known nothrow calls unexpectedly require exception support'
     }
     $rawDeflate = Join-Path $extracted 'raw-deflate.gf'
+    $declarationQualifiers = Join-Path $extracted 'declaration-qualifiers.gf'
+    @'
+struct Buffer {
+    public readonly int* Pointer;
+    public Buffer(int* pointer) nothrow { Pointer = pointer; }
+    public readonly void Set(int value) nothrow { *Pointer = value; }
+}
+int main() nothrow {
+    int number = 1;
+    readonly int* pointer = &number;
+    *pointer = 2;
+    Buffer buffer = new(pointer);
+    buffer.Set(42);
+    immutable int result = number;
+    return result - 42;
+}
+'@ | Set-Content -LiteralPath $declarationQualifiers
+    foreach ($optimization in @(0, 2)) {
+        & $compiler $declarationQualifiers --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "declaration-qualifiers-o$optimization.exe")
+        if ($LASTEXITCODE -ne 0) { throw "Packaged declaration qualifiers failed at O$optimization" }
+    }
     @'
 using Standard::Compression;
 int main() nothrow {
@@ -1078,6 +1099,11 @@ int SmokeHashesAndViews() {
         if (peekInput.TryPeekSlice(5, ref peekSlice) || peekSlice.Data != null || peekSlice.Length != 0 || peekInput.Position != 0) return 9015;
         if (!peekInput.TryPeekByte(ref peekValue) || peekValue != 255 || peekInput.Position != 0) return 201;
         if (!peekInput.TrySkip(4) || peekInput.TryPeekByte(ref peekValue) || peekValue != 0 || peekInput.Position != 4) return 202;
+        BinaryBufferReader terminatedInput = new(delimiterData, 4);
+        BinaryBufferReader terminatedField = new();
+        if (!terminatedInput.TryReadTo((byte)0, ref terminatedField) || terminatedField.Length != 1 || terminatedField.Data != &delimiterData[0] || terminatedInput.Position != 2) return 9040;
+        if (!terminatedInput.TryReadTo((byte)255, ref terminatedField) || terminatedField.Length != 0 || terminatedField.Data != null || terminatedInput.Position != 3) return 9041;
+        if (terminatedInput.TryReadTo((byte)7, ref terminatedField) || terminatedInput.Position != 3 || terminatedField.Data != null) return 9042;
         LinkedList<int> reversedNodes = new();
         LinkedList<int>::Node* originalFirst = reversedNodes.AddLast(1);
         LinkedList<int>::Node* originalLast = reversedNodes.AddLast(2);

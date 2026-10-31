@@ -146,6 +146,23 @@ int main() nothrow {
         & $compiler $rawDeflate (Join-Path $extracted 'Sdk/Standard/core/Compression/Deflate.gf') --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "raw-deflate-o$optimization.exe")
         if ($LASTEXITCODE -ne 0) { throw "Packaged raw DEFLATE decoder failed at O$optimization" }
     }
+    $gzipMember = Join-Path $extracted 'gzip-member.gf'
+    @'
+using Standard::Compression;
+int main() nothrow {
+    byte[23] input = [31,139,8,0,0,0,0,0,0,255,0x4b,0x4c,0x4a,0x06,0,0xc2,0x41,0x24,0x35,3,0,0,0];
+    byte[3] output; nuint consumed = 0; nuint written = 0;
+    if (Gzip::DecompressMember(input, 23, output, 3, ref consumed, ref written) != Gzip::Status::Done) return 1;
+    if (consumed != 23 || written != 3 || output[0] != 97 || output[1] != 98 || output[2] != 99) return 2;
+    return 0;
+}
+'@ | Set-Content -LiteralPath $gzipMember
+    $gzipSources = @('Compression/Gzip.gf', 'Compression/Deflate.gf', 'Hashing/CRC32.gf', 'Binary/BinaryPrimitives.gf') |
+        ForEach-Object { Join-Path $extracted "Sdk/Standard/core/$_" }
+    foreach ($optimization in @(0, 2)) {
+        & $compiler $gzipMember @gzipSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "gzip-member-o$optimization.exe")
+        if ($LASTEXITCODE -ne 0) { throw "Packaged gzip member decoder failed at O$optimization" }
+    }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }

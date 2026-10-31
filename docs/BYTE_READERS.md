@@ -58,6 +58,9 @@ The factory and `GetEnumerator()` perform no reads. Each successful `MoveNext()`
 consumes one byte; `Current` returns that byte without further input. EOF ends that
 iterator permanently. `Current` throws `IOException` before the first successful
 advance, after EOF, or after a failed advance.
+The factory accepts a shallow readonly sequence view; its iterator still borrows
+the mutable source cursor. Cached `Current` also accepts an immutable iterator
+view and does not advance it. `MoveNext()` remains mutable.
 
 ```csharp
 using Standard::Binary;

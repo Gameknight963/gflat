@@ -9,7 +9,7 @@ public struct ByteSequence : IEnumerable<byte, ByteSequence::Enumerator>
     private IByteReader* input;
 
     public ByteSequence(IByteReader* source) { input = source; }
-    public Enumerator GetEnumerator() => new Enumerator(input);
+    public readonly Enumerator GetEnumerator() => new Enumerator(input);
 
     public struct Enumerator : IEnumerator<byte>
     {
@@ -43,7 +43,7 @@ public struct ByteSequence : IEnumerable<byte, ByteSequence::Enumerator>
 
         public byte Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new IOException("Enumerator has no current byte");
                 return current;

@@ -68,6 +68,76 @@ public sealed class ByteSequenceTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void RestrictedViewsObserveCachedBytesWithoutReadingOrChangingTheSource(int optimization)
+    {
+        Run(Reader + """
+            int main()
+            {
+                Source source = new(3);
+                ByteSequence sequence = EnumerateBytes(&source);
+                readonly(ByteSequence)* sequenceView = &sequence;
+                ByteSequence::Enumerator iterator = sequenceView.GetEnumerator();
+                readonly(ByteSequence::Enumerator)* shallow = &iterator;
+                immutable(ByteSequence::Enumerator)* deep = &iterator;
+                if (source.Calls != 0 || attempts != 0) return 1;
+                bool caught = false;
+                try { shallow.Current; } catch (ref IOException error) { caught = true; }
+                if (!caught || source.Calls != 0) return 2;
+                caught = false;
+                try { deep.Current; } catch (ref IOException error) { caught = true; }
+                if (!caught || source.Calls != 0) return 3;
+                int before = attempts;
+                for (nuint index = 0; index < 3; index++)
+                {
+                    if (!iterator.MoveNext()) return 4;
+                    if (shallow.Current != (byte)index || deep.Current != (byte)index || deep.Current != (byte)index) return 5;
+                    if (source.Calls != index + 1 || source.Position != index + 1 || attempts != before) return 6;
+                }
+                if (iterator.MoveNext() || iterator.MoveNext() || source.Calls != 4) return 7;
+                caught = false;
+                try { deep.Current; } catch (ref IOException error) { caught = true; }
+                if (!caught || source.Calls != 4) return 8;
+                caught = false;
+                try { shallow.Current; } catch (ref IOException error) { caught = true; }
+                if (!caught || source.Calls != 4) return 9;
+
+                Source failing = new(3);
+                ByteSequence::Enumerator failed = EnumerateBytes(&failing).GetEnumerator();
+                immutable(ByteSequence::Enumerator)* failedView = &failed;
+                if (!failed.MoveNext() || failedView.Current != (byte)0) return 10;
+                failing.FailNext = true;
+                caught = false;
+                try { failed.MoveNext(); } catch (ref Exception error) { caught = error.code == 73; }
+                if (!caught || failing.Calls != 2) return 11;
+                caught = false;
+                try { failedView.Current; } catch (ref IOException error) { caught = true; }
+                if (!caught || failing.Calls != 2) return 12;
+                if (!failed.MoveNext() || failedView.Current != (byte)2 || failing.Calls != 3) return 13;
+                return 0;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData("readonly(ByteSequence::Enumerator)", "MoveNext", "non-readonly")]
+    [InlineData("immutable(ByteSequence::Enumerator)", "MoveNext", "non-immutable")]
+    [InlineData("immutable(ByteSequence)", "GetEnumerator", "non-immutable")]
+    public void RestrictedViewsCannotAdvanceOrExposeAMutableSource(string receiver, string member, string diagnostic)
+    {
+        string[] names = ["core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
+            "core/IO/byte_reader.gf", "core/IO/ByteSequence.gf", "core/Collections/IEnumerable.gf", "core/Collections/IEnumerator.gf"];
+        var sources = names.Select(name => new SourceFile(name,
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
+            .Append(new SourceFile("restricted-byte-sequence.gf",
+                $"using Standard::IO; void Inspect({receiver}* value) {{ value.{member}(); }} int main() => 0;"));
+        var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() =>
+            Compiler.Check(sources, options: new() { NoStdLib = true }));
+        Assert.Contains($"{diagnostic} method '{member}'", error.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void DeferredUnsignedBytesAndIteratorStateNeverReadAheadOrAllocate(int optimization)
     {
         Run(Reader + """

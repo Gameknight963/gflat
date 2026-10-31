@@ -15,7 +15,7 @@ public static class NativeToolchain
         return toolset == null ? null : Path.Combine(toolset, "lib", "x64");
     }
 
-    internal static string? FindMsvcToolsetDirectory(IEnumerable<string> installations, bool requireHeaders = false)
+    internal static string? FindMsvcToolsetDirectory(IEnumerable<string> installations, bool requireHeaders = false, bool requireCppHeaders = true)
         => installations
             .Select(installation => Path.Combine(installation, "VC", "Tools", "MSVC"))
             .Where(Directory.Exists)
@@ -24,8 +24,9 @@ public static class NativeToolchain
                 Version: Version.TryParse(Path.GetFileName(directory), out var version) ? version : null,
                 Directory: directory))
             .Where(candidate => candidate.Version != null && File.Exists(Path.Combine(candidate.Directory, "lib", "x64", "libcmt.lib")) &&
-                (!requireHeaders || File.Exists(Path.Combine(candidate.Directory, "include", "exception")) &&
-                    File.Exists(Path.Combine(candidate.Directory, "include", "new"))))
+                (!requireHeaders || (requireCppHeaders
+                    ? File.Exists(Path.Combine(candidate.Directory, "include", "exception")) && File.Exists(Path.Combine(candidate.Directory, "include", "new"))
+                    : File.Exists(Path.Combine(candidate.Directory, "include", "vcruntime.h")) && File.Exists(Path.Combine(candidate.Directory, "include", "vadefs.h")))))
             // Compare toolset versions, never edition/year directory spelling.
             .OrderByDescending(candidate => candidate.Version)
             .ThenBy(candidate => candidate.Directory, StringComparer.OrdinalIgnoreCase)
@@ -156,7 +157,7 @@ public static class NativeToolchain
             throw new ArgumentException("Output must differ from native library files.");
         var args = new List<string> { irPath, "-O" + optimization, "-o", outputPath };
         AddUnusedCodeElimination(args);
-        // Runtime compilation supplies a matched C++ header/library toolset below.
+        // Runtime compilation supplies a matched native header/library toolset below.
         // Do not prepend a different, possibly headerless bare-link fallback.
         if (!exceptions && !stdio && OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIB")))
         {
@@ -176,10 +177,12 @@ public static class NativeToolchain
         if (exceptions || stdio)
         {
             // Keep the selected LLVM version, including names such as clang-18.
-            args.Add("--driver-mode=g++");
+            args.Add(exceptions ? "--driver-mode=g++" : "--driver-mode=gcc");
             if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes));
-            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler));
-            args.AddRange(NativeRuntime.HostArguments());
+            // With EH, compile the C bridge against the same matched C++ host
+            // toolset. Its language remains C even though its host profile is shared.
+            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler, cppHost: exceptions));
+            args.AddRange(NativeRuntime.HostArguments(requireCppHeaders: exceptions));
         }
         AddNativeLibraries(args, linkInputs);
         // LLVM may lower floating remainder to fmod/fmodf. A bare program uses

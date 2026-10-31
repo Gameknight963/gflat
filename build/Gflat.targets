@@ -125,7 +125,7 @@
       <_GflatCompilerFiles Include="$(GflatCompilerPath)" Condition="'$(GflatCompilerPath)' != ''" />
       <_GflatNativeOutputs Include="$(_GflatBuildOutput)" />
       <_GflatNativeOutputs Include="$(_GflatFullPdbPath)" Condition="'$(DebugSymbols)' == 'true' and '$(GflatEmitIR)' != 'true' and '$(_GflatFullPdbPath)' != ''" />
-      <_GflatCompilerFiles Include="$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.dll;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.json;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Runtime/*.cpp;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Standard/**/*.gf" Condition="'$(GflatCompilerPath)' != ''" />
+      <_GflatCompilerFiles Include="$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.dll;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.json;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Runtime/*.cpp;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Runtime/*.c;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Standard/**/*.gf" Condition="'$(GflatCompilerPath)' != ''" />
       <_GflatBuildInputs Include="@(_GflatSources);@(_GflatEvaluatedProjectInputs);$([MSBuild]::Escape('$(GflatBuildTasksPath)'));@(_GflatCompilerFiles);@(GflatCompilerInputs)" />
       <_GflatBuildInputs Include="@(_GflatNativeLibraryFiles)" Condition="'$(GflatEmitIR)' != 'true'" />
       <_GflatBuildInputs Include="$([MSBuild]::Escape('$(_GflatNativeLinkManifest)'))" />

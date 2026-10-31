@@ -97,9 +97,12 @@ For explicit source selection, add `Console/standard_readers.gf` and
 runtime dependencies. Include the shared helper sources only when using those
 helpers; the property itself does not require them. Ordinary Standard builds include
 these sources automatically. `Console.gf` remains independently selectable.
-The standard-stream accessor bridge in `Runtime/Stdio.cpp` exposes stdin, stdout,
+The C standard-stream accessor bridge in `Runtime/Stdio.c` exposes stdin, stdout,
 and stderr because these are C macros rather than portable external variables.
-The actual writer behavior remains gflat code.
+The actual writer behavior remains gflat code. Programs requiring only this
+bridge use the C compiler/link driver, not the C++ exception runtime. Windows
+still requires the native C runtime headers/libraries and Windows SDK; programs
+using exceptions retain the host C++ requirements.
 
 `Console/Writer.gf` adds `Console::Writer`, an `ITextWriter` adapter borrowing
 stdout. Pass its address to formatting functions to stream bytes without an

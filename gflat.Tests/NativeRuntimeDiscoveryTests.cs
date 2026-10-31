@@ -108,6 +108,25 @@ public sealed class NativeRuntimeDiscoveryTests
         });
     }
 
+    [Fact]
+    public void StdioOnlyCanUseCHeadersWhileMixedProgramsKeepTheMatchedCppToolset()
+    {
+        WithFixture(root => {
+            string cpp = AddToolset(root, "14.44.1");
+            AddFile(Path.Combine(cpp, "include", "vcruntime.h"));
+            AddFile(Path.Combine(cpp, "include", "vadefs.h"));
+            string c = AddToolset(root, "15.0.1", headers: false);
+            AddFile(Path.Combine(c, "include", "vcruntime.h"));
+            AddFile(Path.Combine(c, "include", "vadefs.h"));
+            AddToolset(root, "99.0.0", headers: false);
+            string kits = Path.Combine(root, "missing-sdk");
+            Assert.Equal(MsvcArguments(c), NativeRuntime.HostArguments([root], kits, requireCppHeaders: false));
+            Assert.Equal(MsvcArguments(cpp), NativeRuntime.HostArguments([root], kits, requireCppHeaders: true));
+            File.Delete(Path.Combine(c, "include", "vadefs.h"));
+            Assert.Equal(MsvcArguments(cpp), NativeRuntime.HostArguments([root], kits, requireCppHeaders: false));
+        });
+    }
+
     private static string[] MsvcArguments(string toolset)
         => ["-isystem", Path.Combine(toolset, "include"), "-Xlinker", "/libpath:" + Path.Combine(toolset, "lib", "x64")];
 

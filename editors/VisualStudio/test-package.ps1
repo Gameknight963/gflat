@@ -116,7 +116,8 @@ try {
     & (Join-Path $PSScriptRoot 'test-project-templates.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
-    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.c'))) { throw 'VSIX is missing the native stdio bridge source' }
+    if (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp')) { throw 'VSIX contains the obsolete C++ stdio bridge source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Standard/core/IGarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
     $noThrowSource = Join-Path $extracted 'nothrow-no-stdlib.gf'
     $noThrowIr = Join-Path $extracted 'nothrow-no-stdlib.ll'

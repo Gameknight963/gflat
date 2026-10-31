@@ -2,23 +2,23 @@ using System.Security.Cryptography;
 
 namespace gflat;
 
-/// <summary>Build the small C++ exception runtime using the host's native C++ ABI.</summary>
+/// <summary>Build native C stream accessors and the host C++ exception transport.</summary>
 internal static class NativeRuntime
 {
     private static readonly object BuildLock = new();
     private static readonly Dictionary<string, string> Objects = new();
 
-    internal static List<string> HostArguments()
+    internal static List<string> HostArguments(bool requireCppHeaders = true)
     {
         if (!OperatingSystem.IsWindows()) return [];
         string kits = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10");
-        return HostArguments(NativeToolchain.VisualStudioInstallations(), kits);
+        return HostArguments(NativeToolchain.VisualStudioInstallations(), kits, requireCppHeaders);
     }
 
-    internal static List<string> HostArguments(IEnumerable<string> installations, string kits)
+    internal static List<string> HostArguments(IEnumerable<string> installations, string kits, bool requireCppHeaders = true)
     {
         var args = new List<string>();
-        string? toolset = NativeToolchain.FindMsvcToolsetDirectory(installations, requireHeaders: true);
+        string? toolset = NativeToolchain.FindMsvcToolsetDirectory(installations, requireHeaders: true, requireCppHeaders: requireCppHeaders);
         if (toolset != null)
             args.AddRange(["-isystem", Path.Combine(toolset, "include"), "-Xlinker", "/libpath:" + Path.Combine(toolset, "lib", "x64")]);
         string? sdk = FindWindowsSdkDirectory(kits);
@@ -51,31 +51,43 @@ internal static class NativeRuntime
     internal static string GetObject(string driver, int reserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
         if (reserveBytes < 0) throw new ArgumentOutOfRangeException(nameof(reserveBytes));
-        return BuildObject(driver, "Exceptions", ["-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes]);
+        return BuildObject(driver, "Exceptions", cpp: true, cppHost: true, ["-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes]);
     }
 
-    internal static string GetStdioObject(string driver) => BuildObject(driver, "Stdio", []);
+    internal static string GetStdioObject(string driver, bool cppHost = false) => BuildObject(driver, "Stdio", cpp: false, cppHost, []);
 
-    private static string BuildObject(string driver, string name, string[] options)
+    private static string BuildObject(string driver, string name, bool cpp, bool cppHost, string[] options)
     {
         lock (BuildLock)
         {
-            string source = Path.Combine(AppContext.BaseDirectory, "Runtime", name + ".cpp");
+            string source = Path.Combine(AppContext.BaseDirectory, "Runtime", name + (cpp ? ".cpp" : ".c"));
             if (!File.Exists(source)) throw new FileNotFoundException("The native runtime source is missing. Restore the compiler's Runtime directory.", source);
             string fingerprint = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source)))[..16];
-            string key = driver + "|" + name + "|" + fingerprint + "|" + string.Join("|", options);
+            string key = ObjectCacheKey(driver, name, fingerprint, cpp, cppHost, options);
             if (Objects.TryGetValue(key, out string? cached) && File.Exists(cached)) return cached;
             string buildId = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key)))[..16];
             string directory = Path.Combine(Path.GetTempPath(), "gflat-runtime", Environment.ProcessId.ToString());
             Directory.CreateDirectory(directory);
             string output = Path.Combine(directory, name + "-" + buildId + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
-            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-ffunction-sections", "-fdata-sections", "-c", source, "-o", output };
-            args.AddRange(options);
-            args.AddRange(HostArguments());
+            var args = ObjectArguments(source, output, cpp, options, HostArguments(requireCppHeaders: cppHost));
             ProcessResult result = NativeToolchain.Run(driver, args, 60000);
-            if (result.ExitCode != 0) throw new InvalidOperationException("Failed to compile the native runtime. Install the host C++ development tools.\n" + result.StandardError);
+            if (result.ExitCode != 0) throw new InvalidOperationException($"Failed to compile {name} native runtime. Install the host {(cpp ? "C++" : "C")} development tools.\n" + result.StandardError);
             Objects[key] = output;
             return output;
         }
     }
+    internal static string ObjectCacheKey(string driver, string name, string fingerprint, bool cpp, bool cppHost, IEnumerable<string> options)
+        => driver + "|" + name + "|" + fingerprint + "|" + (cpp ? "cpp" : "c") + "|" +
+            (cppHost ? "cpp-host" : "c-host") + "|" + string.Join("|", options);
+
+    internal static List<string> ObjectArguments(string source, string output, bool cpp, IEnumerable<string> options, IEnumerable<string> hostArguments)
+    {
+        var args = new List<string> { cpp ? "--driver-mode=g++" : "--driver-mode=gcc", cpp ? "-std=c++17" : "-std=c11", "-O2" };
+        if (cpp) args.Add("-fexceptions");
+        args.AddRange(["-ffunction-sections", "-fdata-sections", "-c", source, "-o", output]);
+        args.AddRange(options);
+        args.AddRange(hostArguments);
+        return args;
+    }
+
 }

@@ -89,6 +89,166 @@ public sealed class DeflateTests
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void EveryLengthAndDistanceCodeMatchesIndependentEndpointFixtures(int optimization)
+    {
+        const int historyLength = 32768;
+        const uint seed = 0x9e3779b9u;
+        byte[] history = new byte[historyLength];
+        uint state = seed;
+        for (int index = 0; index < history.Length; index++)
+        {
+            state = unchecked(state * 1664525u + 1013904223u);
+            history[index] = (byte)(state >> 24);
+        }
+        var prefixWriter = new Bits();
+        WriteStored(prefixWriter, history, false);
+        byte[] prefix = prefixWriter.Finish();
+        Assert.Equal(historyLength + 5, prefix.Length);
+
+        var rows = new List<(byte[] Tail, int Length, int Distance)>();
+        void AddRow(int lengthCode, int lengthWidth, int lengthExtra, int length,
+            int distanceCode, int distanceWidth, int distanceExtra, int distance)
+        {
+            var bits = new Bits();
+            bits.Little(3, 3);
+            bits.Fixed(lengthCode);
+            bits.Little((uint)lengthExtra, lengthWidth);
+            bits.Code((uint)distanceCode, 5);
+            bits.Little((uint)distanceExtra, distanceWidth);
+            bits.Fixed(256);
+            byte[] tail = bits.Finish();
+            byte[] expected = new byte[historyLength + length];
+            history.CopyTo(expected, 0);
+            // Forward-copy reference, independent of the native fixture's
+            // modulo lookup into its unchanged input history.
+            for (int index = 0; index < length; index++)
+                expected[historyLength + index] = expected[historyLength + index - distance];
+            using var input = new MemoryStream(prefix.Concat(tail).ToArray());
+            using var decoder = new DeflateStream(input, CompressionMode.Decompress);
+            using var restored = new MemoryStream();
+            decoder.CopyTo(restored);
+            Assert.True(expected.AsSpan().SequenceEqual(restored.ToArray()),
+                $"Host oracle: length code {lengthCode} extra {lengthExtra}; distance code {distanceCode} extra {distanceExtra}");
+            rows.Add((tail, length, distance));
+        }
+
+        // Derive the ranges from their widening rules, without copying the
+        // implementation's length/distance base or extra-bit tables.
+        // Code284's maximum field also exercises the documented duplicate258
+        // tolerance; the separate code285 row covers its canonical encoding.
+        int nextLength = 3;
+        for (int code = 257; code <= 284; code++)
+        {
+            int width = code < 265 ? 0 : (code - 261) / 4;
+            AddRow(lengthCode: code, lengthWidth: width, lengthExtra: 0, length: nextLength,
+                distanceCode: 2, distanceWidth: 0, distanceExtra: 0, distance: 3);
+            int maximum = (1 << width) - 1;
+            if (maximum != 0)
+                AddRow(lengthCode: code, lengthWidth: width, lengthExtra: maximum, length: nextLength + maximum,
+                    distanceCode: 2, distanceWidth: 0, distanceExtra: 0, distance: 3);
+            nextLength += 1 << width;
+        }
+        AddRow(lengthCode: 285, lengthWidth: 0, lengthExtra: 0, length: 258,
+            distanceCode: 2, distanceWidth: 0, distanceExtra: 0, distance: 3);
+        int nextDistance = 1;
+        for (int code = 0; code < 30; code++)
+        {
+            int width = code < 4 ? 0 : code / 2 - 1;
+            AddRow(lengthCode: 285, lengthWidth: 0, lengthExtra: 0, length: 258,
+                distanceCode: code, distanceWidth: width, distanceExtra: 0, distance: nextDistance);
+            int maximum = (1 << width) - 1;
+            if (maximum != 0)
+                AddRow(lengthCode: 285, lengthWidth: 0, lengthExtra: 0, length: 258,
+                    distanceCode: code, distanceWidth: width, distanceExtra: maximum, distance: nextDistance + maximum);
+            nextDistance += 1 << width;
+        }
+        Assert.Equal(105, rows.Count);
+        Assert.Equal(32769, nextDistance);
+
+        int[] selectedDistances = rows.Select(row => row.Distance).Distinct().Order().ToArray();
+        string[] prefixes = selectedDistances.Select(distance => Convert.ToHexString(
+            Enumerable.Range(0, 3).Select(index => history[historyLength - distance + index % distance]).ToArray())).ToArray();
+        // A byte(i) pattern would hide distance errors differing by256. Check
+        // that this history actually distinguishes every selected match prefix.
+        Assert.Equal(selectedDistances.Length, prefixes.Distinct(StringComparer.Ordinal).Count());
+        var offsets = new List<int>();
+        int offset = 0;
+        foreach (var row in rows) { offsets.Add(offset); offset += row.Tail.Length; }
+        byte[] tails = rows.SelectMany(row => row.Tail).ToArray();
+        int maximumTail = rows.Max(row => row.Tail.Length);
+        const int maximumOutput = historyLength + 258;
+        string program = $$"""
+            using Standard::Compression;
+            int main() nothrow {
+                byte[{{prefix.Length + maximumTail + 4}}] input;
+                input[0] = (byte)90; input[1] = (byte)0;
+                input[2] = (byte)0; input[3] = (byte)128; input[4] = (byte)255; input[5] = (byte)127;
+                uint state = {{seed}}u;
+                for (nuint index = 0; index < 32768; index++) {
+                    state = state * 1664525u + 1013904223u;
+                    input[index + 6] = (byte)(state >> 24);
+                }
+                nuint[{{selectedDistances.Length}}] selectedDistances = [{{string.Join(",", selectedDistances)}}];
+                for (nuint left = 0; left < {{selectedDistances.Length}}; left++) {
+                    for (nuint right = left + 1; right < {{selectedDistances.Length}}; right++) {
+                        bool same = true;
+                        for (nuint index = 0; index < 3; index++) {
+                            nuint a = selectedDistances[left]; nuint b = selectedDistances[right];
+                            if (input[32774 - a + index % a] != input[32774 - b + index % b]) same = false;
+                        }
+                        if (same) return 11;
+                    }
+                }
+                byte[{{tails.Length}}] tails = [{{Array(tails)}}];
+                nuint[{{rows.Count}}] offsets = [{{string.Join(",", offsets)}}];
+                nuint[{{rows.Count}}] sizes = [{{string.Join(",", rows.Select(row => row.Tail.Length))}}];
+                nuint[{{rows.Count}}] lengths = [{{string.Join(",", rows.Select(row => row.Length))}}];
+                nuint[{{rows.Count}}] distances = [{{string.Join(",", rows.Select(row => row.Distance))}}];
+                byte[{{maximumOutput + 2}}] output;
+                for (nuint row = 0; row < {{rows.Count}}; row++) {
+                    for (nuint index = 0; index < sizes[row]; index++) input[32774 + index] = tails[offsets[row] + index];
+                    nuint compressed = 32773 + sizes[row];
+                    input[compressed + 1] = (byte)170; input[compressed + 2] = (byte)0; input[compressed + 3] = (byte)255;
+                    for (nuint attempt = 0; attempt < 2; attempt++) {
+                        for (nuint index = 0; index < {{maximumOutput + 2}}; index++) output[index] = (byte)165;
+                        nuint capacity = 32768 + lengths[row];
+                        if (attempt == 0) capacity--;
+                        nuint consumed = 999; nuint written = 999;
+                        Deflate::Status status = Deflate::Decompress((byte*)input + 1, compressed + 3, (byte*)output + 1,
+                            capacity, ref consumed, ref written);
+                        if (attempt == 0) {
+                            if (status != Deflate::Status::OutputTooSmall || written != 32768) return 100 + (int)row;
+                        } else if (status != Deflate::Status::Done || written != 32768 + lengths[row] || consumed != compressed) return 100 + (int)row;
+                        if (consumed > compressed || written > capacity) return 12;
+                        if (output[0] != (byte)165 || input[0] != (byte)90 || input[compressed + 1] != (byte)170) return 13;
+                        for (nuint index = 0; index < 32768; index++) if (output[index + 1] != input[index + 6]) return 14;
+                        if (attempt != 0) {
+                            for (nuint index = 0; index < lengths[row]; index++) {
+                                byte expected = input[32774 - distances[row] + index % distances[row]];
+                                if (output[32769 + index] != expected) return 100 + (int)row;
+                            }
+                        }
+                        for (nuint index = written + 1; index < {{maximumOutput + 2}}; index++) if (output[index] != (byte)165) return 15;
+                    }
+                }
+                state = {{seed}}u;
+                for (nuint index = 0; index < 32768; index++) {
+                    state = state * 1664525u + 1013904223u;
+                    if (input[index + 6] != (byte)(state >> 24)) return 16;
+                }
+                return 0;
+            }
+            """;
+        string ir = Compiler.Emit(Sources(program), options: new() {
+            NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true
+        });
+        Assert.Equal((false, false), NativeToolchain.RequiredNativeRuntimes(ir));
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
     [Fact]
     public void DecoderDeclaresNoAllocationOrExceptionRuntimeServices()
     {

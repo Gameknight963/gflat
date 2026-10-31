@@ -5687,19 +5687,21 @@ namespace gflat
                 throw new TypeCheckException("Extern functions cannot return owning values; use an explicit pointer contract", node.Line);
         }
 
-        public static string TypeName(TypeExpression type) => TypeName(type, false);
-        private static string TypeName(TypeExpression type, bool inheritedReadOnly) => type.IsReadOnlyValue && !inheritedReadOnly
-            ? (type.IsImmutableValue ? "immutable(" : "readonly(") + TypeNameCore(type, type.IsImmutableValue || type is ArrayTypeExpression) + ")" : TypeNameCore(type, inheritedReadOnly);
-        private static string TypeNameCore(TypeExpression type, bool inheritedReadOnly) => type switch
+        public static string TypeName(TypeExpression type) => TypeName(type, InheritedTypeProtection.None);
+        private static string TypeName(TypeExpression type, InheritedTypeProtection inherited)
+            => NeedsTypeProtectionWrapper(type, inherited)
+                ? (type.IsImmutableValue ? "immutable(" : "readonly(") + TypeNameCore(type, PrintedTypeProtection(type)) + ")"
+                : TypeNameCore(type, inherited);
+        private static string TypeNameCore(TypeExpression type, InheritedTypeProtection inherited) => type switch
         {
             NamedTypeExpression n => n.Name,
             NestedTypeExpression nested => nested.TypeArguments.Count > 0
                 ? $"{TypeName(nested.Parent)}::{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
                 : $"{TypeName(nested.Parent)}::{nested.Member}",
             ReferenceTypeExpression r => "ref " + TypeName(r.Inner),
-            PointerTypeExpression p => TypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression m => (m.Collector == null ? TypeName(m.Inner, inheritedReadOnly) + "^" : "managed<" + TypeName(m.Inner, inheritedReadOnly) + ", " + TypeName(m.Collector) + ">") + (m.IsNullable ? "?" : ""),
-            ArrayTypeExpression a => TypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
+            PointerTypeExpression p => TypeName(p.Inner, IndirectTypeProtection(inherited)) + "*" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression m => (m.Collector == null ? TypeName(m.Inner, IndirectTypeProtection(inherited)) + "^" : "managed<" + TypeName(m.Inner, IndirectTypeProtection(inherited)) + ", " + TypeName(m.Collector) + ">") + (m.IsNullable ? "?" : ""),
+            ArrayTypeExpression a => TypeName(a.ElementType, inherited) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
         };

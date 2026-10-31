@@ -16,6 +16,8 @@ length or ownership semantics.
 
 Use [BufferedReader](BUFFERED_READER.md) to coalesce small reads, or
 [LimitedReader](../Standard/core/IO/LIMITED_READER.md) to bound a payload.
+Use [ReadToEnd](READ_TO_END.md) to collect remaining input into an owning String
+or a reusable String destination.
 Deferred [byte enumeration](#enumerate-bytes-without-owning-the-source) and
 [line enumeration](#enumerate-lines-without-owning-the-source) use this same protocol.
 

@@ -23,6 +23,7 @@ implementation lives in `libc`.
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](LINE_PREFIX_WRITER.md) |
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](TEXT_WRITERS.md) |
 | Byte readers | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](BYTE_READERS.md) |
+| Read remaining input | `ReadToEnd()` and `ReadToEnd(ref text)` | [Owning text, reusable capacity, and byte limits](READ_TO_END.md) |
 | Binary scalar IO | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Borrowed binary IO](BINARY_IO.md) |
 | Buffered input | `BufferedReader` with owned or caller-provided scratch, `PeekByte` | [Read-ahead, cursor lifetime and ownership](BUFFERED_READER.md) |
 | Bounded input | `LimitedReader` | [Read one payload without consuming its tail](../Standard/core/IO/LIMITED_READER.md) |

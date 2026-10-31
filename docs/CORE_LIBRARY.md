@@ -6,6 +6,9 @@ UTF-8, binary codecs, paths, math, and runnable examples.
 [Borrowed byte readers](BYTE_READERS.md) connect counted sources to
 writer and encoding consumers without transferring ownership.
 
+[ReadToEnd](READ_TO_END.md) collects remaining input into a String, with a reusable
+destination overload and an optional byte limit.
+
 [Binary scalar IO](BINARY_IO.md) adds fixed-width endian reads and writes
 through those same borrowed contracts.
 

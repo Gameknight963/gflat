@@ -40,6 +40,13 @@ failure; `Parse` throws `Exception`. Parsing completes its reads before committi
 a successful result, so suitably aligned writable input may overlap the result.
 A failure's Nil store also changes overlapping input bytes.
 
+For both `TryParse` overloads and `TryFromBytes`, `result` must always point to
+non-null, properly aligned, writable storage for one `Uuid`, even on failure.
+The previous value is not read. This permits caller-managed raw storage as well
+as an initialized local. An ordinary local must still be initialized before its
+address is passed, for example `Uuid result = new();`; these pointer parameters
+do not provide an `out` initialization contract.
+
 `TryFormat` emits exactly 36 lowercase bytes and no terminator. Capacity below 36
 returns false, sets `written` to zero, and leaves output unchanged. The written
 count must be separate from both the output region and receiver storage. The

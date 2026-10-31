@@ -22,16 +22,9 @@ int main() nothrow
 
 ## Buffers
 
-- `source` provides `count` readable bytes, and `output` provides `capacity`
-  writable bytes. The ranges must be disjoint
-- `consumed` and `written` are separate initialized values, disjoint from the
-  buffers and each other
-- Keep all storage alive until return
-- Zero input count or output capacity leaves the corresponding pointer untouched.
-  Zero capacity can decode an empty stream
-
-Counts include zero and high bytes. The decoder uses caller-selected capacity
-and performs no allocation.
+Source and output ranges must be disjoint. The consumed/written output variables
+must also be separate from each other and both buffers. Zero output capacity can
+decode an empty stream, provided its complete framing is present.
 
 ## Results
 

@@ -1,13 +1,12 @@
-# Civil timestamps with an explicit UTC offset
+# Timestamps with a UTC offset
 
-`Standard::Time::DateTimeOffset` pairs a civil DateTime with a fixed whole-minute TimeSpan
-offset from UTC. Construction accepts offsets from `-14:00` through `+14:00`,
-inclusive, and requires both wall-clock and UTC values within years 1 through 9999.
-The default value is 0001-01-01 at midnight UTC. The offset is fixed. For named
-time zones, applications must supply their own daylight-saving rules.
+`Standard::Time::DateTimeOffset` pairs a wall-clock DateTime with a fixed UTC
+offset. Both wall time and UTC must fit years 1 through 9999. The offset is a
+whole number of minutes between -14:00 and +14:00.
 
 ```csharp
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
 
 int main()
 {
@@ -22,50 +21,20 @@ int main()
 }
 ```
 
-`DateTime`, `UtcDateTime` and `Offset` return ordinary independent value copies.
-`ToOffset` preserves the instant while changing the wall time/offset, or throws
-if its new offset or wall time is out of range. Construction and ToOffset throw
-`Exception("DateTimeOffset clock or offset is out of range")`. Offset durations
-with fractional minutes, even one tick, are rejected. Equality, ordering and hash
-use UTC ticks. `EqualsExact` also requires the same wall time and offset.
-
-`FromUnixTimeSeconds(seconds)` and `FromUnixTimeMilliseconds(milliseconds)`
-construct an offset-zero UTC value. Seconds must be in
-`-62135596800..253402300799`. Milliseconds must be in
-`-62135596800000..253402300799999`. Outside these inclusive ranges they throw
-`Exception` before epoch shifting or multiplication. They do not consult a clock
-or local time-zone settings.
-
-`ToUnixTimeSeconds()` and `ToUnixTimeMilliseconds()` are immutable, `nothrow`
-observers of the UTC instant, independent of the displayed offset. They round
-down to the containing second or millisecond, including before the 1970 epoch:
-`1969-12-31T23:59:59.9999999Z` yields `-1` in both units. Factories preserve only
-their input unit's precision. Converting a fractional timestamp to a Unix integer
-and back discards the remaining fraction. Normal valid conversions allocate
-nothing internally. Invalid factory calls use ordinary exception behavior.
+`DateTime`, `UtcDateTime`, and `Offset` expose the components. `ToOffset` keeps
+the instant while changing its displayed wall time. Equality, ordering, and
+hashing use UTC ticks. `EqualsExact` also requires the same wall time and
+offset.
 
 ## Duration arithmetic
 
-`Add(TimeSpan)` and `Subtract(TimeSpan)` return a new timestamp with the same
-displayed offset and the duration added to or removed from both its wall clock
-and UTC instant. Both results must remain within years 1 through 9999. The methods
-check before arithmetic, including for `TimeSpan` values containing signed-long
-minimum or maximum ticks. Out-of-range results throw `Exception` with
-`DateTimeOffset addition is outside years 1 through 9999` or
-`DateTimeOffset subtraction is outside years 1 through 9999`.
-
-`Difference(DateTimeOffset other)` returns a `TimeSpan` measuring the
-UTC instant difference, independently of either displayed offset. It is immutable
-and `nothrow`. Even the full supported date range fits a signed-long tick count.
-The operand is an ordinary value copy, matching DateTime's API. Self-difference is zero.
-
-These are exact elapsed-duration operations, with no calendar month/year,
-daylight-saving or named-zone adjustment. They do not mutate either operand or
-allocate internally for successful calls. A failed result assignment preserves
-its destination. Throwing errors use normal exception storage.
+Add and Subtract preserve the displayed offset and shift both wall time and
+UTC by the duration. Either leaving the supported range throws. Difference
+returns the elapsed TimeSpan between UTC instants.
 
 ```csharp
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
 
 int main()
 {
@@ -80,21 +49,14 @@ int main()
 
 ## Calendar arithmetic
 
-`AddMonths(int)` and `AddYears(int)` return a new timestamp using DateTime's
-calendar rules. They clamp the day to the destination month's length and preserve
-the exact time of day, fractional ticks and displayed offset. Chained calls use
-the already clamped day. They do not remember an earlier month's day.
-
-Both wall time and UTC must remain within years 1 through 9999. Calendar overflow
-propagates `Exception("Date addition is outside the supported range")`. A valid
-wall time whose retained offset puts UTC outside that range throws
-`Exception("DateTimeOffset clock or offset is out of range")`. The receiver and a
-failed assignment's destination remain unchanged. Successful calls allocate
-nothing internally. These are fixed-offset calendar operations, with no named
-time zone or daylight-saving adjustment.
+AddMonths and AddYears preserve the time and offset, clamping the day to the
+destination month's length. Chained calls use that clamped day. Wall and UTC
+results must both remain in range. These fixed-offset calculations do not
+apply named-zone daylight-saving rules.
 
 ```csharp
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
 
 int main()
 {
@@ -108,34 +70,38 @@ int main()
 }
 ```
 
+## Unix time
+
+Factories create UTC values with offset zero:
+
+| Factory | Accepted range |
+| --- | --- |
+| `FromUnixTimeSeconds` | `-62135596800..253402300799` |
+| `FromUnixTimeMilliseconds` | `-62135596800000..253402300799999` |
+
+ToUnixTimeSeconds and ToUnixTimeMilliseconds round down to the containing
+unit. For example, `1969-12-31T23:59:59.9999999Z` yields `-1` in either unit.
+Converting back loses the discarded fractional part.
+
 ## Parsing and formatting
 
-Accepted text is exactly `yyyy-MM-ddTHH:mm:ss[.fraction]Z` or the same civil prefix
-followed by `+HH:mm`/`-HH:mm`. Fractions have 1 through 7 decimal digits. `T`/`Z` are
-uppercase. No whitespace, absent suffix, named zone, offset seconds, leap seconds,
-or trailing bytes are accepted. Numeric `-00:00` and `+00:00` both denote zero
-offset and format as `Z`. The civil prefix follows DateTime's exact Gregorian
-grammar. Range checks include the resulting UTC instant.
+Text uses `yyyy-MM-ddTHH:mm:ss[.fraction]` followed by `Z` or `+HH:mm`/`-HH:mm`.
+T and Z are uppercase, and fractions contain one through seven digits.
+Whitespace, missing offsets, leap seconds, and trailing bytes are invalid.
+Numeric `-00:00` and `+00:00` both format as Z.
 
-`TryParse(text, count, DateTimeOffset*)` and the CString overload are `nothrow` and
-allocate nothing internally. Failure resets the output to the default value.
-Counted input includes embedded NUL, which is invalid. CString input stops at its
-terminator and scans at most 34 bytes. Counts below 20 or above 33 reject before input
-access. `Parse` overloads throw `Exception("Invalid date and time offset")` for
-invalid text.
+TryParse resets its output to the default midnight UTC value on failure.
+Counted input must contain 20 through 33 bytes. The C-string form examines at
+most 34. Parse throws `Exception("Invalid date and time offset")` for invalid
+text.
 
-Canonical formatting uses DateTime's 19-byte civil form, or 27 bytes with a nonzero
-seven-digit fraction, then `Z` for zero offset or six bytes for a numeric offset.
-`TryFormat(output, capacity, ref written)` adds no terminator: insufficient capacity
-leaves output untouched and sets written to zero. `Format` sends one counted call
-to its borrowed writer, without flushing. Writer exceptions propagate and can
-leave a prefix. The value remains unchanged.
+TryFormat writes 19 civil-time bytes, or 27 with a nonzero fraction, followed
+by Z or a six-byte numeric offset. Insufficient capacity returns false, resets
+`written` to zero, and preserves output. Format sends the same representation
+in one writer call.
 
-Input/output may overlap fully backed, aligned receiver/result storage: parsing
-and formatting stage their data before committing. `written` must be separate
-from receiver and output. Normal valid operations allocate nothing internally.
-Throwing errors or a destination writer can allocate. `UtcDateTime` uses the
-checked DateTime factory internally and has an ordinary getter. Other primitive
-observers, equality and formatting are declared `nothrow` where shown in source.
+TryParse and TryFormat are `nothrow`. Input or output can overlap sufficiently
+backed result or receiver storage. Keep `written` separate from output and
+receiver.
 
-Include `Time/DateTimeOffset.gf` and the existing DateTime/TimeSpan dependencies.
+Source: `Time/DateTimeOffset.gf`, with DateTime and TimeSpan dependencies.

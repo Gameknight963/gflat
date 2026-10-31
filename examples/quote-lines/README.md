@@ -1,31 +1,18 @@
 # Quote text lines as JSON
 
-This tool reads a UTF-8 file and writes one JSON string literal per line to stdout. It
-is useful for turning line-oriented text into newline-delimited JSON string values,
-retaining quotes, backslashes, control characters, and Unicode.
+Write one JSON string per line of a UTF-8 file:
 
 ```console
 gflat build examples/quote-lines/quote-lines.gfproj --run -- input.txt
 ```
 
-## Lines
+LF and CRLF delimit input lines. A bare CR or embedded NUL belongs to the line
+and is escaped in JSON. Empty lines become `""`, and a final unterminated line
+is included. A BOM remains part of the first value.
 
-LF and CRLF end input lines and are excluded from their values. A bare CR and embedded
-zero bytes remain text and are escaped. Empty input produces no output. An empty
-terminated line produces `""`. A trailing line terminator does not create an additional
-empty line. A BOM remains part of the first value.
+The example combines [file line iteration](../../docs/FILE_LINE_SEQUENCE.md)
+with [JSON string formatting](../../docs/JSON_STRING.md), reusing one line buffer.
+Memory use grows with the longest line.
 
-## Errors
-
-Each line must be valid UTF-8. Invalid input or an I/O failure returns status 1 and
-reports the exception message on stderr. Incorrect arguments return 2. Successful
-conversion returns 0. An error can occur after earlier lines have already been written.
-Stdout uses the host console's existing text mode, including its newline translation on
-Windows.
-
-## Storage and borrowing
-
-The example combines a borrowed `FileLineSequence`, its checked readonly current line,
-and `WriteJsonString` on `Console::Out`. One owning line buffer grows as needed and is
-reused. Quoting writes directly to the output writer. Reading `Current` through its
-reference avoids a per-line String copy.
+Exit codes are 0 for success, 2 for invalid arguments, and 1 for invalid UTF-8
+or IO failure. Errors go to stderr. Earlier lines may already have been written.

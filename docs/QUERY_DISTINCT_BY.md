@@ -1,12 +1,13 @@
 # Lazy distinct values by key
 
-`query.DistinctBy(selector)` yields the first source position for each selected
-key, retaining the source's order. It returns whole values rather than keys, and
-the element type does not need hash or equality implementations. This is useful
-for retaining the first record for each ID without collecting groups first.
+`DistinctBy(selector)` keeps the first whole value for each selected key,
+preserving encounter order:
 
 ```cpp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
 
 struct Row
 {
@@ -31,71 +32,29 @@ int main()
 }
 ```
 
-The selector has ordinary by-value type `K(T)*`, matching `CountBy` and other
-key-selector APIs. A named function can return an owning key such as String.
-`K` implements `IHashable` and the matching `IEquatable<K>` through the existing
-HashSet rules. Equal keys need equal hashes. Their hash and equality must stay
-stable while retained. The exact qualified-key interface contract applies, as
-with `Distinct` and `CountBy`.
+The selector has type `K(T)*`. Keys require `IHashable` and `IEquatable<K>` with
+stable, consistent behavior. Each iterator owns a set of seen keys, so memory
+grows with the distinct keys rather than with every source element.
 
-## Evaluation and state
+## Evaluation
 
-Constructing the query copies its source view and saves the function pointer.
-It does not enumerate. Captured sources follow normal value-copy rules and must
-support those copies. Each `GetEnumerator()` constructs one upstream iterator
-and its own empty `HashSet<K>`. The empty set allocates no backing storage.
-Custom source copies or iterator construction can allocate or throw. `Take(0)`
-constructs the iterator but never selects keys or allocates seen-key storage.
+Each move reads every candidate's `Current` once and calls the key selector
+once, including for duplicates. It stops at the next unseen key.
 
-Each `MoveNext()` advances until it finds an unseen key or reaches EOF. It reads
-upstream `Current` once and invokes the key selector once for each candidate,
-including duplicates. The candidate key is moved into the set on success.
-Duplicate candidate owners are destroyed normally. Seen keys remain owned by
-that iterator until it is destroyed. Separate enumerations have separate sets.
-Stable borrowed views restart normally, while consumable sources such as file
-lines continue at their shared current position.
+Reading the accepted `Current` reads the upstream value again. It does not
+repeat DistinctBy's key selector, but an earlier `Select` can run again. Values
+must remain consistent at that source position. `Count()` and `Any()` still
+evaluate candidate keys.
 
-`Current` is not cached: it reads the upstream value again without invoking
-DistinctBy's key selector. Repeated reads repeat the upstream getter, including
-an upstream `Select` callback. `Count()` and `Any()` still select and inspect
-candidate keys because distinctness is determined during advancement. They need
-not read the accepted value again. The same stable-provider requirement as
-`Distinct` applies: values must keep their intended key and payload meaning at a
-source position. The guarantee concerns first-occurrence positions, not owner
-addresses or a stored snapshot of the selected element.
+## Key ownership
 
-## Ownership and failures
+Selectors receive values by copy. A returned key must own its data or borrow
+storage that remains valid throughout iteration. It must not borrow storage
+owned only by that temporary argument.
 
-By-value selector arguments follow ordinary value semantics. Borrowed owning
-elements such as String are copied into the selector parameter. An upstream
-fresh owning value can transfer into it. A borrowed noncopyable element cannot
-be passed by value. No implicit ownership transfer from source storage occurs.
-Returned keys must own their required resources independently, or point to
-external storage that remains alive and stable throughout iteration. In
-particular, a key must not borrow storage owned only by the selector's temporary
-by-value parameter. Moving a fresh noncopyable key into HashSet is supported.
+The iterator releases its keys on destruction, including early exit. After a
+failed move, discard the iterator. Input and callback effects may already have
+occurred. See [query ownership](QUERIES.md#ownership) for source lifetimes.
 
-Reading `Current` returns an ordinary value, so borrowed owning elements are
-copied again when yielded. Fresh by-value results transfer under the normal
-initializer and `foreach` rules. The iterator never duplicates or steals the
-header of a borrowed owner. Borrowed source backing storage must remain alive
-and stable for the query and all iterators. Callbacks must not structurally
-mutate the source or the seen-key set through another alias.
-
-Before the first successful advance and after EOF, `Current` throws
-`Exception("Enumerator has no current element")`. A failed advance invalidates
-`Current` and may already have advanced the source or retained earlier keys.
-Discard the iterator after such an error. No recovery or rollback is promised.
-An error from the upstream getter, selector, hash/equality method, copy, or
-allocation propagates unchanged. A `Current` read does not itself change the
-wrapper's position. Ordinary RAII destroys retained keys and the upstream
-iterator on scope exit, including early termination and exception unwinding.
-
-Memory grows with the distinct selected keys. The operator does not allocate a
-wrapper per element, use GC, or materialize all source values. Key/source/element
-operations retain their own allocation behavior, and HashSet retains its normal
-collision and capacity limits.
-
-For selective sources include `Queries/enumerable_distinct_by.gf`,
-`Queries/DistinctBySource.gf`, the ordinary query interfaces, HashSet,
-HashMap, and their hashing/equality dependencies, plus the actual input types.
+Sources: `Queries/enumerable_distinct_by.gf`, `Queries/DistinctBySource.gf`,
+and [HashSet](HASH_COLLECTIONS.md) with its dependencies.

@@ -1,102 +1,77 @@
 # ASCII byte utilities
 
-`core/Text/ascii.gf` provides `Standard::Text::Ascii` functions for the language's byte-sized
-`char`. The source can be selected independently with `NoStdLib`. All operations
-are allocation-free and `nothrow`.
+`Standard::Text::Ascii` classifies, converts, and compares bytes using ASCII rules.
 
-Classification functions are `IsAscii`, `IsDigit`, `IsLower`, `IsUpper`,
-`IsLetter`, `IsLetterOrDigit`, `IsHexDigit`, `IsWhiteSpace`, `IsControl`, and
-`IsPrintable`. Every function accepts a `char` and returns `bool`.
+| Classification | Accepted bytes |
+| --- | --- |
+| `IsAscii` | 0–127 |
+| `IsDigit` | `0`–`9` |
+| `IsLower`, `IsUpper`, `IsLetter` | `a`–`z`, `A`–`Z`, or either |
+| `IsLetterOrDigit` | ASCII letters and decimal digits |
+| `IsHexDigit` | `0`–`9`, `a`–`f`, `A`–`F` |
+| `IsWhiteSpace` | Space, tab, LF, vertical tab, form feed, CR |
+| `IsControl` | 0–31 and 127 |
+| `IsPrintable` | 32–126, including space |
 
-- ASCII comprises bytes 0 through 127
-- Letters are A–Z and a–z. Decimal digits are 0–9.
-- Hex digits additionally include A–F and a–f
-- Whitespace is space, tab, line feed, vertical tab, form feed, and carriage return
-- Control bytes are 0–31 and 127
-- Printable bytes are 32–126, including space
+Classification returns false for bytes above 127. `TryHexValue(input, result)`
+writes a hexadecimal digit's value from 0 through 15. Invalid input returns false
+and writes zero.
 
-All classification functions return false for bytes 128–255.
-`ToLower(char)` and `ToUpper(char)` convert ASCII letters and preserve every
-other byte, including bytes above 127. Results do not depend on locale or the
-machine's signed `char` conventions.
-
-`ToLower(char* data, nuint count)` and `ToUpper(char* data, nuint count)` convert
-a caller-owned buffer in place using those same ASCII rules. Counts include
-embedded NULs. These operations continue past them and leave every non-letter
-byte unchanged. There is no null-terminated mutation overload.
+`ToLower` and `ToUpper` accept either one `char` or a buffer and byte count.
+The buffer overload changes ASCII letters in place:
 
 ```csharp
 using Standard::Text;
+
 char[4] bytes = ['A', '\0', 'z', (char)255];
-Standard::Text::Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
+Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
 ```
-
-The caller supplies `count` writable bytes. Only that region is modified, and
-aliases to it observe the changes immediately. A zero count performs no reads
-or writes through the pointer. Pointers to readonly or immutable characters
-cannot be passed implicitly. These overloads are `nothrow`, allocate nothing,
-and add no source dependencies.
-
-`TryHexValue(char input, byte* result)` recognizes one hexadecimal digit and
-writes its numerical value from 0 through 15. Invalid input returns false and
-writes zero. Use `Standard::Text::Utf8` to decode Unicode scalar values before applying
-any future Unicode character operations.
 
 ## Counted case-insensitive comparison
 
-These counted operations are also `nothrow` and allocation-free:
+| Parameter | Meaning |
+| --- | --- |
+| `left`, `right` | Text to compare |
+| `leftLength`, `rightLength` | Respective byte counts |
 
 ```csharp
 using Standard::Text;
-bool command = Standard::Text::Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
-int order = Standard::Text::Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
+
+bool command = Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
+int order = Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
 ```
 
-Lengths count bytes, including embedded nulls. Buffers are borrowed and are never
-modified. Each pointer must designate at least its supplied length of readable
-storage. A zero length performs no reads through that pointer.
+`EqualsIgnoreCase` compares after folding ASCII letters to uppercase.
+`CompareIgnoreCase` uses the same folding and returns -1, 0, or 1 in unsigned-byte
+lexicographic order. A shorter equal prefix sorts first. Uppercase folding means
+`z` sorts before `[`.
 
-`CompareIgnoreCase` returns exactly -1, 0, or 1. It folds ASCII `a`-`z` to
-uppercase, then compares unsigned bytes lexicographically. If the common prefix
-is equal, the shorter input sorts first. Uppercase folding also determines
-punctuation ordering: `z` sorts before `[`. For ASCII inputs, this agrees with
-.NET's `StringComparison.OrdinalIgnoreCase` ordering.
-
-Bytes 128-255 remain unchanged, so differently cased accented letters encoded in
-UTF-8 compare unequal. `EqualsIgnoreCase` returns false immediately
-when lengths differ and otherwise applies the same ASCII-only rules.
+Nonletters match exactly, including embedded NULs and bytes above 127.
+Differently cased accented letters encoded in UTF-8 therefore compare unequal.
 
 ## Null-terminated comparison
 
-Two-argument overloads accept C strings:
+Two-argument overloads compare C strings:
 
 ```csharp
 using Standard::Text;
-bool command = Standard::Text::Ascii::EqualsIgnoreCase(input, "help");
-int order = Standard::Text::Ascii::CompareIgnoreCase(left, right);
+
+bool command = Ascii::EqualsIgnoreCase(input, "help");
+int order = Ascii::CompareIgnoreCase(left, right);
 ```
 
-Both stop at the first null byte and use the same unsigned ASCII-only folding
-and -1/0/1 ordering as the counted forms. Bytes after a terminator do not affect
-the result. Both pointers must designate readable null-terminated strings.
-These overloads are also `nothrow`, allocate nothing, and do not modify input.
-Use the counted forms to compare embedded null bytes as part of the text.
+They use the same comparison rules and stop at the first NUL. Use the counted
+forms when a NUL is part of the data.
 
 ## Case-insensitive hashing
 
-`Ascii::HashIgnoreCase(data, count)` returns a `nuint` hash using the same ASCII
-uppercase folding as counted `EqualsIgnoreCase`. It includes embedded NUL bytes
-and leaves bytes 128-255 unchanged. Input is borrowed and never modified. Provide
-`count` readable bytes. Zero count reads no storage. The helper is `nothrow`,
-allocates nothing, and adds no source dependencies.
-
-Use this hash with the matching equality contract when preserving the original
-spelling of case-insensitive keys. This example borrows only static string literals,
-which remain alive for the entire map lifetime. Keys borrowing other storage must
-keep it alive and unchanged while stored in the map.
+`HashIgnoreCase(data, count)` applies the same uppercase folding. Pair it with
+`EqualsIgnoreCase` for case-insensitive keys:
 
 ```cpp
-using Standard; using Standard::Text; using Standard::Collections;
+using Standard;
+using Standard::Text;
+using Standard::Collections;
 
 struct HeaderName : IHashable, IEquatable<HeaderName>
 {
@@ -125,35 +100,29 @@ int main()
 }
 ```
 
-The implementation currently uses 32-bit FNV-1a widened to `nuint`. Its exact
-numeric result is not a persistent-format contract. Like `Hashing::Bytes`, it is
-not cryptographic and is unsuitable for keys supplied by hostile users because
-collisions can be deliberately chosen. Hash equality alone does not establish
-key equality: the map also calls the matching equality method.
+The example stores pointers to static literals. When keys point into other
+storage, keep those bytes alive and unchanged for the map's lifetime.
+
+The hash uses 32-bit FNV-1a widened to `nuint`. Use it for collection lookup.
+Its value can change between library versions, and deliberately chosen keys can
+cause collisions.
 
 ## Counted case-insensitive substring search
 
-`Ascii::IndexOfIgnoreCase(data, length, pattern, count)` and
-`Ascii::LastIndexOfIgnoreCase(data, length, pattern, count)` return the first or
-last matching start index, or `length` when absent. An empty pattern returns zero
-for forward search and `length` for reverse search, the last insertion endpoint.
-Reverse empty-pattern success therefore shares the absent sentinel. An oversized
-pattern returns `length`. Both preflights read neither pointer, including an
-empty data/pattern pair.
+| Operation | Result when found | Empty pattern |
+| --- | --- | --- |
+| `IndexOfIgnoreCase(data, length, pattern, count)` | First matching byte offset | 0 |
+| `LastIndexOfIgnoreCase(data, length, pattern, count)` | Last matching byte offset | `length` |
 
-Only ASCII letters fold, using the same comparison as `EqualsIgnoreCase`.
-Embedded NULs are ordinary counted bytes. Nonletters and bytes 128 through 255
-must match exactly.
-Both inputs may overlap. For a nonempty pattern that fits, provide live readable
-regions for the counted data and pattern and keep them stable during the call.
-
-Candidate starts run left to right or right to left respectively, comparing
-pattern bytes from left to right at each start. The implementation reuses the
-existing counted equality routine: worst-case work is O(length*count), with
-constant storage and no allocation, copies or mutation of the input buffers.
-Both functions are `nothrow` and add no source dependency to `ascii.gf`.
+Both return `length` when absent or when the pattern is longer than the input.
+The reverse search's empty-pattern result shares that sentinel.
 
 ```csharp
 nuint first = Ascii::IndexOfIgnoreCase(text, textLength, "error", 5);
 nuint last = Ascii::LastIndexOfIgnoreCase(text, textLength, "error", 5);
 ```
+
+Matching uses the comparison rules above. The searches take O(`length * count`)
+time in the worst case and constant working storage.
+
+Source: `core/Text/ascii.gf`

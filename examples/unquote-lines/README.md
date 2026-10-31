@@ -1,28 +1,22 @@
 # Decode JSON string lines
 
+Read one JSON string literal per input line and write its decoded value:
+
 ```console
 gflat build examples/unquote-lines/unquote-lines.gfproj --run -- input.jsonl
 ```
 
-## Input
+Each line must contain exactly one complete UTF-8 JSON string, including its
+quotes. Outside whitespace and other JSON values are rejected. LF and CRLF
+delimit lines. An empty file succeeds, while a blank line is invalid.
 
-Each input line must contain exactly one complete UTF-8 JSON string, including its
-quotes. Outside whitespace, other JSON values, malformed escapes, unpaired surrogates,
-and invalid UTF-8 are rejected. A BOM is treated as input. LF and CRLF end input lines.
-A trailing terminator does not add an empty line. An empty file produces no output,
-whereas a blank input line is invalid.
+Each decoded value is followed by a newline. Embedded NULs and escaped newlines
+are retained, so a value can span several output lines. Windows console output
+translates LF to CRLF.
 
-## Output
+The input buffer is reused for in-place decoding. Memory use grows with the
+longest line. See [JSON string decoding](../../docs/JSON_STRING.md).
 
-The decoded bytes are written with a newline after each value. Embedded NULs and escaped
-newlines are retained, so the output need not have one physical line per value. Input
-line endings are normalized to logical LF. Console output retains the host's text mode,
-including LF-to-CRLF translation on Windows.
-
-## Storage and errors
-
-One owning String buffer is reused for reading and in-place decoding. Invalid input
-returns 1 and reports its line number and input path on stderr. Open, read, explicit
-close, and output flush failures also return 1 and identify the path without claiming a
-line position. Earlier completed output may remain. Incorrect arguments return 2.
-Success returns 0.
+Exit codes are 0 for success, 2 for invalid arguments, and 1 for invalid input
+or IO failure. Errors go to stderr with the path and, for invalid lines, a line
+number. Earlier decoded values may already have been written.

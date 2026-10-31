@@ -1,83 +1,54 @@
 # Binary scalar buffers
 
-`Standard::Binary::BinaryPrimitives` reads and writes signed and unsigned 16-, 32-, and 64-bit integers,
-signed 128-bit `extralong`,
-32-bit `float`, and 64-bit `double` in explicitly selected little- or big-endian byte order. The operations do not
-depend on native alignment, host endianness, or the platform's C `long` width.
+`Standard::Binary::BinaryPrimitives` reads and writes scalars in little- or
+big-endian byte order. Buffer addresses may be unaligned.
+
+| Name in method | Value type | Bytes |
+| --- | --- | --- |
+| `Int16`, `UInt16` | `short`, `ushort` | 2 |
+| `Int32`, `UInt32` | `int`, `uint` | 4 |
+| `Int64`, `UInt64` | `long`, `ulong` | 8 |
+| `ExtraLong` | `extralong` | 16 |
+| `Float`, `Double` | `float`, `double` | 4, 8 |
+
+Method names combine `TryRead` or `TryWrite`, the scalar name, and
+`LittleEndian` or `BigEndian`:
 
 ```csharp
-using Standard; using Standard::Binary;
+using Standard;
+using Standard::Binary;
+
 byte[8] data;
 bool written = BinaryPrimitives::TryWriteUInt32BigEndian(data, 8, 305419896u);
 uint value = 0u;
 bool read = BinaryPrimitives::TryReadUInt32BigEndian(data, 8, ref value);
 ```
 
-Every method accepts a byte pointer and the available byte count. Reads return
-false and set their output to zero if the count is shorter than the scalar.
-Writes return false without touching storage in that case. Success consumes only
-the scalar's width. Excess bytes are untouched. No terminator is written.
+The buffer count must cover the scalar's width. A short read returns false and
+sets the result to zero. A short write returns false and preserves the buffer.
+Successful operations use exactly the scalar's width.
 
-Inputs must cover the stated readable or writable bytes. Unaligned addresses
-are supported because access happens one byte at a time. All methods are
-`nothrow`, allocate no storage, and need no allocator or exception runtime.
-They do not serialize arbitrary object representations or pointer values.
-
-Signed counterparts use `Int16`, `Int32`, and `Int64` in the same method names,
-with `short`, `int`, and `long` values. They preserve the corresponding unsigned
-bit pattern, using two's-complement interpretation on read. Successful reads
-also support an output variable whose storage overlaps the input. All input
-bytes are read before the result is stored. A failed read still writes zero
-to its output, including when that output overlaps input.
+Read outputs may overlap input. The method loads all source bytes before storing
+the result. On a short read, writing the zero result still changes overlapping
+input bytes. Scalar output variables require their normal alignment.
 
 ## Signed 128-bit values
 
-`TryReadExtraLongLittleEndian(data, count, ref value)` and
-`TryWriteExtraLongLittleEndian(data, count, value)` take an `extralong` output or
-value. The corresponding `BigEndian` forms reverse the wire byte order. Each
-operation handles exactly sixteen bytes and preserves the complete two's-
-complement representation, including the most negative value.
-
-The usual scalar contracts apply: short reads set the output to zero, short
-writes leave the buffer untouched, and successful reads finish loading all
-sixteen bytes before committing their output. Byte buffers may be unaligned.
-An overlapping scalar output must still have valid `extralong` alignment.
-The implementation combines two 64-bit halves with shifts and bit operations,
-without floating-point conversions, division helpers, or a separate runtime.
-The matching [binary cursors](BINARY_CURSORS.md) provide sixteen-byte `ExtraLong`
-methods too. `FileBinary::ReadExtraLongLittleEndian` / `ReadExtraLongBigEndian`
-and matching `WriteExtraLong` methods provide the corresponding sixteen-byte
-stream operations.
+The `ExtraLong` methods preserve all sixteen bytes of the two's-complement
+representation, including the minimum signed value. Matching methods are also
+available on [binary cursors](BINARY_CURSORS.md) and
+[binary streams](BINARY_IO.md).
 
 ## Floating-point values
 
-`TryReadFloatLittleEndian` / `TryWriteFloatLittleEndian`, their big-endian
-counterparts, and the matching `Double` forms use the same pointer/count
-signatures with `float` or `double` values. They preserve the exact IEEE 754
-binary32/binary64 representation, including negative zero, infinities, and all
-NaN signs and payloads. No floating-point arithmetic or numeric conversion is performed.
-Short reads produce positive zero. Short writes leave bytes untouched.
+The `Float` and `Double` methods preserve exact IEEE 754 bits, including negative
+zero and NaN signs and payloads. A short read produces positive zero.
 
-Integer helpers assemble/disassemble the wire bits byte by byte. Reinterpretation
-uses aligned local scalar storage, so the byte buffer still need not be aligned.
-These methods require no separate `BitConverter.gf` dependency. A successful
-read finishes loading the input before storing its output, including when that
-output's storage overlaps input.
+On Windows x64, including the floating-point definitions can require `_fltused`
+even when a caller only uses integer methods at O0. The CRT normally supplies
+this marker. Freestanding programs provide it in their startup code. See
+[Windows floating-point startup](FREESTANDING_CORE.md#windows-floating-point-marker).
 
-For a freestanding Windows x64 executable, LLVM still emits the `_fltused`
-linkage marker for floating-point code. The CRT normally provides it. Custom
-startup can provide an integer definition when no CRT floating-point setup is
-required, as [LLVM's maintainers explain](https://discourse.llvm.org/t/lld-link-fails-to-link-uefi-binary-because-of-undefined-symbol-fltused/52454).
-The no-CRT test startup does this explicitly and verifies that only `ExitProcess`
-is imported. `NoStdLib` and `NoBuiltins` do not supply a complete startup or
-platform ABI implementation.
-At O0 this marker can be required even when a caller only uses the integer
-methods: the same source file also emits floating-point method definitions.
+For stream operations and their EOF/error behavior, see [binary IO](BINARY_IO.md).
 
-For stream equivalents, use `FileBinary` from the libc library. Buffer helpers
-can instead be used with caller-owned arrays, network packets, or mapped data.
-`FileBinary::ReadInt16LittleEndian` / `WriteInt16LittleEndian` and the matching
-32-/64-bit and big-endian forms use the same signed interpretation. Like the
-unsigned stream operations, they consume or write exactly the integer width.
-Short input throws `EndOfStreamException`, and closed or failing streams throw
-`IOException`. They borrow the `File*` without closing it.
+Source: `core/Binary/BinaryPrimitives.gf`

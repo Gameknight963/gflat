@@ -27,7 +27,7 @@ new errors and changed bindings before applying it.
 Clients supporting versioned workspace edits receive the unsaved document version.
 Other clients receive range edits.
 
-## Hovers and documentation
+## Hovers
 
 Hovers show signatures with source type names. Literal hovers show the checked
 type. Visual Studio adds shared symbol icons and clickable source declarations.
@@ -35,15 +35,6 @@ type. Visual Studio adds shared symbol icons and clickable source declarations.
 The optional `Exceptions:` section lists known outgoing exception types. It
 excludes caught exceptions and failures terminated by a `nothrow` boundary.
 See [Quick Info preferences](#quick-info-preferences).
-
-Write declaration documentation with consecutive `///` lines immediately before
-the declaration and its attributes:
-
-- A blank `///` line separates paragraphs
-- A physical blank line or ordinary comment detaches the preceding documentation
-- Text is displayed literally, including XML tags, Markdown, and links
-- Generic and inherited members use their original declaration's documentation
-- Aliases use their own documentation
 
 ## Project layout
 
@@ -180,6 +171,8 @@ uses UTF-16 positions, and publishes versioned diagnostics.
 
 ## Analysis and maintenance
 
+### Analysis lifecycle
+
 Analysis waits briefly for typing to pause and runs one compilation at a time.
 New edits invalidate older results. Cancellation skips queued work and suppresses
 obsolete results while running compiler work finishes in the background.
@@ -193,6 +186,8 @@ Malformed syntax and ambiguous calls can still prevent semantic results. Generic
 signatures may retain template parameters. Unexpected compiler failures produce
 `GFLS0002`, and analysis resumes on the next edit.
 
+### Automated tests
+
 Run the portable server and editor grammar tests with:
 
 ```text
@@ -203,6 +198,8 @@ The root `dotnet test` also runs these tests. Package CI tests the extracted ser
 grammar, configuration, and Visual Studio rich-content conversion. Run
 `test-package.ps1` in Windows PowerShell (`powershell.exe`) because its installed
 SDK harness uses .NET Framework APIs.
+
+### Manual checks
 
 Check the live IDE after extension changes:
 

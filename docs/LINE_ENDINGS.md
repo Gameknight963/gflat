@@ -41,5 +41,3 @@ old allocation. Length overflow or allocation failure leaves the receiver's
 contents, length, capacity, and storage unchanged.
 
 A source with no endings keeps its storage and capacity without allocating.
-The counted replacement must provide its declared readable bytes when used.
-The C-string overload requires a readable terminator.

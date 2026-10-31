@@ -1,107 +1,59 @@
 # Explicit buffered input
 
-`Standard::IO::BufferedReader` implements `IByteReader` and borrows an underlying
-source cursor. Choose its buffer when constructing it:
+`Standard::IO::BufferedReader` groups small reads from an `IByteReader`.
 
-- `BufferedReader(input, capacity = 4096)` owns a fixed-size `Vector<char>` buffer.
-  Successful construction initializes every buffer byte and makes one buffer
-  allocation. Allocator failure leaves the source unread and cleans up initialized
-  owned fields.
-- `BufferedReader(input, storage, capacity)` borrows a caller-provided writable
-  region of at least capacity bytes. It allocates no buffer and does not initialize
-  the region. Keep those bytes alive, unmoved, and reserved for this adapter until
-  it is destroyed. They must not overlap the reader, source state, retained input,
-  or output buffers passed to Read.
+| Constructor | Buffer |
+| --- | --- |
+| `BufferedReader(input, capacity = 4096)` | Owns a fixed-size buffer |
+| `BufferedReader(input, storage, capacity)` | Borrows caller scratch |
 
-Both overloads reject zero capacity with `IOException` before reading source input
-or accessing scratch. Throwing that error uses normal exception runtime storage.
-It is separate from buffer allocation. The existing constructor and default
-capacity retain their behavior.
-
-Use it when small reads, such as [stream varints](STREAM_VARINT.md) or
-[counted lines](BYTE_READERS.md#read-counted-lines-from-any-byte-source), would
-otherwise make many underlying source calls. Read-ahead is explicit: wrapping a source permits
-a refill of the entire configured capacity even when the consumer requested one byte.
-No global cache or prefetch thread is involved.
+Zero capacity throws `IOException`. Keep the source and any borrowed scratch
+alive and at stable addresses.
 
 ## Read and progress
 
-- Pending buffered bytes are copied up to the requested count and returned immediately.
-  That call does not also refill, even if it returns a short positive result.
-- With no pending bytes, a positive request makes one source `Read` into its
-  buffer, requesting its full capacity. It then returns at most the requested count.
-  It performs no direct large-read bypass or second refill in the same call.
-- A positive read returning zero means that refill observed EOF. EOF is not cached:
-  a later read can consult the source again.
-- A zero-count request calls the underlying `Read(data, 0)` once to preserve source
-  state validation. It consumes no pending bytes and the adapter never dereferences
-  that output pointer. Closed or otherwise unusable sources may still throw.
-- `BufferedCount` reports the unread prefetched bytes. `Capacity` reports the fixed
-  buffer size. Neither property reads the source. No underlying source pointer,
-  seek, discard, reset or rebind API is exposed.
+- Pending bytes are returned immediately, even when fewer than requested
+- With an empty buffer, one source read requests the full buffer capacity
+- `BufferedCount` reports unread prefetched bytes
+- `Capacity` reports the fixed buffer size
+- A zero-count request forwards `Read(data, 0)` for source-state validation
 
-The source controls how long its `Read` blocks. In particular, `File::Read` uses
-`fread`: refilling a large buffer from a pipe or interactive file-like source can
-wait for the requested bytes or EOF. Wrapping such a source can change latency even
-for a one-byte consumer. File already has libc buffering. This adapter is not an
-unconditional performance improvement for File. TCP `recv` can return a short
-available prefix, which the adapter accepts normally.
+A refill can read ahead even when the consumer requested one byte. Continue all
+later consumption through the same adapter to retain that prefetched suffix.
+
+Refill latency depends on the source. File's `fread` can wait for the requested
+bytes or EOF on a pipe, while TCP `recv` may return an available short prefix.
+Choose capacity with that behavior in mind.
 
 ## Peek without consuming
 
-`PeekByte()` returns the next byte as an int from 0 through 255, or -1 when a refill
-reports EOF. Byte 255 is data. Pending bytes are returned without another source
-read. Repeated peeks return the same byte and leave BufferedCount unchanged.
-The next ReadByte, ReadExactly, or Read through this same adapter starts with that
-peeked byte.
+`PeekByte()` returns 0–255 or -1 at EOF. Repeated peeks return the same pending
+byte. With an empty buffer, peeking refills and can advance the underlying cursor.
+The next read through this adapter still receives the peeked byte.
 
-An empty buffer can refill to its configured capacity, so peeking may block and
-advance the underlying source's physical cursor. It does not advance this adapter's
-logical cursor or allocate another buffer. Continue through the same BufferedReader
-instead of bypassing its retained suffix. EOF is not cached permanently.
-
-PeekByte observes the existing failure latch before returning cached input. An error
-or malformed count recorded by Read(data, 0) therefore also blocks later peeks.
-The operation is on BufferedReader rather than IByteReader: the retained buffer
-provides lookahead without requiring provider pushback.
+EOF is checked again on later calls, so an underlying source that gains more data
+can resume.
 
 ## Ownership, moves and cursor exclusivity
 
-The Vector owner field remains noncopyable under existing value rules, including
-when that field is empty in borrowed-buffer mode. Consequently the
-adapter cannot be implicitly copied into a local, argument or field. Explicit move
-transfers the buffer and unread cursor state. No buffer pointer points into the
-adapter itself. Reinitialize a moved local before using it again. Existing pointers
-to the old adapter address do not follow that move.
+The adapter is move-only in both buffer modes. Moving transfers unread cursor
+state and owned storage. Pointers to the old adapter address become stale.
 
-The concrete source must remain alive, unmoved and usable while the adapter is used.
-All consuming reads, body reads and next-message reads must go through the adapter.
-Do not directly read, seek, clear, move or close the underlying source while using
-this buffered cursor, or install another independently consuming adapter over it.
-The compiler does not prove every external alias obeys this rule.
+Destruction releases the owned buffer and abandons unread prefetched bytes.
+The underlying source has already advanced past those bytes. Keep the adapter
+until all needed input has been consumed.
 
-Destruction frees an owned buffer only. Caller scratch is never freed. It never closes, flushes or rewinds the
-source. Unread prefetched bytes are abandoned when the adapter is destroyed. The
-underlying cursor has already advanced past them. There is no pushback or rollback.
-Do not reuse or modify caller scratch while the adapter may hold unread bytes.
-Moving inline scratch, reallocating its buffer, or freeing it invalidates the borrow.
-A heap allocation can keep its address through an ownership move, but its new owner
-must still outlive the adapter's use.
+Read output must be separate from scratch and adapter/source state. While the
+adapter holds pending bytes, reserve borrowed scratch exclusively for it.
 
-The output buffer passed to `Read` must not overlap scratch, adapter/source state or the
-source's retained backing storage. Output pointers are borrowed for the call only.
-
-If an underlying call throws or reports more bytes than requested, the adapter
-latches failure. Further reads and peeks throw `IOException` without touching the source,
-including zero-count reads. Underlying exceptions propagate unchanged and may have
-consumed an unknown prefix. Recovery cannot be reconstructed from counters. Pending
-properties remain inspectable, but there is no reset/retry guarantee.
+A source exception or over-reported count permanently fails the adapter. Later
+reads and peeks throw `IOException`, including zero-count reads. Counters remain
+inspectable, but an exception can leave an unknown amount of input consumed.
 
 ## One cursor for prefix and body
 
-This complete program writes a small recorded message, then reads both its canonical
-varint prefix and payload through the same buffered cursor. Opening the output
-truncates an existing file at the supplied path.
+This example records a length-prefixed payload, then reads it through one cursor.
+Opening the output truncates the supplied file.
 
 ```csharp
 using Standard::IO;
@@ -135,16 +87,10 @@ int main(int argc, char** argv)
 }
 ```
 
-The same prefix/body code accepts an optional open `Windows::TcpClient` as the
-constructor's source. Continue reading any next message through `input` as well:
-bytes of that message might already be prefetched. Production code must enforce its
-own payload-size limits before allocating or reading a declared body.
+The same code accepts a Windows TcpClient. Enforce application size limits before
+allocating or reading a declared payload, then read the next message through the
+same buffered cursor.
 
 ## Dependencies
 
-`core/IO/BufferedReader.gf` uses existing `IByteReader`, `IOException`, Vector and Span
-APIs. Manual source selections must include the normal Vector/Span/query-interface,
-Memory/BadAllocException and Exception dependencies. The owned buffer uses initialized Vector elements.
-The normal standard-library source glob includes these dependencies. Construction
-uses the selected Memory allocator in owned mode. Borrowed mode retains the same
-source dependencies but makes no buffer allocation.
+Source: `core/IO/BufferedReader.gf`, using IByteReader, Vector, and IO exceptions.

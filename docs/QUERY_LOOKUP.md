@@ -1,13 +1,14 @@
-# Materialize ordered groups
+# Group query results by key
 
-`ToLookup(keySelector)` eagerly consumes the query and returns an owning
-`HashMap<K, Vector<T>>`. `ToLookup(keySelector, valueSelector)` returns
-`HashMap<K, Vector<V>>`. This is a plain map of vectors: map enumeration order is
-unspecified, while each group's vector follows source encounter order. A missing
-key behaves like any other missing HashMap key.
+`ToLookup(keySelector)` returns an owning `HashMap<K, Vector<T>>`.
+`ToLookup(keySelector, valueSelector)` groups projected values in
+`HashMap<K, Vector<V>>`.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
 
 int Parity(int value) => value % 2;
 long Square(int value) => (long)value * (long)value;
@@ -27,41 +28,24 @@ int main()
 }
 ```
 
-Selectors use ordinary by-value signatures `K(T)*` and `V(T)*`. Keys require
-`IHashable` and matching `IEquatable<K>`, as with HashMap. Hash and equality must
-agree, and stored keys must keep stable identity. Equal keys group together.
-The first stored key remains the representative, and later temporary keys are
-destroyed normally. They do not trigger duplicate-key errors.
+Groups keep source encounter order. Map iteration order is unspecified.
+Equal keys join the same group, with the first stored key representing it.
+Keys require stable `IHashable` and matching `IEquatable<K>` behavior.
 
-Each source element reads terminal `Current` once into a local value, invokes
-the key selector, then invokes the optional value selector. Callback arguments
-follow normal copy/move rules. The one-selector overload moves the original local
-element into its group, not the callback argument copy. Selected keys and values
-also move into their owning containers. A new group's first value is staged in
-a local vector before inserting that group into the map. Internal map-value
-pointers are never retained across map insertion or selector calls. Ordinary
-allocator contracts still apply when a group's vector grows.
+## Selectors and results
 
-The result owns its keys and vectors. Borrowed fields inside a key or grouped
-value keep their usual backing-owner lifetime obligations. Do not select a view
-borrowing a temporary selector argument. Source/query values follow ordinary
-copy/move rules, and borrowed adapters still require their backing owners alive.
-Callbacks must respect the source's normal mutation and lifetime rules.
+Each element's `Current` is read once, then the key selector runs, followed by
+the optional value selector. Their types are `K(T)*` and `V(T)*`. Arguments
+follow value-copy rules. A selected key or value must not borrow storage owned
+only by that temporary argument.
 
-The map indexer returns a reference to its vector, so `lookup[&key].AsSpan()`
-borrows the group's elements without copying the vector. Keep the map alive and
-avoid changes that invalidate that group or its storage while using the span.
-Use `Find` when the key may be absent. The indexer throws for a missing key.
+The map indexer returns a reference to its vector. `lookup[&key].AsSpan()`
+therefore borrows group elements. Keep the map and group storage valid while
+using that span. Use `Find` when a key may be absent. The indexer throws for a
+missing key.
 
-An empty source returns an empty map without internal allocation or selector
-calls. A source iterator can itself allocate. Nonempty inputs allocate map and
-group-vector storage and can allocate for element/selector argument copies.
-Capacity and size limits follow the existing HashMap and Vector contracts.
+An empty source produces an empty map. If iteration, callbacks, or allocation
+fail, the partial result is cleaned up. Consumed input and callback effects
+remain visible. See [query ownership](QUERIES.md#ownership).
 
-Iterator, selector, hashing, equality, capacity, and allocation failures propagate.
-The partial map, staged group, local element/key/value and iterator are destroyed
-normally. Failed assignment preserves an existing destination map. Consumed
-input and callback side effects are not rolled back.
-
-For selective sources include `Queries/enumerable_to_lookup.gf`, the Enumerable
-interfaces, and the existing HashMap/Vector hashing and equality dependencies.
+Source: `Queries/enumerable_to_lookup.gf`, with HashMap and Vector dependencies.

@@ -22,10 +22,17 @@ int main()
 }
 ```
 
-- `ReadToEnd(input, maximumBytes)` returns a new owning String
-- `ReadToEnd(input, ref text, maximumBytes)` clears `text` and reuses its capacity
-- Omitting `maximumBytes` uses the largest `nuint` value
-- Embedded zeros, line endings, and high bytes are preserved
+## Parameters and result
+
+| Parameter | Meaning |
+| --- | --- |
+| `input` | Source, read from its current position and left open |
+| `text` | Reusable destination, cleared before the first read |
+| `maximumBytes` | Largest accepted input length, defaulting to the largest `nuint` |
+
+`ReadToEnd(input, maximumBytes)` returns a new owning String.
+`ReadToEnd(input, ref text, maximumBytes)` reuses the destination's capacity.
+Both preserve the input bytes, including embedded zeros and line endings.
 
 ## Limits and failures
 
@@ -33,15 +40,14 @@ An exact-length input succeeds. A longer input throws `IOException` after receiv
 one byte beyond the limit. A zero limit probes for EOF with a one-byte read.
 Short positive reads continue until the source reports EOF.
 
-The limit counts input bytes. String spare capacity, its trailing zero, and source
-buffering use additional memory. With the ref overload, earlier completed chunks
-remain after failure. Input may have consumed further bytes before a source or
-allocation error. A reader reporting more bytes than requested raises `IOException`.
+Source errors propagate. With the ref overload, completed chunks remain in `text`
+after failure. A source or allocation error can occur after further input has
+already been consumed.
 
 ## Borrowing
 
-The helper borrows the source until return and leaves it open at its new position.
-Buffered sources can read ahead. Keep the source alive and unmoved. When reusing a
-String, keep its state and storage independent of the source. Source callbacks
-must not access the destination through another alias. Clearing or growing the
-destination can invalidate its old views.
+Buffered sources can read ahead. Continue through the same adapter to consume
+its buffered tail.
+
+For the ref overload, source callbacks must keep their state and storage independent
+of the destination. They must not access `text` through another alias while reading.

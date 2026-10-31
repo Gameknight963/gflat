@@ -36,16 +36,13 @@ namespace.
 | `Standard::Net` | Numeric addresses, endpoints, and networks |
 | `Standard::Hashing` | Checksums and digest implementations |
 | `Standard::Threading` | Atomic integer operations |
-| `Standard::Reflection` (planned) | Reflection descriptors |
 
-Ordinary library APIs use these subject namespaces. Reflection's move is
-deferred: `TypeInfo` and `TypeKind` currently remain in `Standard`.
-Deliberate global APIs remain valid, including `Console`, `Exception`, `Memory`,
-and the selected `GC` alias.
+`TypeInfo` and `TypeKind` are in Standard. Console, Exception, Memory, and the
+selected GC alias are global.
 
 Use `using Standard::Text;` for `String`, its `s`/`s$` literals, and borrowed text views.
-The formatting contracts `ITextWriter`, `IFormattable`, and `IStringConvertable`
-remain global. Primitive `Format` overloads remain in `Standard`.
+The formatting contracts ITextWriter, IFormattable, and IStringConvertable are
+global. Primitive Format overloads are in Standard.
 
 ## Core
 

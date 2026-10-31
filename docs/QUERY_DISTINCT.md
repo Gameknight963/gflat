@@ -1,11 +1,12 @@
 # Lazy distinct values
 
-`Distinct()` visits the first occurrence of each value in source order. It is an
-optional query extension using the existing `HashSet<T>`, without materializing
-the entire result before yielding its first value.
+`Distinct()` yields the first occurrence of each value in encounter order:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
 
 int main()
 {
@@ -18,67 +19,28 @@ int main()
 }
 ```
 
-`T` must support `IHashable` and `IEquatable<T>` with consistent, stable behavior:
-equal values must have equal hashes. The same requirements as `HashSet<T>` apply.
-Elements read from borrowed storage must be copyable because the set owns its
-keys. Hashing, equality, element copies, and source iteration can allocate or
-throw. No GC or compiler-specific collection support is involved.
+Values must implement `IHashable` and `IEquatable<T>` with stable behavior.
+Equal values need equal hashes. Each iterator owns a hash set that grows with
+the number and size of distinct values.
 
-## Laziness and ownership
+## Evaluation
 
-The query source stores the upstream source view. Every fresh enumerator owns
-its own empty seen-key set and its upstream iterator. Creating that set allocates
-no backing storage. Advancing can allocate as new keys are inserted. Custom source
-copies or iterator construction may allocate or throw independently.
+Each move reads candidates until it finds an unseen value. `Current` then
+reads that source position again. A preceding selector can therefore run
+during the move and on every `Current` read. Use a selector whose value stays
+consistent at each position.
 
-Distinct state is independent across repeated enumerations. The source itself
-still determines what reenumeration means: a borrowed span starts at its first
-element, while a file-line source continues from the file's current position.
-Keep borrowed source storage alive and stable throughout use. Composing a query
-does not extend its lifetime.
+`Count()` and `Any()` still inspect candidate values to establish distinctness.
+After a failed move, discard the iterator. Its source may already have advanced
+and its set may contain earlier keys.
 
-The iterator stores one owned key per distinct value. Duplicate candidate values
-are destroyed normally. Iterators and seen-key sets are cleaned up on normal
-completion, early `Any`, `Take`, `break`, or exception unwinding. A direct iterator
-variable retains its resources until it leaves scope. `Take(0)` does not advance
-or allocate seen-key storage, but still constructs the upstream iterator.
-
-Unlike a plain query's `Count` or `Any`, these terminals over `Distinct` must read
-candidate values to hash and compare them. They do not bypass a preceding selector.
-The source is not modified by the operation itself. Callbacks and user-defined
-copy/hash/equality methods can have their own effects.
-
-## Current values are not cached
-
-`MoveNext()` reads upstream `Current` to insert/check a key. Every read of
-`Distinct`'s own `Current` reads upstream `Current` again, like the existing
-`Where` adapter. It does not return the set's stored key. A preceding selector
-can therefore run during `MoveNext` and again each time `Current` is read.
-
-The value and its equality/hash meaning must remain stable at each source
-position. Use stable getters and selectors when their returned value participates
-in distinctness. A selector that returns different values on successive reads
-does not produce reliable distinct results. This operator does not cache or
-stabilize it.
-
-The order guarantee identifies first-occurrence **positions**, not object
-identity. For owning/projected values, the value returned by `Current` is a fresh
-ordinary read/copy from that source position and can have a different address
-from both the source object and the key retained by the set. With equality based
-on only some fields, a stable source returns the first occurrence's other payload
-fields too. Repeated `Current` reads follow ordinary value copying rules.
-
-Before the first successful advance and after the end, `Current` throws. A failed
-advance invalidates `Current`. It may already have advanced the source or built
-some seen-key state. Dispose of that iterator by leaving its scope rather than
-assuming it can recover or roll back. Exceptions from an upstream `Current`,
-selector, hash/equality method, or allocation propagate normally.
-
-## Unique lines without loading the file
+## Unique file lines
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::IO; using Standard::Queries;
+using Standard;
+using Standard::IO;
+using Standard::Queries;
 
 int main()
 {
@@ -96,15 +58,14 @@ int main()
 }
 ```
 
-The line reader reuses its current String. Distinct retains independent owned
-snapshots of seen lines, so replacing the current line on the next advance does
-not change earlier keys. Blank lines and embedded NULs are preserved as counted
-data. LF/CRLF input endings are removed by the line reader. Each emitted line
-gets one binary LF. Bare CR within a line remains data. Memory grows with the
-unique line contents, rather than with the complete file. This is not a bounded
-memory algorithm for a file containing arbitrarily many unique lines.
+The line reader reuses its current String. Distinct stores independent copies
+of seen lines. Memory grows with the unique line contents. LF and CRLF input
+endings are removed, and each output line receives one LF. Bare CR and embedded
+NUL remain part of a line.
 
-For explicit source selection, include `Queries/enumerable_distinct.gf` and
-`Queries/DistinctSource.gf` alongside the usual query sources, `Collections/HashSet.gf`,
-`Collections/HashMap.gf`, and their hash/equality dependencies.  The existing qualified-element `IEquatable<T>` constraint limitation
-also applies here.
+Each enumeration gets a new seen-key set. The source determines where it
+starts: a span restarts, while a file-line view continues at the file's current
+position. Keep borrowed source storage alive. See [query ownership](QUERIES.md#ownership).
+
+Sources: `Queries/enumerable_distinct.gf`, `Queries/DistinctSource.gf`, and
+[HashSet](HASH_COLLECTIONS.md) with its dependencies.

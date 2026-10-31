@@ -1,17 +1,12 @@
 # Padded Base32
 
-For chunked input, [Base32Encoder](BASE32_ENCODER.md) streams through `ITextWriter`
-without materializing the whole input or output. [Base32Decoder](BASE32_DECODER.md)
-provides strict streaming decoding through the same borrowed writer contract.
-
-`Standard::Encoding::Base32` implements standard padded Base32 with uppercase `A–Z` and `2–7`.
-It follows [RFC 4648 sections 3 and 6](https://www.rfc-editor.org/rfc/rfc4648.html#section-6).
-It adds no whitespace, line breaks, or terminator. Lowercase, aliases such as
-`0`/`1`, nonalphabet bytes, missing/excess/misplaced padding, and nonzero unused
-padding bits are rejected.
+`Standard::Encoding::Base32` encodes bytes with the uppercase `A`–`Z`, `2`–`7`
+alphabet and `=` padding from [RFC 4648](https://www.rfc-editor.org/rfc/rfc4648.html#section-6).
 
 ```csharp
-using Standard; using Standard::Encoding;
+using Standard;
+using Standard::Encoding;
+
 int main()
 {
     char[8] encoded;
@@ -25,50 +20,48 @@ int main()
 }
 ```
 
-All four methods are `nothrow` and allocate nothing:
+| Operation | Result |
+| --- | --- |
+| `TryGetEncodedLength(count, ref length)` | Padded output length. Overflow returns false and zero. |
+| `TryEncode(data, count, output, capacity, ref written)` | Encoded bytes |
+| `TryGetDecodedLength(text, count, ref length)` | Decoded length after validating the input |
+| `TryDecode(text, count, output, capacity, ref written)` | Decoded bytes after validating input and capacity |
 
-- `TryGetEncodedLength(count, ref length)` returns the padded byte count, or false
-  with zero length if it would overflow `nuint`
-- `TryEncode(data, count, output, capacity, ref written)` consumes counted binary
-  bytes, including embedded NUL. It checks encoded size and capacity before writes.
-- `TryGetDecodedLength(text, count, ref length)` validates the entire counted
-  encoding, returning its decoded size or false with zero length
-- `TryDecode(text, count, output, capacity, ref written)` validates the complete
-  input and checks capacity before writing any decoded byte
+All lengths count bytes. Results omit a NUL terminator. Empty input succeeds.
+Failure sets the result count to zero and preserves the output buffer.
 
-Input/output arguments use the same pointer/count conventions as `Base64`.
-Encoding buffers must be disjoint. Decoding supports disjoint buffers or the
-exact same starting address. Arbitrary partial overlap is unsupported. Buffers
-remain valid for their stated lengths, and metadata references must be separate
-from both buffers. A failed encode/decode sets
-`written` to zero and leaves every output byte unchanged. Insufficient capacity
-does not truncate. Bytes beyond a successful result remain untouched. Results
-are counted data without an appended NUL. Empty input succeeds with zero length
-without reading input or output storage.
+Encoding requires separate input and output buffers. Decoding also permits
+in-place output at the input's starting address. Keep count outputs separate
+from both buffers.
 
-Every five input bytes produce eight digits. Partial groups of one, two, three,
-or four bytes use two, four, five, or seven digits, respectively, followed by
-six, four, three, or one `=` characters. The final digit's unused low bits are
-zero. Complete groups require no `=`. The strict decoder accepts exactly those
-canonical shapes, so each byte sequence has one accepted representation.
+Five input bytes produce eight characters. Partial groups use the following padding:
 
-For selective builds, include `core/Encoding/Base32.gf`.
+| Remaining input bytes | Alphabet characters | `=` characters |
+| --- | --- | --- |
+| 1 | 2 | 6 |
+| 2 | 4 | 4 |
+| 3 | 5 | 3 |
+| 4 | 7 | 1 |
+
+The decoder requires this padding and zero unused bits. It rejects lowercase,
+whitespace, and characters outside the alphabet. RFC examples include
+`f → MY======`, `fo → MZXQ====`, and `foo → MZXW6===`.
+
+For chunked input, use [Base32Encoder](BASE32_ENCODER.md) or
+[Base32Decoder](BASE32_DECODER.md).
 
 ## Owning results
 
-`Base32Text::Encode(data, count)` and `Base32Text::Decode(text, count)` return
-owning `String` values. Encoding checks length overflow before reading input.
-Decoding validates the whole encoding before allocating result storage. Invalid
-input throws `Exception`. Result allocation failure follows the usual
-`BadAllocException` contract. Input stays readable and unchanged during the call.
-
-Decoded strings contain counted binary bytes, including embedded NUL. Use
-`Length` when passing that data onward. A C-string consumer would stop at the
-first NUL. Empty input produces an empty String without allocating result storage.
+`Base32Text::Encode(data, count)` and `Decode(text, count)` return `String`
+values. Invalid text throws `Exception`. Allocation failure throws
+`BadAllocException`. Decoded strings can contain NUL bytes, so pass their
+`Length` to counted consumers.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Encoding;
+using Standard;
+using Standard::Encoding;
+
 int main()
 {
     String encoded = Base32Text::Encode("a\0b", 3);
@@ -78,8 +71,4 @@ int main()
 }
 ```
 
-For selective use, include `core/Encoding/Base32Text.gf` plus the normal String
-dependencies.
-
-Official [RFC test vectors](https://www.rfc-editor.org/rfc/rfc4648.html#section-10)
-include `f → MY======`, `fo → MZXQ====`, and `foo → MZXW6===`.
+Sources: `core/Encoding/Base32.gf`, `core/Encoding/Base32Text.gf`

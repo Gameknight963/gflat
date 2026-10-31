@@ -34,12 +34,9 @@ For a file containing several members, call the operation for each member.
 
 ## Buffers
 
-Source supplies `count` readable bytes and output supplies `capacity` writable
-bytes. The ranges must be disjoint. Both count outputs must be initialized,
-separate from each other and both buffers. Keep all storage alive until return.
-Zero input count or output capacity leaves its corresponding pointer untouched.
-Use valid dummy storage for an empty buffer. Empty output still requires a
-complete compressed body and footer.
+Source and output ranges must be disjoint. The consumed/written output variables
+must also be separate from each other and both buffers. Zero output capacity can
+decode an empty stream, provided its complete framing is present.
 
 ## Results
 

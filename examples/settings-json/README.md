@@ -1,35 +1,23 @@
-# Convert simple settings to JSON
+# Convert settings to JSON
+
+Read `key=value` lines from stdin and write a JSON object:
 
 ```powershell
 gflat build examples/settings-json/settings-json.gfproj
 ' title = Hello=world', 'empty =', 'language = gflat' | ./examples/settings-json/bin/Debug/settings-json.exe
 ```
 
-## Settings format
+Lines split at the first `=`. Surrounding ASCII whitespace is trimmed from keys
+and values. A first nonwhitespace `#` starts a comment. Blank lines are ignored.
+Quotes, backslashes, and later `#` characters are ordinary data.
 
-The program reads standard input until EOF, then writes a JSON object. Keys and values
-are strings. Each nonblank line is `key=value`, split at the first `=`. ASCII whitespace
-around the key and value is trimmed. Whitespace inside them is preserved. A line whose
-first nonwhitespace byte is `#` is a comment. Inline `#`, backslashes, and quotes are
-ordinary data.
+Keys must be nonempty and unique. Keys and values must be valid UTF-8. Empty
+values and embedded NULs are preserved in the JSON strings. Property order is
+unspecified.
 
-Keys must be nonempty and unique, with case-sensitive byte comparison. Empty values are
-allowed. Accepted keys and values must be valid UTF-8. Embedded null bytes are retained
-through counted spans and escaped in the JSON output. A UTF-8 BOM has no special
-meaning. Output property order is unspecified.
+Each line can contain at most 4095 bytes, excluding LF or CRLF. The map retains
+all accepted settings until output, so memory use grows with input size.
 
-## Limits and errors
-
-Each physical line has a 4095-byte payload limit after the host console stream's newline
-translation. CRLF and LF delimit lines. See the [console text-mode
-rules](../../Standard/libc/README.md). Overlong lines, malformed settings, duplicates,
-and invalid UTF-8 return 2 with a line diagnostic on stderr. No JSON is emitted until
-all input has passed validation. Allocation or I/O failures return 1. An output failure
-can leave partial JSON. Successful output ends with a newline and returns 0.
-
-## Storage
-
-Parsing borrows slices of a reusable stack buffer. Only accepted keys and values are
-copied into an owning `HashMap<String, String>` before the next read. The map retains
-all accepted settings until output is complete, so total memory use grows with the
-input.
+All input is validated before JSON is written. Exit codes are 0 for success,
+2 for invalid or oversized input, and 1 for IO or allocation failure. Input
+errors go to stderr with a line number. Output failures can leave partial JSON.

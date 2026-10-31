@@ -1,14 +1,13 @@
 # Strings
 
-`Standard::Text::String` owns a null-terminated byte buffer. `Length` excludes the terminator.
-Embedded zero bytes count toward its length. A copy owns independent storage,
-and `move` transfers storage. `Data` and `ToCString()` borrow storage until the
-string is mutated, moved, or destroyed. `String::From(text)` reads a C string.
-`String::From(text, count)` preserves every counted byte.
+`Standard::Text::String` owns a byte buffer with a trailing NUL. `Length` counts
+payload bytes, including embedded NULs. Copies own independent storage, while
+`move` transfers storage.
 
 ```csharp
 using Standard::Text;
 using Standard;
+
 String text = s" hello ";
 text.Trim();
 text.Append('!');
@@ -17,120 +16,27 @@ bool found = text.Contains("ell");
 nuint offset = text.IndexOf('!');
 ```
 
-Search, indexing, slicing, and removal use byte offsets. They do not split on
-Unicode character boundaries automatically. UTF-8 validation and scalar decoding
-are available separately through `Standard::Text::Utf8`.
+## Construction and views
 
-`Equals(&other)` compares another String. `Equals(text)` compares a C string,
-and `Equals(data, count)` compares exactly the counted bytes, including embedded
-zeros. All three compare byte values for equality without allocation
-or locale rules. A C string ends at its first zero, so `s"a\0b".Equals("a")`
-is false. Use the counted overload to compare all three bytes. A counted length
-mismatch returns false without reading the input buffer. These methods also work
-through an immutable String pointer.
+| Operation | Result |
+| --- | --- |
+| `new String()` | Empty String |
+| `String::From(text)` | Copies a C string before its first NUL |
+| `String::From(data, count)` | Copies counted bytes |
+| `Data`, `ToCString()` | Readonly pointer into owned storage |
+| `AsSpan()` | Mutable `Span<char>` over `Length` bytes |
+| `AsReadOnly()`, `AsImmutable()` | `Span<readonly(char)>` over `Length` bytes |
 
-The optional `string_span.gf` source adds `text.AsSpan()`, `text.AsReadOnly()`, and
-`text.AsImmutable()`. All borrow exactly `Length` bytes, including embedded zeros, without copying the
-owner or allocating. `AsSpan` requires a mutable receiver and returns
-`Span<char>`. `AsReadOnly` accepts a shallow readonly receiver. `AsImmutable`
-accepts an immutable receiver. Both return `Span<readonly(char)>`: shallow and
-deep protection are equivalent for individual characters. Temporary receivers
-are accepted and live only through the full expression. The returned view does
-not extend that lifetime. The explicit free ref overloads require existing
-storage. Empty views have null data,
-even when the String retains an allocation. Neither spare capacity nor the shared
-empty sentinel or trailing terminator is exposed through these views.
+Retain the String owner while using its pointers or views. Reallocation,
+structural edits and destruction can invalidate them. Moving transfers storage
+to the new owner. A view from a
+temporary String lasts only through that expression. Empty spans have null data.
 
-Keep the owner alive and at a stable address. Growth, moving/destroying the owner,
-and structural changes invalidate views. Assigning individual bytes through a
-mutable span changes the String without changing its length. It does not validate
-UTF-8. Slice bounds remain byte bounds. End a view's use before calling `Remove`,
-`Append`, or another structural operation. These are raw borrows, without lifetime
-tracking. Explicit source selections also need the ordinary `Span` dependencies.
-`Text/String.gf` alone does not acquire a dependency on Span.
+## Equality, ordering, and search
 
-`IndexOf` and `LastIndexOf` return `String::NotFound` (the largest `nuint`) when
-no match exists. An empty needle matches at the search start for `IndexOf`,
-and at `Length` for `LastIndexOf`.
-`StartsWith`, `EndsWith`, `Contains`, `IndexOf`, and `LastIndexOf` accept C strings
-or counted byte sequences. `LastIndexOf` also accepts a single `char`, searches
-the entire string backwards, and includes overlapping occurrences. Counted
-patterns preserve embedded zero bytes. C-string patterns stop at their first
-zero. Search patterns may borrow the string's own storage. Forward character
-search also accepts a start offset. Invalid start and
-substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
-
-Substring searches reuse `Standard::Text::ByteSearch`'s Two-Way search with constant extra
-storage, no allocation, and O(string length + pattern length) worst-case work.
-Character search is linear. Explicit source selections containing `Text/String.gf`
-must also include `Text/ByteSearch.gf`. Projects referencing the complete standard
-library already include it.
-
-`Substring` allocates an independent string. `Remove`, character `Replace`, and
-ASCII-whitespace `Trim`, `TrimStart`, and `TrimEnd` modify the existing buffer
-without allocation. Trimming preserves its capacity and storage address, removes
-only space, tab, CR, LF, vertical tab, and form feed, and maintains the trailing
-zero byte. Embedded zero bytes and non-ASCII bytes are not whitespace. `Append`
-accepts a character, C string, counted bytes, or borrowed String pointer. Appending
-from the string's own buffer is supported with or without growth.
-
-`PadLeft(width, padding = ' ')` and `PadRight(width, padding = ' ')` extend the
-same string to a total byte width. They never truncate and do nothing when
-`width <= Length`. Padding is one byte, not a Unicode scalar or display column.
-Zero and non-ASCII padding bytes are allowed and count toward `Length`. Existing
-capacity is reused without allocation. Otherwise, one reservation happens before
-any mutation, so allocation failure or an impossible width preserves the original
-storage, capacity, and contents. The trailing zero byte is maintained separately
-from any counted zero padding.
-
-`ShrinkToFit()` sets `Capacity` to `Length` while preserving every counted byte
-and the trailing null byte. An already-tight String is unchanged. For an empty
-String, it frees retained storage without allocating and restores empty storage.
-For a nonempty String with spare capacity, it allocates `Length + 1` bytes before
-replacing the old buffer. Allocation failure leaves the existing storage,
-capacity, length, and bytes unchanged. Successful shrinking invalidates borrowed
-data pointers and spans like growth. Failed shrinking preserves them. `Clear`,
-`Resize`, `Remove`, and trimming continue to retain spare capacity unless the
-caller explicitly requests shrinking.
-
-`Resize(length, fill = '\0')` sets the counted byte length, preserving the prefix.
-Growing initializes every new byte with `fill`. Shrinking keeps capacity and
-writes a terminator at the new end. Resizing to the current length does nothing,
-including for a default empty string. Zero and non-ASCII fill bytes are allowed:
-`text.Resize(16)` creates sixteen initialized bytes, even though a C-string
-consumer stops at the first zero. Existing capacity is reused. Growth reserves
-before changing bytes, so overflow or allocation failure preserves the original
-length, capacity, storage, and contents. Fill is passed by value and may come
-from the same string before growth. As with other mutations, borrowed views may
-observe changed contents or be invalidated by buffer relocation.
-
-`Insert(index, text)` accepts a C string, counted byte sequence, character, or
-borrowed String pointer. Inserting at `Length` appends. Input borrowed from the
-same string is snapshotted before mutation, including when existing capacity is
-sufficient or trimming left readable input beyond `Length` within that capacity.
-Other input needs no temporary allocation. Invalid indices, length
-overflow, and allocation failure leave the original contents unchanged. As with
-all counted APIs, the input must cover the requested readable bytes.
-
-`Replace(oldText, newText)` and the counted overload
-`Replace(oldText, oldCount, newText, newCount)` replace nonoverlapping matches
-from left to right. The old pattern must be nonempty. An empty replacement
-removes matches. Inputs can borrow the original string's storage. A matching
-replacement builds a separate buffer and commits it only after success, so
-allocation failure preserves the original. If no match exists, no allocation
-or mutation occurs. Matching replacements invalidate previous storage views.
-
-Equality, comparison, and hashing use complete byte contents, including embedded
-zero bytes. Ordering is unsigned byte order, independent of locale. String does
-not require valid UTF-8. Binary callers may store arbitrary bytes.
-
-`CompareTo(&other)` compares another String. `CompareTo(data, count)` compares
-exactly the counted bytes, including embedded zeros. `CompareTo(text)` compares
-a C string ending at its first zero. Each returns a negative value, zero, or a
-positive value for less than, equal to, or greater than. These borrowed-input
-overloads allocate nothing and do not change either input. Counted input must
-cover `count` readable bytes. C-string input must contain a readable terminator.
-The String retains its full length even when compared to a C string.
+`Equals` and `CompareTo` accept a String pointer, C string, or pointer and byte
+count. They compare unsigned bytes. `CompareTo` returns negative, zero, or
+positive for less, equal, or greater.
 
 ```cpp
 using Standard::Text;
@@ -148,29 +54,58 @@ int main()
 }
 ```
 
-Empty construction and the `Length`, `Capacity`, `IsEmpty`, and `Data` getters
-are explicitly `nothrow`. So are `ToCString()`, `Equals`, `CompareTo`,
-`GetHashCode`, `StartsWith`, `EndsWith`, `LastIndexOf`, `Trim()`, `TrimStart()`,
-`TrimEnd()`, `Clear()`, and character-to-character
-`Replace`. These operations allocate
-nothing under their input memory preconditions. Allocating operations, indexed
-access, ranges, and forward searches retain their existing exception contracts.
+`StartsWith`, `EndsWith`, `Contains`, `IndexOf`, and `LastIndexOf` accept C-string
+or counted patterns. Character searches accept a single `char`. Counts and
+offsets are bytes. Use [Utf8](UTF8.md) for scalar boundaries.
+
+| Search case | Result |
+| --- | --- |
+| Missing match | `String::NotFound`, the maximum `nuint` |
+| Empty pattern, `IndexOf` | Search start |
+| Empty pattern, `LastIndexOf` | `Length` |
+
+Patterns may borrow the String's own bytes. Counted patterns include NUL, while
+C strings end there. For example, `s"a\0b".Equals("a")` is false because the
+String still has three bytes. Substring search takes O(text length + pattern length).
+
+## Editing
+
+| Method | Effect |
+| --- | --- |
+| `Append(value)` | Adds a character, C string, counted bytes, or another String's bytes |
+| `Insert(index, value)` | Inserts before a byte offset. `Length` appends. |
+| `Remove(start, count)` | Removes bytes and shifts the suffix |
+| `Replace(char, char)` | Changes matching bytes in place |
+| `Replace(oldText, newText)` | Replaces nonoverlapping matches from left to right |
+| `Trim`, `TrimStart`, `TrimEnd` | Remove ASCII whitespace in place |
+| `PadLeft(width, byte)`, `PadRight(width, byte)` | Grow to a byte width, using space by default |
+| `Substring(start, count)` | Returns an independent String |
+
+Range errors throw. Append and Insert support input from the same String,
+including initialized spare bytes. String-pattern Replace requires a nonempty
+old pattern. An empty replacement removes matches. A match builds replacement
+storage before committing, while no match retains the original storage.
+
+Trimming removes space, tab, CR, LF, vertical tab, and form feed. Padding and
+offsets measure bytes rather than displayed columns. For line-ending conversion,
+use [`ReplaceLineEndings`](LINE_ENDINGS.md).
+
+## Capacity and length
+
+- `Reserve(capacity)` grows storage while preserving the counted contents
+- `Resize(length, fill = '\0')` preserves the prefix and fills new bytes
+- `Clear()` empties the String while retaining capacity
+- `ShrinkToFit()` reduces capacity to Length, releasing storage when empty
+
+Shrinking length and trimming retain spare capacity. Allocating edits prepare
+new storage before replacing it, so size overflow or allocation failure preserves
+the original String. Successful buffer replacement invalidates old borrows.
 
 ## Repeated counted bytes
 
-`text.Repeat(times)` returns a new owning String containing `times` copies of
-all counted source bytes, including embedded zeros and arbitrary non-UTF-8 bytes.
-The source is unchanged. A zero count or empty source returns empty without
-allocation, even if the source retains capacity. One repetition is an independent
-copy. Changing or destroying either nonempty owner does not affect the other.
-The result always has a trailing zero outside its counted Length.
-
-The method checks `Length * times <= nuint maximum - 1` before allocating result
-storage. Overflow throws `Exception`. Allocation failure throws `BadAllocException`.
-Both preserve the source and an existing assignment target. Positive nonempty
-results use one allocation. Bytes are filled in linear work by appending doubled
-prefixes into the reserved output, without intermediate String copies. This
-repeats bytes, not Unicode scalars, display columns or a C-string prefix.
+`Repeat(times)` returns a String containing that many copies of the complete
+counted contents. Zero repetitions or empty input returns empty. Result-size
+overflow throws `Exception`, and allocation failure throws `BadAllocException`.
 
 ```csharp
 using Standard;
@@ -190,3 +125,6 @@ int main()
     return 0;
 }
 ```
+
+Sources: `core/Text/String.gf`, `string_span.gf` for views, and `Text/ByteSearch.gf`
+for substring search.

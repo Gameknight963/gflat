@@ -1,28 +1,28 @@
 # Floating-point representation
 
-`Standard::Binary::BitConverter` reinterprets IEEE binary32 and binary64 representations:
+`Standard::Binary::BitConverter` converts between floating-point values and
+their IEEE representation bits:
 
 | Function | Result |
 | --- | --- |
-| `FloatToUInt32Bits(float value)` | The 32 representation bits as `uint`. |
-| `UInt32BitsToFloat(uint bits)` | A `float` with exactly those bits. |
-| `DoubleToUInt64Bits(double value)` | The 64 representation bits as `ulong`. |
-| `UInt64BitsToDouble(ulong bits)` | A `double` with exactly those bits. |
+| `FloatToUInt32Bits(float)` | 32 representation bits as `uint` |
+| `UInt32BitsToFloat(uint)` | `float` with those bits |
+| `DoubleToUInt64Bits(double)` | 64 representation bits as `ulong` |
+| `UInt64BitsToDouble(ulong)` | `double` with those bits |
 
 ```csharp
 using Standard::Binary;
-uint negativeZero = Standard::Binary::BitConverter::FloatToUInt32Bits(-0.0f); // 0x80000000
-float restored = Standard::Binary::BitConverter::UInt32BitsToFloat(negativeZero);
+
+uint negativeZero = BitConverter::FloatToUInt32Bits(-0.0f); // 0x80000000
+float restored = BitConverter::UInt32BitsToFloat(negativeZero);
 ```
 
-These are bit reinterpretations, rather than numeric casts. For example,
-converting `1.0f` to its bits produces `0x3f800000`, whereas `(uint)1.0f`
-produces the integer one. The functions preserve signed zero, subnormals,
-infinities, and quiet or signaling NaN payloads. They perform no floating-point
-arithmetic. Later arithmetic on the resulting value can change a NaN's bits.
+For example, `1.0f` has bits `0x3f800000`, while numeric `(uint)1.0f` is one.
+These methods preserve signed zero, subnormals, infinities, and NaN payloads.
+Later floating-point arithmetic can change a NaN's bits.
 
-Every function is allocation-free and `nothrow`. For selective builds, include
-`core/Binary/BitConverter.gf`. On Windows, floating-point code can require the
-toolchain's `_fltused` marker. See [freestanding startup](FREESTANDING_CORE.md#windows-floating-point-marker).
+Use [BinaryPrimitives](BINARY_PRIMITIVES.md) to write those bits with explicit
+byte order. Freestanding Windows builds need the usual
+[`_fltused` startup marker](FREESTANDING_CORE.md#windows-floating-point-marker).
 
-Use explicit byte-order operations when writing the returned bits into files or packets.
+Source: `core/Binary/BitConverter.gf`

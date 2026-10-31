@@ -6,7 +6,8 @@ libc on glibc 2.17 and newer.
 
 ```csharp
 using Standard::Time;
-alias Timer = Standard::Time::Stopwatch<Linux::MonotonicClock>;
+
+alias Timer = Stopwatch<Linux::MonotonicClock>;
 ```
 
 `Linux::MonotonicClock` measures intervals with `CLOCK_MONOTONIC`. Its frequency is
@@ -25,7 +26,8 @@ UTC, using `CLOCK_REALTIME`:
 
 ```csharp
 using Standard::Time;
-Standard::Time::DateTime utc = Linux::SystemClock::GetUtcNow();
+
+DateTime utc = Linux::SystemClock::GetUtcNow();
 utc.Format(Console::Out);
 Console::WriteLine();
 ```
@@ -38,7 +40,7 @@ Console::WriteLine();
 `CLOCK_REALTIME` follows system clock adjustments. Use the monotonic provider for
 elapsed durations. DateTime carries a civil date and time with seconds 0–59 and
 leaves timezone labeling to the caller. Add a UTC marker when serializing these
-values. Successful calls make no application allocation.
+values.
 
 Native references: [clock_gettime](https://man7.org/linux/man-pages/man3/clock_gettime.3.html),
 [Linux clock IDs](https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/time.h),

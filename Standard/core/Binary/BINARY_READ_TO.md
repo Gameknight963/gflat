@@ -25,11 +25,9 @@ int main() nothrow
 - A delimiter at the current position produces an empty slice with null `Data`
 - A missing delimiter returns false, leaves the parent position unchanged, and
   resets `slice` to empty
-- Empty input returns false without reading storage
+- Empty input returns false
 
-Any byte can be a delimiter, including zero and 255. The search is bounded by the
-reader's length and allocates nothing. Repeating a failed call searches the same
-remaining bytes again.
+Any byte can be a delimiter, including zero and 255.
 
 ## Storage lifetime
 

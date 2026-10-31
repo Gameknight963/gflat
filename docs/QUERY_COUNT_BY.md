@@ -1,13 +1,13 @@
-# Count sequence elements by key
+# Count elements by key
 
-`CountBy(selector)` consumes a query and returns an owning `HashMap<K, nuint>`
-containing the number of elements for each selected key. The selector has type
-`K(T)*`. Keys require `IHashable` and the matching `IEquatable<K>` contract,
-following the existing HashMap rules. Hash values and equality must agree and
-remain stable while a key is stored. Map enumeration order is unspecified.
+`CountBy(selector)` returns an owning `HashMap<K, nuint>` with a count for each
+selected key. The selector has type `K(T)*`.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
 
 int Parity(int value) => value % 2;
 
@@ -23,32 +23,18 @@ int main()
 }
 ```
 
-The terminal iterator's `Current` is read once per element, followed by one
-selector call, in source order. Both the local element and the by-value selector
-argument follow ordinary copy/move rules. These copies may allocate or throw.
-The selector result becomes a local key. A new key moves into the map. For an
-equal key, its existing counter increments and the temporary key is destroyed.
-The first stored key remains the representative of its equality class.
+The operator consumes the complete query. For each element it reads `Current`
+once, then calls the selector once. Equal keys share a counter, with the first
+stored key representing that group. Map iteration order is unspecified.
 
-The returned map owns its keys and counters independently of the query. A key
-that itself contains borrowed pointers retains its ordinary lifetime obligations.
-Do not return a key borrowing a temporary selector argument. The query receiver
-and source follow ordinary value-copy/move rules on entry. Borrowed source
-adapters retain their backing-owner lifetime requirements, and callbacks must
-respect the source's existing mutation and lifetime rules.
-The operator does not alter the source's elements or dispose resources borrowed
-by a source adapter. Source values and iterators are destroyed normally.
+Keys must implement `IHashable` and `IEquatable<K>`. Equal keys need equal
+hashes, and stored keys must keep stable hash and equality behavior. A selected
+key must own its data or borrow storage that stays valid for the result map.
+In particular, it must not borrow the selector's temporary by-value argument.
 
-An empty source returns an empty map without allocating internally or invoking
-the selector. A source's own iterator construction or advancement can allocate.
-Other inputs allocate for map storage and may allocate for element/key copies.
-Before incrementing `nuint` maximum, the operator throws
-`Exception("Sequence count overflow")`, matching `Count()`.
+Empty input returns an empty map. Incrementing a counter past `nuint` maximum
+throws `Exception("Sequence count overflow")`. A failed operation cleans up its
+partial map, while consumed input and callback effects remain visible.
 
-Iterator, selector, hashing, equality, capacity, and allocation failures propagate.
-The partial map, local key/element, and iterator are destroyed during unwinding.
-Assigning the failed result to an existing map leaves that destination unchanged.
-External side effects and consumed source input are not rolled back.
-
-For explicit source selection include `Queries/enumerable_count_by.gf`, the
-normal Enumerable interfaces, and HashMap's hashing/equality dependencies.
+See [hash collections](HASH_COLLECTIONS.md) and [query ownership](QUERIES.md#ownership).
+The extension source is `Queries/enumerable_count_by.gf`.

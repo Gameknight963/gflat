@@ -1,8 +1,7 @@
 # Bound output through a borrowed writer
 
-`Standard::Text::LimitedWriter` wraps an `ITextWriter*` and accepts at most the
-specified number of bytes through that adapter. It borrows the destination for
-the lifetime of the adapter.
+`Standard::Text::LimitedWriter` forwards at most a specified byte count to an
+`ITextWriter`.
 
 ```csharp
 using Standard::IO;
@@ -24,46 +23,35 @@ int main()
 }
 ```
 
-A call exceeding `Remaining` throws `IOException` before accessing input or
-calling the sink. It does not truncate, change the allowance, or poison the
-adapter, so a fitting write can follow. A zero-byte call is a no-op after checking
-failure state, even when the allowance is exhausted. It does not ask the sink to
-validate its state. Successful nonempty calls forward once with the original
-pointer/count, then deduct that count. There is no buffer allocation on success.
-Exceptions use normal runtime storage.
+## Allowance and errors
 
-A sink exception propagates unchanged and poisons this adapter, because some
-output may already have been emitted. Later writes, including zero, throw
-IOException without calling the sink. Remaining retains the allowance after the
-last fully successful call. After failure it does not measure how many bytes
-physically remain unwritten. There is no retry, rollback or reset.
+`Remaining` starts at the supplied limit and decreases after each successful
+write. A call exceeding it throws `IOException` before forwarding anything.
+The allowance stays unchanged, so a smaller write can follow. Zero-count writes
+check the adapter's failure state and otherwise do nothing.
 
-The cap applies to accepted bytes at this point in the pipeline. A BufferedWriter
-can accept them before they reach a device. LimitedWriter does not flush it, even
-on destruction. Place the adapter after an encoder if its *encoded* output must
-be bounded. Earlier successful writes remain when a later call exceeds the cap.
-Whole-frame atomicity is not promised. The caller checks `Remaining == 0` before
-starting the next field. Dropping an underfilled adapter does not pad or complete
-that field.
+A destination exception permanently fails the adapter. Later writes throw.
+`Remaining` then reflects the last successful call, while the destination may
+already have accepted part of the failed write.
 
-For example, passing a LimitedWriter to Base64Encoder bounds the encoded output,
-including padding emitted by `Complete()`. Wrapping the encoder instead bounds
-its raw input. A rejection during completion can leave an encoded prefix already
-accepted. The encoder's own failure state still applies even when LimitedWriter
-rejected the call before forwarding it.
+## Placing a limit in a pipeline
 
-Keep the concrete sink and its captured storage alive, usable and unmoved. Input
-must satisfy the sink's stability/overlap requirements and must not overlap the
-adapter's state. This adapter retains no input pointers. Do not interleave writes
-to the underlying sink when enforcing a frame's one allowance.
+- Give a LimitedWriter to an encoder to cap encoded output, including final padding
+- Wrap an encoder in LimitedWriter to cap raw input
+- Check `Remaining == 0` when a field must contain exactly the declared number of bytes
 
-Copies share the sink but have independent allowances and failure flags. They do
-not form a shared cap: two copies with limit 3 can accept six bytes in total. Use
-one retained adapter and pass its borrowed ITextWriter* to consumers. Nested
-adapters can apply both budgets to the same calls when both remain alive and
-unmoved. Any exception from the wrapped writer poisons this adapter, even if that writer
-rejected the call before emitting anything.
+Dropping an underfilled adapter leaves the field underfilled. Earlier writes
+remain when a later call exceeds the cap. A buffered destination may have
+accepted bytes that still need flushing.
 
-Source: `Standard/core/Text/LimitedWriter.gf`. Direct dependencies are the core
-ITextWriter contract, IO::IOException and its Exception base. BufferWriter bounds a caller memory buffer instead,
-while CountingWriter only measures output without forwarding it.
+## Lifetimes and copies
+
+Keep the destination alive and at the same address. Input must satisfy the
+destination's overlap rules. Use the adapter for every write belonging to its
+allowance.
+
+Copies share the destination but have independent budgets. Two copies with
+limit three can accept six bytes in total. Pass one adapter by pointer when
+several consumers must share a cap.
+
+Source: `core/Text/LimitedWriter.gf`

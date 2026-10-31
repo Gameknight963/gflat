@@ -1,59 +1,45 @@
 # Boolean parsing
 
-`core/Text/boolean_parsing.gf` supplies standalone, allocation-free `Standard::Text::TryParseBool`:
+`Standard::Text::TryParseBool` accepts ASCII `true` and `false`, ignoring letter case.
+The entire token must match. For example, `"TRUE"` succeeds while `" true "` and
+`"1"` fail.
 
 ```cpp
 using Standard::Text;
+
 bool TryParseBool(readonly(char)* text, bool* result) nothrow;
 bool TryParseBool(readonly(char)* text, nuint count, bool* result) nothrow;
 ```
 
-The only accepted words are ASCII `true` and `false`, in any combination of
-uppercase and lowercase letters. The entire input must match. Whitespace is not
-trimmed: `" true "` fails. Empty input, numeric aliases (`0` and `1`), signs,
-underscores, extra letters, and non-ASCII bytes fail too.
-
-`TryParseBool` returns true on success and stores the parsed value. On failure,
-it returns false and stores false. A valid `false` word therefore differs from
-failure through the function's return value:
+Success returns true and stores the parsed value. Failure returns false and
+stores false:
 
 ```cpp
-using Standard; using Standard::Text;
+using Standard;
+using Standard::Text;
+
 bool enabled = true;
 bool valid = TryParseBool("FaLsE", &enabled); // valid=true, enabled=false
 ```
 
-The C-string overload stops at the first zero byte. The counted overload parses
-exactly the selected range and requires no terminator. Zero bytes within that
-range are invalid. For example, `"true\0suffix"` succeeds as a C string but fails
-when the suffix is counted. Zero-length counted input is rejected without
-reading the input pointer. Input must cover the requested readable bytes, and
-the result pointer must designate writable bool storage. Input is read before
-the result is stored, allowing suitably aligned overlapping input/output. That
-store also changes the overlapping input bytes.
+The C-string overload stops at its first NUL. The counted overload validates
+every selected byte, so `"true\0suffix"` fails when the suffix is counted.
+Empty input fails.
 
-`core/Text/boolean_parsing_throwing.gf` adds optional `Standard::Text::ParseBool` wrappers with
-the same counted and C-string forms. They return the parsed bool or throw
-`Exception` for invalid text. Include both sources to use these wrappers. Only
-the Try-only source is needed without an exception runtime. A `String` can be
-parsed through `text.Data, text.Length` without copies or additional wrappers.
+`ParseBool` has the same counted and C-string forms and throws `Exception`
+for invalid text. For a String, pass `text.Data, text.Length`.
+
+Output may overlap aligned writable input storage. The parser finishes reading
+before storing its result, including the false result on failure.
 
 ## Borrowed spans
 
-Optional `core/Text/span_boolean_parsing.gf` adds
-`text.TryParseBool(&result)` for `Span<readonly(char)>`. Include
-`Text/boolean_parsing.gf` as well. `core/Text/span_boolean_parsing_throwing.gf` adds
-`text.ParseBool()` and also requires `Text/boolean_parsing_throwing.gf`. The adapters
-forward the view's exact byte count to the existing parser, without trimming,
-copying its bytes, retaining its pointer, or allocating intermediate storage.
+`Span<readonly(char)>` supports `text.TryParseBool(&result)` and
+`text.ParseBool()`. Both use the span's complete byte count and accept an
+immutable span header. Empty spans fail.
 
-Default and zero-length spans are invalid boolean text. The Try form returns
-false and stores false without accessing input. The throwing form reports the
-same invalid input through `Exception`. The Try adapter is `nothrow` and makes
-no allocation. Successful `false` input still returns true from TryParseBool.
+Sources in `core/Text`:
 
-The view keeps borrowing its original storage. Keep it readable and unchanged
-throughout the call. An immutable span header is accepted. The result may overlap
-suitably aligned writable input under the counted parser's rules above. Storing
-the result then changes those input bytes. A failed throwing parse leaves an
-assignment target unchanged.
+- `boolean_parsing.gf`: pointer-based Try forms
+- `boolean_parsing_throwing.gf`: throwing forms
+- `span_boolean_parsing.gf` and `span_boolean_parsing_throwing.gf`: span forms

@@ -1,44 +1,22 @@
-# Timed integer sorting
+# Time integer sorting
+
+Compare `Sort` and `StableSort` on the same generated integers:
 
 ```console
 gflat build examples/sort-bench/sort-bench.gfproj --configuration Release
 examples/sort-bench/bin/Release/sort-bench.exe 100000
 ```
 
-On Linux, prefix the executable path with `./`. The default project output uses `.exe`.
+`sort-bench [count]` defaults to 100000 values and accepts counts from zero
+through 1000000. A fixed seed makes the input and printed checksum repeatable.
 
-## Input
+Each sort is timed once. The measurement includes its own scratch allocation.
+Generating inputs and checking results happen outside the timed intervals.
+Scheduling, cache state, clock resolution, and system load affect the result.
 
-Syntax: `sort-bench [count]`. The default is 100000 integers. The accepted range is 0
-through 1000000. A fixed PseudoRandom seed of 17 generates one signed 32-bit value per
-element, stored in both inputs.
+The project selects a Windows or Linux clock through a platform-specific alias
+file. See [Stopwatch](../../docs/STOPWATCH.md) for clock providers.
 
-## Clock selection
-
-The application explicitly selects its native clock through one global alias file. The
-project includes Clock.Windows.gf and the Windows platform source library on Windows.
-Linux uses Clock.Linux.gf and the Linux source library. The project lists the selected
-alias explicitly.
-
-## Measurement
-
-Only Sort and StableSort calls are timed. StableSort's own scratch allocations are part
-of its measurement. Creating and filling the equal inputs, checking results, and
-reporting are outside both intervals. After both sorts, the tool checks ascending order,
-identical results, and conservation of the input sum, then prints Count, a signed 64-bit
-Checksum, and Sort/StableSort durations formatted as TimeSpan values. The checksum is
-deterministic for a given count. Durations are not. Reports write through Console::Out
-without constructing per-report Strings.
-
-The tool takes one measurement of each operation in a fixed order. Scheduling, clock
-resolution, cache state, allocation, and system load affect results.
-
-## Errors
-
-Exit codes:
-
-- 0 for verified results and successful output
-- 1 for allocation, clock, or output failure
-- 2 for invalid usage
-- 3 for internal verification failure
-Diagnostics go to stderr. Output is explicitly flushed before success.
+Exit codes are 0 for verified results, 2 for invalid arguments, 1 for clock,
+allocation, or output failure, and 3 if result verification fails. Errors go
+to stderr.

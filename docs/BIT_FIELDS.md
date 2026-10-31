@@ -1,19 +1,18 @@
 # Bit fields in byte buffers
 
-`Standard::Binary::BitPrimitives` reads and writes unsigned fields of 0 through 64 bits
-in borrowed byte buffers. It allocates nothing and requires no other Standard sources.
+`Standard::Binary::BitPrimitives` reads and writes unsigned fields up to 64 bits.
+`count` measures buffer bytes. `bitOffset` measures bits from the start.
 
-| API | Effect |
+| API | Result |
 | --- | --- |
-| `TryReadUInt64(data, count, bitOffset, bitCount, order, ref value)` | Reads a right-aligned `ulong`. Failure sets `value` to zero. |
-| `TryWriteUInt64(data, count, bitOffset, bitCount, order, value)` | Writes a value that fits the field, preserving every other bit. Failure leaves all bytes unchanged. |
+| `TryReadUInt64(data, count, bitOffset, bitCount, order, ref value)` | Reads into the low `bitCount` bits of `value`. Failure writes zero. |
+| `TryWriteUInt64(data, count, bitOffset, bitCount, order, value)` | Writes the field and preserves surrounding bits. Failure preserves the buffer. |
 
-`count` is a byte count. `bitOffset` counts bits from the buffer's start. Bytes
-always advance in address order. `BitOrder::LeastSignificantFirst` visits bit 0
-of each byte first, and the first visited bit becomes bit 0 of the value.
-`BitOrder::MostSignificantFirst` visits bit 7 first, and the first visited bit
-becomes the value's most significant requested bit. Results use only their low
-`bitCount` bits. This choice controls both within-byte order and field significance.
+Bytes advance in address order. The order selects which bit within each byte
+comes first and how that bit contributes to the result:
+
+- `LeastSignificantFirst`: starts with bit 0, which becomes result bit 0
+- `MostSignificantFirst`: starts with bit 7, which becomes the result's highest requested bit
 
 ```csharp
 using Standard::Binary;
@@ -30,16 +29,12 @@ int main() nothrow
 }
 ```
 
-Widths outside 0–64, invalid order values, and fields outside the buffer fail.
-Writes also reject values with set bits above the requested width. A zero-width
-operation succeeds only at a position inside the buffer or exactly at its end.
-It touches no buffer bytes. A zero-width write accepts only zero. An unaligned
-64-bit field can span nine bytes. Bounds checks avoid multiplying the byte count
-by eight or adding the width to the bit offset.
+Operations fail for a width outside 0–64, an invalid order, or a field outside the
+buffer. Writes also fail when the value has bits set above the field width.
 
-Keep buffers alive and valid for their stated extent. Write buffers must be
-readable as well as writable because writes preserve surrounding bits. The read
-output must not overlap the input bytes. Operations are ordinary byte accesses.
-They provide no synchronization. Time is bounded by 64 bit iterations, with
-constant temporary storage. With `NoStdLib`, include only
-`Standard/core/Binary/BitPrimitives.gf` alongside the caller.
+A zero-width field is valid through the buffer's end. Its write value must be
+zero. An unaligned 64-bit field can span nine bytes. Write buffers must be
+readable because writes preserve surrounding bits. Read output must be separate
+from the input buffer.
+
+Source: `core/Binary/BitPrimitives.gf`

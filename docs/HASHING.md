@@ -1,61 +1,42 @@
 # Equality, hashing, and ordering
 
-Core provides three independent contracts in `Standard`:
+`Standard` defines collection contracts with immutable receivers:
 
-- `IHashable.GetHashCode()` returns `nuint`
-- `IEquatable<T>.Equals(immutable(T)* other)` compares borrowed values
-- `IComparable<T>.CompareTo(immutable(T)* other)` returns a negative value, zero,
-  or a positive value for less than, equal to, or greater than its argument
+| Interface method | Result |
+| --- | --- |
+| `IHashable.GetHashCode()` | `nuint` hash |
+| `IEquatable<T>.Equals(immutable(T)* other)` | Value equality |
+| `IComparable<T>.CompareTo(immutable(T)* other)` | Negative, zero, or positive for less, equal, or greater |
 
-All three methods have immutable receivers. Equality and comparison borrow their
-argument, so comparing owning values does not copy their resources.
-
-Each primitive scalar participates through an implementation declared inside
-the corresponding interface. This includes booleans, characters, signed and
-unsigned integers, pointer-sized integers, and floating-point values. The
-primitive type remains built in and does not depend on these interfaces existing.
-Signed 128-bit `extralong` participates as well. Its hash processes all 16 bytes
-with FNV-1a, then applies the integer mixer. The bytes use native byte order.
-This is not a portable serialized hash format.
-Character ordering uses unsigned byte values (0 through 255). Boolean ordering
+Primitive scalars and String provide implementations. Equal values must have
+equal hashes. A key's equality and hash must remain stable while stored in a
+hash collection. Character ordering uses unsigned bytes, and Boolean ordering
 puts false before true.
-
-Equal keys must produce equal hashes. Hash collisions are permitted. A key's
-equality and hash must remain stable while it belongs to a hash collection.
 
 ## Floating-point values
 
-Interface equality treats every NaN as equal to every other NaN, and treats
-positive and negative zero as equal. This differs from the built-in floating
-`==` operator for NaN. Hashes canonicalize both cases to preserve the equality
-contract. Ordering puts NaN before every non-NaN. NaNs compare equal to each
-other. Finite values and infinities use their ordinary numerical order.
+Interface equality equates all NaNs and both signed zeros. This differs from
+floating `==`, where a NaN is unequal to itself. Hashes canonicalize those cases.
+Ordering puts NaNs before all other values, then uses numerical order.
 
 ## Strings
 
-`String` compares its counted UTF-8 bytes, including embedded null bytes.
-Comparison is ordinal and locale-independent, with unsigned byte ordering.
-It does not normalize Unicode or ignore letter case. Equal contents compare
-equal even when their buffers and capacities differ.
+String equality and ordering use complete counted bytes, including NULs.
+Ordering is unsigned lexicographic order. `Hashing::Bytes(data, count)` hashes
+those bytes with 32-bit FNV-1a and returns `nuint`. `Hashing::Integer(ulong)`
+mixes integer bits into a 32-bit hash returned as `nuint`.
 
-`Hashing::Bytes(data, count)` computes deterministic 32-bit FNV-1a and returns
-it as `nuint`. `String.GetHashCode()` uses this function over its full length.
-`Hashing::Integer(ulong)` applies a 64-bit avalanche before folding into a
-32-bit result, also returned
-as `nuint`. Neither operation allocates. Hash values are implementation details,
-not persistent identifiers, cryptographic digests, or protection against
-adversarial collision attacks.
+Hash values serve collection lookup and can change between library versions.
+Use a persistent representation of the value itself when saving keys.
+Ordinary collection hashes are vulnerable to deliberately chosen collisions.
 
 ## Combining component hashes
 
-`Hashing::Combine(nuint first, nuint second) nothrow` combines two component
-hashes in order, without allocation. Both arguments retain their full
-pointer-sized width during mixing. The result is a 32-bit hash returned as
-`nuint`, like `Integer`. For example, a coordinate key can hash each field
-before combining:
+`Hashing::Combine(first, second)` combines two hashes in order:
 
 ```csharp
 using Standard;
+
 struct Point : IHashable, IEquatable<Point> {
     public int X;
     public int Y;
@@ -63,16 +44,10 @@ struct Point : IHashable, IEquatable<Point> {
     public immutable bool Equals(immutable(Point)* other)
         => X == other.X && Y == other.Y;
     public immutable nuint GetHashCode() nothrow
-        => Standard::Hashing::Combine(Standard::Hashing::Integer((ulong)X),
-                                Standard::Hashing::Integer((ulong)Y));
+        => Hashing::Combine(Hashing::Integer((ulong)X),
+                                Hashing::Integer((ulong)Y));
 }
 ```
 
-Equal component hashes produce equal combined hashes. Order participates in
-mixing, so `(x, y)` is not deliberately treated as `(y, x)`. Collisions are still
-possible, including between swapped pairs or different components. Combining
-cannot recover information already lost by a component's own hash.
-For more fields, nest `Combine` in a fixed order. It is not an associative
-operation or a serialized representation. As with the other helpers, results
-are implementation details, not persistent identifiers, cryptographic digests,
-or protection against adversarial keys. No pointers or objects are retained.
+For more fields, nest `Combine` in a fixed order. Collisions remain possible,
+and the operation is not associative.

@@ -1,16 +1,17 @@
-# Measuring intervals
+# Measure elapsed time
 
-`Standard::Time::Stopwatch<C>` is a value that accumulates elapsed time from a clock provider.
-The provider implements the static `IMonotonicClock` interface:
-`long GetTimestamp()` and `long GetFrequency()`. Frequency is positive, fixed,
-and expressed in counter ticks per second. Timestamp origins may be negative.
-Readings must not move backwards or wrap during a measurement.
+`Standard::Time::Stopwatch<C>` accumulates elapsed time using a clock provider
+that implements static `IMonotonicClock` members:
 
-The application selects the provider as an ordinary type argument. This complete
-example uses a deterministic clock and requires no operating-system calls:
+- `long GetTimestamp()` reads a counter
+- `long GetFrequency()` gives its fixed positive ticks-per-second frequency
+
+For example, use a controlled clock to test timing behavior:
 
 ```csharp
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
+
 long timestamp = 0l;
 static class Clock : IMonotonicClock
 {
@@ -32,46 +33,38 @@ int main()
 }
 ```
 
-Construction reads and caches frequency, starts stopped, and does not sample a
-timestamp. `StartNew()` constructs and starts a new value. Start resumes an
-accumulated measurement. Stop freezes it. Repeating Start while running or Stop
-while stopped does nothing and does not consult the provider. Reset clears the
-accumulated time and stops without consulting the provider. Restart samples a
-new starting timestamp and clears earlier elapsed time.
+## Start, stop, and reset
 
-Copies have independent accumulated/running state. The provider type is shared,
-but there is no timer handle to dispose. Successful state operations allocate
-nothing themselves. A custom provider can have its own costs.
+Construction caches frequency and starts stopped. Start resumes an accumulated
+measurement, and Stop freezes it. Starting an already running timer or stopping
+a stopped one keeps its state and avoids reading the clock.
 
-| Observer | Meaning |
+Reset clears time and stops. Restart reads a new starting timestamp and clears
+earlier time. `StartNew()` constructs and starts a timer in one call.
+
+## Read elapsed time
+
+| Property | Result |
 | --- | --- |
-| `IsRunning` | Current running state. Immutable and `nothrow`. |
-| `ElapsedTicks` | Accumulated raw counter ticks, including the current running interval. |
-| `ElapsedSeconds` | Approximate double-precision seconds. |
-| `Elapsed` | A TimeSpan, rounded down to complete 100-nanosecond ticks. |
+| `IsRunning` | Current running state |
+| `ElapsedTicks` | Accumulated provider counter ticks |
+| `ElapsedSeconds` | Approximate double seconds |
+| `Elapsed` | TimeSpan rounded down to complete 100-nanosecond ticks |
 
-The raw units of ElapsedTicks depend on the provider and can differ from
-TimeSpan ticks. Each elapsed observer samples at most once while running, and
-does not sample while stopped. Exact TimeSpan conversion uses 64-bit integer
-arithmetic even for frequencies near the signed-long limit. It can overflow
-when raw ElapsedTicks remains representable. ElapsedSeconds remains available.
+Each elapsed property reads the clock once while running and uses stored state
+while stopped. Provider ticks can differ from TimeSpan ticks. Exact TimeSpan
+conversion can overflow even when ElapsedTicks still fits. ElapsedSeconds
+remains available in that case.
 
-Invalid frequency, backwards readings, counter/accumulation overflow, and
-TimeSpan overflow throw Exception. Provider failures propagate. Failed Start,
-Stop, or Restart leaves the timer's fields unchanged. Elapsed getters never
-modify them. Reset is `nothrow` and can clear a failed measurement. The core
-source uses no String or libc imports and selects no global clock hook.
+## Providers and errors
 
-## Native providers
+Timestamps can start negative, but must not move backwards or wrap during a
+measurement. Invalid frequency, backwards readings, and accumulated or
+TimeSpan overflow throw. Failed Start, Stop, and Restart preserve timer state.
+Reset can clear a failed measurement.
 
-Optional source-library projects supply native providers:
-
-- [Windows performance counter](../libraries/platform/windows/README.md): Windows x64
-- [Linux monotonic clock](../libraries/platform/linux/README.md): Linux LP64
-
-Add the appropriate project reference, then give the chosen specialization a
-local alias, for example `alias Timer = Standard::Time::Stopwatch<Windows::PerformanceCounter>;`.
-These projects are distributed under `libraries/platform` in the SDK and are
-not automatically included with Standard. Their clocks measure intervals. Their
-origins are unrelated to calendar dates. Platform behavior during system
-suspension belongs to the selected provider's contract.
+Optional native providers are available for [Windows x64](../libraries/platform/windows/README.md)
+and [Linux LP64](../libraries/platform/linux/README.md). Add the appropriate
+project reference and choose the provider as the type argument, for example
+`alias Timer = Standard::Time::Stopwatch<Windows::PerformanceCounter>;`.
+Behavior during system suspension depends on the selected provider.

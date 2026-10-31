@@ -1,14 +1,15 @@
-# Materialize a query as a hash map
+# Collect a query into a hash map
 
-`ToHashMap(keySelector)` returns an owning `HashMap<K, T>`. Each selected key is
-paired with its original element. `ToHashMap(keySelector, valueSelector)` instead
-returns `HashMap<K, V>`. Selectors have the ordinary by-value types `K(T)*` and
-`V(T)*`. Keys require `IHashable` and the matching `IEquatable<K>` contract,
-following HashMap's existing rules. Hash and equality must agree, and stored keys
-must retain stable identity. Map enumeration order is unspecified.
+| Method | Result |
+| --- | --- |
+| `ToHashMap(keySelector)` | `HashMap<K, T>` pairing each key with its source element |
+| `ToHashMap(keySelector, valueSelector)` | `HashMap<K, V>` with projected values |
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
 
 int Key(int value) => value;
 long Square(int value) => (long)value * (long)value;
@@ -25,33 +26,23 @@ int main()
 }
 ```
 
-Each element reads terminal `Current` once into a local value. The key selector
-runs first. The two-selector overload then invokes the value selector using that
-same local element. These by-value callback arguments follow ordinary copy/move
-rules and may allocate or throw. The one-selector overload moves the original
-local element into the map, not the callback's argument copy. Both overloads move
-the selected key into the map. The second also moves its selected value.
+The operator consumes the complete query. Keys require stable `IHashable` and
+matching `IEquatable<K>` behavior. Map iteration order is unspecified.
 
-Insertion uses `HashMap.Add`: an equal key throws
-`Exception("Duplicate HashMap key")`. There is no overwrite or merge policy.
-The value selector has already run for that duplicate element before Add detects
-the duplicate. Callbacks and consumed input are not rolled back.
+For each element, `Current` is read once, followed by the key selector and
+optional value selector. Their types are `K(T)*` and `V(T)*`. The original
+element goes into the one-selector result. Callback arguments follow value
+copying rules.
 
-The returned map owns its keys and values. Borrowed fields inside them retain
-their usual backing-owner lifetime requirements. Do not return a key or value
-borrowing a temporary selector argument. The query receiver/source follow normal
-value-copy/move rules. Borrowed adapters still require their backing owners alive
-and callbacks must respect the source's existing mutation rules.
+## Duplicate keys and failures
 
-An empty source returns an empty map without internal allocation or selector
-calls. Its own iterator construction/advancement may still allocate. Other inputs
-allocate map storage and may allocate while copying elements or creating results.
-There is no initial capacity guess or retained source/iterator in the result.
+An equal key throws `Exception("Duplicate HashMap key")`. The value selector
+has already run for that element before insertion detects the duplicate.
+Use [ToLookup](QUERY_LOOKUP.md) to collect groups instead.
 
-Iterator, selector, hashing, equality, capacity, allocation, and duplicate-key
-failures propagate. Locals, partial maps, and iterators are destroyed normally.
-Failed assignment to an existing map preserves that destination. External side
-effects and source advancement remain visible.
+A failed operation cleans up its partial map, while consumed input and callback
+effects remain visible. Keys and values must own their data or borrow external
+storage that stays valid. They must not borrow the selector's temporary
+by-value argument. See [query ownership](QUERIES.md#ownership).
 
-For explicit source selection include `Queries/enumerable_to_hash_map.gf`, the
-normal Enumerable interfaces, and HashMap's existing hashing/equality dependencies.
+Source: `Queries/enumerable_to_hash_map.gf`, with HashMap dependencies.

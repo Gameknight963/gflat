@@ -1,14 +1,11 @@
 # JSON reader
 
-For path-based lookup returning a borrowed raw value, see
-[JSON Pointer](JSON_POINTER.md).
-
-`Standard::Json::JsonReader` reads one complete JSON document from a borrowed counted UTF-8
-buffer. It emits tokens with borrowed string and number bytes. A `Vector<byte>`
-tracks nesting and grows as needed. Allocation can throw `BadAllocException`.
+`Standard::Json::JsonReader` reads tokens from a complete UTF-8 buffer:
 
 ```cpp
-using Standard; using Standard::Json; using Standard::Memory;
+using Standard;
+using Standard::Json;
+using Standard::Memory;
 
 readonly(char)* document = "{\"ready\":true}";
 JsonReader reader = new(document, 14);
@@ -20,60 +17,36 @@ while (reader.Read()) {
 }
 ```
 
-`Read()` returns `true` for a token. `false` means exactly one root value and all
-trailing JSON whitespace have been consumed and validated. Calling it again after
-completion returns `false`. Stopping early does **not** validate the remaining
-document. Empty input, incomplete values, and trailing non-whitespace are errors.
+`Read()` returns true for the next token and false after validating one root
+value plus trailing JSON whitespace. Read until false when validating a document.
+Empty input, incomplete values, and trailing non-whitespace throw.
 
-`JsonTokenKind` contains `StartObject`, `EndObject`, `StartArray`, `EndArray`,
-`PropertyName`, `String`, `Number`, `True`, `False`, `Null`, and `None`. Commas and
-colons belong to the grammar and are not emitted. `TokenOffset` and `TokenLength`
-identify exact byte ranges in the original buffer, including surrounding quotes
-for property names and strings. Number spelling is preserved, including exponent,
-sign, and trailing fractional zeros. Large numbers have no machine numeric range
-restriction. `Depth` is the number of enclosing containers: a root opener and its
-closing delimiter both have depth zero. Its immediate contents have depth one.
-`Kind` becomes `None` and `TokenLength` becomes zero on completion or error.
+| Member | Meaning |
+| --- | --- |
+| `Kind` | Start/end object or array, PropertyName, String, Number, True, False, Null, or None |
+| `TokenOffset`, `TokenLength` | Current lexeme's byte range in the input |
+| `Depth` | Number of enclosing containers. Root opening and closing tokens have depth zero. |
+| `RawToken` | Readonly span containing exact quotes, escapes, number spelling, or one container delimiter |
+| `ValueTextEquals(text, count)` | Compares decoded contents of a String or PropertyName token |
 
-`RawToken` returns a borrowed `Span<readonly(char)>` over the exact current
-lexeme, with length `TokenLength`: quotes and escapes remain present, number
-spelling is unchanged, and container tokens contain their single delimiter.
-It is available through mutable, readonly, and immutable reader views. The
-getter copies no input bytes and allocates nothing. Before the first `Read`,
-after completion or a failed read, and after `Reset`, it returns a canonical
-empty span with null `Data` without accessing input storage.
+Numbers retain their source spelling and can exceed machine numeric ranges.
+Commas and colons are consumed as grammar between tokens.
 
-A saved span borrows the original input rather than the reader. Advancing,
-resetting, moving, or destroying the reader does not invalidate that span.
-The caller must keep the original bytes alive and unchanged for every use.
-The view neither owns those bytes nor prolongs their lifetime.
-
-`ValueTextEquals(text, count)` compares a current `PropertyName` or `String`
-with counted, unquoted UTF-8 text, without decoding into a buffer or allocating.
-For example, `reader.ValueTextEquals("name", 4)` also matches `"na\u006de"`.
-It has an immutable receiver and is `nothrow`. Comparison is exact decoded text.
-Case, normalization, and embedded nulls follow
-[`JsonString::ValueTextEquals`](JSON_STRING.md#comparing-decoded-text).
-For any other token kind or `None`, it returns false without examining `text`.
-A mismatch or malformed expected UTF-8 returns false. The predicate may
-short-circuit and is not a separate input-validation operation. Expected text
-may overlap the borrowed input, but both must remain alive and unchanged.
+Keep input alive and unchanged for the reader and saved RawToken spans. Saved
+spans remain usable after the reader advances or is destroyed, provided their
+input survives. Before reading, after completion, or after failure, RawToken is
+empty and Kind is None.
 
 ## Skipping unknown values
 
-`Skip()` ignores the current value's children without decoding strings or
-building a DOM. On a `PropertyName`, it first reads the property's value. If
-that value, or the original current token, opens an object or array, it reads
-through the matching closing token. `Kind`, `TokenOffset`, `TokenLength`, and
-`Depth` then describe that closing token. On a scalar, it leaves that scalar
-current. The following `Read()` reaches the next sibling or containing delimiter.
-
-On end tokens or `None` (before the first read or after completion), `Skip()`
-does nothing. It does not finish the document or validate trailing data after
-the skipped value. Continue calling `Read()` until it returns false.
+`Skip()` on a property name first reads its value. For an object or array, it
+advances through the matching closing token and leaves it current. For a scalar,
+end token, or None, position stays unchanged. The next Read reaches the next
+sibling or parent delimiter.
 
 ```cpp
 using Standard::Json;
+
 while (reader.Read()) {
     if (reader.Kind == JsonTokenKind::PropertyName) {
         // Decode/compare the name if needed. Ignore this unknown property's value.
@@ -82,44 +55,21 @@ while (reader.Read()) {
 }
 ```
 
-Skipped content is fully validated through the ordinary `Read()` path, including
-UTF-8, escapes, delimiters, and nested grammar. Malformed content still throws
-`JsonParseException` with its original byte offset. Skipping is iterative and
-uses the same nesting stack. Growing it can throw `BadAllocException`. A failed
-reader rejects `Skip()` as well as `Read()` until `Reset()`. Scalar/no-op skips
-do not allocate or advance input.
+Skipped content is validated. Continue reading afterward to validate the rest of
+the document. To decode a string token into a buffer, pass RawToken to
+[JsonString](JSON_STRING.md). For lookup by path, use [JsonPointer](JSON_POINTER.md).
 
-Pass a string token's raw range to `JsonString::TryGetUnquotedLength` and
-`JsonString::TryUnquote` to decode it into caller storage. The reader already
-validates every quoted token through that same helper. Strings therefore require
-valid UTF-8 and paired escaped UTF-16 surrogates. Rejecting lone surrogate escapes
-is intentionally stricter than the RFC's permissive string ABNF, matching the
-existing `JsonString` contract. The reader rejects a leading UTF-8 BOM, comments,
-trailing commas, unescaped control bytes, and non-JSON whitespace. Duplicate object
-names are emitted unchanged. No uniqueness or normalization policy is imposed.
+## Input and errors
 
-Malformed input throws `JsonParseException`, whose `Offset` is an absolute byte
-offset, possibly equal to the input count at unexpected EOF. Invalid string contents
-report the opening quote's offset. Unterminated strings report EOF. Messages give
-a short reason, rather than a stable machine-readable error code.
+Input follows [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259.html), with strict
+UTF-8 and paired escaped surrogates. Comments, trailing commas, and a leading BOM
+are rejected. Duplicate property names are emitted as encountered.
 
-After **any** exception from `Read` or `Skip`, including allocation failure, call `Reset()`
-before reading again. A failed reader rejects further reads. `Reset()` returns to
-the beginning, clears token metadata, and retains stack capacity. Input is never
-modified, including on errors. Exception allocation follows normal runtime rules.
+Malformed input throws JsonParseException. Its Offset is a byte position, possibly
+the end of input. Invalid string contents identify their opening quote, while
+unterminated strings identify EOF. Nesting-stack growth can throw BadAllocException.
 
-The caller keeps input alive and unchanged for the reader and every saved raw
-slice. Token offsets can be saved as ordinary numbers but do not keep the input
-alive. The reader owns only its stack and follows ordinary owning-value rules:
-transfer it with `move`. It does not provide a copy constructor. No chunked-input,
-incremental-document, or resumable-error protocol is provided.
+Any Read or Skip exception requires `Reset()` before further reading. Reset
+restarts the same input and retains stack capacity. The reader is move-only.
 
-For explicit source selection, include `Json/JsonReader.gf`, `Json/JsonTokenKind.gf`,
-`Json/JsonParseException.gf`, `Json/JsonString.gf`, `Text/utf8.gf`, and the ordinary `Vector`
-dependencies. The complete standard library includes them automatically.
-
-Grammar reference: [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259.html).
-The token/depth conventions follow the familiar shape of
-[.NET Utf8JsonReader](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.utf8jsonreader).
-The skip positioning follows
-[Utf8JsonReader.Skip](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.utf8jsonreader.skip).
+Source: `core/Json/JsonReader.gf`

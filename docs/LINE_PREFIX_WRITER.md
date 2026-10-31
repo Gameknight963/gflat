@@ -1,20 +1,13 @@
 # Prefix streamed lines
 
-`Standard::Text::LinePrefixWriter` is an `ITextWriter` adapter. It borrows an output writer
-and either a counted byte prefix or an immutable IFormattable view. It inserts the prefix when the first input byte of each
-LF-delimited line arrives. It preserves every source byte, including NUL, high
-bytes, CR, and LF. It neither validates encoding nor normalizes line endings.
-
-For prefix `> `, input `one\n\ntwo\r\n` becomes `> one\n> \n> two\r\n`.
-An empty input produces no prefix. A final LF produces no dangling prefix.
-A bare CR is ordinary text. CRLF split between writes behaves exactly as one
-write. Prefix bytes are literal output and do not affect input line state,
-even when the prefix itself contains LF. An empty prefix forwards unchanged
-bytes. Zero-length writes read no source or prefix storage and emit no calls.
+`Standard::Text::LinePrefixWriter` inserts a prefix before the first byte of
+each LF-delimited line. For prefix `> `, input `one\n\ntwo\r\n` becomes
+`> one\n> \n> two\r\n`.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::IO;
+using Standard;
+using Standard::IO;
 
 int main()
 {
@@ -29,37 +22,24 @@ int main()
 }
 ```
 
-This preserves exact bytes with binary File sinks. Console streams may apply
-host text-mode transformations. The writer has no completion, flush, close,
-reset, or destructor output. The sink and prefix must remain alive and valid.
-The prefix is not copied. Changing prefix bytes between calls changes later
-prefixes. Do not mutate prefix storage during a call. Source and prefix storage
-must not overlap storage that the sink might modify, move, or reallocate while
-writing, and a sink callback must not reenter or copy/use this same writer.
+LF is the line boundary. CR is ordinary data, including when CRLF spans two
+writes. Empty input and a final LF produce no extra prefix. LF bytes inside the
+prefix itself do not affect input line boundaries.
 
-Normal operations allocate no memory internally. Formatters and sinks may allocate
-or throw. A sink can fail after emitting part of a prefix or input run. Its
-original exception propagates, and all later writes, including empty writes,
-reject the failed writer. There is no rollback or retry guarantee.
-
-Copying duplicates line-start and failure state but shares the borrowed sink and
-prefix. Copies do not coordinate their line state: do not interleave them to
-produce one logical stream. Moving transfers the same metadata. Destruction
-does not dispose either borrowed resource.
+The counted prefix is borrowed. Keep it and the destination alive. Changing
+prefix bytes between writes changes later prefixes. Input and prefix storage
+must be separate from storage the destination may modify.
 
 ## Formatted prefixes
 
-The overload `LinePrefixWriter(ITextWriter* destination, immutable(IFormattable)* prefix)`
-borrows a formatter object instead of prefix bytes. It calls the object's
-`Format(destination)` exactly once when the first source byte of each new line
-arrives. An empty line represented by LF still gets a prefix. Empty writes and
-a trailing LF do not request an extra prefix. The formatter can emit any number
-of writes, including none. Its emitted LF bytes never affect input line state.
-The counted constructor keeps its existing behavior and does not invoke Format.
+`LinePrefixWriter(ITextWriter* destination, immutable(IFormattable)* prefix)`
+calls `prefix.Format(destination)` once per input line, as its first byte arrives.
+An empty line gets a prefix too.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
 
 struct TimestampPrefix : IFormattable
 {
@@ -86,20 +66,17 @@ int main()
 }
 ```
 
-This fixed-date example has no OS clock dependency. A caller can instead keep
-its own formatter that obtains UTC time from an explicitly referenced platform
-clock library. LinePrefixWriter itself never chooses or queries a clock.
-The prefix object must outlive every write using it, and it is not copied or
-owned. The immutable interface view permits calling its immutable Format method.
-It does not freeze other aliases. Changes between calls are visible at later
-line starts. Prefix formatters must not mutate themselves or their backing
-storage through another alias during Format, retain borrowed output/input
-addresses, or reenter/copy/use this writer during a callback.
+Keep the formatter alive. Changes between writes are visible at later line
+starts, as the example demonstrates with timestamps. To generate current time,
+the formatter can query a chosen platform clock.
 
-The writer marks an operation as failed before invoking either the formatter or
-the sink. If either throws, its original exception propagates. Every later
-write, including an empty one, rejects the writer with its existing error.
-There is no rollback, automatic retry, or formatter call after failure.
-The destination may already contain partial prefix or input bytes. Copies share
-the borrowed formatter and destination but keep separate line/failure state,
-just as with a counted prefix. Neither resource is disposed by the adapter.
+## Errors and copies
+
+A formatter or destination exception can leave a partial prefix or line and
+permanently fails the adapter. Later writes throw. Callbacks must not reenter
+this writer.
+
+Copies share the destination and prefix but duplicate line/failure state.
+Use one adapter per logical stream so copies do not insert competing prefixes.
+
+Source: `core/Text/LinePrefixWriter.gf`

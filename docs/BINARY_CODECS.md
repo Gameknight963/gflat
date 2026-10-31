@@ -1,96 +1,49 @@
 # Base64
 
-`Standard/core/Encoding/Base64.gf` defines `Standard::Encoding::Base64`, a caller-buffer codec with no
-allocation and no libc dependency. It uses the standard RFC 4648 alphabet
-(`A-Z`, `a-z`, `0-9`, `+`, `/`) with required `=` padding. It does not accept
-whitespace or URL-safe variants.
+`Standard::Encoding::Base64` uses the [RFC 4648](https://www.rfc-editor.org/rfc/rfc4648.html)
+alphabet `A`–`Z`, `a`–`z`, `0`–`9`, `+`, `/`, with `=` padding.
 
-- `TryGetEncodedLength(count, ref length)` calculates the required output size,
-  returning false on pointer-sized length overflow
-- `TryEncode(data, count, output, capacity, ref written)` writes counted input
-  bytes, including zeros. Output is counted ASCII, without a null terminator.
-- `TryGetDecodedLength(text, count, ref length)` validates the entire input and
-  calculates its decoded size. Nonzero unused padding bits are rejected, so each
-  accepted encoding is canonical.
-- `TryDecode(text, count, output, capacity, ref written)` validates before
-  writing. Malformed input or insufficient capacity leaves output untouched.
+Base64, Base64Url, Hex, and PercentEncoding expose four buffer operations:
 
-Every false result sets the returned length/count to zero. Empty input succeeds
-with zero output. Callers provide readable input and writable output storage.
-Encoding requires disjoint buffers. Decoding supports disjoint buffers or the
-exact same starting address for an in-place operation. Other overlapping
-regions are unsupported.
+| Operation | Result |
+| --- | --- |
+| `TryGetEncodedLength(count, ref length)` | Required output size, or false and zero on overflow |
+| `TryEncode(data, count, output, capacity, ref written)` | Encoded bytes |
+| `TryGetDecodedLength(text, count, ref length)` | Decoded size after validating input |
+| `TryDecode(text, count, output, capacity, ref written)` | Decoded bytes after validating input and capacity |
 
-For Base64, Base64Url, Hex, and PercentEncoding, the scalar `length` and `written`
-variables must occupy separate storage from the input and output byte buffers.
-In-place decoding support applies to the byte buffers, not these count outputs:
-storing a count into encoded or decoded bytes would overwrite their contents.
+Counts and capacities measure bytes. Results omit a terminator. Empty input
+succeeds. Any failure sets the output count to zero and preserves the output
+buffer. Encoding requires separate input and output. Decoding also permits
+output at the input's exact starting address. Keep scalar count outputs separate
+from both buffers.
 
-`Standard/core/Encoding/Base64Text.gf` adds `Standard::Encoding::Base64Text::Encode(data, count)` and
-`Decode(text, count)`, returning owning `Standard::Text::String` values. They reserve the
-result once and process small stack chunks without allocating an intermediate
-whole-size buffer. Decoded strings may contain embedded zeros. Use `Length`
-rather than a C-string scan. Malformed input, length overflow, and allocation
-failure throw. Include the usual core String dependencies for these conveniences.
+Base64 decoding requires canonical padding and zero unused bits. Whitespace
+and URL-safe `-`/`_` are rejected.
 
-For chunked input, [Base64Encoder](BASE64_ENCODER.md) wraps an `ITextWriter` and
-emits the same padded encoding without a whole-input buffer. `File::CopyTo` can
-feed it directly. Call `Complete()` to emit any final padding. It does not close
-or flush the borrowed destination.
+`Base64Text::Encode(data, count)` and `Decode(text, count)` return owning Strings.
+The corresponding `Base64UrlText`, `HexText`, and `PercentEncodingText` helpers
+follow their codecs' rules. They throw for malformed input, size overflow, or
+allocation failure. Decoded results can contain NULs, so use `Length`.
 
-[Base64Decoder](BASE64_DECODER.md) accepts encoded chunks through the same
-writer interface and sends decoded bytes to its borrowed destination. It uses
-the same strict input rules. Unlike whole-buffer `TryDecode`, a later input or
-output failure can occur after earlier chunks have already reached the sink.
+For chunks, use [Base64Encoder](BASE64_ENCODER.md) and
+[Base64Decoder](BASE64_DECODER.md). Call `Complete()` to finish a stream. A
+streaming decoder can emit a prefix before discovering invalid later input.
 
 # URL-safe Base64
 
-`Standard/core/Encoding/Base64Url.gf` defines `Standard::Encoding::Base64Url`, a separate caller-buffer codec
-using the RFC 4648 section 5 alphabet (`-` and `_` instead of `+` and `/`). This
-API explicitly selects the **unpadded** profile: it emits no `=` and rejects
-padding on input. It also rejects whitespace, standard-alphabet `+`/`/`, and
-nonzero unused bits in a final two- or three-character group. There is one
-accepted encoding for each byte sequence. Input lengths congruent to one modulo
-four cannot encode complete bytes and are rejected.
+`Base64Url` uses `-` and `_` in place of `+` and `/` and omits padding. Decoding
+requires this unpadded alphabet and zero unused bits. A length congruent to one
+modulo four is invalid.
 
-The four `nothrow` methods have the same argument order as `Base64`:
-
-- `TryGetEncodedLength(count, ref length)` checks pointer-sized size overflow
-- `TryEncode(data, count, output, capacity, ref written)` emits counted ASCII
-- `TryGetDecodedLength(text, count, ref length)` validates the entire input
-- `TryDecode(text, count, output, capacity, ref written)` validates input and
-  capacity before writing any output
-
-Every failure sets the output count to zero and leaves the output byte buffer
-untouched. Empty input succeeds without reading input or writing output. No
-terminator is added. Binary zeros are ordinary data. Encoding requires disjoint
-buffers. Decoding also supports the exact same starting address. Other overlap
-is unsupported. Count output variables must remain separate from both buffers.
-The codec allocates nothing and requires neither `String`, libc, nor `Base64`.
-
-For example, the bytes `FB FF FF` encode to `-___`. A single ASCII `f` encodes
-to `Zg`. `Zg==` and `Zh` are both rejected: the first has padding, and the
-second has nonzero unused bits. This is an encoding, not encryption.
-
-The alphabet and explicitly omitted padding follow
-[RFC 4648 section 5](https://www.rfc-editor.org/rfc/rfc4648.html#section-5).
-Canonical unused bits follow
-[section 3.5](https://www.rfc-editor.org/rfc/rfc4648.html#section-3.5).
-
-`Standard/core/Encoding/Base64UrlText.gf` separately provides owning
-`Base64UrlText::Encode(data, count)` and `Decode(text, count)` conveniences.
-They use this same strictly unpadded profile, reserve the result once, and
-process small stack chunks. Decoded strings preserve binary zeros and own an
-independent, null-terminated buffer. `Length` excludes that terminator. Empty
-input returns an empty String without allocating result storage. Invalid input,
-length overflow, and allocation failure throw. Input must remain readable and
-unchanged throughout the call. No source pointer is retained. These optional
-helpers require the normal String dependencies, while `Encoding/Base64Url.gf` remains
-usable without String or libc.
+For example, `FB FF FF` encodes to `-___`, and ASCII `f` encodes to `Zg`.
+`Zg==` fails because it contains padding. `Zh` fails because its unused bits
+are nonzero.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Encoding;
+using Standard;
+using Standard::Encoding;
 
 int main()
 {
@@ -106,33 +59,20 @@ int main()
 
 # Hexadecimal
 
-`Standard/core/Encoding/Hex.gf` defines `Standard::Encoding::Hex`, with the same counted-buffer conventions:
+`Hex::TryEncode(data, count, output, capacity, ref written, uppercase = true)`
+writes two digits per byte. Pass `false` for lowercase. Decoding accepts either
+case and requires an even number of digits. Prefixes, separators, and whitespace
+are invalid.
 
-- `TryGetEncodedLength(count, ref length)` checks multiplication by two for
-  pointer-sized overflow
-- `TryEncode(data, count, output, capacity, ref written, uppercase = true)`
-  writes two ASCII digits per byte. Pass false for lowercase output.
-- `TryGetDecodedLength(text, count, ref length)` validates every digit and
-  requires an even input length
-- `TryDecode(text, count, output, capacity, ref written)` accepts mixed letter
-  case. Prefixes such as `0x`, whitespace, and separators are rejected.
-
-Failures set the output count to zero and leave the output buffer untouched.
-Results have no null terminator. Input/output must be disjoint for encoding.
-Decoding additionally supports the exact same starting address. Empty input
-succeeds. `Standard/core/Encoding/HexText.gf` adds owning `Standard::Encoding::HexText::Encode(data, count,
-uppercase = true)` and `Decode(text, count)` conveniences. Decoded strings retain
-embedded zeros and report malformed input through an exception.
-
-The optional `Standard/core/Encoding/hex_writer.gf` adapter adds
-`WriteHex(readonly(char)* data, nuint count,
-bool uppercase = true)`. The method borrows its ITextWriter receiver. It writes two digits per input byte with no prefix,
-separator, whitespace, newline, or terminator. Uppercase is the default, matching
-`Hex::TryEncode` and `HexText::Encode`. Pass `false` for lowercase.
+`HexText::Encode(data, count, uppercase = true)` and `Decode(text, count)` return
+owning Strings. The `WriteHex(data, count, uppercase = true)` extension sends
+encoded bytes directly to an `ITextWriter`:
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Encoding;
+using Standard;
+using Standard::Encoding;
+
 int main()
 {
     char[3] bytes = [(char)0, (char)0xab, (char)0xff];
@@ -145,46 +85,21 @@ int main()
 }
 ```
 
-Input is counted binary data, including embedded NUL bytes. Empty input makes
-no writer calls. The adapter checks the total encoded length for pointer-sized
-overflow before reading input or calling the writer, throwing `Exception` with
-`Hex length overflow` on failure. It then reuses `Hex::TryEncode` for chunks of
-at most 128 input bytes, writing each encoded chunk from a 256-byte stack buffer.
-It allocates no intermediate owning string or other heap storage. The writer
-can allocate according to its own contract.
-
-The writer is borrowed and is never closed or destroyed. Writer exceptions
-propagate and can leave an output prefix. Retrying the entire call can duplicate
-that prefix. Input must remain valid and unchanged throughout the call, separate
-from writer state and destination storage. Each `Write` consumes its supplied
-span immediately and must not retain its pointer to temporary stack storage.
-Include `Encoding/hex_writer.gf` with `Encoding/Hex.gf` and the normal text/exception contracts.
-The adapter uses no `String` type and makes no libc calls. Its writer and the
-language's exception runtime retain their existing dependency requirements.
+`WriteHex` checks output-size overflow before writing. It sends bounded chunks
+from a 256-byte stack buffer. Writer failure can leave a prefix. Keep input
+separate from any storage the writer may modify.
 
 # Component percent encoding
 
-`Standard/core/Encoding/PercentEncoding.gf` defines `Standard::Encoding::PercentEncoding`. This encodes
-component **data**, not an entire URI: only unreserved ASCII letters, digits,
-`-`, `.`, `_`, and `~` pass through. Other bytes become uppercase `%HH` escapes,
-following [RFC 3986 sections 2.1–2.4](https://www.rfc-editor.org/rfc/rfc3986.html#section-2.1).
-Existing percent escapes are treated as data and encoded again.
+`PercentEncoding` escapes URI component bytes as uppercase `%HH`. ASCII letters,
+digits, `-`, `.`, `_`, and `~` pass through. Existing percent escapes are escaped
+again. Supply UTF-8 bytes when encoding Unicode text.
 
-- `TryGetEncodedLength(data, count, ref length)` checks the accumulated length
-  for overflow
-- `TryEncode(data, count, output, capacity, ref written)` requires disjoint
-  buffers and writes no terminator
-- `TryGetDecodedLength(text, count, ref length)` validates all percent escapes
-- `TryDecode(text, count, output, capacity, ref written)` accepts either hex
-  letter case. It decodes exactly once and preserves literal `+`. It is not an
-  HTML form decoder.
+Its encoded-length operation takes `(data, count, ref length)` because length
+depends on byte values. Decoding accepts either hex case, decodes once, and
+preserves a literal `+`. Thus `+` differs from form-encoded space.
 
-All four methods are `nothrow` and allocation-free. A failure sets the returned
-count to zero. Encoding/decoding failures leave output untouched. Decoding
-supports disjoint or exact same-address buffers. Raw and decoded bytes may
-include zeros. No UTF-8 validation or URI parsing occurs. Supply UTF-8 bytes
-explicitly when encoding Unicode text.
+These rules follow [RFC 3986 sections 2.1–2.4](https://www.rfc-editor.org/rfc/rfc3986.html#section-2.1).
 
-`Encoding/PercentEncodingText.gf` separately adds owning `PercentEncodingText::Encode`
-and `Decode` conveniences. These reserve the output String once, preserve
-binary zeros, and throw on invalid percent syntax or allocation failure.
+Sources are in `core/Encoding`: each codec has a matching `.gf` file, owning
+helpers use the `Text.gf` suffix, and writer hex output is in `hex_writer.gf`.

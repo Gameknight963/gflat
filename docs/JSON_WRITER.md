@@ -1,13 +1,11 @@
 # JSON writer
 
-`Standard::Json::JsonWriter` writes one UTF-8 JSON document to a borrowed
-`ITextWriter*`. It owns its nesting stack, not the destination. It never closes,
-flushes, or destroys the destination, and destruction writes nothing. Keep the
-destination alive and at a stable address until the writer is no longer used.
+`Standard::Json::JsonWriter` writes a UTF-8 document through `ITextWriter`:
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Json;
+using Standard;
+using Standard::Json;
 
 String output = s"";
 JsonWriter writer = new(&output);
@@ -25,83 +23,44 @@ writer.Complete();
 // output contains {"name":"Ada","scores":[42,true,null]}
 ```
 
-`JsonWriter(destination, bool indented = false)` keeps compact output as the
-default. Pass `true` to emit two-space indentation and LF newlines to the destination.
-Array items and object properties start on their own indented lines. Nonempty
-containers put their closing delimiter on a line at their parent's depth. Empty
-`[]` and `{}` remain inline. Indented properties use one space after the colon.
-Root scalar values receive no extra whitespace, and no final newline is appended.
-There are no locale, custom indentation, or newline options. Indentation writes
-directly to the destination without buffering text or allocating extra storage.
-Destination behavior still applies: a console in host text mode can translate
-line endings. A binary File preserves the emitted LF bytes.
+Construct with `new(destination, true)` for two-space indentation and LF line
+breaks. Compact output is the default. Empty containers stay inline, and output
+has no trailing newline.
 
 ## Operations
 
-- `WriteStartObject`, `WriteEndObject`, `WriteStartArray`, and `WriteEndArray`
-  manage nesting. Commas and colons are emitted automatically.
-- `WritePropertyName(text)` writes an object name. The counted overload
-  `WritePropertyName(data, length)` permits embedded NULs. A value must follow
-  each name before another name or the closing object delimiter.
-- `WriteString(text)` writes a null-terminated string. `WriteString(data, length)`
-  writes counted text, retaining embedded NULs through JSON escapes. Both names
-  and values require strict UTF-8 and use `JsonString`'s escape policy.
-- `WriteBoolean(value)` and `WriteNull()` write their JSON literals
-- `WriteNumber(value)` supports `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`,
-  `long`, `ulong`, `nint`, `nuint`, and signed 128-bit `extralong`. It uses invariant
-  integer formatting in a fixed local buffer (40 bytes for `extralong`, 21 for
-  the other widths), without allocating number text. There is no floating-point
-  overload yet.
-- `WriteRawNumber(data, length)` validates exactly one JSON number occupying the
-  entire counted input, then preserves its spelling. No surrounding whitespace,
-  leading plus, extra values, NaN, or infinity are accepted. It reuses
-  `JsonReader`'s grammar and does not convert through a machine floating-point
-  type. This preserves large integers, exponents, and negative zero when
-  forwarding reader tokens.
-- `Complete()` verifies that exactly one root value has been written and every
-  container is closed. It emits no bytes and can be called repeatedly. Calling
-  it too early does not prevent supplying a missing value or closing delimiter.
+| Operation | Effect |
+| --- | --- |
+| `WriteStartObject`, `WriteStartArray` | Opens a container |
+| `WriteEndObject`, `WriteEndArray` | Closes the current matching container |
+| `WritePropertyName(text)` or `(data, length)` | Writes a quoted UTF-8 name. A value must follow. |
+| `WriteString(text)` or `(data, length)` | Writes quoted UTF-8 contents |
+| `WriteBoolean(value)`, `WriteNull()` | Writes the JSON literal |
+| `WriteNumber(value)` | Writes an integer through 128-bit `extralong` |
+| `WriteRawNumber(data, length)` | Validates and preserves an exact JSON number token |
+| `Complete()` | Checks that one root was written and all containers are closed |
 
-Duplicate property names are allowed. No key set or DOM is constructed. Nesting
-is iterative with a growing `Vector<byte>`, rather than recursive or a fixed
-large stack buffer. Only nesting state is buffered. Document bytes are forwarded
-to the destination as each operation runs.
+Commas and colons are automatic. Counted names and string values can include
+NUL through escapes. Strings follow [JsonString](JSON_STRING.md) rules. Duplicate
+property names are allowed. Raw numbers can retain large values, exponents, and
+negative zero without conversion to a machine numeric type.
+
+Call Complete explicitly. It writes nothing, can succeed repeatedly, and lets
+you supply missing values or closing delimiters after an incomplete-document error.
 
 ## Failure and ownership
 
-Invalid ordering, incomplete documents, invalid strings, and invalid raw numbers
-throw `JsonWriteException`. Validation happens before writing any part of that
-operation. A start operation reserves its nesting capacity before writing its
-delimiter, so allocation failure leaves the parent value position and output
-unchanged. Correct the invalid operation or allocation condition and retry.
+Ordering errors, invalid text or numbers, and incomplete documents throw
+JsonWriteException before writing that operation. Nesting allocation also happens
+before output. Correct these conditions and retry.
 
-If the destination's `Write` throws, that original exception propagates. Some
-bytes, including a comma or part of an escaped string, may already have been
-written. The JSON writer then rejects every further write and `Complete()` with
-`JsonWriteException`. It cannot roll back external output. Construct a new writer
-for another document or destination. There is no reset, automatic completion,
-or implicit flush. Earlier successful output remains after any later failure.
-This also applies if writing indentation, a newline, or the space after a colon
-fails. Invalid operations and failed nesting allocation emit no extra whitespace
-and remain retryable under the same validation rules as compact output.
+A destination exception may leave partial JSON and permanently fails the writer.
+Later writes and Complete throw JsonWriteException. Handle the partial output
+before starting another document.
 
-Input buffers must remain valid and unchanged throughout each call. In
-particular, do not pass a view into the same destination `String` or another
-buffer which the destination may reallocate or modify while writing. The
-`ITextWriter` interface cannot establish arbitrary aliasing or lifetime. Writer
-callbacks must not move or destroy the JSON writer or its borrowed input.
+Keep the destination alive and at the same address. Input must be separate from
+storage it may modify, such as writing a String's borrowed bytes back into itself.
+JsonWriter is move-only. Finish its document and flush the concrete destination
+explicitly as needed.
 
-Moving a `JsonWriter` transfers its nesting state. Implicit copying is rejected
-because its state owns storage. Moving the destination while it is borrowed is
-also invalid. Call the destination's own flush operation explicitly if needed.
-
-For explicit source selection, include `Json/JsonWriter.gf`, `Json/JsonWriteException.gf`,
-`Json/json_string_writer.gf`, `Json/JsonString.gf`, `Text/utf8.gf`, `Text/IntegerFormatting.gf`,
-`Json/JsonReader.gf`, `Json/JsonParseException.gf`, `Json/JsonTokenKind.gf`, `ITextWriter.gf`, `IFormattable.gf`
-(`ITextWriter`), and the ordinary `Vector` dependencies. No DOM, reflection, GC, or libc-specific
-writer implementation is required.
-
-The shape follows the conventional forward-only
-[.NET Utf8JsonWriter](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.utf8jsonwriter)
-API. The failure latch and borrowed-destination contract described here are
-gflat's own guarantees.
+Source: `core/Json/JsonWriter.gf`

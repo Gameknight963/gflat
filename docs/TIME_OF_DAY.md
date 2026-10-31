@@ -1,12 +1,13 @@
 # Time of day
 
-`Standard::Time::TimeOfDay` stores a time within one day as a private `long` tick count.
-One tick is 100 nanoseconds. Valid values range from midnight through
-`23:59:59.9999999`. Default construction produces midnight.
+`Standard::Time::TimeOfDay` represents midnight through `23:59:59.9999999`,
+at 100-nanosecond resolution. Default construction gives midnight.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
+
 int main()
 {
     TimeOfDay opening = new(9, 30);
@@ -22,58 +23,37 @@ int main()
 }
 ```
 
-The component constructor accepts `hour`, `minute`, optional `second = 0`, and
-optional `millisecond = 0`. Hours must be 0..23, minutes and seconds 0..59,
-and milliseconds 0..999. `FromTicks(long)` accepts 0..863999999999 for finer
-precision. Invalid components or tick counts throw `Exception`.
+## Construction and arithmetic
 
-Immutable, `nothrow` properties expose `Ticks`, `Hour`, `Minute`, `Second`, and
-`Millisecond`. The value implements equality, ordering, hashing, and direct
-writer formatting. Ordering compares times within the same day. No date or
-time zone is attached. Use [TimeSpan](TIME_SPAN.md) for signed durations.
+The constructor takes hours, minutes, optional seconds, and optional
+milliseconds. Their ranges are 0â€“23, 0â€“59, 0â€“59, and 0â€“999.
+`FromTicks(long)` accepts `0..863999999999`. Invalid components throw.
 
-## Arithmetic and ranges
+Properties expose Ticks, Hour, Minute, Second, and Millisecond. Add accepts a
+signed TimeSpan and wraps within the day. `Add(value, ref wrappedDays)` also
+reports signed day crossings. Midnight minus one tick wraps to the last tick
+of the previous day with `wrappedDays == -1`. Every TimeSpan tick value is
+accepted.
 
-Immutable `Add(TimeSpan value)` returns the time after a positive or negative
-duration, wrapping within one day. `Add(value, ref int wrappedDays)` also reports
-the signed day crossings. For example, adding minus one tick to midnight returns
-`23:59:59.9999999` with `wrappedDays = -1`. The last tick plus one tick returns
-midnight with `wrappedDays = 1`. Whole days contribute to this count even when
-the time itself is unchanged. Every signed-long TimeSpan tick count is accepted,
-including its minimum and maximum. Both overloads are `nothrow` and allocate
-nothing. No date, time zone, daylight-saving or clock operation is implied.
+`IsBetween(start, end)` includes start and excludes end. A later start than
+end crosses midnight. Equal endpoints form an empty interval.
 
-Immutable, `nothrow` `IsBetween(start, end)` includes `start` and excludes `end`.
-When start is later than end, the interval crosses midnight. Equal endpoints
-describe an empty interval and return false. The operation compares times only
-and does not infer dates or a full-day interval from equality.
+## Parsing and formatting
 
-These contracts follow [TimeOnly.Add](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.add)
+Parse and TryParse accept `HH:mm:ss[.fraction]`, with exactly two digits per
+clock component and one through seven fraction digits. Whitespace, signs,
+`24:00:00`, and leap seconds are invalid. TryParse resets its result to
+midnight on failure. The C-string form examines at most 17 bytes.
+
+TryFormat writes eight bytes for whole seconds or sixteen with a nonzero
+seven-digit fraction. Output is counted. Insufficient capacity returns false,
+sets `written` to zero, and preserves the buffer. Format and interpolation use
+the same representation.
+
+TryParse and TryFormat are `nothrow`. Parsing and formatting stage their data,
+allowing overlap with properly backed result or receiver storage. Keep
+`written` separate from receiver and output.
+
+Source: `Time/TimeOfDay.gf`, with TimeSpan and interface dependencies.
+Arithmetic follows [TimeOnly.Add](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.add)
 and [TimeOnly.IsBetween](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.isbetween).
-
-## Text
-
-`TryParse(text, count, &result)` consumes complete counted ASCII input in the
-form `HH:mm:ss[.fraction]`. Hours, minutes, and seconds require two digits. An
-optional fraction contains one through seven digits. Signs, day prefixes,
-whitespace, `24:00:00`, and leap-second spellings are rejected. Failure returns
-false and resets the result to midnight. The C-string overload stops at its
-first NUL and reads at most 17 bytes. Throwing `Parse` overloads use the same rules.
-
-`TryFormat(output, capacity, ref written)` emits `HH:mm:ss`, adding exactly seven
-fractional digits when the fraction is nonzero. It writes counted bytes without
-a terminator and needs at most 16 bytes. Insufficient capacity returns false,
-sets `written` to zero, and leaves output bytes unchanged. `Format(writer)`
-and interpolation use this same representation.
-
-Successful construction, parsing, comparison, and caller-buffer formatting allocate nothing.
-`TryParse` and `TryFormat` are `nothrow`. A writer can allocate or throw normally.
-Parsing reads input before writing the result, so an aligned result may overlap
-input. Formatting stages its bytes before writing output, allowing output to
-overlap the receiver when enough writable storage backs that region. The
-`written` variable must be separate from output and receiver storage.
-
-The implementation uses the existing pure `TimeSpan` codec with a restricted
-time-only grammar and range. For selective source builds, include `Time/TimeOfDay.gf`,
-`Time/TimeSpan.gf`, their comparison/hash interfaces, `Hashing/primitive_hashing.gf`, and the normal
-formatting and exception contracts. No clock or operating-system API is needed.

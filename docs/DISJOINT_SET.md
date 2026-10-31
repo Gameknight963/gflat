@@ -1,11 +1,12 @@
 # Disjoint sets
 
-`Standard::Collections::DisjointSet` tracks groups of integer indices. It is useful for undirected
-graph connectivity, cycle detection, and deciding which edges join separate
-components in Kruskal's minimum-spanning-tree algorithm.
+`Standard::Collections::DisjointSet` groups a fixed universe of indices, useful
+for connectivity, cycle detection, and minimum-spanning-tree algorithms.
 
 ```csharp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
+
 int main()
 {
     DisjointSet groups = new(6);
@@ -19,51 +20,32 @@ int main()
 }
 ```
 
-Construction with `count` creates the fixed universe `0..count-1`, initially
-with one component per element. Default construction and `new(0)` create an
-empty universe. `ElementCount` never changes. `SetCount` decreases when two
-different components merge. `Reset()` restores the initial partition of
-single-element components without changing the universe or replacing storage.
+Construction with count creates indices `0..count-1`, each initially in its own
+component. Default construction creates an empty universe.
 
-`Union(first, second)` returns true when it joins two components. It returns false
-for an existing connection, including an element joined to itself. `Find(index)`
-returns a representative index. `Connected(first, second)` compares components,
-and `SizeOf(index)` returns the size of that element's component. Representatives
-are arbitrary members of their components, may change after a union, and need
-not be the smallest index. Do not persist them as stable external identifiers.
+| Operation | Result |
+| --- | --- |
+| `ElementCount` | Fixed universe size |
+| `SetCount` | Current number of components |
+| `Union(first, second)` | True when joining separate components |
+| `Find(index)` | A representative index |
+| `Connected(first, second)` | Whether both belong to one component |
+| `SizeOf(index)` | Number of elements in that component |
 
-All indices must be less than `ElementCount`. Invalid indices throw `Exception`.
-An invalid Union leaves the partition unchanged, including when only its second
-argument is invalid. Every indexed operation on an empty set is invalid.
+Indices must be below ElementCount. Invalid indices throw Exception and preserve
+the partition. Representatives can change after union. Use application labels
+separately when stable identity matters.
 
 ## Ownership and cost
 
-The value owns two vectors and supports moving, not copying. Its destructor
-releases the vectors. Construction reserves their storage. Successful unions
-and queries allocate nothing. As with other owning values, let the value leave
-scope normally or explicitly transfer it with `move`.
-
-Union attaches the smaller component's tree to the larger one. Find does not
-compress paths, so queries are immutable and work through protected views
-without hidden writes. Find, Connected, SizeOf, and Union take logarithmic time
-in the worst case. Storage and construction time are linear in the element
-count. Construction can fail through the normal allocation API. Partially
-initialized ownership is cleaned up by the language.
-
-Map application-specific labels to the fixed indices. Synchronize access when
-sharing a mutable set across threads. The source is
-`core/Collections/DisjointSet.gf`, using Vector and its ordinary runtime contracts.
+The value is move-only. Storage and construction cost are linear in element
+count. Union attaches the smaller tree to the larger. Queries and union take
+O(log n) worst-case time. Queries accept immutable views.
 
 ## Reuse a fixed universe
 
-`Reset()` is `nothrow` and restores `Find(i) == i`, `SizeOf(i) == 1`, and
-`SetCount == ElementCount` for every valid index. It retains both existing vector
-buffers and performs no allocation, freeing, resizing, or element-count change.
-Default-constructed and zero-count partitions remain empty. Repeated resets
-have the same result, and ordinary unions can immediately build another partition.
-
-This supports processing independent graph batches over the same vertex indices
-without reconstructing the owning value between batches:
+`Reset()` restores singleton components and retains storage. This supports another
+graph batch over the same indices:
 
 ```csharp
 using Standard::Collections;
@@ -84,7 +66,7 @@ int main()
 }
 ```
 
-Reset takes linear time in `ElementCount`. It discards all previous connectivity
-and representative meanings. Keep application labels separate from component
-representatives as for unions. Reset mutates the partition and is unavailable
-through readonly or immutable receivers.
+Reset takes O(n). Previous component relationships and representative meanings
+are discarded.
+
+Source: `core/Collections/DisjointSet.gf`

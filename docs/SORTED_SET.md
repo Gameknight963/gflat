@@ -1,12 +1,11 @@
 # SortedSet
 
-`Standard::Collections::SortedSet<T>` owns unique values in comparator order. It wraps
-`SortedMap<T, byte>` and therefore stores its entries contiguously. Lookups use
-binary search. Insertion and removal may move later entries. No hash or equality
-interface is required, and noncopyable owning values work.
+`Standard::Collections::SortedSet<T>` owns unique values in comparer order.
+Storage is contiguous and lookup uses binary search.
 
 ```csharp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {
@@ -26,42 +25,28 @@ int main()
 }
 ```
 
-The comparison must define a consistent ordering. A result of zero identifies
-an existing value, even when the two objects have different fields. `Add(value)`
-returns false for a duplicate and destroys the unused argument without replacing
-the stored owner. Use `move` to transfer an existing noncopyable value. `Remove`
-borrows its query and destroys a matching stored value. It returns false on a
-miss. `Clear` destroys all values while retaining capacity. `Reserve`, `Count`,
-`Capacity`, and `IsEmpty` follow the other owning collections.
+| Operation | Effect |
+| --- | --- |
+| `Add(value)` | Inserts, or returns false and destroys the duplicate argument |
+| `Contains(&query)` | Tests for a comparer-equivalent value |
+| `Find(&query)` | Immutable pointer to the stored equivalent value, or null |
+| `Remove(&query)` | Destroys the stored value, returning false when absent |
+| `Clear()` | Destroys values and retains capacity |
+| `Reserve(count)` | Reserves entry capacity |
 
-`Contains` and `GetEnumerator` work on immutable receivers. The nested
-`SortedSet<T>::Enumerator` borrows the storage and exposes `immutable(T)* Current`
-in comparator order. Keys cannot be modified through that pointer. The source
-must remain alive and at a stable address. Do not mutate, move, or destroy it
-while iterating. Structural mutations may invalidate borrowed pointers. If a
-removal query points into this set, lookup finishes before the stored owner is
-destroyed or moved.
+A zero comparer result identifies an existing value. The comparer must keep a
+consistent ordering and leave the set unchanged through other aliases. Comparison
+or allocation failure preserves existing entries. Insertion arguments still follow
+normal value cleanup.
 
-A throwing comparison or failed insertion/reserve allocation leaves existing
-values and their addresses unchanged. An insertion argument is still consumed
-and destroyed if insertion fails. Copying is not required for insertion,
-relocation, lookup, or enumeration. Callbacks must not mutate the set through
-another alias. Sets do not own objects pointed to by pointer-valued elements.
-
-There are no cross-set relation or mutation methods yet: sets can use different
-comparisons, so such operations need an explicit compatibility contract first.
-Source-library selection requires `Collections/SortedSet.gf`, `Collections/SortedMap.gf`, `Collections/Vector.gf`,
-`Memory/Span.gf`, and their query interface declarations. No tree nodes or GC allocations
-are introduced. The selected `Memory` implementation supplies vector storage.
+Use `move` for noncopyable owners. Enumeration yields immutable pointers in
+comparer order. Insertion, removal, and growth can move entries, so reacquire
+borrowed pointers and iterators afterward.
 
 ## Borrowing the stored equivalent value
 
-`Find(immutable(T)* query)` returns `immutable(T)*?` borrowing the actual
-comparison-equivalent stored value, or null when absent. It delegates to the
-underlying sorted map's FindKey lookup, taking logarithmic comparisons without
-copying owners or allocating storage. Comparator exceptions propagate without
-library mutation under the existing callback rules. A query may borrow the
-stored value. The result protects reachable key state and does not extend its
-lifetime: keep the owner alive, and reacquire borrows affected by growth or shifts
-from insertion/removal. Removing a value, clearing or destroying its owner ends
-that value's borrow. Equivalent duplicate insertion keeps the original payload.
+Find returns the stored object, which may have different payload fields from an
+equivalent query. Duplicate insertion keeps that original object. Keep its owner
+alive and retain the pointer only while that entry stays in place.
+
+Source: `core/Collections/SortedSet.gf`

@@ -1,23 +1,14 @@
 # Query elements by position
 
-`ElementAt(nuint index)` returns the element at a zero-based position. It
-advances a fresh iterator only as far as that position and throws `Exception`
-with code 3 when the sequence ends first. Even the largest `nuint` index is
-handled without count overflow.
-
-`TryElementAt(nuint index, ref T result)` instead returns false when the sequence
-ends first and leaves the initialized output unchanged. On success it replaces
-output with the selected element using ordinary value assignment and returns
-true. It does not default-construct a `T` or provide a borrowed reference.
-
-For a sequence whose element type is itself `readonly(T)` or `immutable(T)`,
-use value-returning `ElementAt`. The current `ref T` output contract also
-qualifies the destination and prevents assignment. `TryFirst`, `TryLast`, and
-`TrySingle` share this limitation. A pointer element with a readonly pointee
-does not by itself make the pointer's output slot readonly.
+| Method | Result |
+| --- | --- |
+| `ElementAt(index)` | Return the zero-based element, or throw `Exception` with code 3 if it is absent |
+| `TryElementAt(index, ref result)` | Replace `result` and return true, or leave it unchanged and return false if the index is absent |
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
 
 int main()
 {
@@ -31,33 +22,18 @@ int main()
 }
 ```
 
-The terminal reads `Current` only for the selected position. In particular,
-`source.Select(project).ElementAt(2)` calls `project` once, for that element.
-An out-of-range index does not call it. An earlier `Where` may read values to
-evaluate its predicate normally. This is sequential enumeration, including for
-sources that also support indexing.
+Both methods enumerate only as far as the selected position, even for sources
+that also support indexing. The terminal reads `Current` only at that position.
+For example, `.Select(project).ElementAt(2)` calls `project` once. A preceding
+`Where` still reads candidates to test its predicate.
 
-Both methods stop immediately after obtaining the selected element. Skipped
-terminal elements do not have their `Current` read. `TryElementAt` also handles
-the largest `nuint` index by decrementing only nonzero remaining indices. A finite
-sequence can be exhausted without index wraparound.
+Results use value semantics. An owning String read from borrowed storage is
+copied. Pointer results retain the source's lifetime requirements.
 
-Results follow ordinary value semantics: owning values such as `String` are
-independent copies when read from a borrowed source. Readonly and immutable
-element views retain their qualifications. Pointer results remain borrowed
-addresses. Keep the source's backing storage alive and obey its normal mutation
-rules throughout the call. Returning an address does not extend its lifetime.
+`TryElementAt` can still throw on input, copying, or callback failure. Those
+errors preserve its previous output. For an outer `readonly(T)` or
+`immutable(T)` element type, use `ElementAt`: `ref T` also qualifies the output
+slot and prevents replacement. A readonly pointee alone leaves the pointer
+slot writable.
 
-Constructed iterators and their owned fields are destroyed before returning or
-propagating an exception. Iterator construction, advancement, element copying,
-and callbacks may throw. Their original exceptions propagate.
-
-`TryElementAt` is potentially throwing, like `TryFirst`. Iterator construction,
-advancement, `Current`, and element-copy failures before assignment preserve the
-previous output value. A successful assignment destroys its old resources
-normally. This follows the existing owning assignment and destructor contracts.
-The method does not catch errors or reinterpret them as an absent index.
-
-Projects selecting standard-library sources explicitly need
-`Standard/core/Queries/enumerable_element_at.gf` alongside their query and source
-dependencies. Ordinary projects including the standard library get it directly.
+Source: `Queries/enumerable_element_at.gf`.

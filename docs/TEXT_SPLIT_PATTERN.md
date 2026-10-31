@@ -1,44 +1,20 @@
 # Split borrowed text once on a byte-sequence delimiter
 
-Optional `core/Text/text_split_once_pattern_span.gf` adds three non-generic overloads on
-`Span<readonly(char)>`, complementing the existing single-character API:
+`Span<readonly(char)>` supports multi-byte separators for `TrySplitOnce` and
+`TrySplitLastOnce`:
 
-- `TrySplitOnce(separator, count, ref before, ref after)` takes counted bytes
-- `TrySplitOnce(separator, ref before, ref after)` takes a null-terminated pointer
-- `TrySplitOnce(separatorSpan, ref before, ref after)` takes the complete
-  counted contents of a `Span<readonly(char)>`, including NUL bytes
+| Separator form | Call arguments |
+| --- | --- |
+| Counted bytes | `separator, count, ref before, ref after` |
+| C string | `separator, ref before, ref after` |
+| `Span<readonly(char)>` | `separatorSpan, ref before, ref after` |
 
-The first complete exact byte match wins. Matching is case-sensitive and has no
-Unicode normalization, quoting, escaping, or word-boundary rules. The separator
-is excluded from both results. Later matches remain in the second result.
-Search reuses `ByteSearch`, rather than introducing another pattern algorithm.
-
-An empty separator matches at offset zero: `before` is an empty default span and
-`after` is the complete receiver. This also succeeds for a default empty source
-or separator span without accessing a null Data pointer. A separator longer than
-the source fails without reading either byte buffer. A counted separator of
-length zero is not dereferenced. The C-string convenience scans its separator to
-find the terminator and therefore requires readable terminated storage.
-
-Failure returns false and clears both output spans to their default empty state.
-Both successful views are computed before output metadata is assigned. Either
-output may reuse the caller's receiver variable or separator-span variable.
-Output references must be distinct from one another.
-
-All results borrow the original text storage. Keep it alive and at the same
-address while using either result. Changing source bytes is visible through
-returned views. No separator pointer is retained, so its storage is needed only
-during the call. Sources/separators may overlap each other. Output metadata must
-not overlap the byte storage being searched. Calls do not allocate, change input
-bytes, construct Strings, or require disposal. Ordinary raw-pointer validity
-requirements still apply for nonempty accepted buffers.
-
-Include `Memory/Span.gf`, `Text/ByteSearch.gf`, `Text/CString.gf` and the Span
-dependencies with this optional source.
+`TrySplitOnce` uses the first exact match:
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Memory;
+using Standard;
+using Standard::Memory;
 
 int main()
 {
@@ -51,19 +27,8 @@ int main()
 }
 ```
 
-For the last complete match, include
-`core/Text/text_split_last_once_pattern_span.gf` and call `TrySplitLastOnce`.
-It accepts the same counted-pointer, C-string, and separator-span forms and
-reuses `ByteSearch::LastIndexOf`. Overlapping matches are considered:
-`"aaaaa"` split on `"aaa"` gives `"aa"` and an empty suffix.
-
-An empty separator matches at the **end**: `before` retains the complete receiver
-metadata and `after` is a default empty span. Empty source and separator spans,
-and counted zero-length separator pointers, are accepted without reading their
-data. Missing separators clear both outputs. The same lifetime, no-allocation,
-and distinct-output requirements apply. Receiver or separator metadata may be
-reused as either output. Both result views are computed before either assignment.
-The optional pattern file has the same source dependencies as first-match splitting.
+`TrySplitLastOnce` uses the last match, including overlapping matches.
+For example, `"aaaaa"` split on `"aaa"` gives `"aa"` and an empty suffix.
 
 ```csharp
 using Standard::Text;
@@ -76,11 +41,21 @@ int main()
     Span<readonly(char)> name = new();
     bool found = qualified.AsReadOnly().TrySplitLastOnce("::", ref owner, ref name);
     // owner is "Standard::Text" and name is "String".
-    if (!found || owner.Length != 9 || name.Length != 6) return 1;
+    if (!found || owner.Length != 14 || name.Length != 6) return 1;
     return 0;
 }
 ```
 
-This owning String example additionally uses `Text/String.gf` and its dependencies,
-plus the optional `Text/string_span.gf` view convenience. A caller-buffer span
-does not require String.
+| Case | Result |
+| --- | --- |
+| Found | True, with views excluding the separator |
+| Missing | False, with both outputs reset to empty |
+| Empty separator, first-match form | Empty `before`, complete input in `after` |
+| Empty separator, last-match form | Complete input in `before`, empty `after` |
+
+Use two distinct output variables. Either can reuse input or separator-span
+metadata. Input and separator bytes may overlap. Keep the input owner alive for
+the returned views.
+
+Sources: `core/Text/text_split_once_pattern_span.gf`,
+`text_split_last_once_pattern_span.gf`, and `Text/ByteSearch.gf`.

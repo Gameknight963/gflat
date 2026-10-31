@@ -1,14 +1,13 @@
 # Minimum and maximum query values
 
-`Min()` and `Max()` return the least or greatest element under the element
-type's `IComparable<T>` order. Each also accepts an explicit borrowed comparer:
-`Min(compare)` or `Max(compare)`, where `compare` has type
-`int(immutable(T)*, immutable(T)*)*`. A negative result orders its first argument
-before its second, zero means equal priority, and a positive result orders it
-after its second. The comparator must define a consistent order.
+`Min()` and `Max()` return the first least or greatest element under
+`IComparable<T>` ordering. Empty input throws `Exception("Sequence is empty")`.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+
 int main()
 {
     int[5] data = [7, -3, 5, -3, 2];
@@ -19,46 +18,28 @@ int main()
 }
 ```
 
-These terminals enumerate the complete source once and read each terminal
-`Current` exactly once. The first element initializes an owned best value.
-Each later element is materialized in a local and compared as
-`compare(&current, &best)`. It replaces the best only when strictly smaller
-for `Min` or strictly larger for `Max`, so the first equal element wins.
-A singleton invokes no comparer. An empty source throws
-`Exception("Sequence is empty")` without reading `Current` or comparing.
+For another order, pass a comparer with type
+`int(immutable(T)*, immutable(T)*)*`. Negative means the first argument comes
+before the second, zero means equal priority, and positive means after.
 
-The result follows ordinary `T` value semantics. Borrowed owning elements are
-copied when read. Replacements move the selected local into the best value and
-release the previous best normally. The final result is moved to the caller.
-Pointer elements remain pointers and do not acquire ownership of their targets.
-The comparer borrows only the two locals during its call. It must not retain
-those addresses, mutate their values, or invalidate source iteration through
-another alias. Source wrappers retain their normal copy and borrowing rules.
+The scan reads each element once and retains the current best. Equal values
+keep the first result. The comparer borrows temporary candidates during its
+call. It must not retain those addresses or invalidate the source.
 
-No sorting, sequence buffer, or GC allocation is introduced. The scan uses
-constant auxiliary element storage. User constructors, element copies,
-comparers, and iterators can allocate or throw. Exceptions propagate and normal
-cleanup releases current/best values and the iterator. Assignment to an existing
-caller value occurs only after the terminal returns its completed result. A
-failed scan does not replace that assignment target.
+## Floating-point ordering
 
-Default comparison requires the exact closed contract `IComparable<T>` and
-forwards through `Comparer<T>::Compare`. It follows the existing floating-point
-comparison contract: NaN compares below every non-NaN value and NaNs compare
-equal to one another. Thus `Min` selects the first NaN if any are present.
-`Max` selects the greatest non-NaN if there is one. Equal signed zeroes retain
-the first value. These rules do not promise equivalence to `Math::Min/Max` or
-floating-point numeric aggregation APIs with different NaN policies.
+Default comparison places NaN below every numeric value and treats NaNs as
+equal. Min therefore selects the first NaN if one exists. Max selects the
+largest non-NaN if available. Equal signed zeroes retain the first value.
 
-The best value is replaced through ordinary local assignment, so its element
-type must permit that assignment. Outer `readonly` or `immutable` element types
-do not meet this requirement. An explicit comparer alone does not change it.
-For a qualified integer view, project to a writable value element before the
-scan: `.Select((readonly(int) value) => (int)value).Min()` (likewise `Max`).
-This also supplies the existing `IComparable<int>` contract rather than assuming
-it applies to `readonly(int)`. The operator does not remove element qualification
-automatically.
+## Element types
 
-Selective source users add `Queries/enumerable_extrema.gf` with the normal
-sequence contracts and `Collections/Comparer.gf`/`IComparable.gf` for default comparison.
-Include the dependencies of the element type and source iterator.
+The best value must support assignment. For an outer readonly or immutable
+element type, project to an ordinary value first:
+`.Select((readonly(int) value) => (int)value).Min()`.
+
+The scan uses constant element storage. Borrowed owning elements are copied
+when read. See [query ownership](QUERIES.md#ownership).
+
+Source: `Queries/enumerable_extrema.gf`, plus `Collections/Comparer.gf` for
+default comparison.

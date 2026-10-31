@@ -1,14 +1,13 @@
 # Getting started with the standard library
 
-A normal gflat project includes the standard library. Import the namespaces for
-the APIs you need, such as `using Standard::Text;` for strings and text parsing or
-`using Standard::Memory;` for spans. `using Standard;` imports only the general APIs in
-`Standard`, not its nested namespaces. See the [namespace layout](../Standard/README.md#namespaces-and-files)
-and [project setup](PROJECTS.md) for creating and building a `.gfproj`.
+A gflat project includes Standard by default. Import namespaces for the APIs
+you use. For example, Standard::Text contains Strings and parsing, while
+Standard::Memory contains spans. See the [namespace layout](../Standard/README.md#namespaces-and-files)
+and [project setup](PROJECTS.md).
 
 ## Parse some text and print a result
 
-This complete program prints `Sum: 33`:
+This program prints `Sum: 33`:
 
 ```csharp
 using Standard::Text;
@@ -42,47 +41,34 @@ int main()
 }
 ```
 
-`s"..."` constructs an owning `String`. `s$"..."` formats values into one.
-Here `long` holds each parsed signed 64-bit integer, and `extralong` holds the
-exact sum of the three values. `Trim()` removes ASCII whitespace from a borrowed
-view. The counted parser consumes the whole remaining token and reports failure
-without throwing. The span overload uses its exact byte count and also accepts
-an empty span, reporting failure without dereferencing its data pointer. The
-separate empty check here gives a more specific error message. See
-[integer parsing](INTEGER_PARSING.md) for the accepted
-syntax and throwing alternatives.
+`s"..."` creates a String, and `s$"..."` formats values into one. Split yields
+borrowed byte spans. Trim removes ASCII whitespace. TryParseLong validates a
+whole token and returns false on failure. The explicit empty check provides a
+more specific error message. See [integer parsing](INTEGER_PARSING.md) for syntax.
 
 ## Owners and borrowed views
 
-`input` owns its bytes. `Split`, `Trim`, and each `Span<readonly(char)>` carry
-borrowed pointer-and-length metadata. Copying these views or iterating the parts
-does not clone the String. Keep `input` alive and unchanged while using the parts.
-Its automatic cleanup releases its allocation when it leaves scope.
-See [text splitting and trimming](TEXT_PARTS.md) and [String views](STRINGS.md).
+Keep input alive while using its split parts. Its cleanup releases the owned
+bytes at scope exit.
 
-Values use their type's normal copying rules. Copying a `String` invokes its copy
-constructor and creates independent text storage. `move value` transfers a value
-and consumes that local: initialize it again before using it. Owning types such
-as `Vector<T>` and `Unique<T>` prohibit copying. Use `move` to transfer them.
-[Unique](UNIQUE.md) is an optional owner for one manually allocated object.
-`ref` borrows an existing value rather than copying it. Borrowed pointers, spans,
-and references require the programmer to keep their backing owner alive.
+| Operation | Ownership effect |
+| --- | --- |
+| Copy a String | Creates independent text storage |
+| Move a value | Transfers it and consumes that local until reinitialized |
+| Borrow through ref, pointer, or Span | Uses the existing value/storage |
 
-`AsReadOnly()` protects each element's inline data while allowing changes through
-its pointer and managed-reference fields. `AsImmutable()` also protects those
-targets through the returned view. For character spans, both prevent character writes.
-Other mutable aliases can still change the backing storage. See
-[readonly and immutable views](LANGUAGE_SPEC.md#readonly-and-immutable-views).
+Vector and Unique are move-only owners. [Unique](UNIQUE.md) manages one manual
+allocation. For collection views, AsReadOnly protects inline element state.
+AsImmutable also protects reachable pointees. See
+[readonly and immutable](LANGUAGE_SPEC.md#readonly-and-immutable-views).
 
 ## Console text and the next step
 
-`Console::WriteLine("hello")` accepts a borrowed null-terminated C string.
-`Console::WriteLine(data, length)` accepts counted bytes, including embedded
-zeros. `Console::WriteLine(ref summary)` borrows an owning String's counted bytes
-without copying its allocation. [Console](../Standard/libc/README.md#console) also provides caller-buffer
-and owning-String input methods.
+| Console call | Input |
+| --- | --- |
+| `WriteLine("hello")` | C string |
+| `WriteLine(data, length)` | Counted bytes |
+| `WriteLine(ref summary)` | String contents |
 
-For a complete streaming program using a reusable input buffer, see
-[number statistics](../examples/number-stats/README.md). The
-[standard-library index](../Standard/README.md) links the collection, file, Unicode,
-JSON, and formatting APIs as you need them.
+Try [number statistics](../examples/number-stats/README.md) for streamed input,
+or browse the [library index](../Standard/README.md).

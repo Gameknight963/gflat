@@ -1,13 +1,13 @@
 # HKDF-SHA256 key extraction and expansion
 
-`Standard::Hashing::HKDFSHA256` composes the existing HMACSHA256 core according to
-[RFC 5869](https://www.rfc-editor.org/rfc/rfc5869.html#section-2). It separates
-extracting a 32-byte pseudorandom key from expanding that key into caller storage.
-It is intended for suitable key material, not password hashing. HKDF does not
-provide the deliberate slowdown used against password guessing.
+`Standard::Hashing::HKDFSHA256` derives keys using
+[RFC 5869](https://www.rfc-editor.org/rfc/rfc5869.html#section-2).
+Extraction produces a 32-byte pseudorandom key. Expansion produces the requested
+key bytes from that key and application-specific info.
 
 ```csharp
-using Standard; using Standard::Hashing;
+using Standard;
+using Standard::Hashing;
 
 int main()
 {
@@ -26,49 +26,33 @@ int main()
 }
 ```
 
-`Extract(salt, saltCount, input, inputCount)` reads counted bytes and returns an
-independent ordinary `byte[32]` value. Empty salt is count zero and produces the
-same padded HMAC key as RFC 5869's default 32 zero bytes. Zero counts do not read
-their corresponding pointers. Input and salt can overlap each other as readable,
-stable storage. No pointer is retained. Input storage can be reused after return.
+## Extract
 
-SHA256 permits at most `2^61 - 1` bytes per hash. HMAC reserves 64 bytes for its
-inner pad. Extract therefore rejects salt above `2^61 - 1` bytes or input above
-`2^61 - 65` bytes, throwing `Exception` before reading either input. Successful
-calls allocate no heap storage. Ordinary thrown exceptions may allocate.
+`Extract(salt, saltCount, input, inputCount)` returns `byte[32]`. An empty salt
+has the RFC's default effect of 32 zero bytes. Input and salt may overlap.
 
-`TryExpand(prk, prkCount, info, infoCount, output, outputLength)` is `nothrow`.
-The last argument is both the requested count and the caller's declared writable
-extent. Success writes exactly that many raw bytes, leaving following storage
-untouched. It does not receive a separate capacity or report a partial count.
-The caller must actually provide the declared writable region.
+The maximum salt count is `2^61 - 1`. The maximum input count is `2^61 - 65`.
+Exceeding either throws `Exception` before reading the inputs.
 
-Expansion accepts output lengths 1 through 8160, the RFC limit of 255 SHA256
-blocks. Zero output returns false. PRK must contain 32 through `2^61 - 1` bytes.
-For a one-block output of at most 32 bytes, info can contain at most `2^61 - 66`
-bytes. Longer output permits at most `2^61 - 98` info bytes, leaving room for
-the previous 32-byte block and one counter byte in each HMAC input.
+## Expand
 
-Invalid lengths or output/info overlap return false before reading any input or
-writing output. All accepted input regions must be readable and stable while
-needed, and output must be writable for the complete requested count. Non-null
-pointer arguments remain required by the language even for zero-count salt/info.
-Neither method allocates internally on success, validates arbitrary storage
-ownership or supports concurrent alias mutation.
+`TryExpand(prk, prkCount, info, infoCount, output, outputLength)` fills exactly
+the requested output extent.
 
-Output may overlap PRK, including at a different offset: the complete key is
-consumed into private HMAC state before output starts, and expansion does not
-reread it. Output must not overlap nonempty info, which is read again for each
-block. That overlap is rejected even for a one-block request. Only the actual
-output interval is checked. Adjacent info in the same allocation is permitted.
-PRK and info can overlap as input, provided output remains disjoint from info.
-Successful writes naturally replace any PRK bytes overlapping output.
+| Parameter | Accepted size |
+| --- | --- |
+| `prkCount` | 32 through `2^61 - 1` bytes |
+| `outputLength` | 1–8160 bytes, up to 255 SHA-256 blocks |
+| `infoCount`, output up to 32 bytes | At most `2^61 - 66` bytes |
+| `infoCount`, longer output | At most `2^61 - 98` bytes |
 
-Tests check the three RFC SHA256 vectors and independent .NET HKDF results,
-binary/unaligned input, block boundaries and the 255th block, output guards,
-permitted key overlap, rejected info overlap and inaccessible-pointer preflight.
-Tests exercise length limits through seeded internal counters. Key bytes remain
-in ordinary value storage until overwritten.
+Invalid lengths return false and preserve output. Output may overlap PRK,
+which is read into keyed state before writing. Output overlap with nonempty
+info is rejected because expansion rereads info for each block. Adjacent regions
+within one allocation are allowed.
 
-Explicit sources require `core/Hashing/HKDFSHA256.gf`, HMACSHA256, SHA256,
-BitOperations and Exception support.
+HKDF is intended for key material. Password-derived keys need a password KDF
+with an appropriate work factor. Derived and intermediate keys occupy ordinary
+storage until overwritten.
+
+Sources: `core/Hashing/HKDFSHA256.gf`, `HMACSHA256.gf`, and their hash dependencies.

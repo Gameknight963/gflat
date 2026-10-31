@@ -1,18 +1,15 @@
 # CSV reader
 
-`Standard::Csv::CsvReader` reads fields from a borrowed byte buffer.
-`Read()` emits one validated field at a time. `EndOfRecord` identifies a record's
-last field. Read through `false` to validate the whole input. Stopping early does
-not validate its remaining suffix.
+`Standard::Csv::CsvReader` reads fields from a complete byte buffer.
 
 ## Importing counted values
 
-This complete program sums the quantity column of a two-column inventory. Quoted
-names may contain commas or doubled quotes. Only the numeric column is decoded
-into a caller-owned buffer. Numeric parsing and column-count policy remain explicit.
+This example sums an inventory's quantity column and prints `20`:
 
 ```csharp
-using Standard; using Standard::Text; using Standard::Csv;
+using Standard;
+using Standard::Text;
+using Standard::Csv;
 
 int main()
 {
@@ -48,77 +45,57 @@ int main()
 }
 ```
 
-It prints `20`. The 32-byte quantity limit is this caller's choice. The reader
-does not impose a fixed field length. This is a complete-buffer reader: input
-split across IO chunks must first be assembled by the caller.
+Call Read until false to validate every record. Assemble chunked IO input before
+constructing the reader.
 
 ## Byte-oriented profile
 
-The quoting rules follow [RFC 4180, section 2](https://www.rfc-editor.org/rfc/rfc4180#section-2),
-with explicit byte-oriented extensions: LF record separators are accepted alongside
-CRLF, and field data need not be ASCII. It does not implement the RFC's exact
-ASCII-only `TEXTDATA` grammar.
+Fields use [RFC 4180](https://www.rfc-editor.org/rfc/rfc4180#section-2) quoting,
+with LF accepted alongside CRLF and arbitrary byte values allowed in data.
 
-- Commas separate fields. Outside quotes, CRLF or LF ends a record. Bare CR is
-  rejected, with the error pointing at the expected LF position or end of input.
-- A field may start with `"`. Inside it, `""` represents one quote. Commas and
-  arbitrary CR/LF bytes are data. Embedded line endings are preserved exactly.
-- After a closing quote, only comma, a record ending, or EOF is accepted. A quote
-  in an unquoted field is an error. Spaces are data, not ignored padding around
-  enclosure: ` "x"` and `"x" ` are invalid.
-- Other bytes, including NUL and non-ASCII values, are opaque counted data. No
-  UTF-8 validation, BOM stripping, locale rules, normalization, comment syntax, or
-  delimiter guessing is performed.
-- Headers are ordinary records. The caller decides whether to skip a header or
-  require equal field counts. Empty fields and blank records are retained.
+- Commas separate fields
+- A quoted field starts with `"` and escapes a quote as `""`
+- Commas and line endings inside quotes remain field data
+- Outside quotes, LF or CRLF ends a record. Bare CR fails.
+- After a closing quote, a separator, record ending, or EOF must follow
 
-| Input bytes | Records |
+Spaces are data, so ` "x"` and `"x" ` fail. Headers are ordinary records.
+The caller chooses column-count and header policy.
+
+| Input | Records |
 | --- | --- |
-| Empty input | Zero records. |
-| LF or CRLF | One record with one empty field. |
-| `,` | One record with two empty fields. |
-| `a,` | One record containing `a` and an empty field. |
-| `a` followed by LF | One record containing `a`. No extra record. |
-| `a` followed by two LFs | A record containing `a`, then a one-empty-field record. |
-| `""` | One record with one quoted empty field. |
-
-A terminal comma introduces an empty final field. An empty file means zero
-records. Use a quoted empty field or a record ending to represent one empty value.
-The final record need not have a line ending.
+| Empty | None |
+| LF or CRLF | One empty field |
+| `,` | Two empty fields |
+| `a,` | `a` and an empty field |
+| Final unterminated fields | One final record |
 
 ## Field metadata and decoding
 
-After a successful `Read()`:
+After a successful Read:
 
-- `HasValue` is true, including for a valid empty field
-- `FieldOffset` is the raw field's byte offset in the original input
-- `RawField` is a borrowed `Span<readonly(char)>` over the exact lexeme, including
-  surrounding quotes and doubled quotes. It excludes the following separator.
-- `ValueLength` counts decoded bytes: outer quotes are removed and doubled quotes
-  count once. It is independent of NUL bytes within the value.
-- `IsQuoted` identifies an enclosed field. `EndOfRecord` is true for the last field
-  of a record, including a final record without a line ending.
+| Member | Meaning |
+| --- | --- |
+| `HasValue` | A current field exists, including an empty one |
+| `FieldOffset` | Byte offset of its raw spelling |
+| `RawField` | Span including surrounding and doubled quotes |
+| `ValueLength` | Decoded byte length |
+| `IsQuoted` | Whether the field was enclosed |
+| `EndOfRecord` | This is the record's last field |
 
-`TryCopyValue(output, capacity, ref written)` decodes the current field into a
-caller-owned buffer. It writes counted bytes, without a terminator. It is
-`immutable` and `nothrow`, does not allocate, and does not advance the reader.
-Repeated copies produce the same value. Insufficient capacity returns false,
-sets `written` to zero, and leaves all output bytes unchanged. A valid empty field
-succeeds with capacity zero without dereferencing output.
-
-Before the first read, after completion, after `Reset`, and after a failed read,
-there is no current field. `TryCopyValue` then returns false with `written` zero.
-Metadata is cleared: offsets and lengths are zero, booleans false, and `RawField`
-is a canonical empty span with null `Data`. A valid empty unquoted field also has
-an empty `RawField`. `HasValue` distinguishes it from no current field.
+`TryCopyValue(output, capacity, ref written)` decodes the field without advancing.
+Short capacity or no current field returns false, zeros `written`, and preserves
+the buffer. Results are counted bytes without a terminator.
 
 ## Reusable owning output
 
-The optional `CsvReaderText` convenience decodes into an initialized `String`,
-reusing its capacity between fields:
+`CsvReaderText::CopyValue` decodes into a String and reuses its capacity:
 
 ```csharp
-using Standard; using Standard::Text; using Standard::Csv;
+using Standard;
+using Standard::Text;
+using Standard::Csv;
+
 int main()
 {
     readonly(char)* input = "first,\"two\"\"quotes\"";
@@ -134,39 +111,18 @@ int main()
 }
 ```
 
-`CopyValue` does not advance the reader or validate an encoding. It preserves
-embedded NUL bytes and maintains the String's trailing terminator. Empty fields
-clear the string while retaining capacity. Calls without a current field throw
-before changing the output. Allocation failure during growth also preserves its
-old bytes, length, capacity, and allocation. Output storage must be separate from
-the reader and its entire borrowed input, as with `TryCopyValue`.
-
-For selective builds using this convenience, include `Csv/CsvReaderText.gf`
-and the String dependencies.
+An empty field clears the String. No current field throws, and growth failure
+preserves its old contents. Keep output separate from the reader's input.
 
 ## Lifetimes, aliases, and errors
 
-The caller must keep the entire input alive and unchanged throughout reader use.
-A saved `RawField` borrows the input independently of the reader: advancing,
-resetting, copying, moving, or destroying reader metadata does not free or modify
-those bytes. It does not prolong their lifetime. Copying a reader duplicates its
-cursor state and allows independent advancement. It does not copy input bytes.
+Keep input alive and unchanged for the reader and saved RawField spans. Reader
+copies have independent positions over those bytes. Buffer decoding requires
+output separate from input and reader state. Keep `written` separate too.
 
-The destination buffer must be disjoint from the entire input and from reader
-storage. The `written` variable must be separate from input, reader storage, and
-the output buffer. In-place or overlapping decoding is not supported by this
-reader: mutating input would invalidate borrowed fields and repeated decoding.
+Malformed input throws CsvParseException with the offending byte or EOF Offset.
+Failure clears current-field metadata and requires Reset before another Read.
+Reset restarts the same input.
 
-Malformed CSV throws `CsvParseException`, whose readonly `Offset` identifies the
-unexpected byte or EOF. A failed read clears the current field and latches failure.
-Another `Read` throws until `Reset()` restarts the same input. `Reset` does not
-change its storage or contents. Successful `Read` and `TryCopyValue` calls allocate nothing.
-Constructing or throwing an exception uses the ordinary exception runtime.
-
-For explicit source selection include `core/Csv/CsvReader.gf`,
-`core/Csv/CsvParseException.gf`, and `Memory/Span.gf` with its query-interface dependencies.
-The complete standard library includes these files automatically.
-
-See [CSV to JSON](../examples/csv-to-json/README.md) for a complete converter
-using a reusable decoded field buffer, and [CsvWriter](CSV_WRITER.md) for
-writing counted fields through an `ITextWriter`.
+Sources: `core/Csv/CsvReader.gf`, `CsvParseException.gf`, and `CsvReaderText.gf`
+for String output. See [CSV to JSON](../examples/csv-to-json/README.md) for a converter.

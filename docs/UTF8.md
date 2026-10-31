@@ -1,53 +1,29 @@
 # UTF-8 codec
 
-`core/Text/utf8.gf` provides allocation-free, strict UTF-8 operations in
-`Standard::Text::Utf8`. It can be compiled with `NoStdLib`. It does not depend on libc,
-String, GC, or exception support.
+`Standard::Text::Utf8` encodes and decodes Unicode scalars. A scalar occupies one
+through four UTF-8 bytes. A displayed grapheme can contain several scalars.
 
 | Function | Result |
 | --- | --- |
-| `IsValidScalar(uint scalar)` | True for Unicode scalar values: U+0000 through U+10FFFF, excluding U+D800 through U+DFFF. |
-| `EncodedLength(uint scalar)` | One through four bytes. Zero for an invalid scalar. |
-| `TryDecode(input, count, &scalar, &consumed)` | Decodes the first complete scalar, reporting its byte length. |
-| `TryDecodeLast(input, count, &scalar, &consumed)` | Decodes the final complete scalar, reporting its byte length. |
-| `TryEncode(scalar, output, capacity, &written)` | Writes one scalar into caller-owned storage. |
-| `TryCount(input, count, &scalarCount)` | Validates all input and counts Unicode scalar values. |
-| `IsValid(input, count)` | Validates all input bytes. |
+| `IsValidScalar(scalar)` | True for U+0000–U+10FFFF, excluding surrogates U+D800–U+DFFF |
+| `EncodedLength(scalar)` | 1–4 bytes, or zero for an invalid scalar |
+| `TryDecode(input, count, &scalar, &consumed)` | First scalar and its byte length |
+| `TryDecodeLast(input, count, &scalar, &consumed)` | Final scalar and its byte length |
+| `TryEncode(scalar, output, capacity, &written)` | Encoded scalar |
+| `TryCount(input, count, &scalarCount)` | Validates all input and counts scalars |
+| `IsValid(input, count)` | Validates all input |
 
-Input pointers have type `readonly(char)*`. Output storage has type `char*`.
-The scalar output is `uint`. Byte lengths, capacities, and scalar counts are
-`nuint`. Output parameters are pointers to writable caller storage.
+`count`, `capacity`, `consumed`, and `written` measure bytes. Decoding uses a
+`uint` scalar output. Encoded output is counted text without a terminator.
 
-`TryDecode`'s scalar and consumed outputs must not overlap each other. Either
-may overlap the input: the bytes needed for the scalar are examined before
-either output is stored. Result stores can overwrite input bytes, including an
-unconsumed suffix, so preserve that suffix separately if it is needed later.
-`TryCount` likewise reads the entire input before storing a successful count.
-Failure still writes zero to the outputs, even when that changes overlapping
-input. Output storage must have its normal scalar alignment and writable size.
-For encoding, the `written` variable must not overlap the destination buffer.
+Malformed or incomplete UTF-8 fails, including overlong sequences, encoded
+surrogates, and values above U+10FFFF. Failed Try calls zero their outputs.
+Encoding failure preserves the output buffer. Empty input validates and counts
+as zero scalars, while decoding one scalar fails.
 
-All input is counted. U+0000 is an ordinary scalar and does not terminate input.
-Encoding does not append a null terminator. Counts describe scalar values,
-not grapheme clusters or user-perceived characters.
-
-The decoder rejects overlong encodings, isolated continuation bytes, invalid
-leading bytes, surrogate encodings, scalars above U+10FFFF, and incomplete
-sequences. It does not replace malformed input. A failed `TryDecode` writes
-zero to both outputs. It does not consume an invalid byte sequence. Decoding
-one scalar does not validate the following bytes. Use `IsValid` or `TryCount`
-for full-input validation.
-
-`TryDecodeLast` examines at most the final four input bytes to locate and
-validate the final scalar. It does not validate the preceding bytes. A malformed
-prefix followed by a valid final scalar can succeed. Empty input and malformed
-or incomplete final scalars fail with both outputs zero. The output alignment
-and overlap rules are the same as for `TryDecode`: result stores can overwrite
-the retained prefix, so use separate metadata if that prefix is still needed.
-
-To remove a final scalar from a counted view, decode it and subtract its byte
-length. Repeating this operation walks scalar boundaries backward without
-building an index. Scalar boundaries do not represent grapheme clusters.
+`TryDecode` and `TryDecodeLast` validate the selected scalar alone. Use `IsValid`
+or `TryCount` to validate an entire buffer. Repeated final-scalar decoding can
+walk a counted string backward:
 
 ```csharp
 int main()
@@ -64,12 +40,13 @@ int main()
 }
 ```
 
-`TryEncode` checks scalar validity and capacity before writing any output byte.
-On failure it writes zero to `written` and leaves the output buffer untouched.
-`TryCount` writes zero on failure, including when a valid prefix preceded an
-invalid sequence. Empty counted input validates successfully and has zero
-scalars. Decoding one scalar from empty input fails.
+## Overlapping results
 
-The caller supplies readable/writable memory of the requested sizes. No Unicode
-normalization, locale behavior, grapheme segmentation, or Unicode category
-tables are provided by this codec.
+Decode outputs may overlap aligned writable input, but must be separate from
+each other. Reading finishes before result stores. Those stores can overwrite
+the remaining input, including when a failed decode writes zero. Keep metadata
+separate if the rest of the input must survive.
+
+For encoding, keep `written` separate from the output buffer.
+
+Source: `core/Text/utf8.gf`. For chunked input, use [Utf8Decoder](UTF8_DECODER.md).

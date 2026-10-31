@@ -1,12 +1,13 @@
-# Taking a finite sequence's tail
+# Take a query's final values
 
-`TakeLast(count)` yields the final at most `count` values of a finite input, in
-original order. It does not reorder or write through the input values. Each
-enumerator owns
-an independent `Deque<T>` tail buffer.
+`TakeLast(count)` yields the final at most `count` values of a finite input,
+keeping their original order:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+
 int main()
 {
     int[5] input = [1, 2, 3, 4, 5];
@@ -21,46 +22,32 @@ int main()
 }
 ```
 
-Creating the query or its enumerator does not enumerate upstream or allocate
-the element buffer. Custom source-value copies retain their ordinary effects.
-`TakeLast(0)` never constructs or advances the upstream iterator, reads its
-`Current`, or allocates tail storage. Ordinary source copies may still occur.
-For positive counts, the first `MoveNext` consumes the whole input and disposes
-the upstream iterator before yielding. An infinite source cannot yield a tail.
-`TakeLast(2).Take(1)` still consumes the complete source.
-`TakeLast(2).Take(0)` does not start buffering.
+## Buffering
 
-Once the tail fills, each next successful upstream move discards the oldest
-buffered value before reading and retaining the new `Current`. Each candidate's
-`Current` is read once during buffering. Deque eviction transfers and destroys
-the discarded value without copying it. Buffer growth uses existing checked
-Deque allocation, never an upfront reservation of the requested count. A huge
-count on a short input therefore stores only that input, rather than requesting
-storage proportional to the count.
+For a positive count, the first move consumes the full input and destroys its
+upstream iterator before yielding. An infinite input cannot produce a tail.
+`TakeLast(2).Take(1)` still reads everything.
 
-`Current` returns an ordinary `T` value copied from the buffered position, like
-`Reverse()`. Repeated reads can copy an owning value again. Elements must permit
-ordinary copying from retained storage. The returned value retains its outer readonly/immutable qualification.
-Pointer and managed-reference values keep their ordinary shared targets, while
-owning Strings retain independent copies. Project qualified scalar values to an
-explicit mutable stored type when necessary, as with `Reverse`/`ToVector`.
-Keep borrowed source storage alive and obey its borrowing rules. Consumable
-sources such as `FileLineSequence` still consume their shared file position. This
-wrapper does not rewind a file or make a one-shot source repeatable. A new enumeration
-reads the source again and owns a separate tail.
+`TakeLast(0)` skips upstream iterator construction and advancement. A
+downstream `Take(0)` also avoids filling the tail buffer.
 
-Input enumeration, copying, or allocation errors propagate. Failed initialization
-cleans the staged tail and upstream iterator and leaves this iterator finished:
-later moves return false without retrying, and `Current` is invalid. An output
-`Current` copy failure leaves the successful buffered position unchanged and can
-be retried. A successful tail remains owned until enumerator destruction,
-including after exhaustion, and normal loop/exception cleanup releases it.
+Each iterator owns a Deque that grows as values arrive, retaining at most
+`count` elements. Storage is O(min(count, input length)), plus spare capacity.
+Each candidate's `Current` is read once while filling that buffer.
 
-Buffer storage is O(min(count, input length)), subject to Deque's normal geometric
-capacity growth. Buffering performs linear work and later moves are constant-time.
-Element copy/allocation/destruction costs remain their normal costs. Unlike
-`Reverse().Take(count).Reverse()`, this retains only a bounded tail instead of
-materializing every input element.
-Selective source users include `Queries/enumerable_take_last.gf`,
-`Queries/TakeLastSource.gf`, the ordinary Enumerable/enumeration contracts,
-and `Deque<T>` plus its Span dependencies.
+## Results and lifetime
+
+`Current` copies a value from the buffer on every read. Elements must support
+that copy. Project qualified scalar views to ordinary stored values when
+necessary. The tail remains alive until iterator destruction, including after
+exhaustion.
+
+Each enumeration consumes the source again. File-line views continue from
+their shared current position. See [query ownership](QUERIES.md#ownership).
+
+An input, copy, or allocation failure finishes the iterator and releases its
+staged tail. A successful buffered position remains available after a
+`Current` copy failure.
+
+Sources: `Queries/enumerable_take_last.gf`, `Queries/TakeLastSource.gf`, and
+Deque dependencies.

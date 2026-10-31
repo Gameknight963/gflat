@@ -1,12 +1,14 @@
 # Borrowed JSON Pointer lookup
 
-`JsonPointer::TryResolve(document, pointer, ref value)` selects a raw JSON value
-using the plain pointer form of [RFC 6901 section 4](https://www.rfc-editor.org/rfc/rfc6901.html#section-4).
-Both inputs and the output have type `Span<readonly(char)>` and contain counted
-UTF-8 bytes. Success replaces the output span. False leaves it unchanged.
+`Standard::Json::JsonPointer::TryResolve(document, pointer, ref value)` locates a
+JSON value using a [plain JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901.html#section-4).
+All three arguments use `Span<readonly(char)>`.
 
 ```csharp
-using Standard; using Standard::Json; using Standard::Memory;
+using Standard;
+using Standard::Json;
+using Standard::Memory;
+
 int main()
 {
     Span<readonly(char)> document = new("{\"users\":[{\"name\":\"Ada\"}]}", 26);
@@ -19,47 +21,35 @@ int main()
 }
 ```
 
-The result borrows the exact value bytes from `document`. Strings retain their
-quotes and escape spelling. Numbers retain their spelling. Containers retain
-internal whitespace. Whitespace surrounding the selected value is excluded.
-An empty pointer selects the complete root value, including a scalar or empty
-container. An empty document is invalid JSON.
+The returned span borrows the selected value's exact bytes, including quotes or
+container whitespace. Keep its document owner alive. An empty pointer selects
+the root value.
 
-The method first validates the **entire JSON document**, including its suffix,
-before checking the pointer. Malformed JSON throws `JsonParseException` with an
-absolute byte offset within the supplied document span, even when the pointer
-is invalid or would miss a member. Pointer failure does not hide JSON errors.
-Allocation failures can throw `BadAllocException`. The method is not `nothrow`.
-These errors also leave the previous output unchanged.
+## Pointer syntax
 
-Pointers must be valid UTF-8. A nonempty pointer begins with `/`. Each slash
-starts another segment. Empty segments address empty object names, including
-the trailing segment of `/a/`. Counted pointers may contain embedded NUL bytes.
-Only `~0` and `~1` escapes are accepted, decoded once to `~` and `/`. `~01`
-therefore names `~1`, not `/`. The complete pointer's UTF-8 and escape syntax
-is checked even if an earlier segment would not resolve.
+- Start a nonempty pointer with `/`, with one segment per level
+- Escape `~` as `~0` and `/` as `~1`
+- Use empty segments for empty object names
+- Use zero-based decimal array indices, with no leading zeroes except `0`
 
-Object names are compared after decoding JSON string escapes, with exact UTF-8
-content and no Unicode normalization or case folding. A requested name that
-matches multiple members returns false, including escaped-equivalent duplicates.
-Duplicates with other names do not by themselves prevent lookup.
-Array segments are zero-based ASCII decimal indices without leading zeros
-except `0`. Empty, negative, signed, overflowing, out-of-range, and `-` indices
-return false. Descent through a scalar, a missing member, or invalid pointer
-syntax also returns false with the previous output unchanged.
+Pointer input is UTF-8 text. For a URI fragment or JSON string representation,
+decode that wrapper first. Escapes are decoded once, so `~01` addresses `~1`.
 
-This API accepts plain pointer text, not a JSON string literal or URI fragment.
-It does not decode JSON quoting or percent escapes in the pointer argument.
-Keep document and pointer bytes alive and unchanged throughout the call. Saved
-result spans continue borrowing the document. They do not keep its owner alive.
-The method neither mutates input bytes nor retains pointers outside the result.
+Object names are compared after decoding JSON string escapes. If the requested
+name matches duplicate members, lookup returns false. Other duplicate names
+do not prevent lookup.
 
-Parsing may allocate reader nesting stacks and one reusable `String` for decoded
-segments. There is no allocation-free guarantee, DOM, or owning result copy.
-Validation adds one full document pass and scans the complete pointer. Descent
-rescans parent values, with worst-case total work
-O(pointer length + document length × (pointer depth + 1)).
+## Results and errors
 
-Selective source users add `core/Json/JsonPointer.gf` with `JsonReader`, `JsonString`,
-`Utf8`, `String`, and `Span` and their normal dependencies, including JSON token
-and parse-exception definitions. Ordinary projects including Standard get it directly.
+Success replaces `value`. Missing members, invalid pointer syntax, invalid array
+indices, or descent through a scalar return false and preserve it.
+
+The entire JSON document is validated first. Invalid JSON throws JsonParseException
+even when the pointer would fail. Validation and segment decoding can allocate,
+and allocation failure can throw BadAllocException. Exceptions also preserve
+the previous output.
+
+Descent rescans parent values, taking O(pointer length + document length ×
+(pointer depth + 1)) worst-case work.
+
+Source: `core/Json/JsonPointer.gf`

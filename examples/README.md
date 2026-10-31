@@ -56,10 +56,10 @@ projects](../docs/PROJECTS.md#running-in-visual-studio).
 - [file-compare](file-compare/README.md): report the first byte or length difference between binary files
 - [riff-list](riff-list/README.md): list top-level RIFF chunk offsets and lengths
 - [png-list](png-list/README.md): list PNG chunk offsets and lengths, checking framing and CRCs
-- [png-verify](png-verify/README.md): verify noninterlaced RGB8/RGBA8 image data, chunk CRCs, and core ordering without extracting pixels
+- [png-verify](png-verify/README.md): check RGB8/RGBA8 PNG image data and chunk integrity
 - [binary-info](binary-info/README.md): inspect PE32+/ELF64LE declared dependency metadata
 - [zip-list](zip-list/README.md): list ZIP32 central-directory sizes, methods, and escaped names
-- [zip-verify](zip-verify/README.md): verify stored or DEFLATE-compressed ZIP32 entries and their CRCs without extracting files
+- [zip-verify](zip-verify/README.md): check ZIP32 entry sizes and CRCs
 
 ## Numbers, algorithms, and commands
 

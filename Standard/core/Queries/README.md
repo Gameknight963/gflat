@@ -5,7 +5,9 @@ build a lazy query:
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Queries;
+using Standard::Collections;
 
 int main()
 {
@@ -27,9 +29,9 @@ int main()
 }
 ```
 
-The query borrows the vector's storage. Keep the vector alive and avoid growth,
-removal, clearing, or movement while using the query. Editing existing elements
-is visible on later reads.
+The query borrows the vector's storage. Keep its owner alive and avoid growth,
+removal, or clearing while using the query. Editing existing elements is visible
+on later reads.
 
 ## Operations
 
@@ -65,7 +67,6 @@ See [custom sequences](../../../docs/QUERIES.md#custom-sequences-and-optional-in
 ## Select an element by its key
 
 `MinBy` and `MaxBy` return the element with the least or greatest selected key.
-`TryMinBy` and `TryMaxBy` return false for empty input.
 See [keyed extrema](../../../docs/QUERIES.md#select-an-element-by-its-key).
 
 ### Empty-safe keyed extrema

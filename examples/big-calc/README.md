@@ -1,8 +1,7 @@
 # Calculate with large integers
 
-`big-calc <left> <operator> <right>` performs one exact integer operation. It accepts
-`+`, `-`, `*`, `/`, `%`, or lowercase `gcd` and `lcm`. It uses the owning BigInteger
-arithmetic APIs.
+`big-calc <left> <operator> <right>` performs exact integer arithmetic.
+Operators are `+`, `-`, `*`, `/`, `%`, `gcd`, and `lcm`.
 
 ```powershell
 gflat build examples/big-calc/big-calc.gfproj -o artifacts/big-calc.exe
@@ -18,27 +17,14 @@ gflat build examples/big-calc/big-calc.gfproj -o artifacts/big-calc.exe
 # 252
 ```
 
-## Operands and results
+Quote `'*'` so the shell passes it as an operator. Operands are decimal integers
+with an optional sign. Leading zeroes are accepted.
 
-Quote `'*'` in both PowerShell and Bash so the shell passes a literal operator instead
-of expanding filenames. Each operand is an optional leading `+` or `-` followed by ASCII
-decimal digits. Leading zeroes are accepted. Whitespace, separators, radix prefixes,
-decimal points, and trailing text are rejected. Shell argument-size and memory limits
-still apply.
+Division truncates toward zero, and a nonzero remainder has the left operand's
+sign. GCD and LCM ignore signs and return nonnegative results. `gcd(0, 0)` and
+the LCM of any number with zero are zero.
 
-Division truncates toward zero. A nonzero `%` remainder has the left operand's sign.
-Division or remainder by zero fails. `gcd` ignores signs and returns a nonnegative
-result, with `gcd(0, 0)` equal to zero. `lcm` also ignores signs and returns a
-nonnegative result. Either zero operand gives zero. It divides out the GCD before
-multiplying.
+Errors go to stderr. Exit codes are 0 for success, 2 for invalid arguments, and
+1 for division by zero, allocation, or output failure.
 
-Results use canonical decimal notation and end with a platform newline.
-
-## Errors
-
-Success exits `0`. Incorrect argument counts, unknown operators, and malformed operands
-produce a diagnostic on stderr and exit `2`. Allocation failures, division by zero, and
-output failures exit `1`. Parsing and computation complete before output begins. An
-output failure can leave a printed prefix.
-
-See [BigInteger](../../docs/BIG_INTEGER.md) for arithmetic and ownership contracts.
+See [BigInteger](../../docs/BIG_INTEGER.md) for the arithmetic APIs.

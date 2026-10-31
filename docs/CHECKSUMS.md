@@ -1,60 +1,40 @@
 # Byte checksums
 
-`Standard::Hashing::CRC32`, `Standard::Hashing::CRC32C`, and `Standard::Hashing::Adler32` are streaming value types. They
-process counted bytes, including embedded zero bytes, without allocation or libc
-calls. All their methods and constructors are `nothrow`.
+`Standard::Hashing` provides three incremental checksum values:
+
+| Type | Algorithm | Empty checksum | Check value |
+| --- | --- | --- | --- |
+| `CRC32` | IEEE, reflected polynomial `0xedb88320` | 0 | `"123456789"` → `0xcbf43926` |
+| `CRC32C` | Castagnoli, reflected polynomial `0x82f63b78` | 0 | `"123456789"` → `0xe3069283` |
+| `Adler32` | Two sums modulo 65521 | 1 | `"Wikipedia"` → `0x11e60398` |
 
 ```cpp
 using Standard::Hashing;
-Standard::Hashing::CRC32 crc = new();
+
+CRC32 crc = new();
 crc.Append("1234", 4);
 crc.Append("56789", 5);
 uint value = crc.GetValue(); // 0xcbf43926
 crc.Reset();
 ```
 
-All three types expose the same operations:
+All three expose `Append(data, count)`, `GetValue()`, and `Reset()`. Getting the
+current value preserves the running message. Copies can continue a shared prefix
+with different suffixes.
 
-- Construction and `Reset()` initialize an empty stream
-- `Append(readonly(char)* data, nuint count)` consumes exactly `count` bytes.
-  The caller supplies readable storage for those bytes. An empty append does not
-  access storage.
-- `immutable uint GetValue()` returns the current checksum without resetting it.
-  More bytes can be appended afterward
-
-Copying a checksum copies its independent running state, so a shared prefix can
-be continued with different suffixes. None of these types retains the input pointer.
-
-Append stages its numeric running state in local integers and commits it only
-after consuming the input. Counted input may therefore overlap the checksum's
-own initialized storage: its bytes are read before that final state update.
-This does not allow concurrent mutation of input or simultaneous mutation of the
-same checksum object.
+Append input can overlap the checksum's initialized storage. The running state
+is stored after reading the input.
 
 ## Algorithms and representation
 
-CRC32 uses the IEEE CRC-32 variant specified for gzip: reflected polynomial
-`0xedb88320`, an internal initial state of `0xffffffff`, and a final XOR of
-`0xffffffff`. The empty checksum is zero. `"123456789"` yields `0xcbf43926`.
-The implementation processes each byte with eight bit steps.
-[RFC 1952, CRC sample code](https://www.rfc-editor.org/rfc/rfc1952#section-8)
-
-CRC32C uses the Castagnoli polynomial, distinct from CRC32's IEEE polynomial.
-Its forward generator is `0x11edc6f41`, represented by reflected low-word
-`0x82f63b78` in the implementation. Internal initial state and final XOR are both
-`0xffffffff`. The empty result is zero and `"123456789"` yields `0xe3069283`.
-It processes each byte with eight bit steps, without tables or CPU-specific
-instructions. CRC32C is useful when a binary format requires that particular
-checksum. It cannot substitute for CRC32 in a format requiring the IEEE variant.
-[RFC 3720, digest definition](https://www.rfc-editor.org/rfc/rfc3720#section-12.1)
-and [reference vectors](https://www.rfc-editor.org/rfc/rfc3720#appendix-B.4).
-
-The RFC lists serialized digest bytes. `GetValue()` returns the numeric CRC,
-without choosing a serialization byte order. For example, the RFC's zero-filled
-32-byte vector lists `aa 36 91 8a`. Its numeric CRC32C is `0x8a9136aa`.
+Both CRC types initialize state to `0xffffffff` and XOR the final state with
+`0xffffffff`. Choose the variant required by the file or protocol format:
+CRC32 and CRC32C produce different results.
 
 ```csharp
-using Standard; using Standard::Hashing;
+using Standard;
+using Standard::Hashing;
+
 int main()
 {
     CRC32C checksum = new();
@@ -68,16 +48,15 @@ int main()
 }
 ```
 
-Adler32 maintains two sums modulo 65521, initially 1 and 0, and returns
-`(second << 16) | first`. The empty checksum is one. `"Wikipedia"` yields
-`0x11e60398`. Reducing each sum after each byte keeps arithmetic bounded even
-for long streams.
-[RFC 1950, Adler-32](https://www.rfc-editor.org/rfc/rfc1950#section-2.2)
+Adler32 starts its sums at 1 and 0 and returns `(second << 16) | first`.
 
-`GetValue()` returns a number, without choosing a byte order for serialization.
-The gzip format stores its CRC32 little endian. The zlib format stores its
-Adler32 big endian. These checksums detect accidental byte corruption. They do
-not authenticate data.
+`GetValue()` returns a number. Serialize it in the byte order required by the
+format: gzip stores CRC32 little endian, while zlib stores Adler32 big endian.
+These checksums detect accidental corruption. For keyed authentication, use
+[HMAC](HMAC_SHA256.md).
 
-For SHA-256 file/content digests with copied fixed-buffer results, see
-[`SHA256`](SHA256.md).
+Algorithm references: [CRC32](https://www.rfc-editor.org/rfc/rfc1952#section-8),
+[CRC32C](https://www.rfc-editor.org/rfc/rfc3720#section-12.1),
+[Adler32](https://www.rfc-editor.org/rfc/rfc1950#section-2.2).
+
+Sources: `core/Hashing/CRC32.gf`, `CRC32C.gf`, and `Adler32.gf`

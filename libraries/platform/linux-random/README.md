@@ -26,7 +26,6 @@ int main()
 
 ## Results and storage
 
-- Supply live writable storage for the complete requested range
 - True means every byte was filled
 - Zero count succeeds without accessing the buffer or calling libc
 - False means a native call failed. Discard the complete output because earlier
@@ -35,8 +34,7 @@ int main()
 The `nothrow` wrapper calls `getentropy` in chunks of at most 256 bytes and stops
 at the first failure. libc handles interrupts and complete chunk delivery. The
 call can block while the system entropy pool initializes, including across
-handled signals. The wrapper retains no buffer pointer and makes no gflat
-allocation. libc and the kernel may allocate internally.
+handled signals.
 
 Native references: [getentropy](https://man7.org/linux/man-pages/man3/getentropy.3.html),
 [getrandom](https://man7.org/linux/man-pages/man2/getrandom.2.html).

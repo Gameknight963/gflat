@@ -1,14 +1,11 @@
 # Streaming Base32 decoding
 
-`Standard::Encoding::Base32Decoder` implements `ITextWriter`. It accepts counted uppercase
-padded Base32 text, validates each complete group using the existing [Base32
-codec](BASE32.md), and sends decoded binary bytes to one borrowed synchronous
-sink. [Base32Encoder](BASE32_ENCODER.md) performs the opposite transformation.
+`Standard::Encoding::Base32Decoder` accepts encoded chunks through `ITextWriter`
+and sends decoded bytes to another writer.
 
 ## Decode counted input through a writer pipeline
 
-This program decodes a file in chunks. Use distinct input and output files: opening the output truncates
-it, so the output path must not name or alias the input.
+Use distinct input and output files. `OpenWrite` truncates the destination.
 
 ```csharp
 using Standard::IO;
@@ -29,71 +26,44 @@ int main(int argc, char** argv)
 }
 ```
 
-Binary File output preserves every decoded NUL, CR, LF and high-bit byte. Explicit
-Close observes buffered File errors. The decoder never flushes or closes its sink.
-The shared byte-reader helper also accepts a caller-defined reader or optional
-TcpClient. An EOF-based network pipeline requires the peer to finish sending. Bounded
-message protocols must use their declared payload extent rather than connection EOF.
+Close the output explicitly to report buffered file errors. For a framed network
+message, bound the encoded payload instead of copying until connection EOF.
 
 ## Strict profile and completion
 
-The profile is uppercase `A` through `Z` and digits `2` through `7`, with canonical
-`=` padding on a partial group and zero unused bits. Lowercase, whitespace, line
-wrapping, BOMs, alternative alphabets, invalid padding shapes and data after the final
-padded group are rejected.
+The decoder accepts the uppercase padded [Base32](BASE32.md) profile. Each
+complete eight-character group is validated before decoding. Groups can span
+several `Write` calls. A padded group ends encoded input, so further nonempty
+input throws.
 
-- Write accepts arbitrary chunk splits, copying at most seven pending encoded characters
-  between calls. No caller input pointer is retained.
-- Each complete eight-character group is validated by Base32 before adding its decoded
-  bytes to a bounded batch. Full 200-byte batches and the successful call's remainder
-  are sent to the sink as counted binary bytes, without terminator or newline.
-- A valid padded group marks the end of encoded input. Further nonempty data throws,
-  whether in that same Write or a later Write. Zero-count writes remain allowed until
-  Complete. On an unfinished usable decoder they dereference no input and call no sink.
-- Complete rejects any incomplete final group. It writes nothing, is idempotent after
-  success, and accepts an empty stream.
-- Every Write after successful completion throws, including zero count. There is no reset.
-- Destruction does not call Complete or validate a pending tail. Call Complete explicitly
-  even when copying reached EOF. Otherwise incomplete final input might go undetected.
+Call `Complete()` to check that the final group is complete. `MY======` decodes
+to `f`, while `MY` fails at completion. Empty input is valid. Repeated successful
+completion is allowed, but any subsequent `Write` throws `Exception`.
 
-For example, `MY======` decodes to `f`. Writing only `MY` emits no byte and Complete
-rejects the missing remainder/padding. Full eight-character groups without padding
-remain valid when they represent complete five-byte input groups.
+Scope exit discards pending text. Explicit completion is needed to detect a
+truncated final group.
 
 ## Prefix progress and failures
 
-Invalid input, incomplete completion or a sink exception permanently fails this decoder.
-The original sink exception propagates unchanged. Subsequent Write and Complete reject
-without calling the sink, including a value copy made after failure.
+Invalid input, incomplete completion, or a destination exception permanently
+fails the decoder. Later `Write` and `Complete` calls throw.
 
-A valid prefix may already have reached the destination before a later invalid group,
-trailing byte or sink error. Valid decoded bytes still buffered in a failing Write
-can be discarded. Visible output can depend on chunk boundaries and sink behavior.
-There is no guaranteed prefix length, rollback, automatic draining or recovery. A failed
-file pipeline can leave a partial decoded output file. Existing Base32::TryDecode keeps
-its validate-before-write behavior when called on a complete buffer.
+A failure can leave output from earlier groups, while a decoded batch waiting
+inside the failing call may be discarded. Handle partial output before starting
+another decoder. For validation before any output, use whole-buffer
+`Base32::TryDecode`.
 
 ## Borrowing and copies
 
-Keep the sink alive, unmoved and usable for every operation. Keep input alive and
-unchanged during Write, disjoint from decoder state and any storage the sink may
-mutate. Do not decode bytes borrowed from a String into that same owning String.
-Concurrent or reentrant operation is unsupported, including callbacks that use or
-copy the decoder during an active output call.
+Keep the destination alive and at the same address. Input must be separate from
+storage the destination may modify. Decoding a String into that same String can
+invalidate input.
 
-A normal copy duplicates the pending prefix and padding/completion/failure flags while
-sharing the sink. Copies are not independent streams: do not interleave divergent
-states into one destination. A copy made before another copy's failure cannot detect
-that failure. Move transfers the same state. No copy or destructor owns the sink or
-performs output, cleanup, close or flush on its behalf.
-
-Normal decoding and completion allocate no internal heap storage. The output batch
-is 200 stack bytes and persistent carry is seven inline characters plus flags/counter.
-The chosen sink and ordinary exceptions may allocate. The decoder maintains no
-whole-input buffer or total output length counter.
+Copies share the destination but duplicate pending text and status. Use one
+decoder per logical stream. Interleaving copies can duplicate output, and a
+failure in one copy leaves older copies unaware of it.
 
 ## Explicit sources
 
-Include `core/Encoding/Base32Decoder.gf`, `core/Encoding/Base32.gf` and the existing
-ITextWriter / Exception contracts with exception runtime support. The file example
-also needs File and the byte-reader copy helpers.
+Sources: `core/Encoding/Base32Decoder.gf`, `core/Encoding/Base32.gf`, and the
+text writer and exception contracts.

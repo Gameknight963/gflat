@@ -1,14 +1,15 @@
 # Measure writer output
 
-`Standard::Text::CountingWriter` implements `ITextWriter` by counting bytes.
-`Write` uses the supplied count and ignores the data pointer. `Length` counts bytes, including embedded NUL,
-not Unicode characters or C-string length.
+`Standard::Text::CountingWriter` implements `ITextWriter` by accumulating byte
+counts. It ignores the data pointer, including on nonempty writes.
 
 ## Validate and measure a decoded file
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::IO; using Standard::Encoding;
+using Standard;
+using Standard::IO;
+using Standard::Encoding;
 
 int main()
 {
@@ -26,41 +27,27 @@ int main()
 }
 ```
 
-This validates strict padded Base64 and reports its decoded byte count without
-storing the decoded file. The file is read through a reusable buffer, and the
-decoder sends bounded output blocks into the counter. Only a successful
-`Complete()` establishes that all encoded input was valid. A failed decoding
-operation may already have counted a valid prefix. There is no rollback.
+The example reports the decoded byte count after Base64 completion succeeds.
+A decoding failure can leave a count for an accepted prefix.
 
 ## Counter operations
 
-- `new CountingWriter()` starts at zero and is `nothrow`
-- `Length` is an `immutable`, `nothrow` getter
-- `TryWrite(data, count)` is `nothrow`. It adds `count` if the sum fits in `nuint`.
-  Otherwise it returns false and leaves the previous length unchanged. The
-  pointer is ignored even when `count` is nonzero.
-- `Write(data, count)` follows the same rule but throws `Exception` with message
-  `Writer length overflow` if the sum would overflow. Failure preserves the
-  previous length and does not poison the counter.
-- `Clear()` resets the length to zero and is `nothrow`
+| Operation | Effect |
+| --- | --- |
+| Construction | Starts at zero |
+| `Length` | Current count |
+| `TryWrite(data, count)` | Adds the count, or returns false on `nuint` overflow |
+| `Write(data, count)` | Adds the count, or throws `Exception("Writer length overflow")` |
+| `Clear()` | Resets the count to zero |
 
-A zero-length write always succeeds, including when the count is already the
-largest `nuint`. Copying duplicates the current number. The copies advance
-independently. Moving transfers the same count.
+Overflow preserves the previous count. The writer can still accept later fitting
+writes. Copies have independent counters.
 
 ## Measuring formatting
 
-Any formatter that accepts an `ITextWriter*` can write into a counter. Primitive
-formatting or a custom `IFormattable` then measures the number of bytes it actually
-passes to that writer, without allocating a result string or output buffer.
+Pass a counter to any formatter accepting `ITextWriter*` to measure its output.
+If you then format a second time into reserved storage, keep the input and
+formatter behavior stable between passes. A formatter observing time or changing
+state may produce a different length.
 
-The counter itself does not allocate on successful operations or failed
-`TryWrite`. Throwing overflow constructs an ordinary exception and may allocate.
-The formatter, source iterator, codec, or other pipeline component can still
-allocate, throw, or have effects of its own.
-
-Calling a formatter again may produce different bytes or a different length if
-it observes changing state,
-time, or side effects. A caller that measures and then writes must ensure its own
-formatter and input remain suitable for two passes, and still handle write
-failures and capacity limits.
+Source: `core/Text/CountingWriter.gf`

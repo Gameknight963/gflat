@@ -1,20 +1,14 @@
-# Comparing lazy sequences
+# Compare two queries
 
-`SequenceEqual(other)` compares two `Enumerable` wrappers with the same element
-type `T`, allowing their source and iterator types to differ. It returns true
-when corresponding elements are equal and both sequences end together. Two
-empty sequences are equal. An unequal pair or differing lengths returns false.
-
-Default equality uses `EqualityComparer<T>::Equals` and requires the matching
-closed `IEquatable<T>` contract. `SequenceEqual(other, equal)` instead accepts
-`bool(immutable(T)*, immutable(T)*)*` and requires no equality-interface
-implementation. The callback receives the left element first and right element
-second. It can define another matching relation. Element qualifications follow
-ordinary generic inference. Readonly element views can use an explicit comparer
-without assuming variance between differently constructed equality contracts.
+`SequenceEqual(other)` returns true when corresponding elements are equal and
+both sequences end together. The queries must share the same element type,
+but can use different source and iterator types.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+
 bool SameParity(immutable(int)* left, immutable(int)* right)
     => *left % 2 == *right % 2;
 int main()
@@ -31,39 +25,26 @@ int main()
 }
 ```
 
+Default equality requires the matching `IEquatable<T>` contract.
+`SequenceEqual(other, equal)` accepts
+`bool(immutable(T)*, immutable(T)*)*` for another relation or qualified views.
+The callback receives the left element first.
+
 ## Evaluation and lifetime
 
-The left iterator is constructed first, then the right iterator. Each comparison
-round advances left once, then right once, including when left has just ended:
-the right advancement determines whether both sequences ended together. When
-only one advances successfully, the method returns false without reading either
-terminal `Current` for that round. After an unequal pair it performs no further
-advancement or element reads. No count, indexing, buffer-identity, or self-source
-shortcut changes this order. Even identical wrappers are enumerated independently.
+Iterators are constructed left first. Each comparison round advances left,
+then right, including a right move after left reports EOF. If both advance,
+their `Current` values are read left first and compared. A mismatched pair or
+length ends the operation immediately.
 
-When both advance, terminal `Current` is read once on the left, then once on the
-right. Both values follow ordinary `T` semantics and are stored in local
-temporaries before comparison. The comparer borrows those temporaries only for
-the call and must not retain their addresses. Owning elements can therefore copy,
-allocate, or throw. Pointer elements remain ordinary borrowed addresses. Upstream
-query operators keep their own advancement and `Current` behavior. For example,
-an upstream `Where` may read an element to test its predicate.
+Even identical wrappers enumerate independently. Take care when both borrow
+the same consumable source, such as a file cursor.
 
-Constructed iterators and temporary owners are destroyed on exhaustion,
-early return, and exceptions. Failure constructing the right iterator cleans up
-the already-constructed left iterator. Failure reading or copying the right
-element cleans up the left temporary. Original iterator/copy/comparer exceptions
-propagate normally. Keep both backing sources alive and obey their borrowing
-rules throughout the call. Callbacks must not invalidate either source through
-another alias. The operation introduces no collection or GC allocation. Source,
-upstream, callback, and element-copy allocation behavior remains unchanged.
+Element values are materialized in temporaries. A comparer must not retain
+their addresses or invalidate either source. For contiguous spans, the span
+SequenceEqual algorithm can compare borrowed elements directly and reject
+unequal lengths immediately.
 
-For contiguous spans, the existing
-`SequenceEqual<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` algorithm
-borrows elements directly and can reject unequal lengths immediately. Query
-sequence equality intentionally enumerates and follows ordinary element value
-semantics.
-
-Selective source users include `Queries/enumerable_sequence_equal.gf`, plus
-`Collections/EqualityComparer.gf` and `IEquatable.gf` for default equality, alongside their
-source/enumeration dependencies.
+See [query ownership](QUERIES.md#ownership).
+Source: `Queries/enumerable_sequence_equal.gf`, plus EqualityComparer for
+default equality.

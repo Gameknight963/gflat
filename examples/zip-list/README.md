@@ -1,70 +1,39 @@
-# ZIP central-directory listing
+# List ZIP entries
 
-List the central directory of a single-disk ZIP32 archive, including VSIX packages:
+Print compressed size, uncompressed size, compression method, and entry name
+from a ZIP central directory:
 
 ```console
 gflat build examples/zip-list/zip-list.gfproj --run -- package.vsix
 ```
 
-The tool accepts files up to 128 MiB and validates the complete directory before
-printing compressed size, uncompressed size, numeric compression method, and quoted
-filename bytes in directory order. Sizes come from archive metadata.
+Sizes come from archive metadata. Names keep directory order and are displayed
+as bytes, with quotes, backslashes, and nonprintable bytes escaped as `\xHH`.
 
-## Names and output
+## Filtering
 
-Names are counted bytes. Printable ASCII appears directly except quotes and backslashes.
-Other bytes use uppercase `\xHH` escapes. The four output columns contain sizes, method,
-and name. Archive comments up to 65,535 bytes are supported.
-
-## Format checks
-
-The reader requires an exact EOCD-to-EOF comment extent, matching single-disk entry
-counts, and a directory consisting of exactly that many bounded central entries, ending
-immediately before the EOCD. Signature-like bytes in comments are only candidates. An
-invalid candidate is skipped while the search continues backward. A comment containing
-another valid directory/EOCD interpretation can select that later interpretation.
-Repeated candidate-directory walks can increase work for adversarial comments.
-
-ZIP64 sentinel counts, sizes and offsets, nonzero disk numbers, spanning,
-central-directory digital signatures, self-extracting offset adjustments,
-encrypted/compressed central directories, and trailing bytes after the declared archive
-comment are unsupported. Extra fields are skipped as opaque bytes. Encrypted entries'
-visible directory metadata can be listed. Use [zip-verify](../zip-verify/README.md) to
-check supported entry payloads and CRCs.
-
-## Storage and errors
-
-Input is completely materialized before inspection. One owning byte vector holds the
-image. Entry names borrow its unchanged storage. Entries are validated once and parsed
-again for printing, without an allocated entry collection. All metadata is checked
-before stdout output begins. Output failures can still leave partial output. Exit codes
-are 0 for a completed listing, 1 for read/metadata/output failure, and 2 for incorrect
-arguments. Error reporting is best effort on stderr.
-
-Format reference: [PKWARE
-APPNOTE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT), sections 4.3.12
-and 4.3.16.
-
-## Filter raw entry names
+Add `--match` after the input filename to filter entry names:
 
 ```console
 gflat build examples/zip-list/zip-list.gfproj --run -- package.vsix --match "*.dll"
 ```
 
-The optional `--match` flag follows the input filename and takes exactly one pattern.
-Quote the pattern so the shell passes it unchanged. With no flag, all entries are listed
-as before. Unknown options, missing patterns and extra operands print usage and exit
-with code 2 before opening the input.
+Matching is case-sensitive and covers the full name. `*` matches any number of
+bytes, `?` matches one byte, and backslash escapes the next byte. Separators
+are ordinary bytes. Quote the pattern to preserve it through the shell.
 
-Matching covers the whole counted filename using `Standard::Text::MatchesWildcard`: `*`
-matches zero or more bytes, `?` matches one byte, and backslash escapes the next literal
-byte. A dangling backslash matches no names. Comparison is ordinal and case-sensitive.
-Separators are ordinary bytes. A UTF-8 character can require multiple `?` bytes.
-Embedded zero bytes in archive names remain part of matching. the command-line pattern
-is a C string and cannot contain a literal zero.
+## Supported archives
 
-Every central entry is validated before any output, including entries excluded by the
-filter. Matching rows retain central-directory order and the same four columns and
-quoted byte escaping. The header is printed even when no name matches. The wildcard
-matcher uses constant storage and can take O(N*M) work for a filename of N bytes and a
-pattern of M bytes.
+The tool accepts single-disk ZIP32 archives up to 128 MiB, including VSIX
+packages. The complete archive is loaded and its directory checked before
+output. Comments may contain at most 65,535 bytes and must end at EOF.
+
+ZIP64, split archives, self-extracting offset adjustments, directory encryption
+or compression, and central-directory signatures are unsupported. If an archive
+comment contains another valid directory and end record, that later
+interpretation can be selected. Repeated candidates can increase parsing work.
+
+Use [zip-verify](../zip-verify/README.md) to check supported payloads and CRCs.
+
+Exit codes are 0 for success, 1 for malformed input or IO failure, and 2 for
+invalid arguments. Errors go to stderr.

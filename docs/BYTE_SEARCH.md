@@ -1,44 +1,46 @@
 # Counted byte searches
 
-`Standard::Text::ByteSearch` searches counted byte buffers. All methods are
-allocation-free and `nothrow`. For selective builds, include
-`core/Text/ByteSearch.gf`.
+`Standard::Text::ByteSearch` searches byte sequences and byte sets.
+
+| Parameter | Meaning |
+| --- | --- |
+| `data` | Buffer to search |
+| `length` | Number of bytes in `data` |
+| `pattern` | Substring or byte set to find |
+| `count` | Number of bytes in `pattern` |
 
 ```csharp
 using Standard::Text;
-nuint first = Standard::Text::ByteSearch::IndexOf(data, length, pattern, count);
-nuint last = Standard::Text::ByteSearch::LastIndexOf(data, length, pattern, count);
+
+nuint first = ByteSearch::IndexOf(data, length, pattern, count);
+nuint last = ByteSearch::LastIndexOf(data, length, pattern, count);
 ```
 
-Both pointers borrow readable regions of the specified byte lengths. The
-regions may overlap. Embedded zero bytes and every byte value are ordinary
-data. No terminator is examined. A zero-length region requires no readable
-bytes, but the pointer parameters remain nonnullable under the normal type
-rules. Neither input changes, and no pointer is retained after the call.
+Results are offsets into `data`. Matching includes all byte values, including NUL.
+Input and pattern may overlap.
 
-Results are byte offsets relative to `data`. A missing pattern returns
-`length`, matching the span algorithms' missing-index convention. An empty
-pattern matches at zero for `IndexOf` and at `length` for `LastIndexOf`.
-Overlapping matches count: the last occurrence of `[1,1]` in `[1,1,1]` is one.
+| Operation | Result |
+| --- | --- |
+| `IndexOf` | First matching substring |
+| `LastIndexOf` | Last matching substring |
+| Either, when absent | `length` |
+| `IndexOf`, empty pattern | 0 |
+| `LastIndexOf`, empty pattern | `length` |
 
-The substring searches use the Two-Way algorithm: preprocessing factors the
-pattern into two parts and establishes its period, then matching reuses that
-information to avoid repeatedly checking long equal prefixes. Worst-case time
-is linear in `length + count`, with constant extra storage and no pattern-size
-stack buffer. The reverse search applies the same algorithm to virtual reversed
-views of the input and pattern. It does not copy or reverse their bytes.
-
-Matches compare exact byte values.
+Overlapping matches count: the last occurrence of `[1,1]` in `[1,1,1]` starts
+at one. The Two-Way algorithm gives O(`length + count`) worst-case time and
+constant working storage.
 
 ## Searching for any member of a byte set
 
-`IndexOfAny(data, length, pattern, count)` returns the first data byte found
-anywhere in the counted pattern set. `LastIndexOfAny` returns the last such byte.
-They return `length` if there is no match. The pattern is a set of individual
-bytes, not a substring: duplicates and order do not affect membership.
+`IndexOfAny` and `LastIndexOfAny` find the first or last byte belonging to a
+counted set. Set order and duplicates have no effect. An empty input or set
+returns `length`.
 
 ```csharp
-using Standard; using Standard::Text;
+using Standard;
+using Standard::Text;
+
 int main()
 {
     byte[6] data = [7, 0, 255, 3, 255, 8];
@@ -50,42 +52,24 @@ int main()
 }
 ```
 
-If either length is zero, both methods return `length` before reading either
-pointer. This differs from substring `IndexOf`'s empty-pattern result of zero.
-All 256 byte values, including embedded NUL, participate normally. Both regions
-are read-only and can overlap. The result is a byte offset, not a Unicode scalar
-or character position. There is no text decoding or normalization.
-
-A fixed four-word membership mask uses 32 bytes of stack storage. The pattern
-is visited once, then the data is scanned in the selected direction until a
-match. Worst-case work is O(`length + count`), independent of duplicate members.
-No allocation, retained pointer, input mutation, or additional source dependency
-is introduced. Both operations are `nothrow`. The membership-mask implementation uses the same counted-buffer contract.
+The set searches use a 256-bit membership mask and take O(`length + count`) time.
 
 ## String searches
 
 `String.IndexOfAny(values, count, start = 0)` and
-`String.LastIndexOfAny(values, count)` use these counted set searches over the
-String's bytes. They return `String::NotFound` when nothing matches, including
-for an empty set or an empty String. `IndexOfAny` returns an absolute byte offset
-and rejects `start > Length`. `start == Length` returns `NotFound`.
+`String.LastIndexOfAny(values, count)` search the String's bytes and return
+`String::NotFound` when absent. An empty set or String has no match.
 
-The one-argument overloads treat `values` as a C string: its first NUL terminates
-the set. Use the counted overloads to search for NUL itself. Sets can borrow the
-String's own bytes. No allocation or mutation occurs, and both overload families
-accept immutable String receivers. `LastIndexOfAny` is also `nothrow`.
-
-These are byte-set searches, without Unicode decoding, case folding, or substring
-matching. A byte can match anywhere in the set, regardless of order or duplicates.
+`IndexOfAny` returns an absolute byte offset. `start > Length` throws, while
+`start == Length` returns `NotFound`. A set may borrow the String's own bytes.
+The C-string overloads stop the set at its first NUL. Use a counted overload
+to search for NUL itself.
 
 ## Attribution
 
-The factorization and matching loops are adapted from musl's
-[`src/string/memmem.c`](https://git.musl-libc.org/cgit/musl/tree/src/string/memmem.c),
-with readable reversed views, prefix-length rather than negative suffix indices,
-and subtraction-based bounds checks. musl's optional bad-character tables and
-special short-pattern routines are not included. The upstream code is covered
-by the following [MIT license](https://git.musl-libc.org/cgit/musl/tree/COPYRIGHT):
+The Two-Way loops are adapted from musl's
+[`src/string/memmem.c`](https://git.musl-libc.org/cgit/musl/tree/src/string/memmem.c).
+The upstream code uses the following [MIT license](https://git.musl-libc.org/cgit/musl/tree/COPYRIGHT):
 
 Copyright © 2005-2020 Rich Felker, et al.
 
@@ -110,23 +94,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Searching outside a byte set
 
-`ByteSearch::IndexOfAnyExcept(data, length, pattern, count)` returns the first
-byte offset whose data byte is absent from the counted set.
-`LastIndexOfAnyExcept` returns the last such offset. No match returns `length`.
-They search set membership, not a substring. Duplicate members and set order
-have no effect, and all byte values including NUL participate.
+`IndexOfAnyExcept` and `LastIndexOfAnyExcept` find the first or last byte
+absent from the set. No match returns `length`.
 
-Zero data length returns Length before reading either pointer. With a positive
-length and an empty set, every position qualifies: the first method returns
-zero and the last returns `length - 1`, without reading either pointer. These
-preflights require no readable bytes through either pointer. The normal
-nonnullable pointer type rules still apply. Otherwise, both counted regions
-must remain readable and stable. They may overlap. Neither is written to, and
-no pointer is retained.
-
-The methods reuse the existing four-word, 32-byte membership mask and make no
-library allocation. Both are `nothrow`, with O(`length + count`) worst-case work.
-The `IndexOfAny` and `LastIndexOfAny` methods return `length` for an empty set.
+| Input | `IndexOfAnyExcept` | `LastIndexOfAnyExcept` |
+| --- | --- | --- |
+| Empty data | 0 | 0 |
+| Nonempty data, empty set | 0 | `length - 1` |
 
 ```csharp
 using Standard::Text;
@@ -142,3 +116,5 @@ int main()
     return 0;
 }
 ```
+
+Source: `core/Text/ByteSearch.gf`

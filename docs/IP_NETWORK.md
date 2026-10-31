@@ -1,12 +1,13 @@
 # IP network prefixes
 
-`Standard::Net::IpNetwork` represents an IPv4 or IPv6 network prefix using an `IpAddress`
-and a prefix length. It is an ordinary fixed value with no owned allocation or
-operating-system state. The default is IPv4 `0.0.0.0/0`.
+`Standard::Net::IpNetwork` holds a network address and prefix length. The default
+is IPv4 `0.0.0.0/0`.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Net;
+using Standard;
+using Standard::Net;
+
 int main()
 {
     IpNetwork network = IpNetwork::Parse("192.0.2.0/024");
@@ -25,98 +26,50 @@ int main()
 
 ## Construction and containment
 
-`new IpNetwork(networkAddress, prefixLength)` requires zero host bits after the
-prefix. Prefix lengths are `0` through `32` for IPv4 and `0` through `128` for
-IPv6. An invalid length throws `Exception("IP network prefix is out of range")`.
-A base with host bits throws `Exception("IP network address has host bits")`.
+`new IpNetwork(address, prefixLength)` requires zero host bits. Prefix length
+ranges are 0–32 for IPv4 and 0–128 for IPv6. Invalid lengths or host bits throw
+Exception. `FromAddress(address, prefixLength)` clears host bits explicitly.
 
-`IpNetwork::FromAddress(address, prefixLength)` explicitly clears host bits,
-returning the containing network. It uses the same prefix bounds and retains
-the address family. `NetworkAddress` returns an address value copy and
-`PrefixLength` returns an `int`. Both getters are immutable and `nothrow`.
+| Member | Meaning |
+| --- | --- |
+| NetworkAddress | Canonical base address |
+| PrefixLength | Number of network bits |
+| Contains(address) | Address matches the prefix |
+| Contains(network) | Entire other prefix is inside this one |
+| Overlaps(network) | Prefixes share at least one address |
 
-`Contains(&address)` tests only prefix membership. It includes every matching
-address, including any network or broadcast address. It does not determine
-whether an address is suitable for host assignment. Different address families
-return false even for `/0`. IPv4-mapped IPv6 remains IPv6, with no automatic
-conversion. A `/32` IPv4 or `/128` IPv6 prefix contains exactly its own address.
-Normalization below the mapped marker's prefix can clear that marker while
-still retaining IPv6 family. IPv4 and IPv6 `/0` cover their own families only.
-
-`Contains(&otherNetwork)` tests whether the complete other prefix is inside this
-one, including equality. Sharing a base address alone is insufficient when the
-other prefix is broader. `Overlaps(&otherNetwork)` tests whether the two prefixes
-share any address. Overlap is symmetric. Same-family CIDR prefixes either nest
-or are disjoint. Different families return false for both operations, including
-IPv4 versus mapped IPv6 and either family's `/0`. Both methods accept immutable
-receivers and inputs, are `nothrow`, and allocate nothing.
+Different families fail containment and overlap checks, including IPv4 versus
+mapped IPv6. A family's /0 covers that family alone. Membership includes the
+numeric network and broadcast addresses where present.
 
 ## Parsing
 
-`TryParse(text, count, &result)` accepts one complete address, a slash, and one
-through three ASCII decimal prefix digits. Leading zeroes in the prefix are
-accepted, so `/024` means `/24`. Four digits, signs, whitespace, embedded NUL,
-trailing data, ports, brackets, and zones are rejected. Address syntax follows
-the existing strict [IpAddress](IP_ADDRESS.md) rules, including its accepted
-IPv6 spellings and mixed dotted tails. Host bits must already be zero: parsing
-`192.0.2.37/24` fails rather than silently normalizing it.
+TryParse accepts counted text or a C string in address/prefix form. The prefix
+has one through three decimal digits. Leading zeroes are allowed, so /024 is /24.
+Host bits must be zero: `192.0.2.37/24` fails. Use FromAddress to normalize it.
 
-Counted input is at most 49 bytes. Zero length or a count above 49 fails without
-reading input. The C-string overload scans at most 50 bytes to find a terminator.
-Both Try methods are `nothrow` and reset output to `0.0.0.0/0` on false. The
-complete result is staged before committing. Properly aligned writable output
-may overlap fully backed readable input. Failure resets can overwrite that
-input too. The input remains caller-owned and no pointers are retained.
-
-`Parse(text, count)` and `Parse(cString)` return the value or throw
-`Exception("Invalid IP network")`. Successful construction and parsing allocate
-nothing. All prefix masks use network-order bytes through IpAddress's public
-byte bridge, independently of native struct layout or byte order.
+The input limit is 49 bytes. Failure returns false and resets output to
+`0.0.0.0/0`. Parse throws `Exception("Invalid IP network")` instead.
 
 ## Formatting and value contracts
 
-`TryFormat(output, capacity, ref written)` writes canonical ASCII without a
-terminator: the canonical IpAddress spelling, slash, and shortest decimal prefix.
-It uses at most 43 bytes and is `nothrow`. Insufficient capacity returns false,
-sets `written` to zero, and leaves every output byte unchanged. Zero capacity
-does not touch output. Formatting prepares the whole result in stack storage
-before copying, so output may overlap a fully backed writable receiver region.
-The `written` reference must be disjoint from output and receiver storage.
+TryFormat writes canonical address/prefix ASCII using at most 43 bytes. Short
+capacity returns false, zeros written, and preserves output. Format and
+interpolation use the same spelling. Equality and hashing include family,
+address, and prefix.
 
-`IFormattable.Format(writer)` performs one counted write from stack storage. It
-borrows the writer without retaining, flushing, closing or destroying it. Writer
-exceptions propagate and can leave partial output. There is no String dependency.
-Interpolation follows String's normal owning allocation behavior.
-
-`IEquatable<IpNetwork>` compares family, complete network address, and prefix.
-`IHashable` includes the address and prefix. Equal values have equal hashes.
-Hashes are collection hashes, not persistent identifiers. Equality, hashing,
-containment and the default constructor are `nothrow` and allocate nothing.
-Ordinary copies retain only values. Throwing errors follow normal Exception
-runtime behavior. Caller-selected writers may allocate or throw.
-
-For selective sources, include `core/Net/IpNetwork.gf`, `core/Net/IpAddress.gf`, their
-equality/hash/formatting interfaces and `core/Hashing/primitive_hashing.gf` with normal Exception
-contracts. No sockets, DNS, interface identifiers, routing state, address lists,
-or implicit family conversions are involved.
-
-The canonical-base policy follows Microsoft's documented
-[IPNetwork contract](https://learn.microsoft.com/en-us/dotnet/api/system.net.ipnetwork)
-and its [.NET 8 implementation](https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Net.Primitives/src/System/Net/IPNetwork.cs).
-Later .NET implementations change constructor normalization and mapped-address
-membership behavior. The strict parsing, explicit normalization and family rules
-above are gflat's own contracts, independent of the host .NET version.
+Parsing permits result/input overlap. Formatting permits receiver/output overlap.
+Keep written-count metadata separate from receiver and output.
 
 ### Numeric range endpoint
 
-`LastAddress` returns the last numeric address in the prefix: it retains the
-network bits and sets every host bit to one. Together, `NetworkAddress` and
-`LastAddress` give the inclusive numeric range, in the original address family.
-The getter is immutable and `nothrow`, returns an ordinary `IpAddress` value
-copy, and allocates nothing.
+LastAddress sets every host bit to one. It and NetworkAddress give the inclusive
+numeric range:
 
 ```cpp
-using Standard; using Standard::Net;
+using Standard;
+using Standard::Net;
+
 int main()
 {
     IpNetwork network = IpNetwork::Parse("192.0.2.128/25");
@@ -127,8 +80,8 @@ int main()
 }
 ```
 
-A full-width `/32` IPv4 or `/128` IPv6 prefix has the same first and last
-address. A `/0` prefix ends at its family's all-one address. IPv4-mapped IPv6
-prefixes remain IPv6. This is a numeric endpoint, not the last usable host:
-it does not exclude IPv4 network/broadcast addresses or assign broadcast
-semantics to IPv6.
+A full-width prefix has identical first and last addresses. LastAddress includes
+the numeric broadcast endpoint when one exists. Applications choose usable-host
+policy separately.
+
+Source: `core/Net/IpNetwork.gf`

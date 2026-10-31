@@ -4,28 +4,28 @@ Version 0.3, experimental. This document describes the supported language.
 
 ## Design charter
 
-gflat combines familiar object-oriented APIs with control over storage and layout.
-`T` is a value. It can be a local, an inline field, or an element in a
-heap-allocated vector. `T*` borrows or manually addresses storage.
-`T^` uses the configured managed allocator. Allocation and
-access qualification are separate from the type's methods and interfaces.
+gflat combines object-oriented APIs with control over storage and layout.
 
-Structs retain constructors, methods, properties, interfaces, and destruction while
-providing inline layout. Classes add a vtable and implementation inheritance. Heap
-storage is requested through allocation expressions or library operations.
-Fixed integer widths and deterministic cleanup of owning values remain language
-guarantees. Readonly and immutable views qualify
-existing types.
+- `T` is a value, stored as a local, an inline field, or an element in an allocation
+- Structs support constructors, methods, properties, interfaces, and destruction
+- Classes add a vtable and implementation inheritance
+- `T*` addresses manual storage, and `T^` uses the selected collector
+- `readonly` and `immutable` qualify access to existing types
+- Owning values use deterministic cleanup
 
-Raw pointers, explicit reinterpretation casts, and extern declarations are the low-level boundary. They do not establish ownership, bounds, or a valid lifetime. `immutable` restricts access through that view. Raw-pointer casts can remove it, but managed-reference casts cannot. Foreign declarations are trusted contracts.
+## Native targets and entry point
 
-Taking an address does not initialize storage. Locals must be initialized before their address is passed to an ordinary pointer parameter. There is currently no `out` parameter contract. Initialize a value explicitly before handing it to a foreign output function.
+| Host | Target triple |
+| --- | --- |
+| Windows x64 | `x86_64-pc-windows-msvc` |
+| Linux x64 | `x86_64-unknown-linux-gnu` |
 
-The native target is **x86_64-pc-windows-msvc** on Windows and **x86_64-unknown-linux-gnu** on Linux. Linux execution is covered by the Ubuntu x64 CI jobs at O0 and O2. The driver accepts only its host target. Cross-compilation and other architectures are not supported. The target triple, pointer width, and LLVM data layout are recorded in `TargetInfo`. Fixed-width types are language rules.
+The driver builds for its host target. `TargetInfo` records the target triple,
+pointer width, and LLVM data layout.
 
-Only a non-generic global `main` is the native entry point. It must return `int`
-and cannot be overloaded. Namespace and type members named `main` are ordinary
-functions, with ordinary name mangling and exception propagation.
+The native entry point is a non-generic global `main` returning `int`.
+It cannot be overloaded. Namespace and type members named `main` are ordinary
+functions, with normal name mangling and exception propagation.
 
 ## Lexical and grammar rules
 
@@ -33,20 +33,21 @@ Identifiers contain ASCII letters, digits, and underscores and cannot begin with
 
 LF, CRLF, and bare CR each end a logical source line. Source text and offsets retain the original line-ending characters.
 
-Strings use double quotes and escape sequences. Raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`. Doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
+Strings use double quotes and escape sequences. Raw newlines are rejected.
+Prefixed interpolation uses `s$"text {expression}"`. Doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
 Character literals hold one 8-bit value. Characters above U+00FF are rejected.
 The supported escapes in strings and characters are `\n`, `\r`, `\t`, `\0`,
 `\\`, `\'`, and `\"`. Unsupported escapes are errors. Character arithmetic and
 ordering interpret the stored byte as signed, including during constant evaluation.
 
-Plain `"text"` literals have type
-`readonly(char)*`: a non-null pointer to static, null-terminated UTF-8 storage.
-Returning that pointer is valid. Writing through it is rejected. Embedded nulls
-remain in the stored bytes, although C-string consumers stop at the first null.
+Plain `"text"` literals have type `readonly(char)*`: a non-null pointer to static, null-terminated UTF-8 storage.
+The storage lasts for the program's lifetime. Embedded nulls remain in the bytes,
+although C-string consumers stop at the first null.
 Within a compilation, immutable literals with identical decoded UTF-8 bytes share
-storage, including literals with different escape spellings. Pointer equality
-compares storage addresses, not C-string contents. Constant evaluation preserves
+storage, including literals with different escape spellings.
+
+Constant evaluation preserves
 byte offsets for pointer arithmetic, indexing, and dereferencing, including the
 terminator. One-past addresses may be formed but cannot be read. Ordering or
 subtracting pointers into different constant strings is not a constant operation.
@@ -62,18 +63,21 @@ The identifier `string` is available for user declarations.
 The following EBNF describes the core expression/type grammar. Declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
 
 ```ebnf
-type          = ( qualifiedType | "immutable", "(", type, ")" ), { suffix } ;
+type          = ( qualifiedType | qualifier, "(", type, ")" ), { suffix } ;
+qualifier     = "readonly" | "immutable" ;
 qualifiedType = name, [ "<", type, { ",", type }, ">" ],
                 { "::", name, [ "<", type, { ",", type }, ">" ] } ;
 suffix        = "*", [ "?" ] | "^", [ "?" ]
               | "[", [ expression ], "]"
-              | "(", [ type, { ",", type } ], ")", ("*" | "^"), [ "?" ] ;
-variable      = [ "const" ], type, name, [ "=", expression ], ";" ;
+              | "(", [ parameterType, { ",", parameterType } ], ")",
+                [ ("*" | "^"), [ "?" ] ] ;
+parameterType = [ "ref" ], type ;
+variable      = [ "const" ], [ qualifier ], type, name, [ "=", expression ], ";" ;
 function      = { modifier }, type, name, "(", [ parameters ], ")",
                 [ "nothrow" ], body ;
 body          = block | "=>", expression, ";" | statement ;
 block         = "{", { statement }, "}" ;
-foreach       = "foreach", "(", type, name, "in", expression, ")", body ;
+foreach       = "foreach", "(", [ qualifier ], type, name, "in", expression, ")", body ;
 ```
 
 `>>` closes two nested type argument lists in a type context and remains a shift in expression contexts. All array lengths are parsed as expressions and then checked as constants. They must be positive and fit supported layout sizes.
@@ -94,7 +98,7 @@ Expression precedence, weakest to strongest:
 
 `&&` and `||` short-circuit at compile time and runtime.
 
-`::` accesses namespaces, nested types, enum values, and static members. `.` accesses instance members, including through pointers. The legacy arrow spelling is rejected semantically. Function pointers are written with their return type, such as `int(int)*`.
+`::` accesses namespaces, nested types, enum values, and static members. `.` accesses instance members, including through pointers. Function pointers are written with their return type, such as `int(int)*`.
 
 A bare function signature, such as `int(int)` or `void()`, is a type that describes
 a function but has no value storage. It can be used as an alias target or generic
@@ -143,6 +147,8 @@ be a local, field, parameter, array element, or the value of `default(void)`.
 An empty parameter list is written `()`, not `(void)`.
 
 Explicit integer narrowing retains low bits and interprets them using the destination signedness. Constant casts use the same widths as runtime lowering. `uint -> int` and `ulong -> long` require explicit casts. `float` conversions round to binary32 during constant evaluation. Non-finite and out-of-range constant float-to-integer conversions are errors.
+
+Decimal numeric separators must appear between digits.
 
 Explicit `u` and `ul` integer suffixes require values within their unsigned 32-bit
 and 64-bit ranges. Decimal `l` literals use the signed 64-bit range. Its minimum
@@ -401,6 +407,7 @@ An extension block adds borrowed instance-style methods to an existing value typ
 
 ```csharp
 using Numbers;
+
 namespace Numbers {
     extension int {
         public readonly int Plus(int extra = 2) => *this + extra;
@@ -507,6 +514,12 @@ Free functions and concrete class/struct methods support these modifiers. Static
 
 `T*` expresses non-null intent. `T*?` permits null. Null and zero constants cannot be explicitly cast to a non-null pointer. Explicit casts to non-null pointer types check their result at runtime and trap on null. This check proves neither bounds nor lifetime. Default construction and foreign contracts must not be assumed to prove complete object validity.
 
+Initialize a local before passing its address to a pointer parameter, including
+a foreign output function. Raw pointers and extern declarations rely on the
+caller to provide valid storage and lifetimes.
+
+### Construction
+
 `new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `Standard::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object. It does not make aliases safe or permit repeated deletion.
 
 `new(...)` infers both the constructed type and allocation kind from its target:
@@ -543,6 +556,8 @@ the default value. One argument must be implicitly assignable to the scalar type
 For example, `new int(42)` produces an `int`, `new* int(42)` produces an allocated
 `int*`, and `new* int(42) at address` initializes existing integer storage.
 
+### Initialization
+
 Constructors must initialize fields that cannot have a default value on every normally completing path. Field initializers and automatic property assignments count. Reading such a field, exposing `this`, or calling an instance method requires the relevant initialization first. The analysis follows branches, loops, returns, and deferred assignments. It does not infer initialization performed inside arbitrary helper methods. Required array fields must be assigned a complete array value. An implicit parameterless constructor is available only when each field has an initializer or a valid default, and the base can be constructed without arguments.
 
 Constructor declarations follow ordinary member accessibility and default to private. Private constructors are accessible from the declaring type and its enclosing or nested types. Protected constructors are accessible from the declaring type and derived classes. Construction checks the selected constructor, including target-typed, pointer, managed, placement, and explicit or implicit base construction. An inaccessible best overload is an error. Selection does not fall back to a less specific accessible overload. Synthesized constructors retain their existing availability when no user constructor is declared.
@@ -550,6 +565,8 @@ Constructor declarations follow ordinary member accessibility and default to pri
 Instance constructors cannot be `immutable`, `virtual`, `override`, or `abstract`. Copy constructors also cannot be `static`. Destructors cannot be `static`, `const`, `immutable`, `override`, or `abstract`.
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates. Their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
+
+### Allocation hooks
 
 The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `Standard/libc/Memory/allocation.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public signatures and non-throwing callback behavior:
 
@@ -575,9 +592,14 @@ than reentering the same allocator. An exhausted reserve can still terminate.
 
 `Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `Standard::BadAllocException` on null before initialization. Direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`. Hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now. Replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 
-Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers. Allocation alone does not guarantee initialized elements. Initialize elements before reading them.
+### Inline arrays
+
+Arrays have inline storage. Initialize elements before reading them. Array-to-pointer
+decay produces a pointer into that storage, whose lifetime the caller must respect.
 
 Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Array values require fixed sizes in every dimension, including parameters, return types, and fields. Spell buffer parameters of unknown length as pointers. Array value conversions preserve dimensions and element representation. Cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
+
+### Nullable pointer operations
 
 Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including immutable qualifications. Implicit numeric return conversions do not change a function's calling convention.
 
@@ -677,15 +699,21 @@ and `using` directives do not select a different collector. Type-only queries ca
 describe the default-reference shape without a provider. Creating and tracking
 live references requires a concrete binding. `T^?` additionally permits null.
 
-The provider implements `Standard::IGarbageCollector`, a static interface declared in
-`Standard/core/IGarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint
-alignment)` returning non-null `void*`, `ReferenceAdded(void* slot) nothrow`,
-`ReferenceRemoved(void* slot) nothrow`, and `Collect()` returning `nuint`.
-The first three operations are the compiler integration contract. `Collect` is
-an ordinary library operation: the compiler never inserts collection requests.
-Provider calls are direct. References do not carry a collector tag or dispatch
-pointer. Existing interface references retain their object-and-interface-table
-representation.
+#### Provider contract
+
+The provider implements `Standard::IGarbageCollector`, declared in
+`Standard/core/IGarbageCollector.gf`:
+
+| Member | Role |
+| --- | --- |
+| `void* Allocate(nuint bytes, nuint alignment)` | Supplies non-null storage for construction |
+| `void ReferenceAdded(void* slot) nothrow` | Registers a managed-reference slot after a store |
+| `void ReferenceRemoved(void* slot) nothrow` | Retires a slot before overwrite or lifetime end |
+| `nuint Collect()` | Library entry point for collection |
+
+The compiler calls the first three members directly. The provider controls when
+to collect. Ordinary managed references contain an address. Interface views keep
+their object-and-interface-table representation.
 
 `new^ T(...)` creates storage using the global provider. `new^ T(...) with C`
 selects an explicit provider and returns `managed<T, C>`. Structs, classes, and
@@ -695,6 +723,8 @@ managed reference. Failure retires that reference through normal exception
 cleanup. References from different collectors cannot be implicitly converted or
 stored in each other's managed object graphs.
 
+#### Provider selection
+
 `Standard/libc/GC.gf`, included by projects referencing Standard, declares the default
 `public weak alias GC : Standard::IGarbageCollector = Standard::TracingCollector;`.
 The implementation lives in `Standard/libc/TracingCollector.gf`. Direct source builds
@@ -703,6 +733,8 @@ Applications select another provider with `replace alias GC = MyCollector;`.
 The constraint validates the selected implementation and limits member access
 through `GC` to the common contract. Provider-specific operations, such as
 `Standard::TracingCollector::ManagedCount`, use the concrete provider's name.
+
+#### Default collector
 
 The default provider allocates through `Memory::Allocate`, records ownership,
 and zeroes storage before construction. It collects and retries once after an
@@ -734,6 +766,8 @@ another budget, or zero to disable automatic collection. Merely assigning or
 copying a reference does not request collection. There is no compiler polling,
 collection at unrelated calls or loop iterations, or finalization.
 
+#### Reference tracking
+
 The compiler reports initialized managed-reference slots through the selected
 provider's `ReferenceAdded` after stores and `ReferenceRemoved` before overwrite
 or lifetime end. The address identifies reference storage, not its target object.
@@ -756,7 +790,9 @@ Collector state uses ordinary static fields. Private inline LLVM provides thread
 ownership validation and an unaligned pointer load. Other providers implement the same static contract. moving collectors, pinning, and thread rendezvous still require
 additional compiler support.
 
-Scope exit does not destroy or free a managed pointee. Types with destructors,
+#### Lifetime and foreign calls
+
+Scope exit retires a managed reference. The collector owns the pointee. Types with destructors,
 including inherited destructors and inline fields requiring destruction, cannot
 be managed pointees. Managed-reference arithmetic and `delete` on managed views
 are rejected. Explicit raw-pointer/managed-reference casts are unsafe adapter
@@ -880,6 +916,7 @@ Returning borrowed fields or indexed elements requires copying.
 ```csharp Standard
 using Standard::Text;
 using Standard;
+
 int main() {
     String a = s"hello";
     String b = move a;
@@ -1600,49 +1637,62 @@ int main() { return Add(20, 22); }
 
 ## Static type metadata
 
-`typeof(T)` produces a compile-time constant `Standard::TypeInfo` describing the static
-queried type. It works through aliases and generic specialization. Its immutable
-fields are `Name`, `Size`, `Alignment`, `IsPointer`, `IsManaged`, `IsNullable`,
-`IsReadOnly`, and `HasDestructor`. It also exposes `Kind`, `HasLayout`,
-`ElementType`, `HasFixedLength`, `Length`, `ReturnType`, `ParameterTypes`, and
-`ParameterCount`. Sizes, alignments, lengths, and counts use `nuint`. Names are
-borrowed, null-terminated strings with static lifetime. Aliases resolve to their
-underlying type name.
+`typeof(T)` produces a compile-time `Standard::TypeInfo` for a static type.
+It resolves aliases and generic specializations.
 
-`Kind` distinguishes primitives, classes, structs, enums, interfaces, raw pointers,
-managed pointers, arrays, function pointers, and references. `ElementType` points
-to immutable static metadata for a pointer/managed/array/reference element. It is
-null for other kinds. Nested elements remain available during constant evaluation.
-Function pointers have a non-null `ReturnType` descriptor, including for void
-returns, and a `ParameterCount`. `ParameterTypes` points to a contiguous immutable
-array of descriptors. It is null when the count is zero. Index only within that
-count. Nested function signatures and reference/immutable/nullable parameter
-layers remain available recursively and during constant evaluation. Non-function
-kinds use null return/parameter pointers and a zero count. No GC allocation is
-needed for descriptors, and their storage survives the function producing them.
-Function-pointer types do not include parameter names, optional defaults, or
-method modifiers, so this metadata does not invent those properties.
+| Fields | Meaning |
+| --- | --- |
+| `Name` | Type name after alias resolution |
+| `Kind` | A `TypeKind` value, such as Struct, Pointer, or FunctionSignature |
+| `HasLayout`, `Size`, `Alignment` | Whether the type has value layout, and its size and alignment in bytes |
+| `IsPointer`, `IsManaged`, `IsNullable` | Reference shape at this layer |
+| `IsReadOnly`, `IsImmutable` | Access qualification at this layer |
+| `HasDestructor` | Whether values of this type require destruction |
+| `ElementType` | Metadata for the element of a pointer, managed reference, array, or reference |
+| `HasFixedLength`, `Length` | Fixed-array status and element count |
+| `ReturnType`, `ParameterTypes`, `ParameterCount` | Function-signature metadata |
 
-`IsReadOnly` qualifies the current layer's value storage. For `readonly(int)*`,
-the pointer's flag is false and its element's flag is true. For `immutable(int*)`,
-both flags are true because immutable qualification propagates through the pointer.
-For `int**`, follow `ElementType` twice to inspect the `int` metadata.
+Sizes, alignments, lengths, and counts use `nuint`. Names and nested descriptors
+use immutable static storage with program lifetime.
 
-`IsImmutable` records deep qualification at the current layer. Primitive and enum leaves
-canonicalize immutable protection to readonly protection because there is no
-deeper storage to protect. Their `IsImmutable` flag is false. Aggregate and
-reference layers retain the distinction.
+### Recursive types
 
-`HasLayout` is false for void and interface elements, whose `Size` and `Alignment`
-are zero. Their pointers have their own valid layouts. Direct `typeof(I)` remains
-invalid when `I` is an interface, while `typeof(I*).ElementType` describes it.
-`HasFixedLength` is true only for fixed arrays. `Length` is their element count,
-zero otherwise. Array and pointer element metadata do not flatten qualifiers.
+Follow `ElementType` to inspect nested layers. For `int**`, following it twice
+reaches `int`. Other type kinds have a null `ElementType`.
 
-Traits describe the queried type itself: `typeof(Resource*).HasDestructor` is
-false even when `Resource` has a destructor. `IsPointer` describes raw and function
-pointers. Managed references use `IsManaged`. Member enumeration is not supported. `typeof(expression)`
-is not supported.
+Qualification belongs to each layer:
+
+- `readonly(int)*` has a mutable pointer and a readonly integer element
+- `immutable(int*)` protects both the pointer and its element
+- Primitive and enum leaves canonicalize immutable to readonly, so their
+  `IsImmutable` flag is false
+
+Traits describe the queried type. For example,
+`typeof(Resource*).HasDestructor` is false even when `Resource` has a destructor.
+Raw and function pointers set `IsPointer`. Managed references set `IsManaged`.
+
+### Arrays and layout
+
+`HasFixedLength` is true for fixed arrays, and `Length` gives their element count.
+Other types use zero for `Length`.
+
+Void, function signatures, and interface elements have no value layout.
+Their `Size` and `Alignment` are zero. Pointer metadata describes its own layout.
+Use `typeof(I*).ElementType` to inspect an interface element. Direct `typeof(I)`
+is rejected.
+
+### Function signatures
+
+Function metadata includes a return descriptor, including for `void`.
+`ParameterTypes` points to a contiguous descriptor array of `ParameterCount`
+elements. A zero count uses a null array pointer. Return and parameter descriptors
+can be followed recursively during constant evaluation.
+
+Other type kinds use null return and parameter pointers and a zero parameter count.
+Function types carry return and parameter types. Parameter names, defaults, and
+method modifiers belong to declarations.
+
+Member enumeration and `typeof(expression)` are not supported.
 
 ```csharp
 struct Packet { public int sequence; }

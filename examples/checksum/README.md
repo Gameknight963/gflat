@@ -1,5 +1,7 @@
 # File checksums
 
+Compute checksums or digests for one or more files:
+
 ```console
 gflat build examples/checksum/checksum.gfproj
 examples/checksum/bin/Debug/checksum.exe first.bin second.bin
@@ -8,38 +10,23 @@ examples/checksum/bin/Debug/checksum.exe --sha512 first.bin second.bin
 examples/checksum/bin/Debug/checksum.exe --crc32c first.bin second.bin
 ```
 
-## Options
+| Option | Output before each file path |
+| --- | --- |
+| Default | CRC32 and Adler32, eight hexadecimal digits each |
+| `--crc32c` | Eight-digit Castagnoli CRC32C |
+| `--sha256` | 64-digit SHA-256 digest |
+| `--sha512` | 128-digit SHA-512 digest |
 
-Syntax: `checksum [--sha256 | --sha512 | --crc32c] [--] <file> [more files...]`. Options
-are recognized only before the first path. `--` ends option parsing, allowing a first
-filename such as `--sha256`, `--sha512`, or `--crc32c`. Later paths are always literal.
-The algorithm options are mutually exclusive. Unknown, repeated, or mixed leading
-options and missing paths are usage errors.
+Choose at most one algorithm option before the first path. Use `--` before a
+first filename that resembles an option. Later filenames are taken literally.
+Hexadecimal output is lowercase.
 
-## Output
+CRC32, CRC32C, and Adler32 detect accidental corruption. For SHA-256 or SHA-512,
+compare against an expected digest obtained from a trustworthy source.
 
-By default, prints an eight-digit hexadecimal CRC32, an eight-digit Adler32, two spaces,
-and the file path for each input. `--sha256` instead prints a 64-digit lowercase SHA-256
-digest, two spaces, and the path, using `FileHash`. `--sha512` prints a 128-digit
-lowercase SHA-512 digest in the same row format. `--crc32c` instead prints one
-eight-digit lowercase CRC32C, two spaces, and the path. Files are read in binary mode,
-in 4096-byte chunks, and closed before output.
+Files are processed in 4096-byte chunks. A failed file produces a stderr
+diagnostic and processing continues with the next file. An output failure stops
+the command.
 
-## Choosing an algorithm
-
-CRC32 is the IEEE variant used by gzip. CRC32C uses the Castagnoli polynomial and
-produces different checksums. Adler32 is the zlib checksum. Use these checksums to
-detect accidental corruption.
-
-SHA-256 and SHA-512 are cryptographic digests. A matching digest is useful only when the
-expected digest comes from a trustworthy source.
-
-## Errors
-
-Checksum rows go to stdout. Usage and failure diagnostics go to stderr. Output is
-explicitly flushed before success, including when the host buffers writes.
-
-Exit codes: 0 when every input and output succeeds, 1 if any file cannot be read or
-checksum output fails, and 2 for invalid options or missing paths. A failed input does
-not prevent processing later files. An output failure stops processing and is reported
-separately from input errors.
+Exit codes are 0 when all files succeed, 1 for file or output errors, and 2 for
+invalid arguments.

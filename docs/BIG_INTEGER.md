@@ -1,10 +1,11 @@
 # BigInteger
 
-`Standard::Numerics::BigInteger` is an owning signed integer whose precision is limited by
-available storage. It stores decimal limbs in a `Vector<uint>`.
+`Standard::Numerics::BigInteger` represents signed integers whose precision is
+limited by available storage. For example, compute 100 factorial:
 
 ```csharp
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
 
 int main()
 {
@@ -23,74 +24,34 @@ int main()
 }
 ```
 
-This prints 100 factorial. `Multiply` borrows its operands and returns a fresh
-owner, which the assignment transfers into `factorial`. The old value is destroyed
-normally. Streaming `Format` does not allocate a temporary decimal string.
+Arithmetic methods borrow their operands and return owning results. Copies
+have independent limb storage, while `move` transfers it. Zero needs no limb
+allocation. The type supports equality, ordering, hashing, and interpolation.
 
-## Operations
+## Construction and parsing
 
-| API | Behavior |
+| API | Result |
 | --- | --- |
-| `new BigInteger()` | Zero, without allocation. |
-| `new BigInteger(long)` | Exact signed 64-bit value, including `long` minimum. |
-| `BigInteger::FromULong(value)` | Independent nonnegative owner from the full unsigned 64-bit range. Zero needs no allocation. |
-| `BigInteger::Parse(text)` | Strict, null-terminated decimal input. |
-| `BigInteger::Parse(data, count)` | Strict, counted decimal input. No terminator is required. |
-| `BigInteger::TryParse(data, count, ref result)` | Parse counted decimal input into an initialized owning result. False resets it to zero. |
-| `BigInteger::TryParse(text, ref result)` | The same syntax and result contract for null-terminated input. |
-| `Sign` | -1, 0, or 1. |
-| `TryToLong(ref result)` / `TryToULong(ref result)` | Checked 64-bit conversion. False writes zero. |
-| `ToLong()` / `ToULong()` | Checked 64-bit conversion. Throws when the value does not fit. |
-| `Abs()` | Return an independent nonnegative integer with the same magnitude. |
-| `Negate()` | Return an independent integer with the opposite sign. |
-| `BigInteger::GreatestCommonDivisor(first, second)` | Borrow two integer pointers and return their independent nonnegative greatest common divisor. |
-| `BigInteger::LeastCommonMultiple(first, second)` | Return an independent nonnegative least common multiple. Either zero operand gives zero. |
-| `Add(immutable(BigInteger)* other)` | Return the exact sum. |
-| `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
-| `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
-| `Pow(uint exponent)` | Return an independent exact nonnegative integer power. Zero to the zero power is one. |
-| `ModPow(immutable(BigInteger)* exponent, immutable(BigInteger)* modulus)` | Return the signed remainder of this value raised to a nonnegative arbitrary-precision exponent. |
-| `DivRem(int divisor, ref int remainder)` | Return a fresh quotient and the signed remainder for a 32-bit divisor. |
-| `DivRem(immutable(BigInteger)* divisor, ref BigInteger remainder)` | Return a fresh quotient and replace initialized output with the exact remainder. |
-| `Divide(immutable(BigInteger)* divisor)` / `Remainder(immutable(BigInteger)* divisor)` | Return the quotient or remainder of arbitrary-precision division. |
-| `Equals`, `CompareTo`, `GetHashCode` | Value equality, signed ordering, and an equality-compatible hash. |
-| `TryFormat(output, capacity, ref written)` | Write canonical decimal bytes into a caller buffer without allocation or a terminator. False writes zero to `written` and preserves the buffer. |
-| `Format(ITextWriter*)` | Write canonical decimal bytes without an intermediate owning string. |
-| `ToString()` | Return an independent owning decimal `String`. |
+| `new BigInteger()` | Zero |
+| `new BigInteger(long)` | Exact signed 64-bit value |
+| `BigInteger::FromULong(value)` | Exact unsigned 64-bit value |
+| `Parse(text)` / `Parse(data, count)` | Parsed decimal value, or an exception for invalid text |
+| `TryParse(text, ref result)` / `TryParse(data, count, ref result)` | True with the parsed value, or false with `result` reset to zero |
 
-The type implements `IEquatable<BigInteger>`, `IComparable<BigInteger>`,
-`IHashable`, `IFormattable`, and `IStringConvertable`, so it works as a hash key,
-in generic comparisons, and in interpolation. There are currently no arithmetic
-operators, implicit primitive conversions, bitwise operations, alternate
-radices, or locale formatting.
+Input uses an optional `+` or `-` followed by ASCII decimal digits. Leading
+zeroes are accepted. Whitespace, separators, radix prefixes, decimal points,
+and counted embedded NULs are rejected.
 
-Parsing accepts an optional leading `+` or `-` followed by at least one ASCII
-digit. Whitespace, separators, decimal points, embedded nulls in counted input,
-non-ASCII digits, and trailing data are rejected. The complete input is validated
-before allocating limb storage. Leading zeroes are accepted. All spellings of zero
-share one canonical value. Formatting emits `0` for zero and otherwise an optional
-minus sign followed by decimal digits without leading zeroes.
-
-`TryParse` accepts the same grammar as `Parse`. Its result must be an initialized
-mutable `BigInteger`, passed by `ref` so successful replacement transfers ownership
-without copying limbs. Malformed input returns false and replaces the old result
-with zero, releasing its previous storage. A zero counted length fails without
-reading input. The null-terminated overload scans to the first NUL, as `Parse`
-does. Arbitrary-length integers have no fixed text-length limit.
-
-These Try methods are potentially throwing: allocation failure throws
-`BadAllocException`, and impossible storage sizes follow the existing size-error
-contract. They leave the previous result unchanged on those failures. All syntax
-is validated before allocating limbs. Malformed input and valid zero spellings
-need no limb allocation. A fresh candidate is completely built before the old
-result is replaced. No input pointer is retained. Input must remain readable
-until that commit. Readable input may borrow the old result's limb storage,
-which replacement can then release. This does not permit corrupting owner
-metadata or passing uninitialized result storage.
+TryParse validates syntax before allocating limbs. Allocation failure throws
+`BadAllocException` and preserves the previous result. This differs from
+malformed input, which replaces it with zero. Readable input can borrow the
+result's old storage because replacement happens after parsing.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
+
 int main()
 {
     BigInteger value = new(42l);
@@ -102,109 +63,37 @@ int main()
 }
 ```
 
-## Ownership and failure
+## Arithmetic
 
-Ordinary copies allocate independent limb storage. Moving transfers storage
-without copying limbs. Reinitialize a moved local before reusing it. Arithmetic
-does not mutate either input, including when both pointers refer to the same value.
-Equal-magnitude cancellation and multiplication by zero return an allocation-free
-zero. A failed allocation throws `BadAllocException`. Invalid syntax or impossible
-storage sizes throw `Exception`. Partial results are cleaned up normally, and
-failed result construction leaves its source operands unchanged. The normal value
-assignment rules prepare a copied or computed result before replacing the target.
+| API | Result |
+| --- | --- |
+| `Add(&other)` | Exact sum |
+| `Subtract(&other)` | This value minus the other |
+| `Multiply(&other)` | Exact product |
+| `Abs()` / `Negate()` | Absolute value or opposite sign |
+| `GreatestCommonDivisor(&first, &second)` | Nonnegative GCD, with `gcd(0, 0) == 0` |
+| `LeastCommonMultiple(&first, &second)` | Nonnegative LCM, or zero if either input is zero |
 
-`Abs()` and `Negate()` borrow the receiver and return independent owners using
-the existing value-copy operation. Even a positive value's `Abs()` owns its own
-limb storage. Only the copied sign changes. Zero stays canonical and copying it
-requires no allocation. Both methods accept immutable receivers. Nonzero results
-copy limbs in linear time and can throw on allocation failure, leaving the
-receiver unchanged. Assignments such as `value = value.Negate()` prepare the
-complete result before releasing the old owner. Neither method is `nothrow`.
-
-`TryFormat(char* output, nuint capacity, ref nuint written)` is an immutable,
-`nothrow` operation. It writes the same canonical decimal bytes without a
-terminating NUL or an intermediate allocation. Insufficient capacity returns false,
-sets `written` to zero, and leaves every output byte unchanged. Success sets
-`written` to the exact byte count. Zero requires one byte. A zero capacity needs
-no writable output storage. The output buffer and `written` must be disjoint from
-each other, the receiver, and its private owned limb storage. The receiver remains
-unchanged. This buffer API does not alter the streaming `Format` failure contract.
-
-`Format` uses a small stack buffer and borrows limbs while writing. The writer must
-consume each byte span during the call, keep the source alive, and must not mutate
-or move it through another alias. A writer may allocate or throw. Failure can leave
-partial output, while the source integer remains unchanged.
-
-Limbs use base 1,000,000,000, least significant first. Addition and subtraction take
-linear time in limb count. Schoolbook multiplication takes O(n*m) time and linear
-result storage. Parsing and formatting take linear time in decimal digits. The
-largest multiplication accumulator is `base*base - 1`, safely within `ulong`.
-This initial implementation favors straightforward decimal arithmetic. It does
-not use advanced multiplication algorithms.
-
-Arbitrary-precision division uses a linear single-limb fast path and normalized
-schoolbook long division for larger divisors. For an m-limb dividend and n-limb
-divisor with m >= n, it takes O((m-n+1)*n + m+n) work and O(m+n) storage. Its
-scratch vectors are reserved once, with no allocation per quotient digit.
-
-For explicit source selection include `core/Numerics/BigInteger.gf`, `Vector`/`Span` and
-their query-interface dependencies, `primitive_format.gf`, `Hashing/primitive_hashing.gf`, the implemented
-interface sources, and `String`/`ByteSearch`. Projects using the complete standard
-library already include these sources.
-
-## Greatest common divisor
-
-Static `GreatestCommonDivisor(immutable(BigInteger)* first,
-immutable(BigInteger)* second)` returns an independent nonnegative integer.
-Signs do not affect the result. For one zero operand it returns the other
-operand's absolute value. For two zero operands it returns canonical zero
-without allocating limb storage. Both pointers may refer to the same integer.
-
-The implementation uses Euclid's algorithm with `Abs()` and `Remainder()`.
-It owns its intermediate values and moves them between iterations, leaving
-both borrowed operands unchanged. Allocation or size failures propagate and
-clean up intermediate owners. An existing assignment target is not replaced
-until the result is complete. The returned nonzero owner has independent limb
-storage even when the input values already equal their greatest common divisor.
-This method can allocate and is not `nothrow`. The fixed-width unsigned overloads
-on `Math::GreatestCommonDivisor` remain available for primitive integers.
-
-## Least common multiple
-
-Static `LeastCommonMultiple(immutable(BigInteger)* first,
-immutable(BigInteger)* second)` ignores operand signs and returns an independent
-nonnegative result. If either operand is zero, it returns canonical zero without
-allocating. Both pointers may refer to the same integer.
-
-It divides out the greatest common divisor before multiplying, avoiding an
-unnecessarily large intermediate product. Neither input changes. Nonzero results
-can allocate and throw. Temporary owners are cleaned up, and an existing
-assignment target is preserved if construction fails, including when that target
-is one of the operands. Fixed-width callers can instead use the checked
-`Math::TryLeastCommonMultiple` overloads.
+GCD and LCM ignore operand signs. LCM divides out the GCD before multiplying
+to reduce intermediate size. Arithmetic can fail on allocation or storage-size
+limits. Operands remain available when result construction fails.
 
 ## Division and remainder
 
-Both `DivRem` overloads truncate the quotient toward zero. A nonzero remainder
-has the dividend's sign, with magnitude less than the divisor's, and satisfies
-`dividend = quotient * divisor + remainder`. A zero divisor throws
-`Exception("BigInteger divisor is zero")` without changing the remainder output.
+`DivRem(&divisor, ref remainder)` returns the quotient and replaces the
+remainder. The quotient truncates toward zero. A nonzero remainder has the
+dividend's sign and a smaller magnitude than the divisor.
 
-The BigInteger-divisor overload borrows its operands and returns an independent
-quotient. Its `ref BigInteger remainder` must refer to an initialized mutable
-owner. Both new results are complete before that owner is replaced. Allocation
-or size failures preserve both operands and the previous remainder value.
-Partial results are cleaned up normally.
-
-The output may be the same object as the dividend or divisor, including when
-both operands are that object. A successful call then replaces the aliased
-operand with the remainder. The returned quotient is independent. All operand
-reads finish before this commit. This permits ordinary complete owning objects,
-not fabricated output references inside owner metadata or limb storage.
+A zero divisor throws `Exception("BigInteger divisor is zero")`. Both results
+are prepared before replacing the remainder, so allocation failures preserve
+its previous value. The remainder may alias either operand. On success that
+operand is replaced with the remainder.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
+
 int main()
 {
     BigInteger dividend = BigInteger::Parse("-100000000000000000001");
@@ -218,40 +107,20 @@ int main()
 }
 ```
 
-`Divide` and `Remainder` return the corresponding independent value with the
-same rules. They share `DivRem`'s algorithm and currently compute both results
-before discarding the unused one. Like the other arithmetic, it is not constant
-time and makes no cryptographic timing guarantee.
+`Divide(&divisor)` and `Remainder(&divisor)` return the corresponding value.
+They currently compute both results and discard the unused one.
 
-## Checked primitive conversions
+## Primitive conversions
 
-`BigInteger::FromULong(ulong value)` constructs the exact nonnegative value,
-including values above `long` maximum. It builds decimal limbs directly without
-parsing text or converting through `long`. Zero produces canonical zero without
-allocation. A nonzero result owns independent storage and allocation failure
-throws `BadAllocException`. Assigning a result transfers that owner. Failure
-leaves an existing assignment target unchanged.
-
-Immutable `TryToLong(ref long result)` accepts the entire signed 64-bit range,
-including `long` minimum. `TryToULong(ref ulong result)` accepts zero through
-`ulong` maximum and rejects negative values. Both are `nothrow`, allocate nothing,
-and write zero to the output on failure. A failed conversion does not wrap,
-truncate, or preserve the previous output value. The receiver is unchanged.
-
-Results are staged before assignment. Output metadata must be separate from
-both the receiver object's storage and its owned limb allocation. These methods
-borrow the integer. They do not transfer ownership or allocate a decimal string.
-
-`ToLong()` and `ToULong()` return the same checked results or throw
-`Exception("BigInteger does not fit in long")` or
-`Exception("BigInteger does not fit in ulong")`, respectively. Successful calls
-allocate nothing. Errors follow normal exception allocation rules. These named
-methods provide checked range conversion, independently of primitive casts'
-ordinary bit-truncation rules. No conversion operator or implicit conversion is
-introduced.
+`TryToLong(ref result)` and `TryToULong(ref result)` return false and write
+zero when out of range. Both are `nothrow`. `ToLong()` and `ToULong()` throw
+instead. The signed form accepts the entire `long` range, and the unsigned
+form rejects negative values.
 
 ```csharp
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
+
 int main()
 {
     BigInteger integer = BigInteger::Parse("18446744073709551615");
@@ -263,26 +132,20 @@ int main()
 }
 ```
 
-## Nonnegative integer powers
+Keep primitive output storage separate from the integer and its owned limbs.
 
-Immutable `Pow(uint exponent)` returns a fresh independent integer and leaves
-the receiver unchanged. The exponent is nonnegative. `Pow(0)` returns one for
-every base, including zero. Zero to a positive exponent is zero. Negative bases
-produce a negative result for odd exponents and a positive result for even ones.
-`Pow(1)` copies the receiver without sharing its limb allocation.
+## Integer powers
 
-The method uses left-to-right exponentiation by squaring through the existing
-`Multiply` operation, requiring O(log exponent) multiplications. This does not
-bound the size of the result: large powers can require substantial storage.
-Zero to a positive exponent allocates nothing. Results equal to one or minus one
-still require their own limb storage. Those bases use a direct fast path even
-for the largest `uint` exponent. Allocation or size failures propagate normally,
-clean up intermediate owners, and preserve the receiver and any existing
-assignment target.
+`Pow(uint exponent)` uses exponentiation by squaring. `Pow(0)` returns one,
+including for zero, and negative bases produce negative results for odd powers.
+Large powers can require substantial storage despite logarithmically many
+multiplications.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
+
 int main()
 {
     BigInteger baseValue = new(-12l);
@@ -295,28 +158,18 @@ int main()
 
 ## Division by a 32-bit integer
 
-`DivRem(divisor, ref remainder)` truncates the quotient toward zero. A nonzero
-remainder has the dividend's sign and an absolute value smaller than the absolute
-divisor. Negative divisors and `int` minimum are supported. The quotient is a
-BigInteger, so dividing a large negative value by -1 has no fixed-width overflow.
+`DivRem(int divisor, ref int remainder)` follows the same truncation and
+remainder-sign rules. Negative divisors and `int` minimum are supported.
+A zero divisor or failed quotient construction preserves the old remainder.
+Its output slot must be separate from the BigInteger's storage.
 
-A zero divisor throws `Exception` before allocating the quotient or changing the
-remainder. Quotient construction completes before the remainder is assigned. A
-failed allocation leaves the source, remainder, and an existing assignment target
-unchanged. The output integer must not overlap the source object or its owned
-storage through unsafe aliases. The quotient owns independent storage.
-
-The method makes one linear pass over base-1,000,000,000 limbs. Its `ulong`
-intermediate is at most 2147483647999999999, even for an `int` minimum divisor.
-A zero input requires no quotient allocation. A nonzero input can reserve storage
-even when its quotient is zero. Normalization need not release that capacity.
-
-For example, repeated division can implement base conversion using existing
-String and collection operations. For example:
+Repeated division can convert to another radix:
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Numerics; using Standard::Collections;
+using Standard;
+using Standard::Numerics;
+using Standard::Collections;
 
 String ToRadix(immutable(BigInteger)* input, int radix)
 {
@@ -349,22 +202,18 @@ int main()
 
 ## Modular exponentiation
 
-`ModPow(&exponent, &modulus)` computes the remainder without constructing the
-full integer power. The exponent must be nonnegative and the modulus nonzero.
-Negative exponents throw `Exception("BigInteger exponent is negative")`, while
-zero modulus uses the existing `Exception("BigInteger divisor is zero")` error.
-These checks precede any working-limb allocations. If both are invalid, the
-negative exponent is reported first. Ordinary exception support still applies.
+`ModPow(&exponent, &modulus)` computes a power's signed remainder while reducing
+intermediate products. The exponent must be nonnegative and modulus nonzero.
+If both are invalid, the negative exponent is reported first.
 
-Negative moduli are accepted and behave like their positive magnitudes. The
-result follows the existing signed remainder convention: a negative base and an
-odd exponent can produce a negative result, rather than a normalized nonnegative
-residue. Zero to exponent zero is one before reduction. Modulus `1` or `-1`
-therefore always produces zero for valid exponents. This agrees with
-[.NET BigInteger.ModPow](https://learn.microsoft.com/en-us/dotnet/api/system.numerics.biginteger.modpow).
+Negative moduli behave like their positive magnitude. A negative base raised
+to an odd exponent can return a negative remainder. Modulus `1` or `-1`
+produces zero. These rules match [.NET BigInteger.ModPow](https://learn.microsoft.com/en-us/dotnet/api/system.numerics.biginteger.modpow).
 
 ```csharp
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
+
 int main()
 {
     BigInteger value = new(4l);
@@ -377,16 +226,32 @@ int main()
 }
 ```
 
-Receiver and borrowed operands remain unchanged, including when their pointers
-refer to the same initialized owner. The result is an independent owner. A
-caller may assign it back to an operand. That assignment commits only after the
-call succeeds. Allocation failures release temporary owners and preserve the
-caller's prior destination. The operation can allocate and throw.
+The implementation uses repeated squaring and decimal-limb division. It is
+variable-time and unsuitable for operations requiring cryptographic timing
+guarantees.
 
-The implementation uses repeated squaring with reduction after multiplication.
-Working residue magnitudes stay below the modulus magnitude. Products can reach
-roughly twice its limb length. It performs O(number of exponent bits) modular
-arithmetic steps plus repeated halving of a copied decimal-limb exponent. Halving can be
-quadratic in exponent representation length, and each arithmetic operation has
-its existing size-dependent cost and allocation behavior. This is not a
-constant-time or specialized cryptographic implementation.
+## Formatting
+
+Formatting uses canonical decimal digits, with `0` for zero and a minus sign
+for negative values.
+
+- `ToString()` returns an owning String
+- `Format(writer)` streams digits to a writer
+- `TryFormat(output, capacity, ref written)` writes counted bytes without a
+  terminator. Insufficient capacity returns false, resets `written` to zero,
+  and preserves output
+
+TryFormat is `nothrow`. Its output and `written` must be separate from each
+other, the receiver, and its owned limbs. A writer must consume bytes during
+each call and keep the integer alive and stable. Writer errors can leave
+partial output.
+
+## Costs
+
+The implementation stores base-1,000,000,000 limbs. Addition, subtraction,
+parsing, and formatting are linear in their input sizes. Multiplication uses
+O(n*m) work. Multi-limb long division uses
+O((m-n+1)*n + m+n) work for an m-limb dividend and n-limb divisor.
+
+Source: `core/Numerics/BigInteger.gf`, with Vector, String, and interface
+dependencies.

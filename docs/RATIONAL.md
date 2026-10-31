@@ -1,12 +1,12 @@
 # Exact rational values
 
-`Standard::Numerics::Rational` owns a numerator and denominator backed by BigInteger. Every
-successfully constructed value has coprime parts, a positive denominator, and
-canonical zero `0/1`. Arithmetic preserves exact fractions within available storage.
+`Standard::Numerics::Rational` stores an exact fraction using two BigIntegers.
+Values are reduced to coprime parts with a positive denominator. Zero is `0/1`.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Numerics;
+using Standard;
+using Standard::Numerics;
 
 int main()
 {
@@ -21,65 +21,43 @@ int main()
 }
 ```
 
-Constructors accept no arguments (`0/1`), one signed long (an integer), a pair
-of signed longs, or a pair of owning BigInteger values. BigInteger arguments use
-ordinary value-copy rules. Use `move` to transfer existing owners. A negative
-denominator reverses both signs. Zero denominators throw
-`Exception("Rational denominator is zero")` before normalization. Long minimum
-values are handled through BigInteger, without negating them in primitive space.
-The default constructor allocates the ordinary BigInteger denominator `1`. It
-does not rely on static heap storage or a special zero-denominator sentinel.
+## Construction and arithmetic
 
-`Add`, `Subtract`, `Multiply`, and `Divide` borrow an immutable pointer to the
-other Rational and return a new normalized owner. `Negate()` also returns a new
-owner. Division by a zero Rational throws `Exception("Rational divisor is zero")`.
-Receivers and borrowed operands are unchanged, including when both pointers
-refer to the same value. There are no arithmetic operators.
+Construct from a signed long, two signed longs, or two BigInteger values.
+Default construction gives `0/1`. A negative denominator reverses both signs.
+A zero denominator throws `Exception("Rational denominator is zero")`.
 
-Copying performs a deep copy of both BigIntegers. `Numerator` and `Denominator`
-return independent owning value copies, rather than pointers into the Rational.
-They may allocate and throw. Moving uses ordinary ownership transfer. Borrowed
-operand pointers must stay valid. Do not move or destroy their owners during calls.
+BigInteger arguments follow value semantics. Use `move` to transfer existing
+owners. `Numerator` and `Denominator` return independent BigInteger copies.
 
-`Equals`, `CompareTo`, and `GetHashCode` use canonical numeric value. Equivalent
-fractions compare equal and hash equally. Comparison uses exact cross-products.
-Arithmetic likewise uses straightforward BigInteger products before GCD reduction.
-Intermediate values can be larger than the result. Ordinary BigInteger size and
-allocation limits apply.
-Failures clean partial owners, and failed result assignment preserves its old
-destination. Arithmetic methods do not mutate their operands.
+`Add`, `Subtract`, `Multiply`, and `Divide` borrow the other Rational and return
+a new normalized value. `Negate()` returns its opposite. Division by a zero
+Rational throws `Exception("Rational divisor is zero")`.
+
+Equality and hashing use the reduced value. Comparison uses exact
+cross-products. Intermediate products can be larger than the final result,
+so BigInteger storage and allocation limits apply.
 
 ## Parsing integer and fraction text
 
-`Parse(text, count)` and `Parse(text)` accept an integer or one
-`numerator/denominator` pair. Each part uses BigInteger's strict optional `+`/`-`
-followed by ASCII decimal digits. Leading zeros and negative denominators are
-allowed. Whitespace, empty parts, multiple slashes, decimal points, radix prefixes,
-non-ASCII digits and trailing bytes are rejected. A zero denominator is invalid
-input. Successful results use the same canonical representation as constructors.
+`Parse` and `TryParse` accept a signed decimal integer or one
+`numerator/denominator` pair. Leading zeroes and negative denominators work.
+Whitespace, empty parts, extra slashes, radix prefixes, decimal points, and
+zero denominators are invalid. Counted input also rejects embedded NULs.
+
+`TryParse(text, count, ref result)` and the C-string overload replace the result
+with the normalized fraction on success. Malformed input returns false and
+resets it to `0/1`. Even that reset can allocate for denominator `1`. Allocation
+failure throws and preserves the old result. Input can borrow the result's old
+owned storage because replacement happens after reading and construction.
+
 `Parse` throws `Exception("Invalid rational")` for malformed input.
 
-`TryParse(text, count, ref result)` and `TryParse(text, ref result)` return true
-for accepted text and replace `result` with its normalized owning value. False
-replaces it with canonical `0/1`. These methods are **not** `nothrow`: even a
-false result can allocate the ordinary BigInteger denominator `1`. If allocation
-or another construction operation throws, the old result is preserved, rather
-than partially reset. Syntax errors remain false when constructing that reset
-value succeeds.
+## Formatting
 
-Counted input includes every supplied byte, so embedded NUL is invalid. CString
-overloads stop at the first NUL and require a readable terminator. Input is
-borrowed for the call. All reads and candidate construction complete before
-replacing the output, so fully readable input in the result's owned storage is
-also supported. No input pointer is retained. The caller must keep the bytes
-valid until parsing returns. No encoding normalization or whitespace trimming
-is performed.
+Formatting writes `numerator/denominator`, omitting `/1` for integers. The
+generic ToString extension returns an owning String. Writer errors can leave
+a partial result in the sink.
 
-Formatting writes the integer numerator when the denominator is `1`, otherwise
-`numerator/denominator`, with decimal BigInteger spelling. It adds no whitespace,
-newline, terminator, or flush. The existing generic `ToString()` extension returns
-an owning String for a named Rational. It borrows the receiver. Writer failures
-propagate and may leave a prefix in the sink without altering the Rational.
-
-For explicit source selection include `Numerics/Rational.gf`, BigInteger's existing
-dependencies, and `Text/formattable_string.gf` only when using the ToString extension.
+Sources: `Numerics/Rational.gf`, BigInteger dependencies, and
+`Text/formattable_string.gf` for the ToString extension.

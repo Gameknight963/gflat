@@ -1,34 +1,17 @@
-# Searching lazy sequences
+# Search a query
 
-`Any(predicate)` tests a sequence in order and returns true at the first element
-passing the predicate. Empty sequences return false without invoking it.
-Parameterless `Any()` retains its existing behavior: it only advances once and
-does not read the terminal iterator's `Current`.
-
-`Count(predicate)` counts matching elements and returns a `nuint`. It advances
-through the whole sequence, calling the predicate once for every element. An
-empty sequence returns zero without invoking it. It has the same ordinary
-enumeration and callback behavior as `Where(predicate).Count()`, without creating
-that adapter. Before incrementing a maximum-sized result, it throws
-`Exception("Sequence count overflow")`, matching parameterless `Count()`.
-Parameterless `Count()` retains its existing behavior and does not read terminal
-`Current`. The predicate overload must read it to test each element.
-
-`Contains(immutable(T)* key)` searches with `EqualityComparer<T>::Equals` and
-requires `T : IEquatable<T>`. The key is borrowed rather than copied. The overload
-`Contains(key, equal)` accepts a callback of type
-`bool(immutable(T)*, immutable(T)*)*` and imposes no equality-interface constraint.
-The first callback argument is the sequence element. The second is the search
-key. Both overloads return true at the first match, or false when exhausted.
-
-Default equality requires the matching closed `IEquatable<T>` contract for the
-sequence's actual element type. For example, a readonly `int` element view does
-not automatically use `IEquatable<int>` through interface variance. Use the
-explicit comparer overload for such views. It needs no equality-interface
-implementation.
+| Method | Behavior |
+| --- | --- |
+| `Any(predicate)` | Stop at the first match, or return false |
+| `Count(predicate)` | Count every match and return a `nuint` |
+| `Contains(&key)` | Stop at the first element equal to the borrowed key |
+| `Contains(&key, equal)` | Use an explicit equality callback |
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+
 bool Even(int value) => value % 2 == 0;
 bool SameParity(immutable(int)* left, immutable(int)* right)
     => *left % 2 == *right % 2;
@@ -49,35 +32,27 @@ int main()
 }
 ```
 
-These operations start a fresh iterator and read terminal `Current` once per
-tested element. `Any(predicate)` and `Contains` short-circuit at a match.
-`Count(predicate)` continues through the sequence. Upstream operators retain their usual rules:
-for example, `Where` may read its own source to evaluate its predicate before
-the terminal reads an accepted value. An early match does not validate a
-malformed suffix of a lazy Unicode source.
+Default Contains requires the matching `IEquatable<T>` contract. The explicit
+callback has type `bool(immutable(T)*, immutable(T)*)*`, with the sequence
+element first and key second. Use it for another equality relation or a
+qualified view whose element type lacks that exact interface.
 
-Elements follow ordinary `T` value semantics. Searching a borrowed sequence of
-owning values can copy each tested element and can therefore allocate or throw.
-The explicit comparer borrows a local materialized element, so it must not retain
-that pointer beyond the callback. The key must stay readable throughout the
-operation. Callbacks must not mutate, move, destroy, or invalidate the sequence
-through another alias. Pointer elements remain ordinary borrowed addresses.
+## Evaluation
 
-Successfully constructed iterators and temporary element owners are destroyed
-on exhaustion, early success, and exceptions. Iterator construction/advancement,
-`Current`, element copying, equality, and predicates can throw. Exceptions
-propagate normally. The terminal methods introduce no collection or GC
-allocation. Allocation behavior of custom sources, callbacks, element copies,
-and allocating upstream operators remains unchanged.
+The terminal reads `Current` once per tested element. Any and Contains stop
+at the first match. Count scans the full sequence and throws
+`Exception("Sequence count overflow")` if its result exceeds `nuint`.
 
-Default equality is the existing `IEquatable<T>` contract. The supplied comparer
-can express another matching relation without changing stored values. For
-contiguous spans, the existing `Contains<T>(Span<immutable(T)>, key, equal)`
-algorithm borrows elements directly. Query searching intentionally follows the
-normal value semantics of sequence enumeration.
+Parameterless `Any()` and `Count()` advance without reading the terminal's
+`Current`. A preceding filter may still read values to test its predicate.
+Short-circuiting can leave an invalid suffix, such as malformed Unicode,
+unexamined.
 
-Selective source users need `Queries/enumerable_predicates.gf` for `Any` and `Queries/enumerable_count.gf` for `Count`,
-and `Queries/enumerable_contains.gf` plus `Collections/EqualityComparer.gf` and
-`IEquatable.gf` for default query membership, alongside the sequence's ordinary
-source and enumeration dependencies. Explicit-comparer calls do not require an
-`IEquatable<T>` implementation.
+Query searches materialize tested values. Borrowed owning elements may be
+copied. Equality callbacks borrow those temporary values only during each call.
+Keep the key and source valid throughout the operation. For contiguous spans,
+the span Contains algorithm can compare elements directly by borrow.
+
+See [query ownership](QUERIES.md#ownership).
+Sources: `Queries/enumerable_predicates.gf`, `Queries/enumerable_count.gf`, and
+`Queries/enumerable_contains.gf`, plus EqualityComparer for default equality.

@@ -1,27 +1,19 @@
-# JSON minify
+# Minify JSON
 
-Write compact JSON to standard output, preserving property order, duplicate names, and
-the exact spelling of strings and numbers, including original escapes and numbers
-outside machine numeric ranges. One final host console newline is appended.
+Remove whitespace between JSON tokens:
 
 ```powershell
 gflat build examples/json-minify/json-minify.gfproj -o artifacts/json-minify.exe
 ./artifacts/json-minify.exe path/to/document.json
 ```
 
-## Processing
+Property order, duplicate names, string escapes, and number spellings are
+preserved. Output ends with a platform newline.
 
-The complete file is held in an owning `String`. `JsonText::Minify` validates the
-document before writing, then copies token bytes while removing whitespace outside
-strings.
+The tool loads and validates the complete document before writing. Invalid JSON
+produces an error on stderr with the file path, byte offset, and reason.
 
-## Errors
+Exit codes are 0 for success, 1 for parse or IO errors, and 2 for invalid
+arguments. Output failures can leave partial JSON on stdout.
 
-Exit codes are `0` success, `1` parse/file/output error, and `2` incorrect arguments.
-Errors go to standard error with the input path and, for parse errors, a zero-based byte
-offset and reason. Invalid input produces no standard output. After validation passes,
-output failures can leave partial output. The tool flushes stdout before reporting
-success.
-
-See [JSON text operations](../../docs/JSON_TEXT.md) for the borrowing contract and [JSON
-reader](../../docs/JSON_READER.md) for strict UTF-8 and escape policies.
+See [JSON text operations](../../docs/JSON_TEXT.md) for the library API.

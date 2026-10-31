@@ -1,75 +1,58 @@
 # Integer parsing
 
-These APIs parse decimal text. Explicit unsigned hexadecimal alternatives are
-documented in [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md).
-
-`Standard::Text` provides strict decimal parsers for `Byte`, `SByte`, `Short`, `UShort`,
-`Int`, `UInt`, `Long`, `ULong`, `ExtraLong`, `NInt`, and `NUInt`. Each name has four forms:
+`Standard::Text` provides decimal parsers named for their result type: `Byte`,
+`SByte`, `Short`, `UShort`, `Int`, `UInt`, `Long`, `ULong`, `ExtraLong`, `NInt`,
+and `NUInt`. Each has counted and C-string forms:
 
 ```cpp
 using Standard::Text;
+
 bool TryParseLong(readonly(char)* text, long* result) nothrow;
 bool TryParseLong(readonly(char)* text, nuint count, long* result) nothrow;
 long ParseLong(readonly(char)* text);
 long ParseLong(readonly(char)* text, nuint count);
 ```
 
-The null-terminated form stops at the first null byte. The counted form consumes
-exactly `count` bytes. An embedded null is invalid input. Pointers must designate
-the requested readable input and writable result storage.
+| Input | Rule |
+| --- | --- |
+| Digits | Decimal `0`–`9`, with optional leading `+` |
+| Negative values | Leading `-` for signed results. Unsigned parsers reject `-0` too. |
+| Leading zeroes | Accepted |
+| Whitespace, separators, radix prefixes, trailing text | Rejected |
+| Empty input or a sign alone | Rejected |
+| Value outside the result type's range | Rejected |
 
-Every parser accepts decimal digits with an optional leading `+`. Signed parsers
-also accept `-`. Unsigned parsers reject a minus sign, including `-0`. Leading
-zeroes are accepted. Empty input, sign-only input, whitespace, separators, radix
-prefixes, trailing characters, and values outside the result type's range fail.
+`TryParse...` returns false and writes zero on failure. `Parse...` throws
+`Exception`. `NInt` and `NUInt` use target pointer limits. `ExtraLong` uses the
+signed 128-bit range, from `-170141183460469231731687303715884105728` through
+`170141183460469231731687303715884105727`.
 
-`TryParse...` returns false and writes zero on every failure. `Parse...` throws
-`Exception` on the same inputs. Overflow is checked before multiplication and
-addition, including at the unsigned 64-bit boundary and the signed minimum.
-Pointer-sized parsers use the target's pointer-sized integer limits.
-`ExtraLong` always uses the signed 128-bit range, from
-`-170141183460469231731687303715884105728` through
-`170141183460469231731687303715884105727`, independently of pointer size.
-It checks a negative decimal accumulator before each step and needs no
-128-bit division or remainder runtime helper.
+C-string forms stop at the first NUL. Counted forms validate every selected
+byte, including embedded NUL, which is invalid decimal text. Output may overlap
+aligned writable input storage. The parser finishes reading before storing the
+result, including the zero written on failure.
 
-Parsing finishes reading its input before committing a successful output, so
-the output may overlap input storage when that storage is valid and suitably
-aligned for the result type. On failure, writing the documented zero output
-also changes any overlapping input bytes.
-
-The pointer-based `TryParse...` overloads explicitly guarantee `nothrow` and
-allocate nothing under their memory preconditions. Their shared magnitude and
-length helpers are also `nothrow`. The source files also contain the throwing
-`Parse...` variants. Including either complete file still requires the normal
-exception definitions and runtime.
-
-`core/Text/parsing.gf` supplies the existing `Int` functions. The other widths live
-in `core/Text/integer_parsing.gf`. Neither file depends on libc. Optional
-`core/Text/string_parsing.gf` and `core/Text/string_integer_parsing.gf` provide borrowed
-immutable String extension methods:
+String extensions parse the String's complete contents:
 
 ```cpp
 using Standard::Text;
+
 String text = s"18446744073709551615";
 ulong number = text.ParseULong();
 ulong attempted = 0ul;
 bool valid = text.TryParseULong(&attempted);
 ```
 
-These methods use `String.Length`, preserve embedded nulls for validation, and
-do not copy or allocate string storage. The String `TryParse...` wrappers are
-also explicitly `nothrow`. The `Parse...` wrappers retain their exceptions.
+For hexadecimal input, use the [unsigned hexadecimal parsers](HEX_INTEGER_PARSING.md).
 
 ## Counted span extensions
 
-`core/Text/span_integer_parsing.gf` supplies `TryParse...` extensions for
-`Span<readonly(char)>` at all eleven widths above. The corresponding throwing
-extensions live in `core/Text/span_integer_parsing_throwing.gf`:
+`Span<readonly(char)>` offers the same `TryParse...` and `Parse...` methods:
 
 ```csharp
 using Standard::Text;
 using Standard::Memory;
+
 char[4] buffer = ['x', '1', '2', 'x'];
 Span<readonly(char)> text = new(&buffer[1], 2);
 long value = text.ParseLong(); // 12; neither surrounding byte is read.
@@ -77,16 +60,15 @@ long attempted = 0l;
 bool valid = text.TryParseLong(&attempted);
 ```
 
-These methods copy only span metadata and forward its exact byte count to the
-existing parsers. They do not scan for a terminator, copy the owner, or retain a
-pointer. An empty span fails normally and writes zero from `TryParse...`, even
-when its `Data` is null. Embedded NUL remains invalid decimal text. Successful
-and failed overlapping outputs follow the counted pointer rules above. Keep
-input and output storage valid for the call. The span does not extend their
-lifetimes. The `TryParse...` extensions are `nothrow` and allocate nothing.
+An empty span fails. The Try form writes zero. These methods also accept an
+immutable span header.
 
-The two wrapper files are optional and add no dependency to `Memory/Span.gf` or the
-base parsers. Explicit source selections still need their normal Span/query
-contracts and `Text/parsing.gf`/`Text/integer_parsing.gf`. Those base files include throwing
-definitions, so selecting the Try wrapper alone does not remove their exception
-dependencies. Boolean and hexadecimal parsing are separate APIs.
+Sources in `core/Text`:
+
+- `parsing.gf`: `Int` forms
+- `integer_parsing.gf`: other widths
+- `string_parsing.gf`, `string_integer_parsing.gf`: String extensions
+- `span_integer_parsing.gf`, `span_integer_parsing_throwing.gf`: span extensions
+
+The pointer parser files contain throwing methods as well as `nothrow` Try
+methods, so selecting those files also requires the exception runtime.

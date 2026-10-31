@@ -1,11 +1,13 @@
 # Filter values by their encounter index
 
-The optional indexed `Where` overload accepts a `bool(T, nuint)*` predicate.
-It can select every nth record or filter by original position without keeping
-mutable state outside the query.
+Indexed `Where` accepts a `bool(T, nuint)*` predicate:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
+
 int main()
 {
     int[5] data = [8, 3, 6, 2, 9];
@@ -18,40 +20,27 @@ int main()
 }
 ```
 
-Each enumerator starts at zero and counts every successful upstream move,
-including values rejected by the predicate. The index is assigned before the
-upstream `Current` getter and predicate run. A preceding filter changes which
-encounters are indexed. A following filter does not renumber them.
+The index starts at zero and counts every successful upstream move, including
+rejected values. A preceding filter changes which encounters are indexed.
+A following filter keeps these indices.
 
-The predicate runs during `MoveNext`. A failing upstream move invalidates
-`Current` without advancing the assigned index. If reading the input or
-evaluating the predicate throws, the encounter has already consumed its index
-and the adapter has no current result. Retrying `MoveNext` advances upstream
-again. It does not retry the faulting predicate. These are ordinary `Where`
-retry semantics, subject to the upstream cursor's own behavior.
+## Evaluation
 
-An accepted `Current` delegates to the upstream getter on every read without
-rerunning the predicate. Its getter can fail and be retried at the same
-position. Nothing caches the input value, so a preceding projection can run
-once for filtering and again when the accepted value is read. `Count()` still
-tests predicates and reads their inputs, but does not reread accepted values.
+The predicate runs during `MoveNext()`. Reading an accepted `Current` reads
+the upstream value again without repeating this predicate. An earlier Select
+can therefore run for filtering and again when the result is read. `Count()`
+tests predicates but skips that second accepted-value read.
 
-The callback takes `T` by value. Borrowed owning values such as `String` are
-copied for the predicate, and accepted output reads follow ordinary copy rules.
-Fresh noncopyable input is not retained to reuse after the predicate consumes
-it. Use named functions for owning by-value parameters. Capturing closures are
-not supported. Keep borrowed source owners alive, and do not retain pointers
-into a temporary callback argument's owned storage.
+If the getter or predicate throws, its encounter has consumed an index. A
+subsequent move advances upstream again. An extra upstream value after index
+`nuint` maximum throws `Sequence index overflow` and finishes the adapter.
 
-The adapter uses no heap buffer. Normal source and iterator copies, factories,
-getters and callbacks keep their ordinary allocation and cleanup behavior.
-Each enumeration gets its own counter. A consumable file is not rewound.
-Indices do not wrap: if upstream succeeds after index `nuint` maximum, the
-adapter throws `Sequence index overflow` before reading the value or calling
-the predicate. That upstream value is consumed, `Current` is invalid, and
-later moves return false. EOF after the maximum valid index returns false
-normally.
+The predicate takes `T` by value. Borrowed owners are copied for it. Accepted
+output reads the source again rather than reusing that argument.
+Use named functions for owning arguments, and avoid retaining pointers into
+temporary argument storage. Callbacks follow noncapturing function-pointer
+rules.
 
-Selective builds add `Queries/IndexedWhereSource.gf` and
-`Queries/enumerable_indexed_where.gf` to the ordinary Enumerable, iterator
-and exception sources.
+See [query ownership](QUERIES.md#ownership) for source lifetimes.
+Sources: `Queries/IndexedWhereSource.gf` and
+`Queries/enumerable_indexed_where.gf`.

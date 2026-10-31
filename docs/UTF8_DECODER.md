@@ -1,18 +1,15 @@
 # Incremental UTF-8 decoding
 
-`Standard::Text::Utf8Decoder` decodes strict UTF-8 across input chunks. It retains only
-the partially decoded scalar, never a pointer to a previous chunk. Construction,
-`Reset()`, and `Read()` are `nothrow`, allocate nothing, and require no libc,
-exception runtime, String, or GC. Include `core/Text/Utf8Decoder.gf`. The separate
-whole-buffer functions in `core/Text/utf8.gf` remain available.
+`Standard::Text::Utf8Decoder` carries a partial scalar between input chunks:
 
 ```cpp
 using Standard::Text;
-Standard::Text::Utf8Decoder decoder = new();
+
+Utf8Decoder decoder = new();
 char[3] euro = [(char)0xe2, (char)0x82, (char)0xac];
 uint scalar = 0;
 nuint consumed = 0;
-Standard::Text::Utf8Decoder::Status status =
+Utf8Decoder::Status status =
     decoder.Read(euro, 2, false, &scalar, &consumed); // NeedMore; consumed = 2
 status = decoder.Read(&euro[2], 1, true, &scalar, &consumed);
 // Scalar; scalar = U+20AC; consumed = 1
@@ -21,40 +18,38 @@ status = decoder.Read(euro, 0, true, &scalar, &consumed); // End
 
 ## Reading chunks
 
-`Read(readonly(char)* input, nuint count, bool final, uint* scalar, nuint* consumed)`
-returns one of the nested `Status` enum values:
+`Read(input, count, final, scalar, consumed)` produces at most one scalar.
 
-| Status | Meaning |
+| Parameter | Meaning |
 | --- | --- |
-| `Scalar` | One complete scalar was produced. U+0000 is a normal scalar. |
-| `NeedMore` | All supplied bytes were consumed. More input may follow. A partial scalar is retained if necessary. |
-| `End` | Final input ended at a scalar boundary. |
-| `Invalid` | An invalid byte or a truncated final scalar was encountered. |
+| `input`, `count` | Current chunk and its byte count |
+| `final` | This is the last chunk |
+| `scalar` | Scalar output, or zero for a non-scalar status |
+| `consumed` | Bytes used from this call's chunk |
 
-Each call produces **at most one scalar**. Advance the chunk pointer by
-`consumed`, subtract that amount from its length, and call again to process
-the remainder after `Scalar`. `consumed` counts only bytes from the current
-call, excluding bytes saved by earlier calls. All other statuses write zero
-to `scalar`.
+| Status | Next step |
+| --- | --- |
+| `Scalar` | Process the value, then call again on remaining bytes |
+| `NeedMore` | Supply another chunk |
+| `End` | Final input ended at a scalar boundary |
+| `Invalid` | Malformed UTF-8 or a truncated final scalar |
 
-Set `final` when the supplied chunk is the last input. A `Scalar` result does
-not itself finish the decoder: process the remainder, then call with zero
-bytes and `final = true` to obtain `End` or detect truncation. Empty nonfinal
-chunks return `NeedMore` without changing pending state, including when the
-previous call ended at a scalar boundary.
+Advance the chunk by `consumed` after each call. Even with `final = true`, a
+`Scalar` result needs another call on the remainder, or a zero-length final call,
+to establish `End`.
 
-Malformed leading bytes and impossible scalar prefixes are rejected immediately.
-For example, `e0 80` is invalid without waiting for a third byte. On `Invalid`,
-`consumed` includes the first offending byte, but excludes any unexamined suffix.
-Truncation consumes all available bytes. Both `Invalid` and `End` persist until
-`Reset()`. Later calls consume zero bytes. Reset explicitly discards pending
-input and starts a new stream. Copying a decoder copies its independent state.
+Empty nonfinal chunks return `NeedMore` and preserve pending state. `End` and
+`Invalid` persist until `Reset()`. Reset discards pending bytes and starts a new
+stream. Decoder copies have independent state.
 
-The caller supplies readable counted input and writable output variables.
-The scalar and consumed outputs must be separate from each other, the input
-buffer, and the decoder's own storage. The decoder's state must also be separate
-from input. Unlike a completed stateless decode, incremental reads update their
-consumed counter while processing bytes and may leave a suffix for a later call.
-No input memory is read when `count` is zero. The decoder rejects overlong
-encodings, surrogate values, and values beyond U+10FFFF. It performs no
-replacement, normalization, or grapheme processing.
+## Errors and storage
+
+Impossible prefixes fail immediately. For example, `e0 80` fails before a third
+byte arrives. `consumed` includes the offending byte and excludes an unread
+suffix. Final truncation consumes the available prefix.
+
+Keep scalar/count outputs separate from input, each other, and decoder state.
+For decoding a complete buffer with overlapping result storage, use
+[Utf8](UTF8.md).
+
+Source: `core/Text/Utf8Decoder.gf`

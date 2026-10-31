@@ -1,115 +1,87 @@
 # Owning collections
 
-Empty collection constructors are `nothrow` and initialize an inline header with
-zero count and capacity. `SortedMap`, `SortedSet`, and `PriorityQueue` also retain
-the supplied comparison function. Allocation and element construction begin when
-storage is requested. Size-taking constructors and later growth can throw.
+These containers own their stored values and release remaining elements at scope
+exit. Empty constructors are `nothrow` and initialize an inline header. Ordered
+containers also retain their comparison function. Storage and element
+construction begin when a size is requested or an insertion grows the container.
 
 ## Vector mutations
 
-`Vector<T>` owns contiguous elements. `Add(value)` appends, `Insert(index, value)`
-inserts before an existing element (or appends at `Count`), and `RemoveAt(index)`
-transfers the removed value to the caller while preserving the order of survivors.
-Ignoring that return value destroys it normally. `Truncate(length)` destroys the
-tail and keeps capacity. It rejects lengths greater than the current count.
-`RemoveRange(start, length)` destroys a window in reverse order, shifts its
-surviving suffix once, and keeps capacity. For example, a token buffer can discard
-an already processed middle window without repeatedly shifting the same suffix
-with `RemoveAt`. It neither allocates nor copies elements, including noncopyable
-owners. The entire range is checked before destruction. An empty range is a
-no-op even at `Count`, while a start beyond `Count` is invalid.
+| Operation | Effect |
+| --- | --- |
+| `Add(value)` | Appends a value |
+| `Insert(index, value)` | Inserts before index, including Count for append |
+| `RemoveAt(index)` | Returns the removed value and preserves survivor order |
+| `SwapRemoveAt(index)` | Returns the removed value and fills its slot with the last element |
+| `Truncate(length)` | Destroys the tail and retains capacity |
+| `RemoveRange(start, length)` | Destroys a range in reverse order and shifts its suffix once |
+
+A removed owning result transfers to the caller. Ignoring it runs normal cleanup.
+Middle mutations relocate elements and invalidate views and iterators. The
+insertion argument is prepared before mutation, so copying an existing element
+into an insertion is supported. An explicit move must leave ownership coherent:
+avoid moving an element that the same vector still owns.
+
+Invalid indices and failed argument copies preserve contents. RemoveRange checks
+the complete range before destruction. A zero-length range is valid through Count.
+Truncate rejects lengths greater than Count.
 
 ### Capacity
 
-`ShrinkToFit()` explicitly releases unused peak storage, setting `Capacity` to
-`Count`. An empty vector frees its buffer. An already tight vector does nothing.
-Otherwise it allocates an exact-size buffer and relocates survivors without
-copies or destruction. Failed allocation preserves contents, capacity, and
-existing borrows. Successful shrinking invalidates borrowed pointers, spans,
-and iterators just like capacity growth. Clearing or removing elements alone
-continues to retain capacity.
+Reserve grows capacity. Clear and removal retain it. ShrinkToFit reduces capacity
+to Count and releases the buffer when empty. Growth and shrinking relocate
+survivors, invalidating views on success. Allocation failure preserves contents,
+capacity, and existing views.
 
 ### Filtering elements
 
-`RemoveAll(predicate)` removes matching elements, preserves survivor order, and
-returns the removed count. The callback borrows each element as `immutable(T)*`.
-The operation retains capacity and uses existing storage.
+`RemoveAll(predicate)` removes matches, preserves survivor order, and returns the
+removed count. The predicate borrows `immutable(T)*` and tests original elements
+once in order.
 
-- Each original element is tested once, in order, until testing finishes or throws
-- On a callback exception, earlier matches are removed. The failing element and
-  unvisited suffix remain in order, and the original exception propagates
-- Every slot stays initialized during callbacks. Intermediate order can change
-- Matched owners are destroyed after testing stops, in an unspecified order
-- Completed removals invalidate iterators and element borrows
+If it throws, earlier matches are removed while the failing element and unvisited
+suffix remain. The vector stays valid and the original exception propagates.
+Every slot remains initialized during callbacks, although intermediate order can
+change. Removed owners are destroyed after testing stops, in an unspecified order.
 
-Callbacks must leave the vector structurally unchanged, avoid recursive
-`RemoveAll` calls, and release element borrows before returning. Element
-destructors retain the language's usual termination-boundary behavior.
-Middle insertion and removal relocate elements instead of invoking copy
-constructors. The insertion argument follows ordinary value semantics and is
-prepared before the vector changes, so inserting a copy of an existing element
-works even when insertion grows the buffer. An explicit move source must not
-refer to an element still owned by that vector.
+Keep the vector structurally unchanged during callbacks. Release element borrows
+before returning, and avoid recursive RemoveAll calls. Any completed removal
+invalidates iterators and element views.
 
 ### Removing the last element
 
-`Pop()` transfers the last element, throwing if empty. `TryPop(ref result)`
-returns false for an empty vector without touching the initialized output.
-On success it moves the last owner into that output, updates `Count` before
-destroying the output's previous value, and retains `Capacity`. No element copy
-or container allocation is needed. Normal element cleanup effects still apply.
-For nonempty vectors, output inside any part of the backing allocation, including
-spare capacity, throws `Exception("Vector output must not refer to its storage")`
-before removing or destroying anything. Output must be a separate complete
-initialized value, not a reference into the vector's header or owned storage.
-The empty check precedes the alias check, matching `Stack.TryPop`.
+`Pop()` transfers the final value or throws when empty. `TryPop(ref result)` returns
+false for an empty vector and leaves output unchanged. On success it removes the
+last value and replaces the initialized output, retaining capacity. Count is
+updated before the output's old value is destroyed.
 
-`SwapRemoveAt(index)` also returns the removed owner, but fills its slot with
-the last element in constant time. It changes survivor order and is useful when
-that order does not matter.
-
-All middle mutations invalidate iterators and views of the vector. Allocation
-failure, invalid indices, and a failing argument copy preserve existing contents.
+Output must be separate from the vector header and backing allocation, including
+spare capacity. A nonempty vector checks backing-storage aliases before removal.
+An empty vector returns false before that check.
 
 ### Adding ranges
 
-With `using Standard::Collections;`, `vector.AddRange(immutableSpan)` copies a range into the tail.
-A span borrowed from that same vector is supported, including across growth.
-The implementation preserves its offset and rebinds it after reserving storage.
-Empty ranges do nothing. Allocation failure before copying preserves contents.
-Growth uses the vector's geometric capacity policy, so repeated small range
-appends retain amortized growth rather than reallocating for each range.
-If an element's copy constructor throws, the successfully appended prefix stays
-in the vector and all earlier elements remain valid. Capacity may have grown.
-Copy constructors must not mutate the vector or source through other aliases.
+`AddRange(immutableSpan)` copies elements into the tail. A span from the same
+vector is supported across growth. Empty input is a no-op.
 
-`AddRange` borrows its receiver and requires copyable elements when instantiated.
-Other vector operations support noncopyable elements through explicit movement.
+Allocation failure before copying preserves contents. A later copy failure leaves
+the successfully appended prefix and all original elements valid. Capacity may
+have grown, invalidating old views. Copy constructors must leave source and
+target structurally unchanged through other aliases.
+
+The extension requires copyable elements when called. Other vector operations
+accept noncopyable owners through movement.
 
 ### Resizing
 
-`vector.Resize(count, fill)` changes the number of initialized elements. Include
-`Collections/vector_resize.gf`. It preserves the shared prefix, destroys the tail
-when shrinking, and appends ordinary copies of `fill` when growing. Capacity is
-retained on shrink. Growth follows `Add`'s geometric capacity policy.
-
-The by-value fill argument is prepared before the call, including for an equal
-or smaller count. A fill copied from an existing vector element is therefore
-captured before growth can relocate storage or shrink can destroy that element.
-Do not explicitly move an element that is still owned by the vector.
-
-A failing argument copy leaves the vector unchanged. If a later element copy or
-allocation fails during growth, the successfully appended prefix remains valid.
-Capacity may have grown and existing borrows may have been invalidated. Copy
-constructors must not structurally mutate the target through another alias.
-The fill overload requires copying even when a particular call shrinks. Noncopyable vectors
-can continue to use `Truncate`, `Add(move value)`, and their other instance methods.
-No default construction of `T` is involved.
-The fill argument participates in type inference: for `Vector<nuint>`, use a
-typed `(nuint)0` fill or call `Resize<nuint>(count, 0)` explicitly.
+`Resize(count, fill)` preserves the shared prefix, destroys a truncated tail, or
+appends copies of fill. Capacity is retained on shrink. Fill is captured by value
+before mutation, including when it comes from an existing element.
 
 ```cpp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
+
 int main()
 {
     Vector<nuint> row = new();
@@ -123,27 +95,18 @@ int main()
 }
 ```
 
-`vector.Resize(count)` instead default-constructs each new element, without copying.
-It requires an accessible valid zero-argument construction of `T`, even when a
-particular call shrinks. Use `Truncate` for types without one. Merely including
-the extension does not impose that requirement on other `Vector<T>` operations.
-For scalars such as `char`, new elements are zero-initialized. Owning elements run
-their ordinary constructors, which may allocate or throw.
+A failed fill-argument copy preserves the vector. A later copy or allocation
+failure leaves successfully appended elements in place, with possible capacity
+growth. The fill overload requires a copyable type even when the call shrinks.
 
-Growth reserves `count` once when needed, then constructs in ascending order.
-Shrink retains capacity and destroys the suffix. An equal count does nothing.
-Vector storage allocation or capacity-overflow failure leaves the vector unchanged and invokes
-no element constructor. Constructor failure destroys the newly appended prefix
-and restores the original count and contents, but capacity may have grown and
-old borrows may be invalidated. Constructors must not structurally mutate the
-target through another alias. Constructor side effects, including writes through
-external aliases, are not rolled back. Reacquire views after growth, including failed growth.
-
-This provides initialized storage for caller-buffer IO. Reserve alone does not
-create elements. After a short read, truncate to the number actually read:
+`Resize(count)` default-constructs new elements. It requires an accessible
+zero-argument construction of T. Scalars are zero-initialized:
 
 ```cpp
-using Standard; using Standard::Collections; using Standard::IO;
+using Standard;
+using Standard::Collections;
+using Standard::IO;
+
 int main()
 {
     Vector<char> buffer = new();
@@ -156,123 +119,68 @@ int main()
 }
 ```
 
+Growth reserves once, then constructs in ascending order. A constructor failure
+destroys the newly appended prefix and restores the original count and contents.
+Capacity may have grown, so reacquire views after failed growth as well.
+External constructor effects remain visible. Use Truncate to shrink a type
+without default construction.
+
 ### Inserting ranges
 
-`vector.InsertRange(index, immutableSpan)` copies a range before `index`, which
-may equal `Count`. Include `Collections/vector_insert_range.gf` together with
-`Collections/vector_add_range.gf` and `Collections/span_algorithms.gf`. Like `AddRange`,
-this optional extension requires copyable elements only when called. Self-borrowed
-ranges work across growth, including insertion within the source range.
+`InsertRange(index, immutableSpan)` copies a range before index, which may equal
+Count. Self-borrowed ranges work across growth, including insertion inside the
+source range.
 
-The index is checked even for an empty source. All copies finish before existing
-elements are reordered. Insertion then relocates elements without further copies.
-If allocation or copying fails, original contents, order, and count are preserved
-and successfully appended copies are destroyed. Capacity may have grown and
-existing borrows may have been invalidated even on failure. Copy constructors and
-cleanup destructors must not structurally mutate the source or target through
-aliases. Their external side effects are outside this guarantee. Destructors retain
-the language's normal termination behavior. Successful insertion invalidates
-element borrows and iterators. Work is linear in the source length plus the
-target suffix length, with no auxiliary element buffer.
+Copies finish before original elements are reordered. A copy or allocation
+failure preserves original contents, order, and count, while discarding completed
+new copies. Capacity may have grown and invalidated views. Successful insertion
+invalidates element views and iterators. Work is linear in source length plus
+the target suffix length.
 
 ## Copying borrowed spans
 
-With `using Standard::Memory;`, `source.AsImmutable().CopyTo(destination)` assigns copies into
-an existing `Span<T>`. The destination must contain initialized elements and
-have room for every source element. Its unused tail stays unchanged. This is
-typed copying: normal copy constructors run and replaced destination values are
-destroyed. It is not construction into raw storage or byte copying.
+`source.AsImmutable().CopyTo(destination)` assigns ordinary copies into initialized
+destination elements. Replaced owners are destroyed. The destination must have
+room for the complete source, and its extra tail stays unchanged.
 
-The implementation handles overlapping spans in either direction. Exact self-copy
-does nothing. Capacity is checked before invoking any copy constructor. A short
-destination is unchanged. If a copy throws, earlier completed assignments remain
-and other elements stay valid. Copying proceeds backward when the destination
-starts at a higher address, so partial progress may be a suffix rather than a
-prefix. Copy constructors must not mutate either collection through another alias.
+Overlap is supported in either direction. Exact self-copy is a no-op. A short
+destination fails before assignment. Copying runs backward when the destination
+starts higher in memory, so a failing copy can leave a completed suffix. Other
+slots stay valid.
 
-`CopyTo` allocates no container storage, although individual copy constructors may
-allocate. The views keep borrowing the same storage. Like `AddRange`, this copying
-extension is checked only when called. Spans of noncopyable values remain usable
-without calling it. For source-library selection its file is
-`Memory/span_copy.gf`.
+`TryCopyTo` returns false for insufficient capacity and otherwise shares the same
+copy behavior. Element-copy exceptions still propagate after any completed
+assignments. Both operations require copyable elements.
 
-`source.TryCopyTo(destination)` has the same receiver and element-copy contract
-as `CopyTo`, but returns false when the destination is too short. That length
-check happens before accessing either data buffer or invoking any element copy.
-Neither span's elements are changed on that false result. Empty copies and exact
-self-copies succeed. Successful copies leave any extra destination elements
-unchanged and preserve the same overlap-safe assignment order as `CopyTo`.
-
-This is a capacity check, not an exception boundary. A copy constructor or
-allocation failure still propagates. Assignments completed before that failure
-remain committed under the existing `CopyTo` rules. The element type must support
-the same ordinary copying even if a particular call would return false. Use
-`view.AsImmutable().TryCopyTo(destination)` for a mutable source view. A readonly
-or immutable destination cannot be written through this helper.
-
-`span.Fill(value)` assigns a snapshot of `value` to every initialized element,
-in increasing index order. For example, `work.AsSpan().Slice(2, 4).Fill(0)` resets
-four existing work slots. The value is an ordinary by-value parameter: its copy
-is prepared even for an empty span, and it may borrow an element of the target
-because that snapshot precedes all assignments. Each element assignment uses
-its normal copy constructor and destroys the replaced owner. If the parameter
-copy fails, no elements change. If a later element copy fails, completed prefix
-assignments remain and other elements stay valid. Copy constructors must not
-mutate the destination through another alias.
-
-`Fill` allocates no container storage, although value copies may allocate. It
-requires mutable, copyable elements only when called, and lives separately in
-`Memory/span_fill.gf`. It does not initialize raw storage.
+`Fill(value)` assigns a captured copy into each element in ascending order.
+Its by-value argument is prepared before mutation, including for an empty span.
+It can therefore come from the destination itself. A later copy failure leaves
+completed prefix assignments in place.
 
 ## Stable sorting
 
-`StableSort<T>(values, compare)` sorts a mutable `Span<T>` while retaining the
-original order of elements whose comparison is zero. For example,
-`StableSort<Record>(records.AsSpan(), CompareByTimestamp)` retains input order
-among records with the same timestamp. Include `Collections/stable_sort.gf` and
-its ordinary `Vector`/`Span` dependencies when selecting source files.
+`StableSort(values, compare)` retains encounter order among comparator-equivalent
+values. The comparator borrows two `immutable(T)*` arguments and defines a
+consistent negative/zero/positive ordering.
 
-The comparator has type `int(immutable(T)*, immutable(T)*)*`: a negative result
-orders the first value before the second, zero treats them as equivalent, and a
-positive result orders the second first. It must define a consistent ordering.
-It must not mutate elements, move or structurally mutate their owner, or sort
-overlapping storage recursively through another alias. Borrowed element addresses
-must not be used to track logical values across sorting: the storage stays in
-place, but its elements change positions.
+For at least two elements, sorting allocates two Length-sized nuint index buffers
+and finishes O(n log n) comparisons before relocating values. Allocation or
+comparison failure preserves original contents and order. Empty and singleton
+input needs no comparison or scratch allocation.
 
-Sorting an empty or singleton span does not allocate or invoke the comparator.
-Otherwise the operation allocates two index buffers, each holding `Length`
-`nuint` values, with checked allocation sizes. It makes O(n log n) comparisons
-before relocating any elements. Allocation or comparator failure preserves the
-original element contents and order and releases all scratch storage. Comparator
-side effects outside the span are outside that guarantee. Once comparisons finish,
-the resulting permutation is applied with typed moves, without element copies,
-element destruction, additional allocation, or callbacks. Noncopyable owners are
-supported and continue to be destroyed normally by their original owner. An
-inconsistent comparator gives no ordering guarantee, but the operation still
-preserves every original owner in the result permutation.
+Callbacks must leave elements and their owner structurally unchanged. A borrowed
+slot identifies storage, so a value can move away from it during sorting.
+Noncopyable owners are supported. An inconsistent comparator loses the ordering
+guarantee while retaining the original owners in the permutation.
 
 ## Queue and stack
 
-`Stack<T>` owns a last-in, first-out sequence backed by a `Vector<T>`.
-`Queue<T>` owns a first-in, first-out sequence backed by a ring buffer.
-Both start empty without allocating. `Count`, `Capacity`, and `IsEmpty`
-describe their current state. `Reserve` grows capacity without changing contents.
-`Queue<T>.ShrinkToFit()` reduces capacity to `Count` while preserving FIFO order,
-including wrapped storage. An empty queue frees its buffer. A tight queue does
-nothing. Successful relocation invalidates borrowed elements and iterators.
-Failed allocation preserves contents, capacity, and existing borrows. It moves
-owners without invoking copy constructors or destroying elements.
-
-`Stack<T>.ShrinkToFit()` also reduces capacity to `Count`, preserving stack
-order without copying or destroying elements. Successful relocation invalidates
-borrowed elements and views. Allocation failure preserves them and the original
-contents and capacity. A tight stack does nothing, and a drained stack frees its
-retained buffer without allocating. Removal and `Clear` retain capacity until
-shrinking is requested.
+`Queue<T>` owns a FIFO ring buffer. `Stack<T>` owns a LIFO sequence backed by a
+vector:
 
 ```csharp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
 
 int main()
 {
@@ -289,66 +197,44 @@ int main()
 }
 ```
 
-`Enqueue` and `Push` follow ordinary value semantics: passing a named owning
-value copies it when its type supports copying. Passing `move value` transfers
-it. `Dequeue` and `Pop` transfer the removed element to the caller. `Front`
-and `Top` borrow an element through a ref property, so inspecting or modifying
-it does not copy its resources. Empty removal or peeking throws `Exception`.
-`TryDequeue(ref result)` and `TryPop(ref result)` return false for an empty
-collection and leave the initialized result unchanged. On success they replace
-it with the removed element, cleaning up its previous value normally.
+| Method | Ownership |
+| --- | --- |
+| `Enqueue` / `Push` | Takes a fresh value, copies a copyable local, or consumes an explicit move |
+| `Dequeue` / `Pop` | Transfers the removed value to the caller |
+| `Front` / `Top` | Borrows an element through a ref property |
+| `TryDequeue(ref result)` / `TryPop(ref result)` | Replaces initialized output on success, leaves it unchanged when empty |
+| `Clear` | Destroys elements and retains capacity |
+| `ShrinkToFit` | Reduces capacity to Count and releases empty storage |
 
-The output must not borrow the source collection's backing storage. For nonempty
-stacks, queues, and priority queues, these methods check its address against the
-entire allocation and throw before removing an element or invoking a comparator
-when the output aliases that storage. This includes `ref stack.Top`,
-`ref queue.Front`, and other elements reached through iterators. An empty
-collection still returns false without touching or checking the output.
+Empty removal or peeking throws Exception. Nonempty ref-output operations reject
+an output address anywhere inside the backing allocation before removal. This
+includes Front, Top, and iterator references. Empty Try calls return false before
+the alias check.
 
-`Clear` destroys every remaining element but retains allocated capacity.
-Destruction destroys remaining elements and releases storage. Pointer elements
-follow ordinary pointer semantics: the collection does not delete pointees.
-Collections themselves can be moved, but do not provide implicit deep copies.
+Growth and shrinking preserve owners by relocation. Allocation failure preserves
+contents and existing views. A failed insertion still cleans up its consumed
+argument.
 
-Enumeration borrows storage and visits queue elements in FIFO order and stack
-elements from top to bottom. Keep the collection alive and structurally unchanged while
-using an iterator or borrowed element. Structural mutation invalidates these borrows.
-There is no runtime mutation counter. The nested `Enumerator.Current` property
-throws before the first successful `MoveNext` and after enumeration ends.
+### Iteration order and views
 
-`AsEnumerable()` exposes the same order to lazy queries without copying the
-owning queue/stack or its elements. It stores a nested borrowed `View`: ring
-metadata for a queue, or a captured span for a stack. Fresh enumerations have
-independent cursors, and ordinary element edits through valid aliases remain
-visible. Captured views do not track a later count or extend the owner's lifetime.
-Structural mutation, moving, or destroying the container invalidates them.
-View construction and iteration allocate nothing. Callbacks and value copies
-retain their normal behavior. Include `Queries/Enumerable.gf` when selecting
-these container sources explicitly, plus query operator sources actually used.
+Queue iteration is FIFO, and stack iteration is top-first. AsEnumerable captures
+the same storage and count. Keep the owner alive and structurally unchanged while
+using a view. Element edits stay visible, while structural mutation, moving, or
+destruction invalidates the view.
 
-Noncopyable elements support view construction, direct borrowed iterator access,
-`Count()`, and `Any()`. Operators whose `Current` returns an element by value can
-require copying during generic specialization, even before a terminal reads it.
-For example, a borrowed noncopyable sequence cannot currently use `Take` merely
-to count a prefix. These adapters do not change that existing query limitation.
-
-Growth checks capacity arithmetic and throws `BadAllocException` on allocation
-failure. Failed allocation preserves existing elements. The insertion argument
-still receives normal cleanup when insertion throws.
+Enumerator Current throws before the first successful MoveNext and after the end.
+Noncopyable elements support direct borrowed access, Count, and Any. Query
+operators returning elements by value can require copying when specialized, even
+if a later terminal only counts them. See [queries](../../../docs/QUERIES.md).
 
 ## Packed bits
 
-`BitSet` owns a resizable sequence of packed bits. `Length` is the number of
-addressable bits. `CountSetBits()` counts bits that are true. Indexing checks
-bounds and produces a bool rather than a reference into packed storage.
-`HasAnySet()` and `HasAllSet()` test occupancy without counting every set bit,
-stopping when a word determines the answer. They work on immutable sets, allocate
-nothing, and are `nothrow`. An empty set has no set bits and satisfies
-`HasAllSet()` because it has no clear logical bits. Unused final-word padding
-does not contribute to either answer.
+`BitSet` owns a fixed-length bit universe. Length is its bit count, while
+CountSetBits counts true values. Its indexer reads or assigns bool values:
 
 ```csharp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
 
 int main()
 {
@@ -362,29 +248,16 @@ int main()
 }
 ```
 
-`Resize` preserves the shared prefix, discards removed bits, and clears new bits.
-`SetAll(bool)` fills the logical range. `Clear()` clears it without changing
-length. Ordinary copying and `Clone()` make independent owned copies. Copying
-allocates packed storage for nonempty sets. An empty copy requires no allocation.
-Allocation failure leaves the source and an existing assignment target unchanged.
-Moving still transfers ownership without copying. `UnionWith`,
-`IntersectWith`, `ExceptWith`, and `SymmetricExceptWith` modify this set and
-require matching logical lengths. Their argument is a borrowed immutable pointer.
-
 ### Equality and hashing
 
-`BitSet` implements `IEquatable<BitSet>` and `IHashable`. Immutable `Equals(&other)`
-compares the fixed universe as well as its set bits: equal values must have the
-same `Length` and every logical bit equal. Different lengths return false instead
-of throwing. `GetHashCode()` includes the length and packed words, so equal sets
-have equal hashes. Both observers are `nothrow` and allocate nothing. Padding
-remains canonical zero through all owning mutation operations. Hashes are not
-persistent identifiers, and unequal values can have the same hash. These contracts
-allow independently copied bitsets to be ordinary hash keys. As with other mutable
-keys, do not change a stored key through an alias while a collection relies on it.
+Equals compares Length and every logical bit. Different lengths return false.
+GetHashCode includes Length and packed words. Padding remains zero. Like other
+mutable hash keys, a stored BitSet must stay unchanged through aliases.
 
 ```csharp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
+
 int main()
 {
     BitSet flags = new(65);
@@ -399,31 +272,27 @@ int main()
 }
 ```
 
+Copying and Clone create independent storage. Allocation failure preserves the
+source and an existing assignment target. Moving transfers its buffer.
+
 ### Set operations
 
-`Overlaps(&other)` tests whether two equal-length bitsets share any set bit.
-For matching lengths it copies no owner, allocates nothing, changes neither
-input, and scans packed words only until an intersection is found. Empty sets
-return false. Self-comparison agrees with `HasAnySet()`. Like the set operations,
-different `Length` values throw `Exception` before inspecting word storage.
-It is an immutable observer and borrows its argument through an immutable pointer.
+| Method | Result |
+| --- | --- |
+| `HasAnySet` / `HasAllSet` | Tests packed occupancy. Empty input returns false/true |
+| `Overlaps(other)` | Tests whether a bit is set in both |
+| `IsSubsetOf(other)` / `IsSupersetOf(other)` | Tests set inclusion |
+| `UnionWith` / `IntersectWith` | Mutates to union/intersection |
+| `ExceptWith` / `SymmetricExceptWith` | Removes other's bits or toggles them |
 
-`IsSubsetOf(&other)` tests whether every set bit in this bitset is also set in
-`other`. `IsSupersetOf(&other)` tests the converse. For example, required
-capabilities can be checked against enabled capabilities without cloning or
-building a temporary difference. Both methods borrow immutable bitsets, copy no
-owner, allocate nothing on valid calls, and leave both inputs unchanged. They
-scan packed words until inclusion fails. Self-comparisons and two empty bitsets
-return true.
-
-Like `Overlaps` and the mutating algebra, these methods require equal `Length`
-values and throw `Exception("BitSet lengths differ")` otherwise. A length mismatch
-is rejected before word storage is read. This is a fixed-universe contract.
-It does not treat a shorter bitset as implicitly extended with clear bits.
-`Equals` continues to return false, rather than throw, for different lengths.
+The binary set operations require equal Length and throw before inspecting words
+when lengths differ. Inclusion tests return true for two empty sets and for
+self-comparison. Overlaps returns false for empty sets.
 
 ```cpp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
+
 int main()
 {
     BitSet required = new(64);
@@ -444,58 +313,37 @@ int main()
 
 ### Shifting and ranges
 
-`ShiftLeft(count)` moves each set bit toward a higher index. `ShiftRight(count)`
-moves it toward a lower index. Both keep `Length`, discard bits shifted past an
-end, and fill the vacated positions with zero. A zero shift changes nothing.
-Any count at least `Length` clears the set, including the largest `nuint` count.
-They process words in place without allocating. Padding remains clear, so a
-later `Resize` cannot bring discarded bits back.
-`SetAll`, `Clear`, both shifts, and `CountSetBits` are `nothrow`. They neither
-allocate nor invoke user callbacks.
+Resize preserves the shared bit prefix, clears newly added bits, and discards a
+removed tail. SetAll and Clear fill the current logical range.
 
-`SetRange(start, count, value)` sets or clears a consecutive range.
-`FlipRange(start, count)` toggles it. They process affected words without
-allocating. Both validate the complete range before writing, so an invalid range
-leaves all bits unchanged. A zero-length range is valid anywhere up to `Length`,
-including on an empty set. Neither operation changes the logical length.
+ShiftLeft moves bits toward higher indices, and ShiftRight moves them lower.
+Both preserve Length and fill vacated positions with zero. A count at least
+Length clears the set. Zero changes nothing.
+
+SetRange assigns a consecutive region, and FlipRange toggles one. They validate
+the complete range before writing. A zero range is valid through Length.
 
 ### Iteration
 
-Enumeration yields **indices of set bits**, in ascending order, and borrows
-storage. `AsEnumerable()` provides lazy queries over those indices through a
-nested `BitSet::View`, capturing only the word pointer and bit length. It works
-through mutable, shallow readonly, and immutable receivers. No owner is copied,
-no allocation is made, and no pointer to the BitSet object is retained. For
-example, `visited.AsEnumerable().Where(IsVisible).Take(10)` scans only far enough
-to find ten matching set-bit indices.
+Enumeration yields set-bit indices in ascending order. AsEnumerable captures
+the word pointer and bit length. Existing bit edits can affect later reads.
+An active cursor caches Current until MoveNext, and changes behind its position
+never repeat indices. Keep storage alive and avoid resize, move, or destruction
+while views are in use.
 
-Each enumeration starts again at zero using the captured length, so changes to
-bit contents are visible on later enumerations. An active enumerator reloads
-words as it advances: edits ahead of its position may change future results.
-Edits behind it do not repeat indices. Its current index stays cached until
-`MoveNext`. Keep the original storage alive: resizing, moving, or destroying the
-owning BitSet invalidates these borrows. Queries and views do not own or extend
-the storage's lifetime. The public `View(storage, bitLength)` constructor also
-accepts caller-owned words. Null is valid only for zero length, otherwise provide
-at least `ceil(bitLength / 32)` readable words for every later enumeration.
-
-Explicit source selection now requires `Queries/Enumerable.gf` alongside
-`Collections/BitSet.gf`, `Collections/IEnumerable.gf`, `IEquatable.gf`, `IHashable.gf`, and
-`Hashing/primitive_hashing.gf`. Query operators additionally use
-their ordinary collection source files. Failed allocation during `Resize`
-preserves both the original bits and length. Padding bits outside the logical
-length are always kept clear.
+The public View constructor can borrow caller-owned words. Supply
+`ceil(bitLength / 32)` words for a positive length. Null is valid for an empty view.
 
 ### Finding a matching bit
 
-`FindIndex(value, start = 0)` returns the first logical bit equal to `value` at or
-after `start`, or `Length` if none matches. Start may equal `Length`, including on
-an empty set. A larger start throws before reading bit storage. This is an
-immutable observer, allocates nothing, and changes no bits. It skips whole words
-with no matches and excludes both earlier bits and unused final-word padding.
+`FindIndex(value, start = 0)` returns the first matching logical bit at or after
+start, or Length. It skips whole words and excludes unused final-word padding.
+Start may equal Length. A larger start throws before inspecting words.
 
 ```cpp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
+
 int main()
 {
     BitSet occupied = new(65);
@@ -508,31 +356,17 @@ int main()
 }
 ```
 
-The existing enumerator already efficiently yields set-bit indices. Use it for
-ordinary enumeration. `FindIndex(false, start)` instead locates a clear/free bit
-without walking prior set-bit indices or allocating a complemented copy. A start
-offset also supports a direct resumed search for either bit value.
+Use FindIndex(false) for a free slot and the ordinary enumerator for all set bits.
 
 ## Priority queue
 
-`PriorityQueue<T>` owns a binary min-heap. Its constructor accepts a comparison
-function borrowing two elements through `immutable(T)*` pointers. Return a
-negative result when the left element should be removed first, zero for equal
-priority, and a positive result otherwise. Equal-priority removal order is not
-stable. Comparator state and stored priorities must remain consistent while
-elements are in the heap.
-Types implementing `IComparable<T>` can use `Comparer<T>::Compare` directly,
-such as `PriorityQueue<int> pending = new(Comparer<int>::Compare);`.
-
-`ShrinkToFit()` reduces backing capacity to `Count`, preserving the existing
-heap without calling the comparator, copying owners, or destroying elements.
-Successful relocation invalidates borrowed elements. Allocation failure preserves
-contents, capacity, and existing borrows. A tight queue does nothing. A drained
-queue frees retained storage without allocating. Removal and `Clear` retain
-capacity until shrinking is requested.
+`PriorityQueue<T>` owns a min-heap. A negative comparison gives the left element
+higher removal priority. Equal-priority order is unstable. Keep priorities and
+comparison behavior consistent while stored:
 
 ```csharp
-using Standard; using Standard::Collections;
+using Standard;
+using Standard::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {
@@ -550,13 +384,30 @@ int main()
 }
 ```
 
-`Enqueue`, `Dequeue`, and `TryDequeue(ref result)` use the same ownership rules
-as the FIFO queue. `Top` borrows the next element through `ref immutable(T)`.
-`Count`, `Capacity`, `IsEmpty`, `Reserve`, and `Clear` have their usual collection
-meanings. It does not expose an iterator that could be mistaken for sorted
-enumeration. Repeated removal produces priority order.
+Enqueue, Dequeue, and TryDequeue use the queue ownership rules above. Top borrows
+`ref immutable(T)`. Repeated removal produces priority order.
 
-Insertion and removal find their relocation paths before moving any existing
-elements. If the comparator throws, existing contents and heap order are
-preserved. Allocation failure also preserves contents. Comparators must not
-mutate the queue or its elements, including through separate aliases.
+Insertion and removal compare the complete path before relocating existing
+values. Comparator or allocation failure therefore preserves contents and heap
+order. Comparators must leave the queue and its values unchanged.
+
+ShrinkToFit reduces capacity while retaining the current heap. Successful
+relocation invalidates element views. Allocation failure preserves them.
+
+## Source selection
+
+Ordinary Standard projects include these APIs. Selective builds add the relevant
+container and its normal value, memory, and interface dependencies. Optional
+operations are separate files:
+
+| File | Operations |
+| --- | --- |
+| `Collections/vector_add_range.gf` | AddRange |
+| `Collections/vector_insert_range.gf` | InsertRange, also using vector_add_range and span algorithms |
+| `Collections/vector_resize.gf` | Resize overloads |
+| `Memory/span_copy.gf` | CopyTo and TryCopyTo |
+| `Memory/span_fill.gf` | Fill |
+| `Collections/stable_sort.gf` | StableSort |
+
+Container query adapters use `Queries/Enumerable.gf`. Include the query operator
+sources that the program calls.

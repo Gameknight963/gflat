@@ -50,8 +50,7 @@ delimiters, or EOF.
 
 ## Lifetime and failures
 
-- Keep buffers valid for the full count and coordinate shared-client calls.
-  `Close` must not race with IO
+- Coordinate shared-client calls. Close must not race with IO
 - Closed clients reject IO and shutdown, including zero-count IO
 - IO failures can leave an already consumed or sent prefix
 - `SocketException` derives from `IOException` and captures the WSA error code
@@ -67,8 +66,7 @@ signal before closing. Final WinSock cleanup can discard queued data.
 ## Scope
 
 Endpoints are numeric IPv4 or IPv6 with scope zero. Operations block according to
-native OS behavior. DNS, TLS, listeners, socket options, timeouts, and async IO
-would require additional APIs.
+native OS behavior.
 
 Native lifetime references: [WSAStartup](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsastartup),
 [closesocket](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-closesocket),

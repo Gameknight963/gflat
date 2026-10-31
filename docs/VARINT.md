@@ -1,41 +1,34 @@
 # Variable-length integers
 
-`core/Binary/VarInt.gf` provides `Standard::Binary::VarInt`, a standalone, allocation-free codec
-for unsigned base-128 integers. All methods are `nothrow`. No other Standard source
-is required.
+`Standard::Binary::VarInt` encodes unsigned integers in base-128. Each byte
+contributes seven value bits, least-significant group first. Bit 7 indicates
+another byte follows.
 
-For position-tracking buffers, optional `Binary/binary_buffer_var_int.gf` adds
-[`ReadVarUInt32/64` and `TryWriteVarUInt32/64`](BINARY_CURSORS.md#optional-variable-length-integers)
-to the existing binary cursors. It keeps the standalone codec independent of
-cursor and raw-memory sources.
+| Value | Encoded bytes |
+| --- | --- |
+| 0 | `00` |
+| 127 | `7F` |
+| 128 | `80 01` |
+| 300 | `AC 02` |
 
-For borrowed file streams, optional [`FileVarInt`](FILE_VARINT.md) supplies
-UInt32/UInt64 reads and writes without reading ahead into the next field.
-
-Core [stream varints](STREAM_VARINT.md) expose the same canonical unsigned codec
-and explicit ZigZag operations through borrowed `IByteReader*` / `ITextWriter*`
-endpoints. They request one byte at a time. `FileVarInt` retains its existing
-concrete buffered-file path.
-
-Each byte contributes seven value bits, least-significant group first. Bit 7
-means another byte follows. For example, 0 is `00`, 127 is `7F`, 128 is
-`80 01`, and 300 is `AC 02`. UInt32 uses at most five bytes. UInt64 uses at
-most ten. This is the unsigned integer encoding used by Protocol Buffers.
-The ZigZag helpers below compose with it for signed values.
+UInt32 uses at most five bytes. UInt64 uses at most ten. The shortest
+representation is required.
 
 ## Signed values with ZigZag
 
-`ZigZagEncode(int value)` returns `uint`. The `long` overload returns `ulong`.
-`ZigZagDecode(uint value)` returns `int`. The `ulong` overload returns `long`.
-These four `nothrow` operations accept every bit pattern, allocate nothing, and
-map `0, -1, 1, -2, 2` to `0, 1, 2, 3, 4` respectively. Signed minima map to
-the corresponding unsigned maximum. Signed maxima map to unsigned maximum minus
-one. Decoding reverses the mapping for the entire 32-bit or 64-bit range.
+`ZigZagEncode` maps `int` to `uint` and `long` to `ulong`.
+`ZigZagDecode` reverses the mapping across the full range:
 
-Compose the helpers with the matching unsigned length/read/write methods:
+| Signed value | Unsigned code |
+| --- | --- |
+| 0, -1, 1, -2, 2 | 0, 1, 2, 3, 4 |
+| Signed minimum | Unsigned maximum |
+| Signed maximum | Unsigned maximum minus one |
 
 ```csharp
-using Standard; using Standard::Binary;
+using Standard;
+using Standard::Binary;
+
 int main()
 {
     int original = -150;
@@ -53,49 +46,38 @@ int main()
 }
 ```
 
-This mapping corresponds to Protocol Buffers `sint32` and `sint64`, **not** its
-`int32`/`int64` representation of negative values. The latter uses sign-extended
-two's-complement varints rather than ZigZag. See the official
-[signed integer encoding documentation](https://protobuf.dev/programming-guides/encoding/#signed-ints).
-These helpers do not parse protobuf field tags or messages. The unsigned reader's
-canonical-encoding restriction still applies after ZigZag is added.
+This corresponds to Protocol Buffers `sint32` and `sint64`. Its `int32` and
+`int64` fields encode negative numbers differently. See the
+[protobuf encoding reference](https://protobuf.dev/programming-guides/encoding/#signed-ints).
 
 ## Writing
 
-- `GetUInt32Length(uint value)` and `GetUInt64Length(ulong value)` return the
-  exact encoded byte count, including one byte for zero
-- `TryWriteUInt32(byte* output, nuint capacity, uint value, ref nuint written)`
-  and the UInt64 counterpart emit the shortest encoding
-- Insufficient capacity returns false, sets `written` to zero, and leaves all
-  destination bytes unchanged. Success sets it to the exact length. Bytes
-  beyond that length are unchanged. No terminator is written.
+`GetUInt32Length(value)` and `GetUInt64Length(value)` return the encoded size.
+`TryWriteUInt32(output, capacity, value, ref written)` and the UInt64 form write
+the encoding. Short capacity returns false, sets `written` to zero, and preserves
+the buffer.
 
 ## Reading
 
-`ReadUInt32(readonly(byte)* data, nuint count, ref uint value, ref nuint consumed)`
-and the UInt64 counterpart return `VarInt::Status`:
+`ReadUInt32(data, count, ref value, ref consumed)` and the UInt64 form return:
 
-- `Done`: one complete canonical value was read. `value` holds the result and
-  `consumed` holds its encoded length. Any following bytes are ignored.
-- `NeedMore`: the buffer ends at a valid unfinished prefix, including empty
-  input. Supply that same prefix together with more bytes on the next call.
-  The decoder retains no state. A final `NeedMore` means truncated input.
-- `Invalid`: the encoding overflows the destination width, still has a
-  continuation bit in its last permitted byte, or uses more bytes than needed
+| Status | Meaning |
+| --- | --- |
+| `Done` | Decoded one value. `consumed` identifies the next field. |
+| `NeedMore` | A valid unfinished prefix, including empty input |
+| `Invalid` | Overflow, continuation beyond the width, or an overlong encoding |
 
-Both failure statuses leave `value` unchanged and set `consumed` to zero.
-In particular, `80 00` and `81 00` are rejected even though some protobuf
-readers accept these overlong encodings. This strictness makes the shortest
-representation unique. Do not assume it accepts every permissive protobuf
-producer's output.
+Both failure statuses preserve `value` and set `consumed` to zero. Retry
+`NeedMore` with the same prefix and additional bytes. If input is final, that
+status means truncation. Encodings such as `80 00` and `81 00` are invalid even
+though some protobuf readers accept them.
 
-A zero count/capacity does not dereference the buffer. Otherwise, callers must
-provide readable/writable storage for the indicated range. The metadata `ref`
-arguments must not overlap buffers or each other. Reading never changes input.
-Writing uses only the supplied value and output buffer.
+Keep scalar output references separate from the byte buffers and each other.
 
 ```csharp
-using Standard; using Standard::Binary;
+using Standard;
+using Standard::Binary;
+
 int main()
 {
     byte[10] data;
@@ -109,3 +91,8 @@ int main()
     return 0;
 }
 ```
+
+For cursors, use [binary buffer varints](BINARY_CURSORS.md#optional-variable-length-integers).
+For IO, use [stream extensions](STREAM_VARINT.md) or [FileVarInt](FILE_VARINT.md).
+
+Source: `core/Binary/VarInt.gf`

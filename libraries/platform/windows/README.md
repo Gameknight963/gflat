@@ -5,12 +5,13 @@ providers. The project includes Standard.
 
 ```csharp
 using Standard::Time;
-alias Timer = Standard::Time::Stopwatch<Windows::PerformanceCounter>;
+
+alias Timer = Stopwatch<Windows::PerformanceCounter>;
 ```
 
 `Windows::PerformanceCounter` measures elapsed time with QueryPerformanceCounter
 and its fixed frequency. Use it through `Stopwatch` for intervals. Native query
-failures throw an exception. Successful readings make no application allocation.
+failures throw an exception.
 The imports link through Kernel32 with the Windows toolchain's default libraries.
 
 ## UTC wall-clock time
@@ -20,14 +21,13 @@ UTC:
 
 ```csharp
 using Standard::Time;
-Standard::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
+
+DateTime utc = Windows::SystemClock::GetUtcNow();
 utc.Format(Console::Out);
 Console::WriteLine();
 ```
 
 - Requires Windows 8 / Windows Server 2012 or newer, x64
-- Converts GetSystemTimePreciseAsFileTime's unsigned 100ns count from the 1601
-  epoch to DateTime's year-1 epoch
 - Throws for values beyond year 9999
 - Follows system clock adjustments, including backward jumps
 

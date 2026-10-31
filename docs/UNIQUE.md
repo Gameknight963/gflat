@@ -1,11 +1,12 @@
 # Unique ownership
 
-`Standard::Memory::Unique<T>` owns one separately allocated object and deletes it when its owner
-is destroyed. It has no copy constructor. Move the owner to transfer its deletion
-responsibility, without moving the pointed-to object or allocating another buffer.
+`Standard::Memory::Unique<T>` deletes one allocated object when its owner leaves
+scope. It is move-only:
 
 ```csharp
-using Standard; using Standard::Memory;
+using Standard;
+using Standard::Memory;
+
 class Widget {
     public int Count;
     public Widget(int count) { Count = count; }
@@ -20,75 +21,37 @@ int main() {
 }
 ```
 
-Default construction is empty. `IsEmpty` has an `immutable` getter. `Value` returns
-`ref T` and throws `Exception` on an empty owner. Its `readonly` getter cannot
-replace the owner's pointer, but permits changing the pointee through a shallow
-readonly owner. An immutable owner cannot call that getter to obtain mutable
-access. Passing `ref owner.Value` to a function edits the actual object rather
-than copying it. `&owner.Value` explicitly borrows its address when needed.
+| Member | Effect |
+| --- | --- |
+| Default constructor | Empty owner |
+| `Unique(T* pointer)` | Adopts responsibility for deleting one live object |
+| `IsEmpty` | Whether the owner has an object |
+| `Value` | Borrows the object as `ref T` |
+| `ValueImmutable` | Borrows as `ref immutable(T)` |
 
-`ValueImmutable` returns `ref immutable(T)` and is available through mutable,
-shallow readonly, and immutable owners. It borrows the same object without copying
-or allocating, including when `T` is noncopyable. Its deep view protects inline
-fields and storage reached through raw or managed pointers, and permits only
-immutable instance methods. It throws the same `Exception("Unique is empty")`
-for an empty owner. Existing mutable aliases are not frozen. The borrow follows
-the same lifetime and invalidation rules as `Value`. It does not keep an owner
-alive or transfer deletion responsibility.
+Adopt a pointer for which ordinary `delete` is valid, usually from `new*`.
+Delete responsibility belongs to this owner until moved or released. `Value`
+and `ValueImmutable` throw `Exception("Unique is empty")` on an empty owner.
 
-`Unique(T* pointer)` adopts a non-null raw pointer. Construction itself is `nothrow`
-and does not allocate. After adoption, the caller must not delete the pointer or
-adopt it into another owner. It must identify one live object for which ordinary
-`delete` is valid: typically an individual `new*` allocation. Stack, placement,
-interior, managed, and array-storage pointers do not satisfy that contract.
-This wrapper does not infer ownership from arbitrary pointer provenance.
+The `Value` getter accepts shallow readonly owners. `ValueImmutable` also accepts
+immutable owners. Other mutable aliases can still modify the same object.
 
-The destructor uses ordinary `delete`, including dynamic class destruction.
-`Unique<Base>` can therefore own a derived class through its base pointer.
-Noncopyable pointee types work: accessing `Value` does not copy them. Interface
-types themselves have no inline value layout, so `Unique<IInterface>` is not
-supported by this ref-value API and is rejected by normal generic checking.
-Use a concrete class or class base as the owned type.
+Moving consumes the source variable and transfers the allocation's lifetime to
+the destination. Existing pointee addresses stay the same. Replacing or destroying
+the responsible owner ends that object's lifetime and invalidates its borrows.
 
-Moving consumes the source variable under the language's normal rules. It does
-not leave an empty usable owner behind. Assigning a fresh owner into an existing
-one destroys its previous object. Scope exit and exception cleanup destroy the
-remaining owner exactly once. The representation is one nullable raw pointer.
-There is no collector, shared counter, or per-owner allocation.
-
-`Vector<Unique<Widget>>` can store fresh owners or consume named ones with `move`.
-Growth relocates the owner values while their heap objects keep their addresses.
-`Pop()`, `RemoveAt(index)`, and `SwapRemoveAt(index)` transfer the removed owner
-to their caller instead of destroying its pointee. Discarding that returned owner
-destroys it normally. `Clear`, `Truncate`, `RemoveRange`, and `RemoveAll` destroy
-the removed owners and their objects.
-
-Borrows never keep the owner alive. Destroying/reassigning the owner invalidates
-all pointers and references to its object. Moving the owner preserves the object's
-address, but its lifetime is then controlled by the destination owner. Keep that
-owner alive while using the borrow. The programmer is responsible for keeping raw-pointer borrows within that lifetime.
-
-Include `core/Memory/Unique.gf` with the ordinary exception and allocation runtime
-contracts, or use the complete standard library. No reset, shared-owner, or
-custom-deleter policy API is provided.
+`Unique<Base>` can own a derived class and uses dynamic class destruction.
+`T` needs a value layout, so use a concrete type or class base. Collections such
+as `Vector<Unique<T>>` can relocate owners while their pointees keep their addresses.
 
 ## Releasing a raw pointer
 
-`Release()` returns the stored `T*?` and empties the owner. It is a mutable,
-`nothrow` operation that does not allocate, free storage, or destroy the pointee.
-An empty owner returns null, including repeated releases. The owner remains
-usable: `IsEmpty` is true and its later destruction does nothing. Readonly and
-immutable owners cannot call `Release()`.
-
-The caller now owns the deletion responsibility. It can pass the pointer to an
-API that explicitly takes ownership, delete it, or construct a new Unique from
-its non-null value. Merely borrowing the released address does not dispose it.
-Letting it go unowned leaks. Existing pointers and references keep the same object
-address, but its lifetime is controlled by whoever takes responsibility next.
-Releasing a base pointer retains ordinary dynamic-class destruction behavior.
+`Release()` returns `T*?` and leaves an empty, usable owner. An already empty
+owner returns null. The caller now owns deletion responsibility.
 
 ```csharp
-using Standard; using Standard::Memory;
+using Standard;
+using Standard::Memory;
 
 class Widget
 {
@@ -109,8 +72,7 @@ int main()
 }
 ```
 
-Releasing does not provide automatic cleanup for the interval before a new owner
-adopts the pointer. Re-adopt before calling potentially throwing code when that
-code does not itself take ownership. The new owner then handles exception cleanup
-normally. `Release` does not reset the owner to another pointer or change its
-copy/move rules.
+Re-adopt or delete the result before calling potentially throwing code unless
+that code takes ownership. An unowned interval has no automatic cleanup.
+
+Source: `core/Memory/Unique.gf`

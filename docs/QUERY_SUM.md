@@ -1,11 +1,12 @@
-# Integer query sums
+# Sum integer query values
 
-`Sum()` consumes a query and returns a checked `long` total. Empty input returns
-`0l`. It uses ordinary implicit conversion to `long` when reading each element.
-It does not cast or truncate values.
+`Sum()` returns a checked `long` total. Empty input returns `0l`.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+
 int main()
 {
     int[3] data = [2147483647, 1, -2];
@@ -17,34 +18,17 @@ int main()
 }
 ```
 
-The existing integer conversions admit `byte`, `sbyte`, `short`, `ushort`,
-`char`, `int`, `uint`, `long`, and `nint`, including readonly and immutable
-element views. Their values fit in `long`. Floating point, `ulong`, `nuint`,
-`extralong`, bool, and enum values need an explicit caller-chosen conversion or
-another reduction. Unsupported elements fail the ordinary assignment check
-when the generic body is specialized. No separate numeric interface is required.
+Elements must implicitly convert to `long`. Supported built-in types are
+`byte`, `sbyte`, `short`, `ushort`, `char`, `int`, `uint`, `long`, and `nint`,
+including readonly and immutable views. Other types need an explicit Select
+projection or a different accumulator.
 
-Every addition is checked in sequence order, before modifying the total.
-If a prefix would exceed the signed 64-bit range, `Sum` throws
-`Exception("Sequence sum overflow")`. Later cancellation does not rescue an
-overflowing prefix: `[9223372036854775807l, 1l, -1l]` throws at its second value.
-Conversely, `[2147483647, 1]` succeeds with `2147483648l`, since integer queries
-accumulate in `long`. `IntRange.Sum()` and `FilteredIntRange.Sum()` already use
-that result type. Converting their output to a general query keeps those totals.
+Every addition is checked in source order. An overflowing prefix throws
+`Exception("Sequence sum overflow")`, even if a later value would cancel it.
+For example, `[9223372036854775807l, 1l, -1l]` fails at its second element,
+while `[2147483647, 1]` produces `2147483648l`.
 
-One cursor is constructed. Its `Current` is read once per successful
-`MoveNext`. Iteration stops at the first source, conversion, or overflow error.
-Normal cleanup releases the cursor and copied source on success and failure.
-The source collection is not modified, assuming its callbacks and iterator obey
-their normal borrowing contracts.
+The scan reads each `Current` once and stops on the first input or overflow
+error. Use `Aggregate` for another accumulator type or arithmetic policy.
 
-The method itself creates no heap storage on a successful primitive reduction.
-Source copies, cursor construction, user conversions, and upstream callbacks
-can allocate or throw. `Take(0)` still constructs its input cursor, but does not
-advance it. Queries with borrowed storage retain their existing owner-lifetime
-and invalidation rules.
-
-Use `Select` before `Sum` for a projection, or `Aggregate` for a different
-accumulator type or arithmetic policy. For selective source builds, include
-`Queries/enumerable_sum.gf` with the ordinary query contracts and the source
-operators you use.
+Source: `Queries/enumerable_sum.gf`.

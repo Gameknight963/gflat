@@ -1,11 +1,12 @@
 # Sliding windows over borrowed spans
 
-Include `core/Collections/SpanWindows.gf` alongside `Memory/Span.gf`, `IEnumerable.gf`,
-`IEnumerator.gf`, and `Enumerable.gf` when selecting standard-library sources.
-The full standard library includes these sources automatically.
+`span.Windows(width, step = 1)` yields full-width `Span<T>` windows:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Collections;
+
 int[5] samples = [1, 3, 5, 7, 9];
 Span<int> values = new(samples, 5);
 foreach (Span<int> pair in values.Windows(2)) {
@@ -13,46 +14,23 @@ foreach (Span<int> pair in values.Windows(2)) {
 }
 ```
 
-`Windows(nuint width, nuint step = 1)` on `Span<T>` returns
-`SpanWindows<T>`. Every result is a full `Span<T>` of `width` elements. Starts are
-0, `step`, twice `step`, and so on while the full window fits. No partial final
-window is produced. Width and step must be positive, even for an empty source.
-For nonoverlapping groups that retain a shorter final piece, use
-[chunks](SPAN_CHUNKS.md).
-A width greater than the source length produces no windows. Cursor advancement
-checks the remaining distance before addition, including very large steps.
+Starts are zero, step, twice step, and so on while a complete window fits.
+Width and step must be positive. An oversized width produces no windows.
+For a shorter final piece, use [Chunks](SPAN_CHUNKS.md).
 
-The view and its nested `Enumerator` copy only a pointer and numeric metadata.
-They do not copy, own, allocate, or destroy source elements. Noncopyable elements
-are supported. Overlapping mutable windows refer to the same elements, so writes
-through an earlier window can change values observed by later windows. `T`'s
-qualifiers are preserved: `AsReadOnly().Windows(...)` protects element storage.
-`AsImmutable().Windows(...)` also protects storage reached through its elements.
-Enumeration and `AsEnumerable()` require a mutable view header, as with `Span`.
+The result is SpanWindows<T>. Windows preserve element qualifications. Overlapping
+writable windows share elements, so an edit can affect a later window. Keep the
+backing storage alive for every retained window and iterator.
 
-`GetEnumerator()` creates an independent cursor. `Current` throws before the
-first successful `MoveNext()` and after iteration ends. Repeated `MoveNext()`
-after the end returns false. The public constructors reject null storage with a
-nonzero length. The caller supplies a valid extent for non-null storage.
-
-The captured pointer and length do not depend on the original span header.
-Changing or destroying that header does not change an existing windows view.
-Source element edits remain visible. The caller keeps the underlying storage
-alive and at the same address for every enumeration and every retained window.
-Container operations that invalidate source borrows invalidate these views too.
-A view does not extend an owning container's lifetime or root managed storage.
-
-`AsEnumerable()` supports the existing lazy query extensions, without copying
-elements or allocating for view construction/enumeration. For example:
+AsEnumerable enables queries over windows:
 
 ```csharp
 using Standard::Memory;
+
 int Average(Span<readonly(int)> window)
     => (window[0] + window[1] + window[2]) / 3;
 
 var averages = values.AsImmutable().Windows(3).AsEnumerable().Select(Average);
 ```
 
-Include the normal query extension/source files when using `Select` and other
-operators. Consumer callbacks and materializing terminal operations retain their
-own allocation, copying, and exception behavior.
+Source: `core/Collections/SpanWindows.gf`

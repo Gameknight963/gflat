@@ -1,34 +1,32 @@
 # Counted Unicode transcoding
 
-`Standard::Text::UnicodeTranscoding` converts whole buffers between strict UTF-8 and UTF-16.
-Include `core/Text/UnicodeTranscoding.gf`, `core/Text/utf8.gf`, and `core/Text/utf16.gf`. All four methods are allocation-free and `nothrow`.
+`Standard::Text::UnicodeTranscoding` converts between UTF-8 bytes and UTF-16
+`ushort` units.
 
-| Method | Result |
+| Method | Result units |
 | --- | --- |
-| `TryGetUtf16Length(input, bytes, ref units)` | Required UTF-16 code units for counted UTF-8 input. |
-| `TryGetUtf8Length(input, units, ref bytes)` | Required UTF-8 bytes for counted UTF-16 input. |
-| `TryUtf8ToUtf16(input, bytes, output, capacity, ref written)` | Write UTF-16 units. Capacity and written count units. |
-| `TryUtf16ToUtf8(input, units, output, capacity, ref written)` | Write UTF-8 bytes. Capacity and written count bytes. |
+| `TryGetUtf16Length(input, bytes, ref units)` | Required UTF-16 units |
+| `TryGetUtf8Length(input, units, ref bytes)` | Required UTF-8 bytes |
+| `TryUtf8ToUtf16(input, bytes, output, capacity, ref written)` | UTF-16 units |
+| `TryUtf16ToUtf8(input, units, output, capacity, ref written)` | UTF-8 bytes |
 
-UTF-8 storage is `char*`. UTF-16 storage is `ushort*`, containing host-order code
-unit values. This does not serialize UTF-16LE or UTF-16BE bytes. Embedded nulls
-are ordinary scalar values. Nothing appends a terminator, strips a BOM, or
-normalizes text.
+Capacity and written counts use the destination's units. Output is counted and
+omits a terminator. U+0000 and U+FEFF are preserved.
 
 ```csharp
 using Standard::Text;
+
 ushort[32] wide;
 nuint units = 0;
 bool converted = UnicodeTranscoding::TryUtf8ToUtf16("hello", 5, wide, 32, ref units);
 ```
 
-Lengths return false and zero their result for malformed input or an
-unrepresentable output length. Conversion validates the entire input and output
-capacity before writing: failure writes zero to `written` and leaves the output
-buffer untouched. Successful conversion writes exactly `written` elements.
-Storage after that remains untouched. Conversion makes two passes over input.
+Malformed input, length overflow, or insufficient capacity returns false, sets
+the result count to zero, and preserves output bytes. Conversion validates and
+measures the entire input before writing.
 
-Keep source, destination, and result metadata disjoint and valid for their
-declared extents. Do not change input during a call. Zero-length operations do
-not dereference input or output. These APIs do not check raw pointers'
-allocations, protection, or alignment.
+Keep input, output, and count metadata separate. To convert serialized UTF-16LE
+or UTF-16BE bytes, decode their byte order into `ushort` units first.
+
+Source: `core/Text/UnicodeTranscoding.gf`. For owning results, use
+[UnicodeText](UNICODE_TEXT.md).

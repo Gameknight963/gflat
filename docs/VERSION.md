@@ -1,13 +1,7 @@
 # Dotted numeric versions
 
-`Standard::Version` stores two through four nonnegative signed 32-bit components:
-`major.minor[.build[.revision]]`. Use it for numeric protocol or file-format revisions.
-
-The default value is 0.0. Construct Version(major, minor, build=-1, revision=-1).
--1 denotes an absent trailing optional component. Required components must be
-nonnegative, optional components cannot be below -1, and revision cannot be
-present when build is absent. Invalid tuples throw Exception("Invalid version components").
-Immutable Major, Minor, Build, and Revision getters expose these exact values.
+`Standard::Version` stores `major.minor[.build[.revision]]` as two through four
+nonnegative 32-bit components. Use it for numeric protocol or file revisions.
 
 ```csharp
 using Standard;
@@ -26,34 +20,38 @@ int main()
 }
 ```
 
-Ordering is lexicographic by the four component values. Missing parts sort
-before zero. Thus 1.2, 1.2.0, and 1.2.0.0 are distinct, increasingly ordered
-values. Comparisons use relational checks rather than potentially overflowing
-subtraction. Equality and hashing include missing-component distinctions. Hash
-codes need not match .NET and are not a serialized protocol.
+## Components and ordering
 
-TryParse/Parse each accept either a counted readonly(char)* plus nuint length,
-or a null-terminated readonly(char)*. The entire supplied input must be two to
-four nonempty ASCII decimal components separated by single dots. Whitespace,
-signs, suffixes, counted embedded NUL, and component values beyond int maximum
-are rejected. Leading zeroes are accepted and normalized, including inputs
-longer than 43 bytes. Only canonical output has a 43-byte maximum. Counted
-input need not have a terminator. C-string input requires one.
+Default construction gives `0.0`. `Version(major, minor, build=-1, revision=-1)`
+uses `-1` for absent trailing components. Revision requires a build component.
+Other invalid tuples throw `Exception("Invalid version components")`.
 
-TryParse writes the default 0.0 result on failure and returns false. Its input
-reads precede the final output assignment, so a suitably aligned output value
-may overlap readable input storage with enough backing space. Parse throws
-Exception("Invalid version"). Result pointers must designate valid writable
-Version storage. There is no null-output shortcut.
+`Major`, `Minor`, `Build`, and `Revision` expose these component values.
+Comparison is lexicographic, with missing parts before zero. Thus `1.2`,
+`1.2.0`, and `1.2.0.0` are distinct and increasingly ordered. Equality and
+hashing preserve those distinctions.
 
-TryFormat(char* output, nuint capacity, ref nuint written) writes canonical
-ASCII digits and separators, without a NUL. It retains the specified number of
-components and removes leading zeroes. Failure leaves bytes unchanged and sets
-written to zero. Staging allows receiver/output overlap when backed by enough
-storage. Written must be separate from both. Format(ITextWriter*) emits one
-counted write and propagates writer errors normally. There is no String
-dependency or allocation on valid parse/format/constructor paths. Throwing
-errors and the selected writer may allocate.
+## Parsing
 
-The value implements IEquatable<Version>, IComparable<Version>, IHashable and
-IFormattable, so it composes with ordinary sets, maps, comparisons and writers.
+Parse and TryParse accept C strings or counted input with two through four
+ASCII decimal components. Signs, whitespace, empty components, suffixes, and
+values above `int` maximum are rejected. Leading zeroes are accepted, even
+when they make input longer than the maximum canonical output.
+
+TryParse returns false and resets its output to `0.0`. Parse throws
+`Exception("Invalid version")`. Reads complete before output assignment, so
+properly aligned result storage can overlap readable input.
+
+## Formatting
+
+`TryFormat(output, capacity, ref written)` writes canonical digits and dots,
+retaining the specified component count and dropping leading zeroes. Output
+is counted and requires at most 43 bytes. Insufficient capacity returns false,
+sets `written` to zero, and preserves the buffer.
+
+Formatting stages its bytes, allowing overlap with sufficiently backed receiver
+storage. Keep `written` separate from receiver and output. `Format(writer)`
+sends the same representation in one write.
+
+Version implements `IEquatable<Version>`, `IComparable<Version>`, `IHashable`,
+and `IFormattable`.

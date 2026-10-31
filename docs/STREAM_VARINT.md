@@ -1,29 +1,21 @@
 # Borrowed stream varints
 
-Import `Standard::IO` for canonical variable-length integer extensions on borrowed
-`IByteReader*` / `ITextWriter*` endpoints. The endpoints can be a File, the optional
-Windows TcpClient, or a caller-defined reader/writer. No owner is copied or transferred.
+Import `Standard::IO` for variable-length integers on `IByteReader*` and
+`ITextWriter*`:
 
-| Read operation | Write operation | Value and maximum encoded size |
+| Read | Write | Maximum bytes |
 | --- | --- | --- |
-| `ReadVarUInt32()` | `WriteVarUInt32(uint value)` | UInt32, five bytes |
-| `ReadVarUInt64()` | `WriteVarUInt64(ulong value)` | UInt64, ten bytes |
-| `ReadZigZagInt32()` | `WriteZigZagInt32(int value)` | Int32 via ZigZag, five bytes |
-| `ReadZigZagInt64()` | `WriteZigZagInt64(long value)` | Int64 via ZigZag, ten bytes |
+| `ReadVarUInt32()` | `WriteVarUInt32(uint value)` | 5 |
+| `ReadVarUInt64()` | `WriteVarUInt64(ulong value)` | 10 |
+| `ReadZigZagInt32()` | `WriteZigZagInt32(int value)` | 5 |
+| `ReadZigZagInt64()` | `WriteZigZagInt64(long value)` | 10 |
 
-These reuse the existing [VarInt](VARINT.md) codec. Unsigned integers use
-least-significant seven-bit groups first, with bit 7 indicating continuation. The
-shortest representation is required: overlong zero groups, overflow and continuation
-at the maximum width throw `IOException`. Signed operations use the existing ZigZag
-mapping, not signed LEB128 or protobuf `int32`/`int64` negative representations.
-There is no 128-bit varint operation.
+The encoding is canonical unsigned base-128. Signed methods apply the
+[ZigZag mapping](VARINT.md#signed-values-with-zigzag) first.
 
 ## Shared file or TCP framing
 
-This complete program records a length-prefixed three-byte payload and signed metadata,
-then reads them back. Opening the output truncates an existing file at the supplied path.
-`ReadPayloadLength` can also accept an open `Windows::TcpClient` through `&client` when
-its optional network library is referenced, with no change to the parsing code.
+This example records a length-prefixed payload. Opening output truncates the file.
 
 ```csharp
 using Standard::IO;
@@ -59,44 +51,30 @@ int main(int argc, char** argv)
 }
 ```
 
-The payload limit is application policy. A persistent TCP connection need not reach
-EOF after a message: read its declared body length rather than copying the connection
-until EOF. These helpers provide scalar encoding, not message routing or buffering.
+The length reader also accepts an open Windows TcpClient. Check application
+limits before reading a declared body. A persistent connection may contain
+another message, so consume the declared payload rather than copying to EOF.
 
 ## Consumption, failures and cost
 
-A reader requests exactly one byte per encoded group, stopping at the first terminator
-or the width limit. It never prefetches the following field, including after an invalid
-integer. Up to five or ten `Read` calls are required. With a direct unbuffered TcpClient,
-that means up to five or ten `recv` calls per scalar. No extra buffering is hidden in
-these helpers. For bulk parsing, read framed blocks into `BinaryBufferReader` and use
-its existing varint adapters, or use an explicit [BufferedReader](BUFFERED_READER.md) and keep subsequent reads on that cursor.
+Readers request one byte per encoded group and stop at its terminator or width
+limit. A direct TcpClient can therefore make five or ten `recv` calls per integer.
+Use [BufferedReader](BUFFERED_READER.md) for small-read buffering, or parse a
+received block with BinaryBufferReader.
 
-Empty input or EOF inside an unfinished integer throws `EndOfStreamException`. A
-malformed integer throws `IOException` at its terminator or width limit. Underlying
-reader exceptions propagate unchanged, possibly after consuming an unknown prefix.
-No failed operation rewinds, retries after an exception or guarantees resynchronization.
+| Failure | Exception |
+| --- | --- |
+| EOF before or during the integer | `EndOfStreamException` |
+| Overlong encoding, overflow, or continuation beyond the width | `IOException` |
+| Underlying read/write error | Propagates from the endpoint |
 
-Each writer encodes into a five- or ten-byte stack buffer and calls the synchronous
-sink's `Write` once with the encoded count. Sink exceptions propagate unchanged and
-can follow partial output. There is no output rollback. Neither side retains an
-endpoint or buffer, closes, flushes or transfers ownership. Keep concrete owners alive,
-unmoved and usable throughout the call. Normal helpers allocate no intermediate data.
-Underlying endpoints and exception handling can allocate.
+Reads can consume a prefix before failure. Writes send one encoded stack buffer
+and can leave partial output if the destination throws. Handle the failed record
+before continuing with the stream.
 
-`FileVarInt` remains unchanged, including its concrete `fgetc`-backed byte path and
-four existing unsigned operations. Generic stream extensions do not replace that
-buffered file implementation or add more File-specific overloads.
+The File-specific [FileVarInt](FILE_VARINT.md) methods use libc's buffered byte IO.
 
 ## Explicit sources
 
-Reader extensions live in `core/IO/byte_reader_var_int.gf` and require
-`core/Binary/VarInt.gf`, `core/IO/IByteReader.gf`, `core/IO/byte_reader.gf`,
-`core/IO/IOException.gf`, `core/IO/EndOfStreamException.gf`, and the existing
-`Exception` / `ITextWriter` contracts plus ordinary exception runtime support.
-The reader helper source also defines copying to writers, so its writer contract
-remains a source dependency even for read-only consumers.
-
-Writer extensions live in `core/IO/text_writer_var_int.gf` and require only the
-standalone VarInt codec and existing ITextWriter contract, plus dependencies of the
-chosen sink. Ordinary standard-library source discovery includes both files.
+Sources: `core/IO/byte_reader_var_int.gf`, `core/IO/text_writer_var_int.gf`,
+`core/Binary/VarInt.gf`, and the byte-reader/text-writer contracts.

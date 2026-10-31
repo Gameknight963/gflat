@@ -1,10 +1,13 @@
 # Project values with their encounter index
 
-The optional indexed `Select` overload accepts a `U(T, nuint)*` selector. It is
-useful for numbered records and diagnostics without a separate index sequence.
+Indexed `Select` passes a zero-based `nuint` index to a `U(T, nuint)*` selector:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Collections;
+
 int main()
 {
     int[3] data = [8, 4, 9];
@@ -17,32 +20,25 @@ int main()
 }
 ```
 
-Each enumerator starts at index zero. Its index advances on successful
-`MoveNext`, even when `Current` is skipped. Reading `Current` invokes the
-selector every time, with the same index until the next successful move.
-Projected values are not cached. `Count()` and `Any()` need not invoke a
-selector or read its input value. A preceding filter changes which encounters
-are indexed. A following filter does not renumber the projection.
+Every successful move consumes an index, even if its `Current` is skipped.
+Reading `Current` invokes the selector each time with the current index.
+`Count()` and `Any()` can advance without invoking it.
 
-A failing upstream `MoveNext` invalidates `Current` without advancing the
-assigned index. Retrying follows the upstream iterator's ordinary behavior,
-as with the one-argument `Select`. A failing input `Current` or selector leaves
-the position and index unchanged. The caller can retry the getter.
+A preceding filter changes which encounters are indexed. A following filter
+keeps the assigned indices.
 
-Indices do not wrap. If an upstream move succeeds after index `nuint` maximum,
-the adapter throws `Sequence index overflow`, with that upstream value consumed
-and no current result. Later moves return false. EOF immediately after the
-maximum valid index returns false normally.
+## Failures and callback values
 
-Source views and cursor owners follow the same copy and lifetime rules as
-ordinary `Select`. Both factories and repeated enumeration retain their source's
-behavior. A consumable file is not rewound. The adapter uses no heap buffer,
-but callbacks, source factories and ordinary element copies can allocate.
-The callback takes `T` by value: borrowed owning values are copied, while fresh
-owners can transfer normally. A selector result must not borrow storage owned
-only by its temporary by-value argument. Capturing closures are not supported.
-Use a named function for an owning value parameter such as `String`.
+A selector or input-getter failure leaves the current index available for
+another read. If upstream produces a value after index `nuint` maximum, the
+adapter throws `Sequence index overflow` and finishes permanently. The extra
+upstream value has already been consumed.
 
-Selective builds include `Queries/IndexedSelectSource.gf` and
-`Queries/enumerable_indexed_select.gf` alongside the ordinary Enumerable,
-iterator, span and exception sources.
+The selector takes `T` by value. An owning borrowed value is copied, and the
+result must not borrow storage owned only by that temporary argument. Use
+named functions for owning arguments such as String. Callbacks use the
+language's noncapturing function-pointer rules.
+
+See [query ownership](QUERIES.md#ownership) for source lifetimes.
+Sources: `Queries/IndexedSelectSource.gf` and
+`Queries/enumerable_indexed_select.gf`.

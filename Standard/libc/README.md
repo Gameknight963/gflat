@@ -32,7 +32,9 @@ or final output must reach stdout. See [console APIs](../../docs/HOST_RUNTIME.md
 ## Files
 
 ```csharp
-using Standard; using Standard::IO;
+using Standard;
+using Standard::IO;
+
 int main()
 {
     File output = File::OpenWrite("message.txt");
@@ -45,20 +47,14 @@ int main()
 `File` owns a binary stream and closes it at scope exit. Call `Close()` explicitly
 to report final flush and close errors.
 
-- `FileText::ReadAll(path)` returns an owning String
-- `FileBytes::ReadAll(path)` returns an owning `Vector<byte>`
-- Both accept an optional maximum byte count
-- `FileLines` reads into caller storage or a writer
-- `File.Lines()` provides lazy line enumeration
-- `FileBinary`, `FileVarInt`, and `FileHash` read structured values and digests
-
 See [file APIs](../../docs/HOST_RUNTIME.md#files),
 [file lines](../../docs/FILE_LINE_SEQUENCE.md), and [file hashing](../../docs/FILE_HASH.md).
 
 ### Owning binary and text conveniences
 
-`FileText` reads and writes String values. `FileBytes` reads and writes byte
-vectors. See [owning file helpers](../../docs/HOST_RUNTIME.md#owning-binary-and-text-conveniences).
+`FileText::ReadAll(path)` returns a String. `FileBytes::ReadAll(path)` returns a
+Vector<byte>. Both accept an optional maximum byte count.
+See [owning file helpers](../../docs/HOST_RUNTIME.md#owning-binary-and-text-conveniences).
 
 ### File digests
 

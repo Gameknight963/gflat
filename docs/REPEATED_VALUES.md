@@ -1,10 +1,12 @@
 # Repeated values
 
-`Standard::Queries::Repeated<T>` stores one captured value and a `nuint` count. It describes a
-sequence without allocating a buffer of repeated elements.
+`Standard::Queries::Repeated<T>` captures one value and presents it a specified
+number of times:
 
 ```csharp
-using Standard; using Standard::Queries;
+using Standard;
+using Standard::Queries;
+
 int main()
 {
     Repeated<int> values = new(7, 4);
@@ -19,44 +21,19 @@ int main()
 }
 ```
 
-`Count` and `IsEmpty` inspect the stored count in constant time. Both are
-immutable and `nothrow`. Each `GetEnumerator()` starts a fresh cursor, with its
-own remaining count and a copy of the captured value. `MoveNext()` is `nothrow`
-and stays false after exhaustion. Even the maximum `nuint` count is supported:
-the cursor decrements a remaining count rather than incrementing past its limit.
-Use `Take` to consume a bounded prefix.
-
-`Current` returns a value using normal copying rules. It throws before the first
-successful `MoveNext()` and after exhaustion. Reading it repeatedly copies the
-same captured value without advancing. A failed copy leaves the cursor at that
-element, so a caller may retry.
+`Count` and `IsEmpty` read the captured count. Each enumerator owns a copy of the
+captured value. Reading Current copies that value again. T therefore needs a
+copy operation. Strings produce independent contents, while pointer values share
+their pointees.
 
 ## Ownership
 
-Construction copies a named capture or transfers a moved/fresh capture normally.
-Sequence copies, cursor copies, and `Current` use the type's ordinary copy
-operation. These operations require a copyable `T`. Resource owners such as
-`String` produce independent copies. Raw and managed pointers copy references,
-sharing their target rather than cloning it.
+Destroying or replacing the sequence leaves existing cursors usable. Each cursor
+owns its captured value until destruction, even after exhaustion. A zero-count
+sequence still owns its capture and copies it when creating an iterator.
 
-A cursor retains no pointer back to its sequence. Replacing or destroying the
-source therefore leaves existing cursors usable. Each cursor owns its capture
-until its own destruction, including after exhaustion. A zero-count sequence
-still owns its capture. Creating its cursor still copies that capture. Plain
-scalar values need no allocation, while custom copying can allocate or throw.
-Partial copied owners are cleaned up normally on failure.
+`AsEnumerable()` also copies the captured source. Even Take(0) can therefore copy
+or allocate. Use the Count property for constant-time count inspection. Query
+Count enumerates normally.
 
-`GetEnumerator`, `AsEnumerable`, and the `Current` getter are shallow `readonly`
-observers. Pointer captures retain their ordinary pointee mutability. Deep
-immutable receivers keep the language's normal restrictions.
-
-`AsEnumerable()` returns an owning source copy for the existing query API.
-Creating or copying queries and their cursors can therefore copy the capture,
-even for `Take(0)`. The query's generic `Count()` enumerates. The sequence's
-`Count` property simply reads its metadata.
-
-For selective use, include `core/Queries/Repeated.gf`, `Collections/IEnumerable.gf`,
-`Collections/IEnumerator.gf`, `Queries/Enumerable.gf`, and the chosen query
-operator sources. Invalid `Current` access requires ordinary Exception support.
-Captured owners keep their usual dependencies. No GC is needed unless the
-capture itself uses managed references.
+Source: `core/Queries/Repeated.gf`

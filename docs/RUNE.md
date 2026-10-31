@@ -1,17 +1,20 @@
 # Unicode scalar values
 
-`Rune` stores one validated Unicode scalar in a `uint`. Its default value is
-U+0000. `new Rune(value)` accepts U+0000 through U+10FFFF except the surrogate
-range U+D800 through U+DFFF. Invalid input throws `Exception` with the message
-`Invalid Unicode scalar value`.
+`Standard::Text::Rune` stores one validated Unicode scalar. Construction accepts
+U+0000 through U+10FFFF except U+D800 through U+DFFF and throws `Exception` for
+invalid values. Default construction is U+0000.
 
-`Value` returns the numeric scalar. `IsAscii` includes U+0000 through U+007F.
-`Utf8Length` counts encoded bytes (1–4), while `Utf16Length` counts code units
-(1–2). All four getters are `nothrow`.
+| Property | Meaning |
+| --- | --- |
+| `Value` | Numeric `uint` scalar |
+| `IsAscii` | True for U+0000–U+007F |
+| `Utf8Length` | 1–4 encoded bytes |
+| `Utf16Length` | 1–2 encoded units |
 
 ```csharp
 using Standard::Text;
 using Standard;
+
 int main()
 {
     Rune face = new(0x1f600u);
@@ -25,23 +28,11 @@ int main()
 }
 ```
 
-`Format` writes the scalar's counted UTF-8 encoding to a borrowed `ITextWriter`.
-It uses four stack bytes and propagates writer failures. Interpolation emits
-that encoding rather than a decimal code-point number. `ToString()` returns an
-independent owning UTF-8 `String`, retaining U+0000 as a byte with length one.
-Counted output preserves this byte. A C-string consumer sees a terminator.
+`Format` and interpolation write the scalar's UTF-8 encoding. `ToString()`
+returns that encoding in an owning String. U+0000 produces a String of length
+one, whose contents appear empty to a C-string consumer.
 
-Equality compares scalar values, ordering follows numeric scalar order, and
-equal values have equal hashes. This order is unrelated to linguistic collation.
-`Rune` owns no allocation. String conversion and interpolation use their normal
-owning `String` allocation behavior.
+Equality and ordering compare scalar numbers. `Utf8Scalars` and `Utf16Scalars`
+yield `uint`, which can be converted with `new Rune(scalar)`.
 
-Existing `Utf8Scalars` and `Utf16Scalars` continue yielding `uint`. Construct a
-`Rune` explicitly for a validated-value API or use an ordinary query projection:
-`.Select((uint scalar) => new Rune(scalar))`. Decoders and encoders retain their
-current APIs, and `Utf8::TryEncode(rune.Value, ...)` remains available.
-
-A scalar is not necessarily a displayed character or grapheme cluster.
-Selective source users include `Text/Rune.gf`, `Text/utf8.gf`,
-`Text/utf16.gf`, equality/order/hash and text contracts, `Hashing/primitive_hashing.gf`, and `String`
-dependencies for its owning conversion contract.
+Source: `core/Text/Rune.gf`

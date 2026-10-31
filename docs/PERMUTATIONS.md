@@ -1,17 +1,13 @@
 # Advancing lexicographic arrangements
 
-`NextPermutation<T>(Span<T> values, compare)` rearranges values into their next
-lexicographic ordering under the comparator. `PreviousPermutation` chooses the
-previous ordering. Each returns true when it advances. At the last or first
-ordering respectively, it wraps to the opposite endpoint and returns false.
-
-These operations are useful for bounded arrangement searches: enumerate small
-assignment or route candidates without allocating a collection for every order.
-The number of arrangements can still grow factorially. The caller controls the
-input size and stopping policy.
+`Standard::Collections::NextPermutation(values, compare)` advances a mutable span
+to its next comparer ordering. PreviousPermutation moves backward.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Collections;
+
 int Compare(readonly(int)* left, readonly(int)* right)
 {
     if (*left < *right) return -1;
@@ -32,42 +28,20 @@ int main()
 }
 ```
 
-Begin with the first ordering to enumerate every distinct comparator-key
-arrangement using `NextPermutation`, or the last ordering with
-`PreviousPermutation`. Arbitrary starting arrangements are also accepted.
-Duplicate keys are handled without treating comparator-equivalent values as
-different key arrangements. Equal values do not have a stable identity order.
-Wrapping can rearrange equivalent owners too.
+Success returns true. At the endpoint, the span wraps to the opposite ordering
+and returns false. Empty and singleton spans return false unchanged.
 
-Empty and singleton spans return false without comparing or accessing element
-storage. For larger spans, false still means the values were wrapped. It is not
-a no-op or a failed-capacity result. A custom reversed comparator reverses the
-meaning of first and last. Only the sign of its result matters, including
-non-unit magnitudes or the minimum `int`. No result is negated.
+Start in the first ordering to enumerate all distinct arrangements with
+NextPermutation, or the last ordering with PreviousPermutation. Comparer-equivalent
+values share one key arrangement, while their identities can change order.
 
-Each call uses O(n) comparisons and relocation work, constant extra storage, and
-no heap scratch allocation. It borrows mutable elements and invokes no element
-copy constructor or destructor. Noncopyable owners are supported through the
-existing public `Swap` and `Reverse` relocation operations. Collector hooks and
-comparator effects retain their ordinary behavior. Protected element storage
-is not made writable by these algorithms.
+Comparators borrow immutable element pointers and must preserve a consistent
+ordering. A comparator exception leaves the arrangement unchanged because
+comparisons finish before movement. Slots can hold different owners after success,
+so reacquire any value-specific borrows.
 
-Comparators borrow `immutable(T)*` values. They must provide a consistent
-ordering, must not mutate elements or the span through aliases, and must not
-retain element pointers across calls. All comparisons finish before the first
-swap or reversal, so a comparator exception leaves the original arrangement
-unchanged. External callback side effects are not rolled back. Normal
-collector-hook effects still apply. No extra failure policy is introduced.
+Each call takes O(n) time and constant working storage. Noncopyable values work.
+The default overloads use IComparable through Comparer.
 
-Pointers to element slots continue to refer to those slots, which may now hold
-different owners. Pointers into separately owned allocations keep their address
-and follow the transferred owner's lifetime. Raw aliases inside values are not
-retargeted. Keep the source storage alive and obey the usual in-place algorithm
-borrowing rules.
-
-Include optional `Collections/span_permutations.gf` and `Collections/span_algorithms.gf`,
-Span and their normal dependencies. `Collections/default_ordering.gf` adds
-one-argument `NextPermutation(values)` and `PreviousPermutation(values)` for
-`T : IComparable<T>`, using `Comparer<T>::Compare`. Include `Collections/Comparer.gf` and
-`IComparable.gf` for those conveniences. Explicit callbacks remain available
-without that interface.
+Sources: `core/Collections/span_permutations.gf`, `span_algorithms.gf`, and
+`default_ordering.gf` for default comparison.

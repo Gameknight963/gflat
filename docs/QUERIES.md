@@ -1,16 +1,13 @@
 # Enumeration and queries
 
-`Vector`, `Deque`, `Queue`, `Stack`, `LinkedList`, `Span`, `IntRange`,
-`FilteredIntRange`, `Repeated<T>`, `TextParts`, `TextLines`, `Utf8Scalars`, `Utf16Scalars`, and
-`BitSet` provide an `AsEnumerable()` adapter
-for lazy queries.
-[`Repeated<T>`](REPEATED_VALUES.md) captures a value. Its query and
-cursor copies use that value's ordinary ownership rules.
-Import `Standard::Queries` to make the query extensions visible:
+Import `Standard::Queries` and use `AsEnumerable()` to build a query over a
+collection or view:
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Queries; using Standard::Collections;
+using Standard;
+using Standard::Queries;
+using Standard::Collections;
 
 int main()
 {
@@ -32,45 +29,33 @@ int main()
 }
 ```
 
-The query stores a span of the vector's elements. It copies neither the vector
-nor its elements when the query is built. Keep the vector alive and do not grow,
-clear, remove from, or move it while using the view. The length is captured when
-the view is created. Editing existing elements is visible on the next read.
-For a readonly view use `numbers.AsReadOnly().AsEnumerable()`.
-Its callback parameter types retain that qualification, for example
-`.Where((readonly(int) n) => n > 0)`.
+## Sources and borrowing
 
-Deque queries capture the ring buffer's pointer, head, capacity, and count,
-rather than requiring contiguous storage. Keep the owner alive and avoid
-structural mutation while using a query. Element edits remain visible.
-Its adapter currently requires a mutable owner. See [Deque views](DEQUE.md).
+A query captures source state when constructed. Keep borrowed storage alive until
+the query and its iterators finish.
 
-Queue queries preserve FIFO order, while stack queries visit the top first.
-Their adapters likewise borrow captured storage metadata and require a mutable
-owner. Keep that owner alive and avoid structural mutation while using the query.
-Ordinary element edits remain visible. See [queue and stack views](../Standard/core/Collections/OWNING_COLLECTIONS.md#queue-and-stack).
+| Source | Captured state and invalidation |
+| --- | --- |
+| Vector | Element pointer and length. Growth, removal, and clearing can invalidate the viewed range |
+| Span | Borrowed pointer and length. Keep the underlying storage and elements alive |
+| Queue, Stack, and Deque | Storage and cursor metadata. Structural mutation invalidates the view |
+| LinkedList | First node. Node insertion/removal invalidates iteration. Moving the owner preserves node addresses |
+| BitSet | Packed storage and bit length. Resizing or destruction invalidates the view |
+| Text and Unicode views | Borrowed source bytes |
+| IntRange and FilteredIntRange | Copied range and filter state |
+| Repeated<T> | A captured value with ordinary copy/ownership rules |
+| FileLineSequence | A shared file cursor and an iterator-owned current-line buffer |
 
-Linked-list queries capture the first node and visit values from first to last.
-Do not insert or remove nodes while using them. As with node handles, an owner
-move preserves these views while the destination owner lives. See
-[linked-list borrowing](LINKED_LIST.md#borrowing-and-iteration).
+Moving an owning container transfers its allocation to the destination. Keep
+that owner alive while using views into the allocation.
 
-Integer ranges are different from container views: their adapters copy the small
-range state rather than borrowing the original range variable. Both range
-adapters accept immutable receivers. A filtered range remains lazy and can enter
-the general query operators with `.AsEnumerable().Select(...)`. Constructing
-that adapter does not evaluate its predicate or allocate storage. Each
-enumeration starts again from the captured range, filter, skip, and take state.
-Skipping filtered matches evaluates the predicate while consuming them, even
-when the skip exhausts an earlier take limit. A subsequent `Take(0)` suppresses
-that work, as with the general query operators.
+Edits to existing collection elements are visible through a valid view. Each
+iterator starts from its captured state. A file sequence starts from the current
+file position, so re-enumeration consumes further input. Use `ToVector()` when
+values must be replayed independently of a consumable source.
 
-Text and Unicode scalar adapters copy small views that borrow the caller's
-storage. BitSet's adapter captures its packed storage and bit length, yielding
-set-bit indices. These adapters do not copy their owners or extend a buffer's
-lifetime. See [text parts](TEXT_PARTS.md),
-[Unicode scalars](UTF8_SCALARS.md), and
-[BitSet queries](../Standard/core/Collections/OWNING_COLLECTIONS.md#packed-bits) for their invalidation rules.
+`numbers.AsReadOnly().AsEnumerable()` preserves readonly element qualification.
+For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 
 ## Operations
 
@@ -117,132 +102,81 @@ lifetime. See [text parts](TEXT_PARTS.md),
 | `ToHashMap(keySelector)` / `ToHashMap(keySelector, valueSelector)` | Materialize an owning map. Reject duplicate selected keys. |
 | `ToLookup(keySelector)` / `ToLookup(keySelector, valueSelector)` | Materialize an owning map of vectors, preserving encounter order within each group. |
 
-See [sequence equality](QUERY_SEQUENCE_EQUAL.md) for paired
-advancement order, equality contracts, and temporary element ownership.
-The ref-output `Try` methods currently require writable element storage types.
-See the [qualified-element limitation](QUERY_ELEMENT_AT.md).
-
-## Evaluation
-
-Operators are lazy until a terminal operation or `foreach` advances an iterator.
-The individual guides describe consumption order, buffering, and value ownership:
-
-- Combining sources: [Zip](QUERY_ZIP.md), [Concat](QUERY_CONCAT.md),
-  [Append and Prepend](QUERY_ENDPOINT.md)
-- Selecting elements: [ElementAt](QUERY_ELEMENT_AT.md), [extrema](QUERY_EXTREMA.md),
-  [Distinct](QUERY_DISTINCT.md), [DistinctBy](QUERY_DISTINCT_BY.md),
-  [DefaultIfEmpty](QUERY_DEFAULT_IF_EMPTY.md)
-- Buffering: [TakeLast](QUERY_TAKE_LAST.md), [SkipLast](QUERY_SKIP_LAST.md),
-  [Reverse](QUERY_REVERSE.md), [Order](QUERY_ORDER.md)
-- Aggregation: [Sum](QUERY_SUM.md), [ToHashSet](QUERY_HASH_SET.md),
-  [CountBy](QUERY_COUNT_BY.md), [ToHashMap](QUERY_TO_HASH_MAP.md),
-  [ToLookup](QUERY_LOOKUP.md)
-- Borrowed views: [span windows](SPAN_WINDOWS.md), [span chunks](SPAN_CHUNKS.md)
-
-Each enumeration starts a fresh iterator, but does not rewind an external source.
-For example, [FileLineSequence](../Standard/libc/README.md#reading-lines) continues from
-its borrowed file's current position. Enumerating an ordered or reversed file
-query again does not replay the previous buffer. A span starts again over its
-captured view. Materialize values into an owning collection when replay is needed
-independently of a consumable source.
-
-Operator order affects which values are visited:
+### Evaluation order
 
 - `Take(3).Where(test)` examines at most three input elements
-- `Where(test).Take(3)` looks for three matches
-- `Take(0)` leaves its input unadvanced
+- `Where(test).Take(3)` searches for three matches
+- `Take(0)` constructs its input iterator, then performs no moves
+- `TakeWhile` consumes the first rejected element and ends
+- `SkipWhile` yields the first rejected element, then the remaining suffix
 
-
-Starting that enumeration still constructs the input iterator, so a custom
-`GetEnumerator()` or iterator constructor can allocate or throw even for
-`Take(0)`. Any successfully constructed iterator is destroyed when enumeration
-ends, including before the first element.
-
-`TakeWhile` examines but does not yield the first element rejected by its
-predicate. `SkipWhile` yields that first rejected element. Both start fresh on
-each enumeration and never advance their input again after they finish. Their
-`Current` getters delegate to the input without caching: when used after
-`Select`, testing a predicate and then reading the accepted value can invoke
-the selector separately, as with `Where`.
+Construction of a custom iterator can throw even for `Take(0)`.
 
 ### Projection and predicates
 
-`Select` recomputes projected values. Reading its `Current` twice invokes
-the selector twice. `Any()` and `Count()` need not invoke a selector at all. This
-allows arbitrary result types without default construction or hidden storage
-allocation. Put effects in `ForEach`, rather than relying on a selector running.
+`Select` invokes its selector whenever `Current` is read. Reading it twice
+projects twice. `Any()` and `Count()` can finish without reading projected values.
+Use `ForEach` for effects that must happen once per visited value.
 
-Optional indexed `Select` supplies a zero-based `nuint` encounter index. The
-index advances on successful moves, not getter calls. Repeated reads project
-the same index. It keeps ordinary `Select` copy, retry and uncached getter
-semantics. See [indexed projection](QUERY_INDEXED_SELECT.md).
+Indexed `Select` supplies the successful move's encounter index. Indexed `Where`
+counts every upstream encounter, including rejected values. See
+[indexed projection](QUERY_INDEXED_SELECT.md) and
+[indexed filtering](QUERY_INDEXED_WHERE.md).
 
-Optional indexed `Where` counts all successful upstream encounters, including
-predicate rejections. Its predicate runs during `MoveNext`. Accepted `Current`
-reads remain uncached and do not rerun it. See
-[indexed filtering](QUERY_INDEXED_WHERE.md) for retry, index and
-ownership contracts.
-
-`Any(predicate)` and both `Contains` overloads read terminal `Current` once for
-each element tested. They stop before reading a later element after a successful
-match. `Count(predicate)` reads each terminal value once and scans the whole
-sequence. Query membership borrows the search key but follows ordinary element-copy
-semantics. See [query searches](QUERY_SEARCH.md).
+`Any(predicate)`, `Contains`, and `Count(predicate)` read each tested terminal
+value once. `Any` and `Contains` stop at the first match. See
+[query searches](QUERY_SEARCH.md) for comparer and key rules.
 
 ### Allocation and callbacks
 
-- Built-in source views, `Where`, `Select`, `Zip`, `Concat`, `Take`, `Skip`,
-  `TakeWhile`, and `SkipWhile` store their internal state inline
-- `Distinct` and `DistinctBy` grow an iterator-owned hash set as values arrive
-- `Reverse` fills an iterator-owned vector on its first move
-- `TakeLast` fills an iterator-owned bounded deque on its first move. A zero
-  count skips upstream iteration
-- `Order` buffers input on its first move and uses `StableSort`'s two index buffers
+| Operators | Internal storage |
+| --- | --- |
+| `Where`, `Select`, `Zip`, `Concat`, `Take`, `Skip`, `TakeWhile`, `SkipWhile` | Inline source and cursor state |
+| `Distinct`, `DistinctBy` | A hash set grown during iteration |
+| `Reverse` | A vector filled on the first move |
+| `TakeLast` | A bounded deque filled on the first move |
+| `SkipLast` | A bounded lookahead buffer |
+| `Order` | Buffered input plus StableSort's two index buffers |
 
-Custom sources, callbacks, element copy constructors, and materialization can
-allocate independently of the operator's internal storage.
+The iterator owns its buffers. Copies of elements, custom sources, and callbacks
+have their own allocation behavior.
 
-Callback signatures use ordinary
-function pointers. Capturing closures are not implemented. For owning value
-parameters such as `String`, use a named function: lambda parameters currently
-must borrow those values through pointers.
+Callbacks use function pointers and noncapturing lambdas. For an owning
+by-value argument such as String, use a named function. Lambda parameters
+currently require pointer borrowing for those values.
 
 ## Ownership
 
-Elements follow ordinary value semantics:
+`ToVector()` copies elements into an owning vector. Reading a borrowed String
+into a local also creates an independent copy. Inspect through `ref Current`
+when the source exposes a borrowed getter. Raw pointer elements remain borrowed,
+and managed pointers retain their collector behavior.
 
-- Assigning a borrowed `String` to an owning local or passing it by value copies
-  its bytes. `ToVector()` creates independently owned strings
-- A borrowed `Current`, such as a span, file-line, or ordered cursor's getter,
-  permits inspection through a reference
-- Copying a raw pointer copies its address. Its pointee stays borrowed
-- Managed pointer elements retain their collector's normal reference behavior
+Iterators clean up owned fields on completion, `break`, return, and exceptions.
+A raw pointer returned from a query remains valid only as long as its backing
+owner. In particular, a pointer into an iterator-owned buffer expires when that
+iterator is destroyed.
 
-`ToVector()` requires an element type accepted by `Vector<T>`. An element type
-with outer `readonly` or `immutable` qualification currently fails its writable
-indexer check. Choose an ordinary stored value explicitly, for example
-`.Select((readonly(int) value) => (int)value).ToVector()` for readonly integers.
-The same restriction applies to buffering with query `Reverse()`, `Order()`, `TakeLast(count)`, or `SkipLast(count)`.
-Managed pointer elements keep their normal collector behavior.
+### Qualified elements
 
-`Aggregate` owns its seed parameter. Passing a named seed normally copies it at
-entry. Use `move seed` to transfer it instead, including a noncopyable owner such
-as `Unique<T>`. Each iteration transfers the current accumulator to the callback,
-then uses the callback's returned value as the next accumulator. A callback that
-returns its owning parameter should return `move accumulator`. This avoids
-copying the accumulator on every step. Source elements still follow ordinary
-callback argument copying rules. An empty sequence returns the supplied seed.
-Iterator or callback exceptions clean up the current accumulator and iterator.
+Buffering and materialization currently require mutable stored element types.
+For a readonly integer source, select an ordinary stored value explicitly:
+`.Select((readonly(int) value) => (int)value).ToVector()`.
+This restriction also applies to `Reverse`, `Order`, `TakeLast`, and `SkipLast`.
 
-Without a seed, `Aggregate(function)` starts with the first element and folds
-the remaining elements from left to right. It throws `"Sequence is empty"` on
-an empty sequence. One element needs no callback. Otherwise there is one
-callback per remaining element. Each element's `Current` is read once. The
-accumulator is transferred to the callback and back using the same ownership
-rules as the seeded overload. The source's elements are read normally.
+Ref-output terminals require writable destinations. Value-returning terminals
+such as `First()` and `ElementAt()` can initialize a local from a qualified view.
+See [qualified outputs](QUERY_ELEMENT_AT.md).
+
+## Aggregate
+
+`Aggregate(function)` folds left from the first value and throws
+`Exception("Sequence is empty")` for empty input:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
 
 int Subtract(int accumulated, int next) => accumulated - next;
 
@@ -255,10 +189,14 @@ int main()
 }
 ```
 
-For example, a fold can update one uniquely owned integer without reallocating it:
+`Aggregate(seed, function)` starts from the supplied seed and returns it for an
+empty sequence. Each callback receives ownership of the current accumulator and
+returns the next one. Move an owning seed to transfer it into the fold:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
 
 Unique<int> Add(Unique<int> accumulator, int value)
 {
@@ -278,66 +216,46 @@ int main()
 }
 ```
 
-`TryLast` and `TrySingle` assign their output only after iteration establishes
-the answer. A throwing iterator, callback, or element copy leaves that output
-unchanged. These errors still propagate normally. `TrySingle` stops after finding
-a second element and does not read its `Current` value. Successful outputs follow
-ordinary copying rules and own their independent resources, as with `Last` and
-`Single`.
+A callback returning its owning accumulator should use `return move accumulator`.
+Source elements retain their normal copying rules.
 
-The output-parameter terminals currently have a compiler limitation for qualified
-element types such as `readonly(int)`: their `ref T` destination becomes readonly
-too, so assigning the answer is rejected. Value-returning terminals such as
-`First()` and `ElementAt()` work for these views and can initialize a new local.
+## Ref-output terminals
 
-These output guarantees describe writes made by the terminal operation. An
-iterator or callback can also change storage through other aliases. If `result`
-borrows that storage, those changes remain visible. Use independent output
-storage when iteration mutates its source, and keep the output reference valid
-for the entire call.
+`TryFirst`, `TryLast`, `TrySingle`, and `TryElementAt` return false when their
+selection fails and leave the output unchanged. They assign only after finding
+the result. Iterator, callback, and element-copy errors propagate before that
+assignment. A second element makes `TrySingle` fail without reading its Current.
 
-Iterators are values. Their destructors and owned fields are cleaned up on
-completion, early return, `break`, and exceptions. A custom iterator returned as
-a raw pointer has ordinary borrowed-pointer semantics. Returning a pointer does
-not make the query responsible for deleting it.
+Keep output separate from storage changed by iteration or callbacks. Writes
+through other aliases remain visible even when the terminal leaves its output
+unchanged.
 
 ## Custom sequences and optional interfaces
 
-`IEnumerable<T, Iterator>` requires `GetEnumerator()` to return the specified
-concrete iterator type. Keeping this second type parameter avoids requiring a
-heap-allocated interface iterator. The value-producing `IEnumerator<T>` contract
-requires `bool MoveNext()` and a `T Current` getter. Borrowing iterators, such as
-`Span<T>::Enumerator`, can expose `ref Current` and use the pattern directly.
+`foreach` accepts `GetEnumerator()`, `MoveNext()`, and `Current` by pattern.
+`IEnumerable<T, Iterator>` requires the concrete iterator return type, and
+`IEnumerator<T>` describes `MoveNext()` and a value-returning Current getter.
+Borrowing iterators can expose `ref Current` through the pattern.
 
-`foreach` continues to accept the pattern without either interface.
-For custom queries, construct `Enumerable<T, Source, Iterator>` with a source
-whose `GetEnumerator()` creates an iterator. The source must be copyable: it is
-copied into composed views. Usually it should contain borrowed pointers or
-other small views. It must not retain a pointer to a temporary source object.
-Iterators themselves may own resources and need not be copyable.
+Construct `Enumerable<T, Source, Iterator>` for a custom query source. Source must
+be copyable because composition captures a source view through `SourceView()`.
+Extension methods borrow their receiver before making that explicit capture.
+Iterators can own resources and be noncopyable.
 
-Query extension methods borrow their receiver. Composed operators explicitly
-capture a copy of its source view through `SourceView()`, following ordinary
-value semantics. A source or iterator can own backing storage and release it
-during cleanup. Returning a raw pointer from a terminal
-operation does not keep those source copies or iterators alive: a provider of
-borrowed pointer elements must arrange for their storage to survive enumeration
-and terminal cleanup. Built-in borrowed views satisfy this when the original
-owner remains alive. Owning sources can also work, for example with independently
-copied value outputs or shared backing owners whose storage remains alive.
-There is no automatic lifetime tracking for raw pointer results.
+Use source state that outlives every iterator and returned borrow. A view pointing
+to a temporary source object becomes invalid when that object dies. An owning
+source must arrange for pointer results to survive iterator and source-copy
+cleanup if callers retain them.
 
 ## Select an element by its key
 
 `MinBy(selector)` and `MaxBy(selector)` return the first element with the least
-or greatest projected key.
-An explicit comparer is accepted as `MinBy(selector, compare)` or
-`MaxBy(selector, compare)`. The selector has type `K(T)*`. The comparer has type
-`int(immutable(K)*, immutable(K)*)*`. Default comparison requires the exact
-`IComparable<K>` contract and forwards through `Comparer<K>::Compare`.
+or greatest key. Add an explicit comparer as `(selector, compare)`:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
 
 long Magnitude(int value)
 {
@@ -355,55 +273,33 @@ int main()
 }
 ```
 
-The source is enumerated once. Each element's `Current` is read once, then
-its key is computed once. For N nonempty elements there are N selector calls
-and N-1 comparer calls. Comparisons receive the current key first and the best
-key second. Equal keys retain the first element. A singleton still computes its
-key but does not compare. An empty source throws `Exception("Sequence is empty")`
-without reading Current or invoking either callback.
+The selector has type `K(T)*`, and the comparer has type
+`int(immutable(K)*, immutable(K)*)*`. Default comparison uses `IComparable<K>`
+through `Comparer<K>::Compare`.
 
-Elements and keys follow ordinary value semantics. Reading a borrowed owning
-source element copies it. Passing that local to the by-value selector follows
-ordinary callback argument copying rules too. A returned owning key is stored
-as an ordinary value. A new winner moves both element and key into the retained
-locals. Non-winning locals and replaced winners are cleaned up normally. The
-result element is moved to the caller, and the retained key is destroyed.
-The scan retains the best element and key. Iterators, element/key copies, and
-callbacks can allocate or throw.
+Each element and key is read once. For N nonempty elements there are N selector
+calls and N-1 comparisons, with the current key first and retained best key
+second. Equal keys keep the first element. Empty input throws
+`Exception("Sequence is empty")`.
 
-Callbacks must not invalidate iteration through another alias. A comparer may
-borrow its two key arguments only during the call and must not retain those
-addresses or mutate the keys. A key containing raw pointers must keep its
-pointees valid throughout the scan: returning an address into a selector's
-by-value parameter does not extend that parameter's lifetime. Pointer elements
-and keys do not acquire ownership or lifetime tracking.
+The scan retains one best element and key. Replacing the best value moves the new
+winner and destroys the old one. The final element moves to the caller, and its
+retained key is destroyed. Types must support the ordinary assignments used by
+these locals.
 
-Exceptions propagate with ordinary cleanup of the iterator and initialized
-current/best elements and keys. An assignment target in the caller is replaced
-only after the terminal returns its completed result. Callback side effects
-through other aliases are outside that guarantee.
-
-As for Min/Max, retained element and key locals must permit ordinary assignment.
-Outer readonly/immutable types do not become writable automatically. Default
-comparison preserves the key type's existing ordering, including its floating
-NaN/signed-zero policy. Explicit comparers must define a consistent ordering.
-
-Selective source users add Queries/enumerable_extrema_by.gf with the ordinary
-sequence contracts. Default comparison additionally uses Collections/Comparer.gf and
-IComparable.gf. Include the dependencies of the selected element, iterator,
-callbacks, and exception runtime as well.
-
+Comparer arguments are borrows for the call. A pointer-valued key must stay valid
+through the scan. Returning an address inside a by-value selector parameter
+would leave the key dangling when that callback returns.
 
 ### Empty-safe keyed extrema
 
-`TryMinBy(selector, ref result)` and `TryMaxBy(selector, ref result)` scan once
-and return false for an empty sequence, leaving the initialized output unchanged.
-Explicit comparison uses `(selector, compare, ref result)`. Like the throwing
-forms, they select the first tied element, read each `Current` and select its key
-once, and compare the current key with the retained best key.
+`TryMinBy(selector, ref result)` and `TryMaxBy(selector, ref result)` return false
+for empty input. Explicit comparison uses `(selector, compare, ref result)`:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
 
 struct Ticket
 {
@@ -427,13 +323,21 @@ int main()
 }
 ```
 
-The output is replaced only after the complete scan, following `TryLast`'s
-ordinary move-assignment and destructor rules. Iterator, element/key copying,
-selector and comparer failures propagate. They do not become false, and failures
-before the final assignment preserve the old output. Source consumption and
-callback effects are not rolled back. A separate `Any()` check is unnecessary,
-which matters for stateful sources whose enumerations consume input.
+Output is replaced after the scan completes. Iterator, copy, selector, and
+comparer errors leave it unchanged and propagate. Source consumption and other
+callback effects remain. These overloads share the writable-output restriction
+above.
 
-Elements, keys and source views retain the ownership and borrowing rules above.
-The loop retains the best element and key. Value copies and callbacks can
-allocate. Ref-output overloads require writable element types.
+## Further references
+
+- [Zip](QUERY_ZIP.md) and [Concat](QUERY_CONCAT.md) for paired advancement and captures
+- [Distinct](QUERY_DISTINCT.md), [DistinctBy](QUERY_DISTINCT_BY.md), and
+  [Order](QUERY_ORDER.md) for buffered ownership
+- [TakeLast](QUERY_TAKE_LAST.md), [SkipLast](QUERY_SKIP_LAST.md), and
+  [Reverse](QUERY_REVERSE.md) for tail and replay behavior
+- [Min and Max](QUERY_EXTREMA.md) for ordering and ties
+- [SequenceEqual](QUERY_SEQUENCE_EQUAL.md) for paired equality
+- [Append and Prepend](QUERY_ENDPOINT.md) and [DefaultIfEmpty](QUERY_DEFAULT_IF_EMPTY.md)
+  for captured values
+- [Sum](QUERY_SUM.md), [CountBy](QUERY_COUNT_BY.md), [ToHashMap](QUERY_TO_HASH_MAP.md),
+  and [ToLookup](QUERY_LOOKUP.md) for aggregates

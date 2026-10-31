@@ -31,11 +31,9 @@ reading its complete dictionary identifier.
 
 ## Buffers
 
-Source provides `count` readable bytes, and output provides `capacity` writable
-bytes. The ranges must be disjoint. Both count outputs must be initialized,
-separate from each other and the buffers. Keep all storage alive until return.
-A zero count leaves the corresponding buffer untouched. Use valid dummy storage
-for an empty buffer. Empty output still requires a complete body and checksum.
+Source and output ranges must be disjoint. The consumed/written output variables
+must also be separate from each other and both buffers. Zero output capacity can
+decode an empty stream, provided its complete framing is present.
 
 ## Results
 

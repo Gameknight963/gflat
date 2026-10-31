@@ -1,46 +1,40 @@
 # Hexadecimal integer parsing
 
-`core/Text/hex_integer_parsing.gf` provides unsigned hexadecimal `TryParseHex...`
-functions in `Standard::Text` for `Byte`, `UShort`, `UInt`, `ULong`, and `NUInt`.
-`core/Text/hex_integer_parsing_throwing.gf` adds the optional throwing `ParseHex...`
-wrappers. Names follow the decimal parsers:
+`Standard::Text` provides unsigned hexadecimal parsers for `Byte`, `UShort`,
+`UInt`, `ULong`, and `NUInt`:
 
 ```cpp
 using Standard::Text;
+
 bool TryParseHexULong(readonly(char)* text, ulong* result) nothrow;
 bool TryParseHexULong(readonly(char)* text, nuint count, ulong* result) nothrow;
 ulong ParseHexULong(readonly(char)* text);
 ulong ParseHexULong(readonly(char)* text, nuint count);
 ```
 
-Digits are `0`–`9`, `a`–`f`, and `A`–`F`. A leading `0x` or `0X` is optional,
-but at least one digit is required. Leading zeroes are allowed. Signs, whitespace,
-underscores, trailing characters, and values outside the destination's range are
-rejected. Signed and two's-complement interpretations are not provided.
-`NUInt` uses the target pointer-sized unsigned limit.
+Digits are `0`–`9`, `a`–`f`, and `A`–`F`. A leading `0x` or `0X` is optional.
+At least one digit is required. Signs, whitespace, separators, trailing text,
+and out-of-range values fail. `NUInt` uses the target's unsigned pointer range.
 
 ```cpp
-using Standard; using Standard::Text;
+using Standard;
+using Standard::Text;
+
 uint flags = ParseHexUInt("0x80000001");
 ulong address = 0ul;
 bool valid = TryParseHexULong("fF0012", &address);
 ```
 
-The C-string form stops at the first zero byte. The counted form consumes exactly
-`count` bytes and needs no terminator. Zero bytes within that range are invalid.
-For example, parsing `"0xFF"` with count `1` reads the complete digit sequence
-`"0"`, whereas count `2` selects an incomplete prefix and fails. A `String` can
-be passed using `text.Data, text.Length` to validate all of its counted bytes.
+`TryParseHex...` returns false and writes zero on failure. `ParseHex...` throws
+`Exception` for the same inputs.
 
-`TryParseHex...` returns false and writes zero on every failure. It is `nothrow`
-and allocates nothing. `ParseHex...` throws `Exception` on the same invalid or
-out-of-range input. Neither form modifies disjoint input storage. The input must
-cover the requested readable bytes, and the result pointer must designate
-writable storage. Successful parsing finishes reading before committing its
-output, so suitably aligned output may overlap the input. On failure, the zero
-output also changes any overlapping input bytes.
+C-string forms stop at NUL. Counted forms validate every selected byte, so
+embedded NUL is invalid. Parsing `"0xFF"` with count one selects the valid digit
+`"0"`. Count two selects an incomplete prefix and fails.
 
-Overflow is checked before multiplication and addition, including at the
-unsigned 64-bit maximum. Include the hexadecimal parser source independently of the decimal parser. The Try-only source also works
-without the exception definitions or runtime. The separate throwing wrappers
-require those facilities.
+Output may overlap aligned writable input. Reading finishes before the result
+is stored, including the zero result on failure. For String input, pass
+`text.Data, text.Length`.
+
+Sources: `core/Text/hex_integer_parsing.gf` for Try forms and
+`core/Text/hex_integer_parsing_throwing.gf` for throwing forms.

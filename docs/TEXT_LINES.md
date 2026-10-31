@@ -1,12 +1,12 @@
 # Borrowed text lines
 
-`Standard::Text::TextLines` iterates counted text in memory without allocating a string per
-line. It uses the same line endings as `FileLines` and `Console`: LF and CRLF
-terminate lines. A bare CR remains text. Embedded null bytes are preserved.
+`Standard::Text::TextLines` yields readonly spans over lines in a byte buffer.
+String and character spans also offer `.Lines()`.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Memory;
+using Standard;
+using Standard::Memory;
 
 Span<readonly(char)> text = new("first\r\nsecond\n", 14);
 TextLines lines = new(text);
@@ -15,41 +15,25 @@ foreach (Span<readonly(char)> line in lines) {
 }
 ```
 
-The example produces two lines. Terminators are excluded from each view.
-Empty input contains no lines. `"\n"` contains one empty line. `"a\n\n"`
-contains `"a"` and an empty line. A trailing terminator does not introduce an
-additional final line. An unterminated final line is included, preserving any
-final bare CR.
+| Input | Lines |
+| --- | --- |
+| Empty | None |
+| `"\n"` | One empty line |
+| `"a\n\n"` | `"a"`, then an empty line |
+| Final unterminated text | One final line |
 
-The constructor takes `Span<readonly(char)>`. Build that span from a live
-counted buffer, or from `String.Data` and `String.Length`. The input does not
-need a null terminator, and no encoding conversion or validation is performed.
+LF and CRLF end a line and are excluded from its span. Bare CR and embedded NUL
+remain data. A final terminator creates no additional line.
 
-The optional `text_lines_span.gf` provides `.Lines()` for mutable and immutable
-character spans. `string_lines.gf` provides `.Lines()` for `String`, borrowing
-its bytes through an immutable receiver without copying its allocation. The
-extension accepts temporary owners, whose lifetime ends with the full
-expression. A returned view does not extend that lifetime: consume it immediately
-or retain the owner in a variable before storing the view. The compiler does not
-check borrowed-view lifetimes. The explicit free `Lines(ref text)` overload
-requires existing storage. These optional files keep the owning string and
-general span implementations independent of line enumeration.
+## Keeping line views
 
-`GetEnumerator()` returns a fresh independent nested `Enumerator`.
-`MoveNext()` remains false after completion. `Current` throws before the first
-successful advance and after completion. Copying a view or iterator copies its
-position and borrowed pointer, never its source bytes.
+Retain the input owner while using its lines, iterators, or queries. String
+destruction and buffer replacement can invalidate them. A view from a temporary
+String lasts only through that expression. Changes through other aliases are
+visible through existing line views.
 
-`GetEnumerator()` and `AsEnumerable()` accept mutable, shallow readonly, and
-immutable sequences. `Current` can be read through a readonly or immutable
-iterator observer. Advancing still requires a mutable iterator. These views
-prevent character writes through their returned spans, but do not freeze the
-backing storage: writes through another live alias remain visible.
+Each `GetEnumerator()` starts at the beginning. `Current` throws before the first
+successful advance and after completion. `AsEnumerable()` enables query operators
+over the same borrowed storage.
 
-Keep the input storage alive and stable while using any view, iterator, or
-returned line. Moving or resizing an owning source can invalidate them.
-These views never free the source. Valid iteration allocates nothing.
-
-`AsEnumerable()` enables the existing query operators when their source files
-are included. It captures the borrowed view, so those same lifetime rules apply
-to a query retained for later enumeration.
+Sources in `core/Text`: `TextLines.gf`, `text_lines_span.gf`, and `string_lines.gf`.

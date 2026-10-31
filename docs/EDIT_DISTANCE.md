@@ -1,16 +1,16 @@
 # Counted-byte edit distance
 
-`EditDistance::TryCompute(first, second, scratch, ref distance)` computes the
-minimum number of single-byte insertions, deletions, and substitutions needed to
-transform the first input into the second. Every operation costs one. This is
-[Levenshtein distance](https://xlinux.nist.gov/dads/HTML/Levenshtein.html), useful
-for small fuzzy-match candidates when callers control temporary memory.
-Transposition is not a single edit. Inputs are counted byte spans: NUL and high
-bytes are ordinary values. No Unicode decoding, normalization, or case folding
-is applied, so this is not a Unicode-character distance.
+`Standard::Text::EditDistance::TryCompute` calculates
+[Levenshtein distance](https://xlinux.nist.gov/dads/HTML/Levenshtein.html): the
+minimum number of byte insertions, deletions, and substitutions transforming one
+input into the other. Each operation costs one. Swapping different adjacent bytes costs
+two edits.
 
 ```csharp
-using Standard; using Standard::Text; using Standard::Memory;
+using Standard;
+using Standard::Text;
+using Standard::Memory;
+
 int main()
 {
     Span<readonly(char)> first = new("kitten", 6);
@@ -24,31 +24,19 @@ int main()
 }
 ```
 
-For two nonempty inputs, scratch needs at least `min(first.Length, second.Length)
-+ 1` writable `nuint` elements. The function uses the shorter input for columns,
-regardless of argument order. Insufficient scratch returns false before reading
-input bytes or writing scratch or `distance`. Their prior contents are preserved.
-If either input is empty, the result is the other length, no scratch is needed,
-and no data buffer is read or written. On success `distance` receives the answer.
-Scratch contents become working state and have no public meaning. Elements beyond
-the required prefix remain unchanged.
+| Parameter | Meaning |
+| --- | --- |
+| `first`, `second` | Readonly character spans to compare |
+| `scratch` | Writable span of at least `min(lengths) + 1` `nuint` elements |
+| `distance` | Result on success |
 
-Both inputs may overlap one another and must remain alive and unchanged during
-the call. Scratch must be separate from both input byte ranges and from all
-input/scratch span metadata. The `distance` variable must be separate from those
-buffers and metadata as well. Every nonempty span must describe valid readable
-input or writable scratch storage as appropriate. The helper does not retain any
-pointer and does not validate pointer ownership or overlapping caller storage.
+Insufficient scratch returns false and preserves scratch and result. If either
+input is empty, the answer is the other length and scratch is unnecessary.
 
-The method is `nothrow` and performs no allocation, formatting, or callbacks.
-It takes O(first.Length * second.Length) time and O(min(lengths)) caller-provided
-workspace. The implementation never multiplies the lengths. Very long inputs can
-therefore still take substantial time. A one-row dynamic program records costs,
-with saturating increments to prevent pointer-width arithmetic wraparound in
-unused high-cost alternatives. The exact distance is always representable because
-it is at most the longer input length.
+The inputs may overlap each other. Keep scratch and result separate from inputs
+and their span metadata. Scratch becomes working state during the call.
 
-Explicit source users include `core/Text/EditDistance.gf`, `Memory/Span.gf`, and its ordinary
-Enumerable/IEnumerable declaration dependencies, along with the normal exception
-and runtime declarations required by Span's checked operations. Span constructors and checked operations can emit exception support. Include
-their runtime dependencies even when calling this `nothrow` helper.
+Work is O(first length × second length), with one row of scratch. Matching is by
+byte, so a UTF-8 scalar may account for several edits.
+
+Source: `core/Text/EditDistance.gf`

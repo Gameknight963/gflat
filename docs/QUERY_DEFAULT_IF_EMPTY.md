@@ -1,11 +1,13 @@
 # Default value for an empty query
 
-`DefaultIfEmpty(value)` yields the source unchanged when it has an element. If
-its first `MoveNext()` reports no elements, the query yields its captured value
-once. It creates a lazy, repeatable query and does not change the source.
+`DefaultIfEmpty(value)` yields the source, or the supplied value once if the
+source is empty:
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Queries;
+using Standard;
+using Standard::Memory;
+using Standard::Queries;
+
 int main()
 {
     Span<int> empty = new();
@@ -20,60 +22,32 @@ int main()
 }
 ```
 
-The overload requires an explicit value with the sequence's existing `T` type.
-It composes with `Where`, `Take`, `Append` and other existing operators. Filtering
-the source to empty selects the fallback. Filtering the result can remove it.
-A nonempty or infinite source never emits the fallback.
+Put it after a filter to provide a fallback for an empty filtered result.
+A filter placed after it can remove that fallback.
 
-Creating the query captures a normal source view and the fallback under ordinary
-copy/move rules. A named owning fallback is copied. `DefaultIfEmpty(move value)`
-transfers it. Reusable queries require a copyable captured element. Moving a
-noncopyable owner into the factory does not make repeatable enumeration possible.
-There is no implicit borrow of the fallback variable or lifetime extension for
-underlying borrowed source storage.
+## Capturing the fallback
 
-`GetEnumerator()` constructs the underlying iterator, then copies the fallback
-into the wrapper iterator. It does not call underlying `MoveNext` or `Current`.
-The source may turn out to be nonempty, but the fallback is still copied and
-owned. `Take(0)` can also construct/copy source and fallback state before any
-advance. These copies may allocate or throw according to their types. If fallback
-copying fails after underlying iterator construction, ordinary cleanup destroys
-that iterator and any partially initialized fields.
+The query stores the value and copies it into each new iterator, even if the
+source later proves nonempty. Named owners are copied when captured.
+`DefaultIfEmpty(move value)` transfers the owner into the query, but its type
+must still support the per-iterator copy.
 
-The first move examines only the source's `MoveNext`. True selects its current
-source value. False selects the fallback once without reading source `Current`.
-After source iteration has begun, its first false move finishes the wrapper with
-no additional fallback. After the fallback, the next move finishes without
-advancing the source again. Exhaustion is sticky.
+The fallback has the sequence's existing element type. Outer `readonly` or
+`immutable` elements can require an explicit projection to an ordinary value
+before capture, as with [Append](QUERY_ENDPOINT.md).
 
-`Current` returns an ordinary `T` value. For source elements it delegates to the
-underlying `Current`, preserving effects such as repeated selector evaluation.
-For the fallback it copies the captured value on each read. It throws before the
-first successful move, after exhaustion, or after a failed move. A `Current`
-exception does not advance or finish the wrapper, so another read can retry.
-An underlying `MoveNext` exception propagates and permanently finishes this
-wrapper iterator. A fresh enumeration can retry the source.
+## Iteration
 
-Each iterator owns its underlying cursor and its separate fallback copy. They
-remain alive until iterator cleanup, including after a nonempty source, early
-exit, or exhaustion. Source view and cursor borrowing rules still apply. Owning
-cursor implementations can outlive the query, while borrowed source storage
-must remain valid. Query copying and source `SourceView()` follow the normal
-ownership rules of their source type.
+The first move tests the source. An empty source selects the fallback once.
+After a nonempty source ends, iteration finishes normally.
 
-The wrapper itself uses constant inline state, with no type erasure, direct heap
-allocation or direct GC calls. Owning element/source copies and underlying
-iterators may allocate or throw. Raw pointers copy addresses with their normal
-pointee rules. Managed references retain their ordinary shared targets and roots.
-There is no allocation-free promise for an arbitrary owning `T`.
+`Current` copies the captured fallback or reads the source's `Current` each
+time. Repeated source reads can repeat an upstream selector. A `MoveNext()`
+exception permanently finishes that iterator. A `Current` error leaves its
+position available for another read.
 
-As with `Append` and `Prepend`, capturing moves a value parameter of existing `T`.
-Outer `readonly` or `immutable` element types can require an explicit projection
-to an ordinary value before capture. The implementation follows the existing
-mutable generic observer/getter pattern to preserve ordinary pointer/reference
-copies. It does not add qualifier conversions or new compiler rules.
+Each iterator owns its fallback copy until destruction. Borrowed source views
+still follow the [query lifetime rules](QUERIES.md#ownership).
 
-Selective users include `Queries/DefaultIfEmptySource.gf` and
-`Queries/enumerable_default_if_empty.gf` with the normal IEnumerable,
-IEnumerator and Enumerable contracts, plus the other operators they call.
-Include the dependencies of the captured value and source iterator.
+Sources: `Queries/DefaultIfEmptySource.gf` and
+`Queries/enumerable_default_if_empty.gf`.

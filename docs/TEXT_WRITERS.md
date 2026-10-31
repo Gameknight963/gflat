@@ -1,44 +1,31 @@
 # Text writer helpers
 
-`Standard/core/Text/text_writer_line.gf` and
-`Standard/core/Text/text_writer_repeated.gf` add optional line and repeated-byte extensions
-to borrowed `ITextWriter*` values. Bring them into scope with `using Standard::Text;`:
+Import `Standard::Text` for line and repeated-byte operations on `ITextWriter`:
 
 ```csharp
 using Standard::Text;
 using Standard;
+
 Console::Error.WriteLine("warning");
 Console::Out.WriteLine("A\0B", 3);
 Console::Out.WriteLine();
 ```
 
-The parameterless overload writes one LF byte. The C-string overload scans to the
-first null. The counted overload preserves every byte, including embedded nulls.
-No String, GC, allocation, ownership transfer, or implicit flush is involved.
-The writer itself still determines where and how bytes are stored. For example,
-Windows libc text-mode standard streams translate LF to CRLF.
+| Operation | Output |
+| --- | --- |
+| `WriteLine()` | One LF byte |
+| `WriteLine(text)` | Bytes before the C string's first NUL, then LF |
+| `WriteLine(data, count)` | Counted bytes, then LF |
+| `WriteRepeated(value, count)` | One byte repeated `count` times |
 
-Counted and C-string lines write their body, then write LF separately. If the
-body write throws, the LF is not attempted. If the LF write fails, the body may
-already have been written. Calls do not promise atomic output or synchronization
-across multiple writes. Exceptions from the underlying writer propagate.
-
-These helpers work with any `ITextWriter*`, including borrowed File, BufferWriter,
-String, and application writer implementations. They never close or destroy it.
-Its owner must keep it alive for the call. As with File and Console counted
-writes, the caller supplies valid readable input storage.
-
-To measure emitted bytes without storing output, use
-[`CountingWriter`](COUNTING_WRITER.md). It also accepts these line helpers.
-
-`writer.WriteRepeated(value, count)` writes one `char` byte `count` times, using
-a fixed 64-byte stack buffer and counted writes of at most 64 bytes. Zero count
-makes no writer calls. It supports every byte value, including NUL and high bytes.
-It adds no terminator or newline. Use it for byte padding or rulers.
+Line bodies and LF are separate writes. A body failure skips LF, while an LF
+failure can leave the body already written. Concrete writers apply their own
+stream behavior, such as Windows Console's LF-to-CRLF translation.
 
 ```csharp
 using Standard::Text;
 using Standard;
+
 int main()
 {
     char[70] bytes;
@@ -52,30 +39,19 @@ int main()
 }
 ```
 
-The helper allocates nothing and retains no state or pointer. The writer is
-borrowed and must consume the supplied temporary span during each `Write`.
-It is never flushed, closed or destroyed by the helper. A writer may allocate
-or throw according to its own contract. Exceptions propagate and can leave an
-accepted prefix. Repeated output is not transactional, and retrying the whole
-operation may duplicate that prefix. Counting uses subtraction after each
-successful chunk, without multiplying or accumulating a potentially overflowing
-total. No total-output buffer is allocated.
-
-[`LinePrefixWriter`](LINE_PREFIX_WRITER.md) adds a counted prefix to each
-LF-delimited input line as bytes arrive. It borrows its destination and prefix,
-preserves source bytes, and needs no intermediate String or completion call.
+Repeated output uses chunks of at most 64 bytes. A writer error can leave a
+prefix, so retrying the whole operation may duplicate it. To measure formatting,
+use [CountingWriter](COUNTING_WRITER.md). To add a prefix per line, use
+[LinePrefixWriter](LINE_PREFIX_WRITER.md).
 
 ## Send one stream to two writers
 
-`Standard::Text::TeeWriter` borrows two `ITextWriter*` endpoints. Each `Write(data,
-count)` calls the first writer, then the second with the same pointer and count,
-including zero-length writes. Identical endpoints receive two calls. Counted
-bytes include NUL and high bytes. No encoding or newline conversion is added by
-the adapter. Each endpoint retains its own output behavior. Console streams can
-apply host text-mode transformations.
+`TeeWriter(first, second)` forwards each write to the first destination and then
+the second. This lets a formatter produce each chunk once for both outputs.
 
 ```csharp
-using Standard; using Standard::Text;
+using Standard;
+using Standard::Text;
 
 int main()
 {
@@ -91,36 +67,22 @@ int main()
 }
 ```
 
-A formatter writes to the tee once, so each emitted chunk reaches both endpoints
-without formatting twice or materializing a String. Constructor and adapter
-forwarding allocate nothing internally. Sinks and formatters may allocate or
-throw. Explicit source selection needs `Text/TeeWriter.gf` and the ordinary
-formatting contracts in `ITextWriter.gf` and `IFormattable.gf`, plus the selected endpoint/helper definitions.
+Keep both destinations alive. Input must remain valid through both calls and be
+separate from storage either destination may modify. Passing the same endpoint
+twice sends each chunk twice.
 
-The adapter owns neither endpoint. Keep both alive and valid for every write.
-Copying or moving the tee shares those same borrowed endpoints. Ending an
-adapter's lifetime does not write, flush, close or destroy either endpoint.
-No input pointer is retained by the tee. Input must remain readable and stable
-through both calls and must not overlap storage either sink might modify, move
-or reallocate, including their object state. Endpoints consume the supplied bytes
-during their calls. The tee does not supply storage for deferred use.
-
-Output is not transactional. If the first writer throws, the second is not
-called. If the second throws, the first may already have accepted the complete
-chunk. Either endpoint can emit a prefix before failing. The original exception
-propagates without rollback. Retrying can duplicate accepted output. The tee
-keeps no failure latch, so later writes are forwarded normally, subject to each
-endpoint's own recovery rules.
+If the first destination throws, the second receives nothing from that call.
+If the second throws, the first may already have accepted the complete chunk.
+Later writes are forwarded normally, subject to each destination's recovery rules.
 
 ## Buffer small writes before forwarding
 
-`Standard::Text::BufferedWriter` borrows an `ITextWriter*` sink and caller-provided
-scratch storage. It combines small writes without allocating a String. The
-constructor's capacity is entirely payload space. It reserves no terminator and
-does not touch scratch or write to the sink.
+`BufferedWriter(destination, scratch, capacity)` collects writes in caller scratch
+and sends each full block to the destination.
 
 ```csharp
-using Standard; using Standard::Text;
+using Standard;
+using Standard::Text;
 
 int main()
 {
@@ -137,46 +99,21 @@ int main()
 }
 ```
 
-For positive capacity, every nonempty write copies bytes into scratch, draining
-each full buffer immediately through one sink `Write`. Large writes use the same
-path, with no bypass. A partial buffer remains pending until later input fills it
-or `Flush()` is called. Binary NUL and high bytes are ordinary payload. Zero
-capacity instead forwards every nonempty write directly, never touching scratch.
-Empty writes and empty flushes make no sink calls and access no data storage.
-The language's non-null pointer requirement still applies to zero-capacity
-scratch and zero-length input.
+Call `Flush()` to send a partial block. It drains this buffer alone. For File or
+Console, flush the adapter first and the concrete stream afterward. Flush nested
+buffers from the outermost inward. Scope exit discards pending bytes.
 
-`Flush()` sends only this adapter's pending bytes. `ITextWriter` has no flush
-method, so it does not call the sink's device flush. For File or Console output,
-explicitly flush the adapter before flushing the concrete sink when needed.
-Nested buffers likewise require flushing from the outer adapter inward.
-Successful writes can leave pending data. Ending the adapter's lifetime performs
-no output, including when bytes remain pending. It never closes or destroys the
-sink. There is no reset or completion operation.
+Zero capacity forwards nonempty writes directly. Empty writes and flushes make
+no destination call.
 
-Constructor and successful forwarding allocate nothing internally. Formatters
-and sinks retain their ordinary allocation and exception behavior. A sink can
-accept a prefix before throwing. Its original exception propagates and latches
-that adapter as failed: later `Write`, including zero count, and `Flush` throw
-before accessing input or calling the sink. Earlier completed drains remain
-written. There is no rollback or safe replay guarantee for the buffered bytes.
+Keep scratch and the destination alive and at stable addresses. Input must be
+separate from scratch and storage the destination may change. A destination
+exception can leave partial output and permanently fails the buffer. Later writes
+and flushes throw.
 
-Keep the sink and full scratch region alive and at stable addresses throughout
-use. Nonempty input must remain readable and unchanged during each `Write` and
-must be disjoint from scratch and storage the sink might modify or reallocate.
-Scratch must also be separate from adapter/sink state and storage that sink
-writes might modify, move or reallocate. The sink consumes each supplied span
-during its call. The adapter retains no input pointer. No callback reentrancy,
-concurrent access or arbitrary external mutation of pending scratch is supported.
+Copies share scratch but duplicate pending length and status. Flushing two copies
+can duplicate output, while writing through one can overwrite another's pending
+bytes. Use one buffer per logical stream.
 
-Copies share scratch while duplicating the pending count and failure flag.
-They are not independent output branches: flushing both untouched copies emits
-the same pending bytes twice, and writes through either copy can replace bytes
-the other still considers pending. An existing copy does not automatically
-become failed when another copy fails. These sequential shared-buffer effects
-can be intentional. They are not prevented by the adapter. For one logical
-stream, prefer borrowing the writer through a pointer/reference, or moving its
-metadata for handoff, and use separate scratch for independent branches.
-
-Explicit source selection needs `Text/BufferedWriter.gf`, the ordinary
-`ITextWriter.gf`, `IFormattable.gf` and Exception contracts, and the chosen sink/formatter definitions.
+Sources in `core/Text`: `text_writer_line.gf`, `text_writer_repeated.gf`,
+`TeeWriter.gf`, and `BufferedWriter.gf`.

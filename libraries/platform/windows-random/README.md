@@ -25,7 +25,6 @@ int main()
 
 ## Results and storage
 
-- Supply writable storage for the requested count
 - True means the complete range was filled
 - Zero count succeeds without accessing the buffer or calling Windows
 - Counts above 4,294,967,295 bytes and positive requests on a non-64-bit layout
@@ -33,7 +32,6 @@ int main()
 - A native failure returns false. Discard the complete output range because any
   bytes in it may have changed
 
-The wrapper is `nothrow`, makes one native call, and retains no buffer pointer.
-It requires only the native API. Windows may allocate internally.
+The wrapper is `nothrow` and makes one native call.
 
 Native reference: [BCryptGenRandom](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom).

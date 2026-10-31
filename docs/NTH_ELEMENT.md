@@ -1,17 +1,14 @@
 # Selecting an element by rank
 
-`NthElement<T>(Span<T> values, nuint nth, compare)` rearranges a mutable span so
-that `values[nth]` compares equal to the value at that position in a fully sorted
-copy. Every earlier element is no greater than it, and every later element is
-no less. Neither side is necessarily sorted. Equal values need not retain order
-or identity at the selected rank.
-
-This is useful for selecting a median or percentile, or separating the smallest
-`k` values without ordering them all. The caller chooses the rank and any policy
-for even-sized medians or percentiles. The algorithm returns no owning value.
+`Standard::Collections::NthElement(values, nth, compare)` puts the value of sorted
+rank nth at that index. Earlier values compare no greater, and later values no
+less. Each side can remain unordered.
 
 ```csharp
-using Standard; using Standard::Memory; using Standard::Collections;
+using Standard;
+using Standard::Memory;
+using Standard::Collections;
+
 int Compare(readonly(int)* left, readonly(int)* right)
 {
     if (*left < *right) return -1;
@@ -30,39 +27,23 @@ int main()
 }
 ```
 
-`nth == values.Length` is a no-op, including zero on an empty span. A larger
-index throws `Exception("Selection index out of range", 3)` before comparing or
-changing elements. A singleton's rank zero does not call the comparator.
-These cases do not read element storage. To select the smallest `k` elements,
-pass `k` and inspect the prefix of length `k`. Passing the whole length needs no
-rearrangement. The prefix itself is not sorted.
+Pass rank k to select the smallest k values into the prefix. For a median,
+choose a rank according to the application's even-length policy.
 
-The comparator borrows `immutable(T)*` values and returns negative, zero or
-positive, as for `Sort`. It must provide a consistent ordering, must not mutate
-the elements/span through aliases, and must not retain borrowed element pointers
-across callbacks. Floating-point ordering is chosen by that comparator. No
-implicit NaN or signed-zero policy is added.
+| Rank | Effect |
+| --- | --- |
+| Below Length | Selects the element |
+| Equal to Length | Leaves the span unchanged |
+| Above Length | Throws `Exception("Selection index out of range", 3)` |
 
-The algorithm uses iterative three-way partitioning around an element tracked
-by index. Swaps update that index. It never copies an owning pivot or holds a
-removed element across a comparison. After a bounded number of partition passes
-it heapsorts the remaining active range with `Sort`. Worst-case work is
-O(n log n) comparisons, with constant extra storage and no recursion. There is
-no guarantee of worst-case linear selection or of a particular permutation.
+The comparator borrows immutable element pointers and must define a consistent
+order without changing the span through another alias. A comparator exception
+can leave a partially rearranged permutation. Element slots remain in place,
+while the owners stored there may move.
 
-Elements move through the existing `Swap`/`Sort` relocation rules. Noncopyable
-owners are supported. No element copy constructor or destructor is invoked by
-the algorithm. Managed-reference values retain the normal root-tracking rules.
-The algorithm allocates no heap scratch storage. Ordinary comparator and
-collector-hook effects still apply. Comparator errors propagate, leaving the
-span an initialized permutation that may already
-be rearranged. There is no rollback or completed partition guarantee on failure.
-The addresses of element slots stay fixed while the values stored there move.
-Raw aliases inside values are not retargeted. Obey the same borrowing rules as
-other in-place algorithms.
+Noncopyable values are supported. The implementation uses partitioning with a
+sorting fallback, giving O(n log n) worst-case comparisons and constant working
+storage. Default `NthElement(values, nth)` uses IComparable through Comparer.
 
-Include optional `Collections/nth_element.gf` with `Collections/span_algorithms.gf`,
-Span and their normal dependencies. `Collections/default_ordering.gf` adds
-`NthElement(values, nth)` for `T : IComparable<T>`, using `Comparer<T>::Compare`.
-Include `Collections/Comparer.gf` and `IComparable.gf` for that convenience. The explicit
-three-argument operation remains independent of those comparison contracts.
+Sources: `core/Collections/nth_element.gf`, `span_algorithms.gf`, and
+`default_ordering.gf` for default comparison.

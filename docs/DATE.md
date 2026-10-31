@@ -1,80 +1,61 @@
 # Calendar dates
 
-`Standard::Time::Date` is an immutable Gregorian calendar value from `0001-01-01` through
-`9999-12-31`.
-The Gregorian rules apply throughout that range, including before their historical
-adoption. Its single private `int` day number counts days since `0001-01-01`.
-Default construction represents the first day.
+`Standard::Time::Date` represents Gregorian dates from `0001-01-01` through
+`9999-12-31`. The Gregorian rules apply throughout that range, including dates
+before their historical adoption.
 
 ```csharp
 using Standard::Text;
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
+
 Date leapDay = new(2024, 2, 29);
 Date march = leapDay.AddDays(1);
 String message = s$"Next day: {march}"; // Next day: 2024-03-01
 ```
 
-`Date(year, month, day)` validates all components. Readonly `Year`, `Month`, `Day`,
-and `DayNumber` properties expose them. `Date::FromDayNumber(number)` accepts
-`0..3652058`. `Date::IsLeapYear(year)` and `Date::DaysInMonth(year, month)` validate
-the same year/month ranges. Invalid arguments throw `Exception`.
+## Construction and components
 
-`DayOfWeek` returns `Standard::Time::DayOfWeek`: `Sunday = 0`, `Monday = 1`, through
-`Saturday = 6`. `DayOfYear` is one-based, from `1` on January 1 through `365`
-(or `366` in a leap year). Both properties are `immutable`, `nothrow`, and
-allocate nothing.
+`Date(year, month, day)` checks the components. Default construction gives
+`0001-01-01`. `FromDayNumber(number)` accepts `0..3652058`, counting from that
+first day. Invalid arguments throw `Exception`.
 
-`AddDays(int days)` returns a new date. It never mutates the original. It uses a
-64-bit intermediate and throws if the result leaves the supported range, including
-for extreme 32-bit offsets. It does not wrap, clamp, or normalize invalid dates.
-Copying a Date copies its small value without allocating. `IEquatable<Date>`,
-`IComparable<Date>`, and `IHashable` use the day number for equality, chronological
-ordering, and hashing. Hashes are not a serialized representation. Use `DayNumber`
-or the documented calendar components when persistence matters.
+Properties expose `Year`, `Month`, `Day`, `DayNumber`, `DayOfYear`, and
+`DayOfWeek`. DayOfYear starts at one. DayOfWeek uses Sunday = 0 through
+Saturday = 6. `IsLeapYear` and `DaysInMonth` validate their year and month.
 
-`AddMonths(int months)` and `AddYears(int years)` perform calendar arithmetic.
-Offsets may be positive, negative, or zero. If the destination month has fewer
-days, the day is clamped to its last day: January 31 plus one month becomes
-February 28 (or 29), and February 29 plus one year becomes February 28.
-Results outside years `1..9999` throw `Exception`. Extreme offsets never wrap.
-Both methods preserve the original date and allocate nothing on success.
+## Calendar arithmetic
+
+`AddDays`, `AddMonths`, and `AddYears` return the shifted date and throw if it
+would leave the supported range. Month and year changes clamp the day to the
+destination month's final day:
 
 ```csharp
 using Standard::Time;
+
 Date invoice = new(2024, 1, 31);
 Date nextInvoice = invoice.AddMonths(1); // 2024-02-29
 Date anniversary = nextInvoice.AddYears(1); // 2025-02-28
 ```
 
-Clamping does not remember an original end-of-month preference. Calling
-`invoice.AddMonths(2)` gives March 31, whereas
-`invoice.AddMonths(1).AddMonths(1)` gives March 29. Base recurring schedules on
-the original date when that distinction matters. These calendar shifts differ
-from adding a fixed number of days.
+Clamping uses the current day. January 31 plus two months gives March 31,
+while two successive one-month additions can give March 28 or 29. Base a
+recurring schedule on its original date when that distinction matters.
 
 ## ISO week dates
 
-Immutable `IsoWeekYear` and `IsoWeekOfYear` expose ISO week numbering without
-changing the stored Gregorian date. ISO weeks begin on Monday. Week 1 contains
-January 4, equivalently the year's first Thursday. Dates near New Year can
-belong to an adjacent ISO year: `2021-01-01` is week 53 of ISO year 2020.
-Both properties are `nothrow` and allocate nothing. Default Date is Gregorian
-`0001-01-01`, also Monday in ISO year 1, week 1.
+`IsoWeekYear` and `IsoWeekOfYear` use weeks beginning Monday. Week 1 contains
+January 4. Near New Year, the ISO year can differ from the calendar year.
 
-`Date::GetIsoWeeksInYear(year)` accepts ISO years `1..9999` and returns 52 or 53.
-`Date::FromIsoWeek(year, week, weekday)` returns the corresponding Gregorian date.
-It requires a week from 1 through that ISO year's actual week count and a valid
-`DayOfWeek` value. The existing enum keeps its values: Sunday is 0, Monday is 1,
-through Saturday 6. Sunday is the final day of an ISO week.
-
-Invalid years, nonexistent week 53, invalid weekday values, and results outside
-the supported Gregorian Date range throw `Exception`. In particular, Saturday
-and Sunday of ISO year 9999's final week lie beyond `9999-12-31` and are rejected.
-Successful factories and week-count lookup allocate nothing. These methods
-perform calendar calculations without a clock, locale, or timezone.
+`GetIsoWeeksInYear(year)` returns 52 or 53. `FromIsoWeek(year, week, weekday)`
+requires an existing week and valid DayOfWeek. Results must also fit the Date
+range. For example, Saturday and Sunday of ISO year 9999's last week lie
+beyond `9999-12-31` and are rejected.
 
 ```csharp
-using Standard; using Standard::Time;
+using Standard;
+using Standard::Time;
+
 int main()
 {
     Date holiday = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);
@@ -85,50 +66,29 @@ int main()
 }
 ```
 
-The ISO fields and valid conversions can be checked against Microsoft's
-[ISOWeek API](https://learn.microsoft.com/en-us/dotnet/api/system.globalization.isoweek).
-The factory here explicitly validates that the requested week exists in
-the selected ISO year, in addition to validating the resulting Gregorian range.
-
 ## Formatting
 
-`TryFormat(output, capacity, ref written)` emits exactly ten ASCII bytes in
-`yyyy-MM-dd` form, without a null terminator. It is `nothrow` and allocates nothing.
-Insufficient capacity returns false, sets `written` to zero, and leaves all output
-bytes unchanged. Zero capacity does not access output. Keep the `written` location
-disjoint from both the output buffer and receiver storage, and supply writable
-storage for the stated capacity. Output may overlap the receiver when backed by
-enough writable bytes: all calendar components are captured before output writes.
-A successful overlapping write replaces those receiver bytes with text. It does
-not preserve the date object stored there.
+`TryFormat(output, capacity, ref written)` writes ten ASCII bytes,
+`yyyy-MM-dd`, without a terminator. It is `nothrow`. Insufficient capacity
+returns false, sets `written` to zero, and preserves output.
 
-`IFormattable.Format(writer)` sends that same ten-byte representation in one
-counted write using stack storage. It does not allocate a String or flush/close the
-writer. Writer failures propagate and may already have produced partial output.
-Ordinary string interpolation uses this interface, so `s$"{date}"` works without
-`ToString()` or a String dependency inside Date. Creating the interpolated String
-itself follows its usual allocation behavior.
+Output can overlap sufficiently backed receiver storage because formatting
+captures its components first. Keep `written` separate from receiver and
+output. `Format(writer)` and interpolation use the same representation.
 
 ## Parsing
 
-`Date::TryParse(text, count, &result)` accepts exactly ten ASCII bytes in
-`yyyy-MM-dd` form, with valid Gregorian components. It accepts neither whitespace,
-signs, omitted leading zeroes, trailing data, nor timestamps. Year zero and
-impossible dates such as `1900-02-29` fail. It is `nothrow` and allocates nothing.
-Failure returns false and resets `result` to the default date, `0001-01-01`.
-When `count != 10`, input is not read, including at zero length.
+`TryParse(text, count, &result)` and the C-string overload require exactly
+`yyyy-MM-dd` with a valid Gregorian date. Failure resets the result to
+`0001-01-01`. Both are `nothrow`. A counted length other than ten is rejected
+before reading input. The C-string form examines at most eleven bytes.
 
-`Date::TryParse(cString, &result)` accepts the same format terminated by NUL.
-It examines at most eleven bytes. Bytes after the first NUL are outside the
-C string. A counted input includes any embedded NUL and therefore rejects it.
-Supply readable input and a writable, properly aligned `Date*` result. Result
-storage may overlap input: all needed input is read before the output is committed.
-
-`Date::Parse(text, count)` and `Date::Parse(cString)` return the parsed date or
-throw `Exception` on invalid input. Successful parsing allocates nothing.
+Parse returns the value or throws `Exception`. Result storage can overlap
+input because parsing reads before assignment.
 
 ```csharp
 using Standard::Time;
+
 Date birthday = Date::Parse("2000-02-29");
 Date parsed = new();
 if (Date::TryParse("2024-12-31", &parsed)) {
@@ -136,14 +96,7 @@ if (Date::TryParse("2024-12-31", &parsed)) {
 }
 ```
 
-The sources are `core/Time/Date.gf` and `core/Time/DayOfWeek.gf`, with the normal
-equality/comparison/hash and text interface dependencies. The complete standard library includes them. No
-current-date lookup, custom formats, other calendars, or timezone conversion is
-provided by this API.
-
-The supported range and day-number baseline also match
-[.NET DateOnly](https://learn.microsoft.com/en-us/dotnet/api/system.dateonly), which
-the native tests use as an independent calendar and formatting oracle.
-Month/year arithmetic is also checked against
-[DateOnly.AddMonths](https://learn.microsoft.com/en-us/dotnet/api/system.dateonly.addmonths)
-and [DateOnly.AddYears](https://learn.microsoft.com/en-us/dotnet/api/system.dateonly.addyears).
+Equality, ordering, and hashing use the day number. Sources:
+`core/Time/Date.gf` and `core/Time/DayOfWeek.gf`, with their interface
+dependencies. Calendar behavior follows [.NET DateOnly](https://learn.microsoft.com/en-us/dotnet/api/system.dateonly)
+and [ISOWeek](https://learn.microsoft.com/en-us/dotnet/api/system.globalization.isoweek).

@@ -13,7 +13,11 @@ allocation, and process termination. This reference groups the APIs by use.
 | `Write(data, length)` | Writes counted bytes, including embedded zeros |
 | `WriteLine()` | Writes a newline |
 | `WriteLine(text)` / `WriteLine(data, length)` | Writes text followed by a newline |
+| `Write(value)` / `WriteLine(value)` | Formats a primitive value |
+| `Write(ref value)` / `WriteLine(ref value)` | Borrows an `IFormattable` value for output |
 | `Flush()` / `FlushError()` | Flushes stdout or stderr |
+
+See [formatted output](CONSOLE_FORMATTING.md) for primitive and custom values.
 
 Write and flush failures throw `Standard::IO::IOException`. Earlier output can
 already have reached the stream. Flush before reporting successful command-line

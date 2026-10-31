@@ -20,7 +20,7 @@ int main()
 }
 ```
 
-- `Write` and `WriteLine` accept C strings or counted bytes
+- `Write` and `WriteLine` accept C strings, counted bytes, or [formatted values](../../docs/CONSOLE_FORMATTING.md)
 - `Read` and `ReadExactly` fill caller storage
 - `ReadLine()` returns a String
 - `TryReadLine(ref line)` reuses a String's capacity and returns false at EOF

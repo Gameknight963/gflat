@@ -165,6 +165,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Area | APIs |
 | --- | --- |
 | Console | `Console::Write`, `WriteLine`, `Read`, `ReadByte`, `PeekByte`, `ReadExactly`, `ReadLine`, `TryReadLine` into buffers, String, or a borrowed writer. `Out`, `Error`, flush operations |
+| Formatted console output | [Primitive values and borrowed `IFormattable` values](CONSOLE_FORMATTING.md) |
 | Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileLineSequence`, `FileBinary`, [`FileHash`](FILE_HASH.md), [`FileVarInt`](FILE_VARINT.md) |
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |

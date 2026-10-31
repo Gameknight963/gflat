@@ -10,6 +10,18 @@ public class FreestandingCoreUtilitiesTests
     private const string ProgramSource = """
         extern ulong formatter_input() nothrow;
         extern void byte_search_input(byte* data) nothrow;
+        int DeflateProof() nothrow {
+            byte[5] compressed = [0x4b, 0x4c, 0x4a, 0x06, 0x00];
+            // Keep the header opaque to LLVM so the decoder cannot fold away.
+            compressed[0] = (byte)(74ul + (formatter_input() >> 63));
+            byte[5] output = [165, 165, 165, 165, 165];
+            nuint consumed = 0; nuint written = 0;
+            if (Standard::Compression::Deflate::Decompress(compressed, 5, &output[1], 3,
+                ref consumed, ref written) != Standard::Compression::Deflate::Status::Done) return 1;
+            if (consumed != 5 || written != 3 || output[0] != 165 || output[4] != 165) return 2;
+            if (output[1] != 97 || output[2] != 98 || output[3] != 99) return 3;
+            return 0;
+        }
         int Sha256Proof() nothrow {
             Standard::Hashing::SHA256 hash = new();
             char[3] text = ['a', 'b', (char)(98ul + (formatter_input() >> 63))];
@@ -352,6 +364,7 @@ public class FreestandingCoreUtilitiesTests
             if (Sha256Proof() != 0) return 180;
             if (Sha512Proof() != 0) return 181;
             if (HmacSha512Proof() != 0) return 182;
+            if (DeflateProof() != 0) return 183;
             return 42;
         }
         """;
@@ -367,7 +380,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Text/ascii.gf", "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf", "Encoding/Hex.gf", "Encoding/Base64.gf", "Encoding/Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf", "Hashing/SHA512.gf", "Hashing/HMACSHA512.gf",
             "Encoding/PercentEncoding.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Text/Utf8Decoder.gf",
-            "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Text/IntegerFormatting.gf", "Text/hex_integer_parsing.gf", "Text/boolean_parsing.gf", "Text/ByteSearch.gf", "Text/CString.gf", "Memory/bytes.gf", "Json/JsonString.gf", "Binary/VarInt.gf" }
+            "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Text/IntegerFormatting.gf", "Text/hex_integer_parsing.gf", "Text/boolean_parsing.gf", "Text/ByteSearch.gf", "Text/CString.gf", "Memory/bytes.gf", "Json/JsonString.gf", "Binary/VarInt.gf", "Compression/Deflate.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

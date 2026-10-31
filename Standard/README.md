@@ -27,6 +27,7 @@ namespace components. Both roots can contribute to the same namespace.
 | `Standard::IO` | Files, paths, borrowed byte readers, IO exceptions |
 | `Standard::Binary` | Binary cursors, byte-order operations, bit fields, variable-length integers |
 | `Standard::Encoding` | Base32, Base64, hexadecimal, percent encoding |
+| `Standard::Compression` | Bounded raw DEFLATE decoding |
 | `Standard::Json`, `Standard::Csv` | Format readers, writers, helpers, and exceptions |
 | `Standard::Time` | Dates, times, durations, clocks, timers |
 | `Standard::Net` | Numeric addresses, endpoints, and networks |
@@ -141,6 +142,7 @@ implementation lives in `libc`.
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification, comparison, case conversion, and case-insensitive hashing | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`; owning `Base64Text`, `Base64UrlText`, `HexText` helpers and writer `WriteHex` | [Caller-buffer, owning, and writer codecs](../docs/BINARY_CODECS.md) |
+| Raw compression | `Deflate::Decompress` | [Stored, fixed-Huffman, and dynamic-Huffman decoding into caller-owned buffers](core/Compression/DEFLATE.md) |
 | Padded Base32 | `Base32`, `Base32Text` | [Strict canonical caller-buffer codecs and owning results](../docs/BASE32.md) |
 | Streaming Base32 | `Base32Encoder`, `Base32Decoder` | [Encoding](../docs/BASE32_ENCODER.md), [strict decoding](../docs/BASE32_DECODER.md) through borrowed writers |
 | Streaming Base64 | `Base64Encoder`, `Base64Decoder` | [Encoding](../docs/BASE64_ENCODER.md), [strict decoding](../docs/BASE64_DECODER.md) through borrowed writers |

@@ -344,11 +344,12 @@ public partial class LlvmEmitter : IVisitor
 
         public void Execute(LlvmEmitter emitter)
         {
+            // Destructor entrypoints terminate on escape and cannot unwind into their callers.
             string dtorNs = Namespace ?? "";
             string dtorMangled = dtorNs.Length > 0
                 ? $"gflat${dtorNs}${StructName}$dtor"
                 : $"gflat${StructName}$dtor";
-            emitter.EmitCallInstruction("void", "@" + dtorMangled, $"%{StructName}* {LocalPtr}");
+            emitter.EmitCallInstruction("void", "@" + dtorMangled, $"%{StructName}* {LocalPtr}", handleUnwind: false);
         }
     }
 
@@ -388,7 +389,7 @@ public partial class LlvmEmitter : IVisitor
                 emitter.Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
                 string dtorFn = emitter.NewTemp();
                 emitter.Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{Class.Name}*)*");
-                emitter.EmitCallInstruction("void", dtorFn, $"%{Class.Name}* {LocalPtr}");
+                emitter.EmitCallInstruction("void", dtorFn, $"%{Class.Name}* {LocalPtr}", handleUnwind: false);
             }
             else
             {
@@ -396,7 +397,7 @@ public partial class LlvmEmitter : IVisitor
                 string dtorMangled = dtorNs.Length > 0
                     ? $"gflat${dtorNs}${Class.Name}$dtor"
                     : $"gflat${Class.Name}$dtor";
-                emitter.EmitCallInstruction("void", "@" + dtorMangled, $"%{Class.Name}* {LocalPtr}");
+                emitter.EmitCallInstruction("void", "@" + dtorMangled, $"%{Class.Name}* {LocalPtr}", handleUnwind: false);
             }
 
             emitter.Emit($"    store i8** null, i8*** {vtableSlot}");
@@ -1611,7 +1612,7 @@ public partial class LlvmEmitter : IVisitor
                 string baseDtorName = baseInfo.Namespace.Length > 0
                     ? $"gflat${baseInfo.Namespace}${baseInfo.Name}$dtor"
                     : $"gflat${baseInfo.Name}$dtor";
-                EmitCallInstruction("void", "@" + baseDtorName, $"%{baseInfo.Name}* {baseThis}");
+                EmitCallInstruction("void", "@" + baseDtorName, $"%{baseInfo.Name}* {baseThis}", handleUnwind: false);
             }
         }
 
@@ -3258,7 +3259,7 @@ public partial class LlvmEmitter : IVisitor
                     string dtorFn = NewTemp();
                     Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{dtorCall.Class.Name}*)*");
                     TransferArguments();
-                    EmitCallInstruction("void", dtorFn, $"%{dtorCall.Class.Name}* {classPtr}");
+                    EmitCallInstruction("void", dtorFn, $"%{dtorCall.Class.Name}* {classPtr}", handleUnwind: false);
                 }
                 else
                 {
@@ -3273,7 +3274,7 @@ public partial class LlvmEmitter : IVisitor
                         ? $"gflat${dtorNs}${dtorCall.Class.Name}$dtor"
                         : $"gflat${dtorCall.Class.Name}$dtor";
                     TransferArguments();
-                    EmitCallInstruction("void", "@" + dtorMangled, $"%{dtorCall.Class.Name}* {classPtr}");
+                    EmitCallInstruction("void", "@" + dtorMangled, $"%{dtorCall.Class.Name}* {classPtr}", handleUnwind: false);
                 }
             }
             else if (_typeChecker.TryGetStructDestructorCall(node, out TypeChecker.StructInfo? structInfo) && structInfo != null)
@@ -3289,7 +3290,7 @@ public partial class LlvmEmitter : IVisitor
                     ? $"gflat${dtorNs}${structInfo.Name}$dtor"
                     : $"gflat${structInfo.Name}$dtor";
                 TransferArguments();
-                EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}");
+                EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}", handleUnwind: false);
             }
 
             // gflat$Memory$Free is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
@@ -4369,7 +4370,7 @@ public partial class LlvmEmitter : IVisitor
                 Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
                 string dtorFn = NewTemp();
                 Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{dtorCall.Class.Name}*)*");
-                EmitCallInstruction("void", dtorFn, $"%{dtorCall.Class.Name}* {classPtr}");
+                EmitCallInstruction("void", dtorFn, $"%{dtorCall.Class.Name}* {classPtr}", handleUnwind: false);
             }
             else
             {
@@ -4383,7 +4384,7 @@ public partial class LlvmEmitter : IVisitor
                 string dtorMangled = dtorNs.Length > 0
                     ? $"gflat${dtorNs}${dtorCall.Class.Name}$dtor"
                     : $"gflat${dtorCall.Class.Name}$dtor";
-                EmitCallInstruction("void", "@" + dtorMangled, $"%{dtorCall.Class.Name}* {classPtr}");
+                EmitCallInstruction("void", "@" + dtorMangled, $"%{dtorCall.Class.Name}* {classPtr}", handleUnwind: false);
             }
         }
         else if (_typeChecker.TryGetStructDestructorCall(node, out TypeChecker.StructInfo? structInfo) && structInfo != null)
@@ -4398,7 +4399,7 @@ public partial class LlvmEmitter : IVisitor
             string dtorMangled = dtorNs.Length > 0
                 ? $"gflat${dtorNs}${structInfo.Name}$dtor"
                 : $"gflat${structInfo.Name}$dtor";
-            EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}");
+            EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}", handleUnwind: false);
         }
 
         if (_typeChecker.ResolveAlias(ptrType) is PointerTypeExpression rawPointer &&

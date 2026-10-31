@@ -135,7 +135,7 @@ public partial class LlvmEmitter
         {
             string ns = emitter._typeChecker.GetClassByIdentity(name)!.Namespace;
             string destructor = ns.Length > 0 ? $"gflat${ns}${name}$dtor" : $"gflat${name}$dtor";
-            emitter.EmitCallInstruction("void", "@" + destructor, $"%{name}* {address}");
+            emitter.EmitCallInstruction("void", "@" + destructor, $"%{name}* {address}", handleUnwind: false);
             emitter.EmitManagedReferences(NamedTypeExpression.Resolved(name, 0), address, true);
         }
     }

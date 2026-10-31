@@ -30,7 +30,7 @@ public partial class LlvmEmitter
         string thunk = $"gflat${owner}$interface_destroy";
         if (_interfaceDestructors.Add(owner))
         {
-            EmitGlobal($"define internal void @{thunk}(i8* %data){NoBuiltinsAttribute} {{");
+            EmitGlobal($"define internal void @{thunk}(i8* %data) nounwind{NoBuiltinsAttribute} {{");
             EmitGlobal("entry:");
             if (_typeChecker.IsClassByIdentity(owner) || NeedsCleanup(NamedTypeExpression.Resolved(owner, 0)))
             {
@@ -63,7 +63,7 @@ public partial class LlvmEmitter
         Emit($"    {slot} = getelementptr i8*, i8** {table}, i32 {_typeChecker.GetInterface(iface)!.Methods.Count}");
         Emit($"    {raw} = load i8*, i8** {slot}");
         Emit($"    {fn} = bitcast i8* {raw} to void (i8*)*");
-        EmitCallInstruction("void", fn, $"i8* {data}");
+        EmitCallInstruction("void", fn, $"i8* {data}", handleUnwind: false);
         return data;
     }
 

@@ -1,12 +1,12 @@
 namespace Standard;
 
 /// Creates version 4 UUIDs using an explicitly supplied random-byte callback.
-/// No default provider is selected. The generator itself uses no heap storage on success.
+/// Successful calls use a fixed stack buffer.
 public static class UuidGenerator
 {
-    /// Calls fill once with a temporary writable 16-byte buffer; true requires all bytes filled.
+    /// Calls fill once with a temporary writable 16-byte buffer. True requires all bytes filled.
     /// The buffer is valid only during the callback and must not be retained.
-    /// False discards partial bytes and writes Nil; callback exceptions propagate.
+    /// False discards partial bytes and writes Nil. Callback exceptions propagate.
     public static bool TryCreateVersion4(bool(byte*, nuint)* fill, ref Uuid result)
     {
         byte[16] bytes;

@@ -2,7 +2,7 @@ namespace Standard::IO;
 
 /// Borrows one source cursor and permits at most the specified number of bytes.
 /// No read-ahead, buffer allocation, closing or ownership transfer is performed.
-/// Keep the source alive and unmoved; do not interleave other consuming access.
+/// Keep the source alive and unmoved. Do not interleave other consuming access.
 /// Copies share the source cursor but have independent remaining allowances.
 public struct LimitedReader : IByteReader
 {
@@ -18,7 +18,7 @@ public struct LimitedReader : IByteReader
     }
 
     /// Unused allowance, not the source length. Early EOF leaves this positive.
-    /// After failure it remains the last validated allowance; reads then reject.
+    /// After failure it remains the last validated allowance. Reads then reject.
     public nuint Remaining { immutable get nothrow => remaining; }
 
     /// Performs at most one source read, capped to the unused allowance.

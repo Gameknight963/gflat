@@ -1,7 +1,7 @@
 namespace Standard::Compression;
 
 /// Decodes one raw RFC 1951 stream into caller-owned storage, without allocating.
-/// This is a one-shot operation; counts report bytes examined and emitted, not resumable state.
+/// Decodes the complete stream in one call. Counts report bytes examined and emitted.
 public static class Deflate
 {
     public enum Status { Done, NeedInput, OutputTooSmall, InvalidData }
@@ -125,9 +125,9 @@ public static class Deflate
     }
 
     /// Borrows disjoint source/output buffers and disjoint count outputs until return.
-    /// Done stops after the final block; whole trailing bytes remain unconsumed.
+    /// Done stops after the final block. Whole trailing bytes remain unconsumed.
     /// Final-byte padding is ignored. All other statuses leave a possibly partial prefix.
-    /// Retrying requires the complete input and a fresh output pass; no state is retained.
+    /// Retrying requires the complete input and a fresh output pass. No state is retained.
     /// Accepts the common duplicate length-258 encoding (code 284 plus extra value 31).
     public static Status Decompress(readonly(byte)* source, nuint count, byte* output, nuint capacity,
         ref nuint consumed, ref nuint written) nothrow

@@ -2,7 +2,7 @@ using Standard::Text;
 namespace Standard::IO;
 
 /// Clears line first and reuses its capacity, matching Console's ref-String contract.
-/// False leaves line empty; errors may leave an already-appended prefix. No rollback or drain.
+/// False leaves line empty. Errors may leave an already-appended prefix. No rollback or drain.
 /// Input must not borrow line's storage, which Clear or later growth can change.
 public bool TryReadLine(IByteReader* input, ref String line)
 {
@@ -11,7 +11,7 @@ public bool TryReadLine(IByteReader* input, ref String line)
 }
 
 /// Returns an owning counted line, or throws EndOfStreamException before any line.
-/// Empty terminated lines return an empty String; errors use normal local cleanup.
+/// Empty terminated lines return an empty String. Errors use normal local cleanup.
 public String ReadLine(IByteReader* input)
 {
     String line = new();

@@ -25,14 +25,14 @@ bool found = input.TrySplitOnce('=', ref key, ref value);
 ```
 
 The separator is excluded from both views. A separator at either end produces
-an empty side; a one-byte input containing the separator produces two empty
+an empty side. A one-byte input containing the separator produces two empty
 views and returns true. Missing separators, including in empty input, return
 false and reset **both** outputs to canonical empty spans (length zero, null
 Data). Embedded nulls and high bytes are ordinary counted data. This operation
 does not decode Unicode or inspect a terminator.
 
-The two output references must designate distinct span variables. The receiver
-is passed by value, so either output may reuse the receiver variable's metadata:
+The two output references must designate distinct span variables. The method saves
+the receiver's metadata before writing either output, so an output may reuse it:
 `input.TrySplitOnce('=', ref key, ref input)` keeps the remainder in `input`.
 The source bytes are never changed or copied, and the operation allocates nothing.
 It uses the existing checked Span indexer/slicing operations and does not add a

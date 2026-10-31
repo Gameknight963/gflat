@@ -28,14 +28,15 @@ properties expose the exact count and signed components. Division truncates
 toward zero: minus 25 hours has `Days == -1` and `Hours == -1`, while minus one
 tick has zero whole components. Hours range from -23 through 23, minutes and
 seconds from -59 through 59, and milliseconds from -999 through 999.
+
 `TotalMilliseconds`, `TotalSeconds`, `TotalMinutes`, `TotalHours`, and `TotalDays`
 return the complete interval as an approximate `double` in that unit, including
 fractional units. They are immutable, `nothrow`, and allocate nothing. They are
-totals rather than components: 25 hours has `Hours == 1` and `TotalHours == 25`;
-minus one tick has zero whole components and negative fractional totals.
+totals rather than components: 25 hours has `Hours == 1` and `TotalHours == 25`.
+Minus one tick has zero whole components and negative fractional totals.
 Each converts ticks to `double` and divides by the unit's tick scale. Large
-values can lose tick precision; use `Ticks` for exact storage or arithmetic.
-The natural approximate result is not clamped to a whole-unit integer range.
+values can lose tick precision. Use `Ticks` for exact storage or arithmetic.
+The approximate result retains fractional units across the full tick range.
 
 ```cpp
 using Standard; using Standard::Time;
@@ -54,7 +55,7 @@ duration in milliseconds without changing the clock provider or allocating.
 for overflow before performing signed arithmetic. They throw `Exception` when
 the result would lie outside the signed tick range. In particular, negating
 `FromTicks(-9223372036854775807l - 1l)` throws because its positive counterpart
-does not fit. Successful factories and arithmetic allocate nothing; throwing
+does not fit. Successful factories and arithmetic allocate nothing. Throwing
 operations follow the ordinary exception allocation contract.
 
 ## Formatting
@@ -76,7 +77,7 @@ location must be separate from both output and receiver storage.
 `IFormattable.Format(writer)` writes the same representation with one counted
 write from stack storage. It borrows the writer and neither retains it nor
 flushes or closes it. Writer failures propagate and may leave partial output.
-TimeSpan itself has no String dependency; ordinary interpolation can use its
+TimeSpan itself has no String dependency. Ordinary interpolation can use its
 formatting interface. Allocating an interpolated String follows String's usual
 allocation behavior.
 
@@ -84,17 +85,17 @@ allocation behavior.
 
 `TimeSpan::TryParse(text, count, &result)` accepts a complete invariant ASCII
 interval in the form `[-][days.]hh:mm:ss[.fraction]`. Hours, minutes, and seconds
-each require exactly two decimal digits. Hours range from `00` through `23`;
-minutes and seconds from `00` through `59`. Optional days contain one or more
+each require exactly two decimal digits. Hours range from `00` through `23`.
+Minutes and seconds from `00` through `59`. Optional days contain one or more
 decimal digits, including leading zeros. An optional fractional second contains
 one through seven digits, padded on the right to seven tick digits:
 `00:00:01.5` is one and a half seconds. Formatting still emits seven fractional
 digits whenever the fraction is nonzero.
 
 Both signed tick endpoints are supported, including
-`-10675199.02:48:05.4775808`. Magnitudes outside the signed range fail;
+`-10675199.02:48:05.4775808`. Magnitudes outside the signed range fail.
 `10675199.02:48:05.4775808` is therefore invalid. A leading minus applies to the
-complete interval; negative zero becomes zero. A plus sign, whitespace, embedded
+complete interval. Negative zero becomes zero. A plus sign, whitespace, embedded
 NUL, trailing data, omitted clock components, and unit words are rejected.
 
 Counted input is at most 26 bytes, including any day-prefix leading zeros.
@@ -128,8 +129,7 @@ int main()
 signed tick count. Comparison returns -1, 0, or 1 without subtracting the counts,
 so ordering works across the full range. Equal values have equal hashes.
 Hashes serve collections and are not a stable serialized representation.
-Use `Ticks` when persistence matters. No arithmetic operators, clocks,
-or calendar arithmetic are provided.
+Use `Ticks` when persistence matters.
 
 For selective source use, include `core/Time/TimeSpan.gf`, `core/ITextWriter.gf`, `core/IFormattable.gf`,
 `core/IEquatable.gf`, `core/IComparable.gf`, and `core/IHashable.gf` with
@@ -138,5 +138,4 @@ For selective source use, include `core/Time/TimeSpan.gf`, `core/ITextWriter.gf`
 The tick unit, signed components, and constant spelling match documented
 [.NET TimeSpan semantics](https://learn.microsoft.com/en-us/dotnet/api/system.timespan)
 and the [constant format](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-timespan-format-strings).
-Native tests use .NET as an independent result oracle. The implementation is
-original gflat source and does not incorporate .NET runtime code.
+Native tests compare results against .NET.

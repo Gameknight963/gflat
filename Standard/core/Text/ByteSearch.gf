@@ -51,12 +51,12 @@ public static class ByteSearch
         readonly(byte)* pattern, nuint count) nothrow
         => SearchAny(data, length, pattern, count, true, false);
 
-    /// Finds the first byte outside the counted set; an empty set selects zero without pointer reads.
+    /// Finds the first byte outside the counted set. An empty set selects zero without pointer reads.
     public static nuint IndexOfAnyExcept(readonly(byte)* data, nuint length,
         readonly(byte)* pattern, nuint count) nothrow
         => SearchAny(data, length, pattern, count, false, true);
 
-    /// Finds the last byte outside the counted set; empty data always returns Length.
+    /// Finds the last byte outside the counted set. Empty data always returns Length.
     public static nuint LastIndexOfAnyExcept(readonly(byte)* data, nuint length,
         readonly(byte)* pattern, nuint count) nothrow
         => SearchAny(data, length, pattern, count, true, true);

@@ -2,9 +2,9 @@ using Standard::Memory;
 namespace Standard::Collections;
 
 /// Finds the first contiguous pattern match, or returns the source Length.
-/// Empty patterns return zero; oversized patterns return Length without comparisons.
+/// Empty patterns return zero. Oversized patterns return Length without comparisons.
 /// Both spans must remain valid and stable and may overlap. Elements are borrowed, source first.
-/// Uses constant storage, no element copies or library allocation; callback exceptions propagate.
+/// Uses constant storage, no element copies or library allocation. Callback exceptions propagate.
 public nuint IndexOf<T>(Span<immutable(T)> values, Span<immutable(T)> pattern,
     bool(immutable(T)*, immutable(T)*)* equal)
 {
@@ -25,9 +25,9 @@ public nuint IndexOf<T>(Span<immutable(T)> values, Span<immutable(T)> pattern,
 }
 
 /// Finds the last contiguous pattern match, or returns the source Length.
-/// Empty patterns return Length as the reverse insertion endpoint; oversized patterns also return Length.
-/// Candidates run right to left; each candidate compares offsets left to right, source element first.
-/// Valid stable spans may overlap. No element copies or library allocation; callback exceptions propagate.
+/// Empty patterns return Length as the reverse insertion endpoint. Oversized patterns also return Length.
+/// Candidates run right to left. Each candidate compares offsets left to right, source element first.
+/// Valid stable spans may overlap. No element copies or library allocation. Callback exceptions propagate.
 public nuint LastIndexOf<T>(Span<immutable(T)> values, Span<immutable(T)> pattern,
     bool(immutable(T)*, immutable(T)*)* equal)
 {

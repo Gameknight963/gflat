@@ -15,7 +15,7 @@ long ParseLong(readonly(char)* text, nuint count);
 ```
 
 The null-terminated form stops at the first null byte. The counted form consumes
-exactly `count` bytes; an embedded null is invalid input. Pointers must designate
+exactly `count` bytes. An embedded null is invalid input. Pointers must designate
 the requested readable input and writable result storage.
 
 Every parser accepts decimal digits with an optional leading `+`. Signed parsers
@@ -41,11 +41,11 @@ also changes any overlapping input bytes.
 The pointer-based `TryParse...` overloads explicitly guarantee `nothrow` and
 allocate nothing under their memory preconditions. Their shared magnitude and
 length helpers are also `nothrow`. The source files also contain the throwing
-`Parse...` variants; including either complete file still requires the normal
+`Parse...` variants. Including either complete file still requires the normal
 exception definitions and runtime.
 
 `core/Text/parsing.gf` supplies the existing `Int` functions. The other widths live
-in `core/Text/integer_parsing.gf`; neither file depends on libc. Optional
+in `core/Text/integer_parsing.gf`. Neither file depends on libc. Optional
 `core/Text/string_parsing.gf` and `core/Text/string_integer_parsing.gf` provide borrowed
 immutable String extension methods:
 
@@ -59,7 +59,7 @@ bool valid = text.TryParseULong(&attempted);
 
 These methods use `String.Length`, preserve embedded nulls for validation, and
 do not copy or allocate string storage. The String `TryParse...` wrappers are
-also explicitly `nothrow`; the `Parse...` wrappers retain their exceptions.
+also explicitly `nothrow`. The `Parse...` wrappers retain their exceptions.
 
 ## Counted span extensions
 
@@ -82,11 +82,11 @@ existing parsers. They do not scan for a terminator, copy the owner, or retain a
 pointer. An empty span fails normally and writes zero from `TryParse...`, even
 when its `Data` is null. Embedded NUL remains invalid decimal text. Successful
 and failed overlapping outputs follow the counted pointer rules above. Keep
-input and output storage valid for the call; the span does not extend their
+input and output storage valid for the call. The span does not extend their
 lifetimes. The `TryParse...` extensions are `nothrow` and allocate nothing.
 
 The two wrapper files are optional and add no dependency to `Memory/Span.gf` or the
 base parsers. Explicit source selections still need their normal Span/query
-contracts and `Text/parsing.gf`/`Text/integer_parsing.gf`; those base files include throwing
+contracts and `Text/parsing.gf`/`Text/integer_parsing.gf`. Those base files include throwing
 definitions, so selecting the Try wrapper alone does not remove their exception
 dependencies. Boolean and hexadecimal parsing are separate APIs.

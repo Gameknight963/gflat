@@ -7,7 +7,7 @@ bytes, CR, and LF. It neither validates encoding nor normalizes line endings.
 
 For prefix `> `, input `one\n\ntwo\r\n` becomes `> one\n> \n> two\r\n`.
 An empty input produces no prefix. A final LF produces no dangling prefix.
-A bare CR is ordinary text; CRLF split between writes behaves exactly as one
+A bare CR is ordinary text. CRLF split between writes behaves exactly as one
 write. Prefix bytes are literal output and do not affect input line state,
 even when the prefix itself contains LF. An empty prefix forwards unchanged
 bytes. Zero-length writes read no source or prefix storage and emit no calls.
@@ -31,8 +31,8 @@ int main()
 
 This preserves exact bytes with binary File sinks. Console streams may apply
 host text-mode transformations. The writer has no completion, flush, close,
-reset, or destructor output. The sink and prefix must remain alive and valid;
-the prefix is not copied. Changing prefix bytes between calls changes later
+reset, or destructor output. The sink and prefix must remain alive and valid.
+The prefix is not copied. Changing prefix bytes between calls changes later
 prefixes. Do not mutate prefix storage during a call. Source and prefix storage
 must not overlap storage that the sink might modify, move, or reallocate while
 writing, and a sink callback must not reenter or copy/use this same writer.
@@ -54,7 +54,7 @@ borrows a formatter object instead of prefix bytes. It calls the object's
 `Format(destination)` exactly once when the first source byte of each new line
 arrives. An empty line represented by LF still gets a prefix. Empty writes and
 a trailing LF do not request an extra prefix. The formatter can emit any number
-of writes, including none; its emitted LF bytes never affect input line state.
+of writes, including none. Its emitted LF bytes never affect input line state.
 The counted constructor keeps its existing behavior and does not invoke Format.
 
 ```csharp
@@ -88,16 +88,16 @@ int main()
 
 This fixed-date example has no OS clock dependency. A caller can instead keep
 its own formatter that obtains UTC time from an explicitly referenced platform
-clock library; LinePrefixWriter itself never chooses or queries a clock.
+clock library. LinePrefixWriter itself never chooses or queries a clock.
 The prefix object must outlive every write using it, and it is not copied or
-owned. The immutable interface view permits calling its immutable Format method;
-it does not freeze other aliases. Changes between calls are visible at later
+owned. The immutable interface view permits calling its immutable Format method.
+It does not freeze other aliases. Changes between calls are visible at later
 line starts. Prefix formatters must not mutate themselves or their backing
 storage through another alias during Format, retain borrowed output/input
 addresses, or reenter/copy/use this writer during a callback.
 
 The writer marks an operation as failed before invoking either the formatter or
-the sink. If either throws, its original exception propagates; every later
+the sink. If either throws, its original exception propagates. Every later
 write, including an empty one, rejects the writer with its existing error.
 There is no rollback, automatic retry, or formatter call after failure.
 The destination may already contain partial prefix or input bytes. Copies share

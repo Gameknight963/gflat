@@ -1,11 +1,11 @@
 namespace Standard::IO;
 
-/// Appends one counted byte line to a borrowed writer; never clears or closes it.
-/// LF and CRLF end a line; bare CR, embedded zeros and high bytes remain data.
-/// False means EOF before any line; empty terminated and final nonempty lines return true.
+/// Appends one counted byte line to a borrowed writer. Never clears or closes it.
+/// LF and CRLF end a line. Bare CR, embedded zeros and high bytes remain data.
+/// False means EOF before any line. Empty terminated and final nonempty lines return true.
 /// Uses stack scratch, no read-ahead or heap buffer. Wrap input once in BufferedReader when useful.
-/// Source/writer errors propagate unchanged; consumed input and prior output are not rolled back.
-/// An uncommitted scratch prefix can be lost on error; no remaining input is drained.
+/// Source/writer errors propagate unchanged. Consumed input and prior output are not rolled back.
+/// An uncommitted scratch prefix can be lost on error. No remaining input is drained.
 /// Keep source/sink alive, unmoved, and disjoint from each other and retained input/output storage.
 public bool TryReadLine(IByteReader* input, ITextWriter* output)
 {

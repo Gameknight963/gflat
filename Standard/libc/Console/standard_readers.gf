@@ -4,7 +4,7 @@ namespace Console;
 private reader_detail::StandardReader inputReader = new reader_detail::StandardReader();
 
 /// Borrows a stable process-lifetime reader over the current stdin stream.
-/// Never delete or explicitly destroy this pointer; it owns no stream.
+/// Never delete or explicitly destroy this pointer. It owns no stream.
 public IByteReader* In { get nothrow => &inputReader; }
 
 namespace reader_detail

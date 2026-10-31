@@ -13,7 +13,7 @@ foreach (uint scalar in text) {
 
 The pointer/count constructor accepts `readonly(char)*?` and `nuint`. Null is
 accepted only when count is zero. The parameterless constructor creates an
-empty view. `ByteLength` reports the captured byte count; it does not scan input.
+empty view. `ByteLength` reports the captured byte count. It does not scan input.
 The length getter is `nothrow`.
 The view does not require String and does not own or retain an allocation.
 
@@ -42,7 +42,7 @@ remaining bytes. On a failed decode the byte position stays unchanged, so
 calling `MoveNext()` again on unchanged input throws again.
 
 `Current` throws before the first successful `MoveNext()`, after exhaustion,
-and after a decoding error. Valid enumeration allocates nothing; failures use
+and after a decoding error. Valid enumeration allocates nothing. Failures use
 the normal exception runtime. `Text/utf8.gf`, the generic enumeration interface
 definitions, and `Queries/Enumerable.gf` are dependencies of `Text/Utf8Scalars.gf`.
 Query operators additionally require their ordinary collection source files.

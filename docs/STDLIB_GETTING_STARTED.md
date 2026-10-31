@@ -42,7 +42,7 @@ int main()
 }
 ```
 
-`s"..."` constructs an owning `String`; `s$"..."` formats values into one.
+`s"..."` constructs an owning `String`. `s$"..."` formats values into one.
 Here `long` holds each parsed signed 64-bit integer, and `extralong` holds the
 exact sum of the three values. `Trim()` removes ASCII whitespace from a borrowed
 view. The counted parser consumes the whole remaining token and reports failure
@@ -56,15 +56,15 @@ syntax and throwing alternatives.
 
 `input` owns its bytes. `Split`, `Trim`, and each `Span<readonly(char)>` carry
 borrowed pointer-and-length metadata. Copying these views or iterating the parts
-does not clone the String. Keep `input` alive and unchanged while using the parts;
-its automatic cleanup releases its allocation when it leaves scope.
+does not clone the String. Keep `input` alive and unchanged while using the parts.
+Its automatic cleanup releases its allocation when it leaves scope.
 See [text splitting and trimming](TEXT_PARTS.md) and [String views](STRINGS.md).
 
 Values use their type's normal copying rules. Copying a `String` invokes its copy
 constructor and creates independent text storage. `move value` transfers a value
 and consumes that local: initialize it again before using it. Owning types such
-as `Vector<T>` and `Unique<T>` prohibit copying; use `move` to transfer them.
-[Unique](UNIQUE.md) is an optional owner for one manually allocated object;
+as `Vector<T>` and `Unique<T>` prohibit copying. Use `move` to transfer them.
+[Unique](UNIQUE.md) is an optional owner for one manually allocated object.
 `ref` borrows an existing value rather than copying it. Borrowed pointers, spans,
 and references require the programmer to keep their backing owner alive.
 

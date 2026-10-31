@@ -27,7 +27,7 @@ Constructing the query copies its source views without enumerating either input.
 Each `GetEnumerator()` constructs the left iterator, then the right iterator.
 Both exist even when one input is empty or a later `Take(0)` avoids advancing.
 Every `MoveNext()` advances the left input first. If it ends, the right input is
-not advanced; otherwise the right input is advanced. Consequently, when the
+not advanced. Otherwise the right input is advanced. Consequently, when the
 right input ends first, the left iterator may advance once without a matching
 right element. This can run input callbacks or expose an input error. After
 ordinary exhaustion, further calls advance neither input.
@@ -43,7 +43,7 @@ Each enumeration starts fresh and has independent iterator positions.
 
 Built-in borrowed source views and Zip's state allocate nothing. Callbacks,
 element/source copies, custom iterators, or materialized results may allocate.
-Sources follow the existing copyable-source contract; iterators may own resources
+Sources follow the existing copyable-source contract. Iterators may own resources
 and be noncopyable. Zip moves each freshly constructed iterator into its state.
 If constructing the right iterator throws, the left iterator is cleaned up.
 The nested iterator owns both input iterators. It releases them when it leaves
@@ -53,7 +53,7 @@ and is cleaned up or transferred by its caller.
 
 Selector parameters also follow ordinary value semantics. Reading String
 elements from either input copies them before passing them to a by-value String
-parameter; editing those copies leaves the source strings unchanged. `Count()`
+parameter. Editing those copies leaves the source strings unchanged. `Count()`
 does not read the paired elements and therefore does not perform those copies.
 
 Input and callback exceptions propagate unchanged. There is no rollback of
@@ -61,6 +61,6 @@ completed advances or callback effects, and resuming after a failed `MoveNext`
 has no recovery guarantee. Discard that iterator after such an error.
 
 Zip retains the source views' borrowing rules. Keep backing storage alive and
-stable for the query and all iterators; pointer results do not extend an owner's
+stable for the query and all iterators. Pointer results do not extend an owner's
 lifetime. Writes through other valid aliases remain visible when their elements
 are read. See [query ownership](../Standard/core/Queries/README.md#ownership).

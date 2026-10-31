@@ -2,14 +2,14 @@
 
 `Standard::Threading::Interlocked` provides atomic operations on existing `int` and
 `long` storage. Each method is `nothrow` and uses sequentially consistent ordering
-across threads. Every method below has both an `int` and a `long` overload;
+across threads. Every method below has both an `int` and a `long` overload.
 `T` in the table stands for that same integer type, not a generic parameter.
 
 | API | Result and effect |
 | --- | --- |
-| `Read(ref readonly(T) location)` | Returns the atomically loaded value; accepts a mutable or readonly location. |
+| `Read(ref readonly(T) location)` | Returns the atomically loaded value. Accepts a mutable or readonly location. |
 | `Exchange(ref T location, T value)` | Replaces the value and returns its previous value. |
-| `CompareExchange(ref T location, T value, T comparand)` | Writes `value` only if the observed value equals `comparand`; returns the observed value in either case. |
+| `CompareExchange(ref T location, T value, T comparand)` | Writes `value` only if the observed value equals `comparand`. Returns the observed value in either case. |
 | `Add(ref T location, T value)` | Adds `value` atomically and returns the updated value. |
 | `Increment(ref T location)` | Adds one atomically and returns the updated value. |
 | `Decrement(ref T location)` | Subtracts one atomically and returns the updated value. |
@@ -43,8 +43,8 @@ repository root with the compiler already built:
 dotnet gflat/bin/Debug/net10.0/gflat.dll main.gf Standard/core/Threading/Interlocked.gf --no-stdlib --no-builtins --run
 ```
 
-The program exits with zero. It illustrates operation results in one thread;
-thread creation and joining are provided separately by the application or its
+The program exits with zero. It illustrates operation results in one thread.
+Thread creation and joining are provided separately by the application or its
 native host.
 
 Locations must designate live, initialized integer storage for every access and
@@ -52,7 +52,7 @@ must have at least 4-byte alignment for `int` or 8-byte alignment for `long`.
 Forged references or unaligned packed storage do not satisfy this contract.
 All concurrent overlapping accesses to a location must use compatible atomic
 operations of the same integer width. Ordinary reads or writes may initialize
-storage before workers start or inspect it after all workers have joined; they
+storage before workers start or inspect it after all workers have joined. They
 must not race with atomic accesses. Keep the storage alive until every user has
 finished. `Read` accepting a readonly view does not permit modifying storage that
 is actually readonly through some other alias.

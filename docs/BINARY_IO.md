@@ -5,8 +5,7 @@ write them through a borrowed `ITextWriter*`. The endpoints can be a `File`, an
 optional `Windows::TcpClient`, or an application implementation of the contracts.
 No owning File/TcpClient value is copied or transferred.
 
-Each method explicitly selects byte order. These are raw scalar representations,
-not an object serializer or a framed-message protocol.
+Each method explicitly selects byte order.
 
 | Name component | Type | Bytes |
 | --- | --- | --- |
@@ -18,7 +17,7 @@ not an object serializer or a framed-message protocol.
 
 Every row supports `Read<Name>LittleEndian`, `Read<Name>BigEndian`,
 `Write<Name>LittleEndian`, and `Write<Name>BigEndian`. For example,
-`input.ReadUInt32BigEndian()` returns `uint`; `output.WriteDoubleLittleEndian(value)`
+`input.ReadUInt32BigEndian()` returns `uint`. `output.WriteDoubleLittleEndian(value)`
 sends a `double`. All 36 names match the established `FileBinary` operations.
 
 Signed integers preserve their two's-complement bits. Floating operations preserve
@@ -71,21 +70,20 @@ must enforce its own payload limits and read the declared body separately.
 ## Progress, lifetime and failure
 
 Readers use the existing [borrowed reader](BYTE_READERS.md) `ReadExactly` loop. Short
-positive reads continue. EOF before the scalar width throws `EndOfStreamException`;
-a final zero-byte result may require one further read after a short positive prefix.
+positive reads continue. EOF before the scalar width throws `EndOfStreamException`.
+A final zero-byte result may require one further read after a short positive prefix.
 Reader exceptions propagate unchanged and may have consumed an unknown prefix.
 There is no rewind or rollback, and a failed read returns no scalar.
 
 Writers build a 2/4/8/16-byte stack buffer and call the synchronous sink's `Write`
-exactly once. A sink exception can follow partial output; no retry or rollback is
+exactly once. A sink exception can follow partial output. No retry or rollback is
 attempted. These operations never retain endpoints, allocate an intermediate buffer,
 flush, close or finalize them. Keep each concrete owner alive, unmoved and usable
 throughout the call. Underlying sources/sinks and exception paths can allocate.
 
 `FileBinary::Read...` / `FileBinary::Write...` remain available with their existing
 `File*` signatures as thin forwarding conveniences. Core extensions do not require
-libc. [File varints](FILE_VARINT.md) are a separate canonical variable-length protocol
-and remain unchanged.
+libc. Use [File varints](FILE_VARINT.md) for canonical variable-length integers.
 
 ## Explicit source selection
 
@@ -97,8 +95,8 @@ The reader additionally needs `core/IO/IByteReader.gf`, `core/IO/byte_reader.gf`
 `core/IO/IOException.gf`, `core/IO/EndOfStreamException.gf`, and the project's normal
 `ITextWriter`/`Exception` definitions and exception runtime support. `byte_reader.gf`
 also defines copying to writers, so its `ITextWriter` contract is still required.
-The writer-only file needs `BinaryPrimitives` and the existing `ITextWriter` contract;
-it does not require the reader interface/helper files.
+The writer-only file needs `BinaryPrimitives` and the existing `ITextWriter` contract.
+It does not require the reader interface/helper files.
 
 Existing manual `FileBinary` source lists must now include both extension files,
 `BinaryPrimitives`, and the borrowed reader helper dependencies above in addition to

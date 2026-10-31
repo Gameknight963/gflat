@@ -5,7 +5,7 @@
 `JsonStringText::Quote(data, count)` returns an independent owning `String`
 containing one quoted JSON literal. `JsonStringText::Unquote(text, count)`
 returns the decoded owning UTF-8 text from one complete quoted literal. Counts
-are bytes; embedded NULs remain counted data. Both use the strict validation and
+are bytes. Embedded NULs remain counted data. Both use the strict validation and
 escape policy described below, and throw `Exception` for invalid input.
 Each operation also accepts a `Span<readonly(char)>`, for example
 `JsonStringText::Unquote(reader.RawToken)`.
@@ -29,13 +29,13 @@ int main()
 ```
 
 The decoded owner keeps its bytes after both input strings change. Its final
-counted NUL is data; the String's terminator is a separate byte after `Length`.
+counted NUL is data. The String's terminator is a separate byte after `Length`.
 
 The complete input is validated before allocating result storage. Successful
-nonempty results use one allocation; unquoting `""` allocates nothing, while
+nonempty results use one allocation. Unquoting `""` allocates nothing, while
 quoting empty input allocates its two quote bytes. The result has its normal
 String terminator beyond `Length`. Allocation failure propagates normally.
-Keep the input alive and unchanged during the call; no input pointer is retained,
+Keep the input alive and unchanged during the call. No input pointer is retained,
 and later input changes do not affect the returned owner.
 
 These optional conveniences live in `Json/JsonStringText.gf`, with normal String,
@@ -46,7 +46,7 @@ codec remains independent of owning strings and allocation.
 
 `Standard::Json::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
 is a string primitive, not a JSON parser, object model, or serializer. Its only
-Standard source dependency is `Text/utf8.gf`; it performs no allocation and calls neither
+Standard source dependency is `Text/utf8.gf`. It performs no allocation and calls neither
 libc nor the exception runtime. All counted-buffer methods are `nothrow`.
 
 ```csharp
@@ -78,11 +78,11 @@ This follows the JSON string rules in
 The result is JSON text, not an HTML or JavaScript escaping policy.
 
 `TryGetQuotedLength` validates the entire input and checks size arithmetic. On
-success it returns the exact required byte count; on failure it returns false
+success it returns the exact required byte count. On failure it returns false
 and sets `needed` to zero. `TryQuote` performs that same preflight and checks
 capacity before writing output. Failure sets `written` to zero and leaves
-every output byte unchanged. Success changes exactly `written` output bytes;
-storage after the closing quote remains untouched.
+every output byte unchanged. Success changes exactly `written` output bytes.
+Storage after the closing quote remains untouched.
 
 ## Unquoting one complete literal
 
@@ -96,7 +96,7 @@ trailing data. Literal control bytes below 32, unescaped quotation marks,
 unknown escapes, and malformed UTF-8 are rejected. Standard escapes `\"`, `\\`,
 `\/`, `\b`, `\f`, `\n`, `\r`, and `\t` are decoded. `\uXXXX` accepts either
 hexadecimal letter case. A high surrogate must be immediately followed by a
-`\uXXXX` low surrogate; lone or mismatched surrogates are rejected. This API
+`\uXXXX` low surrogate. Lone or mismatched surrogates are rejected. This API
 always produces Unicode scalar values, even if a more permissive JSON reader
 would accept an unpaired surrogate escape.
 
@@ -104,8 +104,8 @@ Output is counted UTF-8, with no terminator. Escaped U+0000 becomes an actual
 zero byte inside that count. Raw non-ASCII UTF-8 and its equivalent Unicode
 escapes produce the same bytes. No Unicode normalization occurs.
 
-The empty literal `""` succeeds with length zero, even with zero output capacity;
-it does not access output storage. Empty input is not a literal and fails
+The empty literal `""` succeeds with length zero, even with zero output capacity.
+It does not access output storage. Empty input is not a literal and fails
 without reading input. On any malformed input or insufficient capacity, the
 metadata count becomes zero and every output byte remains unchanged. The entire
 input is validated, including a malformed suffix after valid text.
@@ -121,7 +121,7 @@ retains no state or pointers between calls.
 
 The caller supplies live input and writable output regions with their specified
 byte counts. Scalar output metadata must be disjoint from both byte buffers.
-Quoting requires disjoint input and output; unquoting additionally allows the
+Quoting requires disjoint input and output. Unquoting additionally allows the
 exact same starting address. The input must remain
 unchanged between validation and writing, including through other threads or
 aliases. No pointer is retained after the call.
@@ -133,8 +133,8 @@ length and extra storage is constant.
 
 The [freestanding executable test](FREESTANDING_CORE.md) selects these sources
 with `NoStdLib` and the explicit `NoBuiltins` optimizer policy. Both Windows x64
-O0/O2 builds quote runtime-populated bytes and check escapes and atomic failures;
-their only import is `KERNEL32.dll!ExitProcess`. The same test retains a Linux
+O0/O2 builds quote runtime-populated bytes and check escapes and atomic failures.
+Their only import is `KERNEL32.dll!ExitProcess`. The same test retains a Linux
 x64 syscall-startup branch for CI. This is evidence for that tested configuration,
 not a blanket guarantee about backend ABI helpers on every target.
 
@@ -143,7 +143,7 @@ not a blanket guarantee about backend ABI helpers on every target.
 `JsonString::ValueTextEquals(input, count, text, length)` compares one complete
 quoted JSON string with counted, unquoted UTF-8 text. It is `nothrow`, writes
 nothing, and uses no allocation, caller buffer, or owning String. Both input
-regions may overlap; keep them alive and unchanged during the call.
+regions may overlap. Keep them alive and unchanged during the call.
 
 Escapes are decoded using the same rules as `TryUnquote`: `"na\u006de"` equals
 `name`, escaped surrogate pairs equal their UTF-8 scalar, and `\u0000` equals an
@@ -153,7 +153,7 @@ Malformed JSON string syntax or UTF-8 returns false, as does a mismatch. False
 may short-circuit without examining the remaining bytes, so this predicate is
 not a replacement for the standalone validation methods.
 
-Both counts are explicit; no C-string scanning or terminator is involved.
+Both counts are explicit. No C-string scanning or terminator is involved.
 Zero-length text is valid and needs no readable text pointer. A quoted input
 count below two returns false without reading either input. For other calls,
 provide valid readable storage for both stated extents. The helper adds no
@@ -184,7 +184,7 @@ The adapter validates the entire input and quoted length before its first writer
 call. Invalid UTF-8 or size overflow throws `Exception` without writing. After
 successful validation, it writes the opening quote, maximal spans requiring no
 escaping, individual escapes, and the closing quote. Each escape uses the core
-`JsonString` encoder with an eight-byte stack buffer; no second escape policy or
+`JsonString` encoder with an eight-byte stack buffer. No second escape policy or
 intermediate owning String is involved. Empty input makes two quote writes.
 
 The adapter itself allocates no heap storage during successful writing. An
@@ -196,9 +196,8 @@ buffer first, then use a writer with the required commit behavior.
 
 Input must remain valid and unchanged throughout the call, separate from writer
 state and destination storage. A writer consumes each supplied span during
-`Write` and must not retain its pointer; escape bytes live in temporary stack
+`Write` and must not retain its pointer. Escape bytes live in temporary stack
 storage. The adapter borrows the writer and never destroys or closes it.
 BufferWriter, String, File, and custom `ITextWriter` implementations can all be
 used through the same interface pointer. The adapter depends on the normal
-writer/exception contracts; adding it does not add those dependencies to the
-standalone counted-buffer quoting source.
+writer/exception contracts.

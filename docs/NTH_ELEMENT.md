@@ -8,7 +8,7 @@ or identity at the selected rank.
 
 This is useful for selecting a median or percentile, or separating the smallest
 `k` values without ordering them all. The caller chooses the rank and any policy
-for even-sized medians or percentiles; the algorithm returns no owning value.
+for even-sized medians or percentiles. The algorithm returns no owning value.
 
 ```csharp
 using Standard; using Standard::Memory; using Standard::Collections;
@@ -34,36 +34,35 @@ int main()
 index throws `Exception("Selection index out of range", 3)` before comparing or
 changing elements. A singleton's rank zero does not call the comparator.
 These cases do not read element storage. To select the smallest `k` elements,
-pass `k` and inspect the prefix of length `k`; passing the whole length needs no
+pass `k` and inspect the prefix of length `k`. Passing the whole length needs no
 rearrangement. The prefix itself is not sorted.
 
 The comparator borrows `immutable(T)*` values and returns negative, zero or
 positive, as for `Sort`. It must provide a consistent ordering, must not mutate
 the elements/span through aliases, and must not retain borrowed element pointers
-across callbacks. Floating-point ordering is chosen by that comparator; no
+across callbacks. Floating-point ordering is chosen by that comparator. No
 implicit NaN or signed-zero policy is added.
 
 The algorithm uses iterative three-way partitioning around an element tracked
-by index. Swaps update that index; it never copies an owning pivot or holds a
+by index. Swaps update that index. It never copies an owning pivot or holds a
 removed element across a comparison. After a bounded number of partition passes
 it heapsorts the remaining active range with `Sort`. Worst-case work is
 O(n log n) comparisons, with constant extra storage and no recursion. There is
 no guarantee of worst-case linear selection or of a particular permutation.
 
 Elements move through the existing `Swap`/`Sort` relocation rules. Noncopyable
-owners are supported; no element copy constructor or destructor is invoked by
+owners are supported. No element copy constructor or destructor is invoked by
 the algorithm. Managed-reference values retain the normal root-tracking rules.
-The algorithm allocates no heap scratch storage; ordinary comparator and
+The algorithm allocates no heap scratch storage. Ordinary comparator and
 collector-hook effects still apply. Comparator errors propagate, leaving the
 span an initialized permutation that may already
-be rearranged; there is no rollback or completed partition guarantee on failure.
+be rearranged. There is no rollback or completed partition guarantee on failure.
 The addresses of element slots stay fixed while the values stored there move.
-Raw aliases inside values are not retargeted; obey the same borrowing rules as
+Raw aliases inside values are not retargeted. Obey the same borrowing rules as
 other in-place algorithms.
 
 Include optional `Collections/nth_element.gf` with `Collections/span_algorithms.gf`,
 Span and their normal dependencies. `Collections/default_ordering.gf` adds
-`NthElement(values, nth)` for `T : IComparable<T>`, using `Comparer<T>::Compare`;
-include `Collections/Comparer.gf` and `IComparable.gf` for that convenience. The explicit
+`NthElement(values, nth)` for `T : IComparable<T>`, using `Comparer<T>::Compare`.
+Include `Collections/Comparer.gf` and `IComparable.gf` for that convenience. The explicit
 three-argument operation remains independent of those comparison contracts.
-There is no median wrapper.

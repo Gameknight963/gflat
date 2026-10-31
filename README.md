@@ -1,25 +1,13 @@
-![GitHub Repo Views](https://gitviews.com/repo/gameknight963/gflat.svg?style=flat&label-color=purple)
+﻿![GitHub Repo Views](https://gitviews.com/repo/gameknight963/gflat.svg?style=flat&label-color=purple)
 [![compiler](https://github.com/Gameknight963/gflat/actions/workflows/test.yml/badge.svg)](https://github.com/Gameknight963/gflat/actions/workflows/test.yml)
 
 # gflat
 
-A compiled language with C#-inspired syntax, pointers,
-scope-based destruction, and native code generation through LLVM
+A compiled language with C#-inspired syntax, control over storage and layout,
+scope-based destruction, and native code generation through LLVM.
 
-**Work in progress.** The language, standard library, compiler, and project format
-can change without notice. Consider currently nightly releases as "demos"
-
-Also this readme might be out of date.
-
-# UNDER SUPER CONSTURCTION!!
-
-This means you should expect:
-
- - Slop
- - Undocumented footguns
- - Undocumented anything
- - Unable to build (even CI only works half the time)
- - Breaking changes
+gflat is experimental. The language, compiler, library, and project format change
+frequently. Nightly builds are demos of the current work.
 
 ```csharp
 using Standard::Text;
@@ -35,59 +23,47 @@ int main()
 }
 ```
 
-This example uses Standard; see the runnable
-[interpolation project](examples/interpolation/interpolation.gfproj).
+Try the [interpolation project](examples/interpolation/interpolation.gfproj) or
+browse the [examples](examples/README.md).
 
-## What works
+## Language and library
 
-- Structs, classes, interfaces, generics, properties, and indexers.
-- Pointers, readonly access, custom allocators, and deterministic destruction.
-- Nullable pointers with local null-check analysis.
-- Namespace extension methods with ordinary value, reference, and readonly receivers.
-- Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
-  non-moving tracing collector. See the [managed example](examples/managed/README.md).
-- Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
-- Custom string literal prefixes and string interpolation. For example, create a `Standard::Text::String` with the 's' prefix as shown in the example above
-- Multiple source files and MSBuild `.gfproj` projects.
-- Project creation with `gflat new`, configurable optimization, and `inline` hints.
-- Compile-time `typeof(T)` metadata for names, layout, and recursive type structure.
-- A language server and Visual Studio integration with diagnostics, completion,
-  syntax highlighting, reference and symbol searches, document outlines, and rich hovers.
-- A growing source standard library with owning strings and containers, borrowed
-  spans, lazy queries, binary codecs, and console/file IO. See the [library index](Standard/README.md).
-- Native Windows x64 and Linux x64 builds
+- Structs and classes with constructors, deterministic cleanup, properties, and indexers
+- Interfaces, generics, and borrowed extension methods
+- Raw pointers, nullable references, shallow `readonly` and deep `immutable` views
+- Replaceable allocation and managed references (`T^`)
+- Native stack-unwinding exceptions
+- Custom string prefixes and interpolation
+- Compile-time name, layout, and type queries
+- [Standard](Standard/README.md): strings, collections, queries, text and binary formats, console and file IO
 
-
-## _Maybe_ in the future
-
- - Generators?
- - Compile-time member reflection?
- - Random important features it's missing
- - Probably a package manager
- - More editors support (vs code probably)
+The [Visual Studio extension](docs/EDITOR_SUPPORT.md) provides highlighting,
+completion, navigation, hovers, and native debugging. A language server supports
+other LSP clients.
 
 ## Download
 
-These links select the latest successful `master` workflow using
-[nightly.link](https://github.com/oprypin/nightly.link). Builds happen on pushes, there's no release schedule, remember I just decided to make this public because why not
+These links use [nightly.link](https://github.com/oprypin/nightly.link) to download
+the latest successful `master` build.
 
 | Download | Contents |
 | --- | --- |
-| [Windows x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-win-x64.zip) | Compiler, language server, Standard, project files, examples, and docs |
-| [Linux x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-linux-x64.zip) | The same bundle, wrapped in a `.tar.gz` to preserve executable permissions |
-| [Visual Studio extension](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-visual-studio.zip) | VSIX for Visual Studio 2022 17.14+ / Visual Studio 2026, x64 |
+| [Windows x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-win-x64.zip) | Compiler, language server, Standard, build rules, examples, and docs |
+| [Linux x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-linux-x64.zip) | The same bundle in a `.tar.gz` that preserves executable permissions |
+| [Visual Studio extension](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-visual-studio.zip) | VSIX for Visual Studio 2022 17.14+ and Visual Studio 2026, x64 |
 
 ### Requirements
 
-- Downloaded bundles include the .NET runtime and MSBuild. No .NET SDK or separate
-  MSBuild installation is needed to use the compiler or language server.
-- Clang and the native platform linker and C/C++ development libraries.
-  - Windows: Visual Studio's **Desktop development with C++** workload and
-    **C++ Clang Compiler for Windows**, or an equivalent LLVM/MSVC toolchain.
-  - Linux: Ubuntu 24.04 is tested, using Clang 18 and the system C/C++ toolchain.
-    For example: `sudo apt install clang-18 build-essential`.
-   > Note: I am developing gflat on Windows, Linux support may be spotty atm
-- Set `GFLAT_CLANG` to the Clang executable if it is not on PATH. On Windows the compiler also searches Visual Studio installations.
+Bundles include the .NET runtime and MSBuild. Native builds also need Clang and
+the platform linker and C/C++ development libraries:
+
+- **Windows:** Visual Studio's **Desktop development with C++** workload and **C++ Clang Compiler for Windows**, or an equivalent LLVM/MSVC toolchain
+- **Linux:** CI tests Ubuntu 24.04 with Clang 18. Install the toolchain with `sudo apt install clang-18 build-essential`
+
+Set `GFLAT_CLANG` to the Clang executable if needed. On Windows, the compiler also
+searches Visual Studio installations.
+
+### Run an example
 
 After extracting the Windows ZIP, run from its directory:
 
@@ -95,47 +71,42 @@ After extracting the Windows ZIP, run from its directory:
 ./compiler/gflat.exe build examples/interpolation/interpolation.gfproj --run
 ```
 
-For Linux, unzip the download, extract its tarball into an empty directory, and run:
+On Linux, unzip the download and extract its tarball:
 
 ```sh
 tar -xzf gflat-linux-x64.tar.gz
 GFLAT_CLANG=clang-18 ./compiler/gflat build examples/interpolation/interpolation.gfproj --run
 ```
 
-You can also compile individual files: `gflat main.gf helper.gf --run`.
-This mode adds only the minimal runtime sources; `using` directives do not load
-library files. A `.gfproj` includes the full standard library by default. For
-selective library use, pass the required source files explicitly; `--no-stdlib`
-also disables the automatic runtime sources. See
-[standard library selection](docs/PROJECTS.md#standard-library-selection).
+Add the bundle's `compiler` directory to PATH to use `gflat` anywhere. Keep the
+bundle's directory layout intact.
 
-Add the bundle's `compiler` directory to PATH to use `gflat` anywhere.
-Keep Standard and the `build` directory together. The CLI and language server support
-both `<Project Sdk="Gflat.Sdk">` and explicit imports of `Gflat.props` and
-`Gflat.targets`, without SDK registration. SDK-style projects in Visual Studio
-use the extension's Windows setup scripts.
-See [project setup](docs/PROJECTS.md) for toolchain paths and `NoStdLib`.
+### Create a project
 
-Create a project with `gflat new MyApp`, then run
-`gflat build MyApp/MyApp.gfproj --run`. See [project setup](docs/PROJECTS.md) for
-library projects and optimization settings, or try the [line-search utility](examples/search/README.md).
-The [word-count tool](examples/word-count/README.md) and
-[weighted pathfinding example](examples/pathfinding/README.md) exercise the newer collections.
-The [tail tool](examples/tail/README.md) combines file line iteration with a bounded owning queue.
-The [big-calc tool](examples/big-calc/README.md) performs exact arbitrary-precision arithmetic and GCD calculations.
-Browse the [example index](examples/README.md) for all runnable projects.
+```text
+gflat new MyApp
+gflat build MyApp/MyApp.gfproj --run
+```
 
-If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
-Clang, and native exception runtime linking.
+You can also compile individual files with `gflat main.gf helper.gf --run`.
+Projects include Standard by default. Direct source commands include the minimal
+runtime sources and accept additional library files explicitly. See
+[project setup and library selection](docs/PROJECTS.md).
 
-For Visual Studio, extract and install the VSIX, restart VS, and use **File > New >
-Project** and search for **gflat**. Choose a Console Application or Source Library,
-or open an existing `.gfproj` and add it to a solution. The VSIX build number increases
-ONLY so newer builds can replace older ones; it is not a language version.
+Run `gflat doctor --native` to check the toolchain if setup fails.
+
+### Visual Studio
+
+Install the VSIX and restart Visual Studio. Use **File > New > Project**, search
+for **gflat**, and choose a Console Application or Source Library. You can also
+add an existing `.gfproj` to a solution.
+
+See [editor setup](docs/EDITOR_SUPPORT.md) for SDK-style projects and other editors.
 
 ## Build from source
 
-Building the tools from source also requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0):
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and
+the native toolchain above.
 
 ```sh
 dotnet build gflat/gflat.csproj
@@ -144,34 +115,26 @@ dotnet test gflat.Tests/gflat.Tests.csproj
 dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
 ```
 
-The solutions separate compiler development from gflat programs:
+| Solution | Contents |
+| --- | --- |
+| [gflat.slnx](gflat.slnx) | Compiler, CLI, language server, and tests |
+| [Standard/Standard.slnx](Standard/Standard.slnx) | Standard library |
+| [examples/examples.slnx](examples/examples.slnx) | Runnable programs |
+| [Visual Studio extension](editors/VisualStudio/gflat.VisualStudio.slnx) | VSIX |
 
-- [gflat.slnx](gflat.slnx): compiler, command-line tools, language server, and tests.
-- [Standard/Standard.slnx](Standard/Standard.slnx): the source standard library.
-- [examples/examples.slnx](examples/examples.slnx): runnable examples; choose a startup project in Visual Studio.
-- [editors/VisualStudio/gflat.VisualStudio.slnx](editors/VisualStudio/gflat.VisualStudio.slnx): the Visual Studio extension.
-
-Set `GFLAT_OPT_LEVEL=2` to test optimized native output.
-
-Build the VSIX on Windows using Visual Studio MSBuild:
-
-```powershell
-./editors/VisualStudio/build.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./editors/VisualStudio/test-package.ps1
-```
+For extension builds and validation, see [editor development](docs/EDITOR_SUPPORT.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and test instructions.
 
 ## Documentation and feedback
 
-- [Language specification](docs/LANGUAGE_SPEC.md)
+- [Language reference](docs/LANGUAGE_SPEC.md)
 - [Projects and build commands](docs/PROJECTS.md)
 - [Editor support](docs/EDITOR_SUPPORT.md)
-- [Standard library core](Standard/core/README.md) and [libc integration](Standard/libc/README.md)
+- [Standard library](Standard/README.md)
 
-Bug reports and small examples are welcome. Include your OS, the source program,
-and the commit from `BUILD-INFO.json` in the downloaded bundle (also inside the VSIX).
-For a source build, use `git rev-parse HEAD`.
+For bug reports, include a small reproducing program, your OS, and the commit
+from the bundle's `BUILD-INFO.json`. For source builds, use `git rev-parse HEAD`.
 
 ## License
 
-[MIT](LICENSE). Bundled dependencies retain their own licenses. See
-[third-party notices](THIRD_PARTY_NOTICES.md)
+[MIT](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for bundled dependencies.

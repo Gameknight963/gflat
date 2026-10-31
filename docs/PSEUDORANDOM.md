@@ -47,7 +47,7 @@ streams. Nothing seeds itself from clocks, system entropy, or a shared global
 generator.
 
 `Fill` writes the low byte of each generated word first, then the next byte, up
-to eight bytes per word. A partial final word is consumed in full; two separate
+to eight bytes per word. A partial final word is consumed in full. Two separate
 calls need not produce the same bytes as one combined call. A zero-count call
 does not advance the state. It does not append a null terminator.
 
@@ -59,7 +59,7 @@ The first output for seed zero is `0xe220a8397b1dcdaf`.
 
 `NextLong()` covers the full signed `long` domain, including both extremes and
 negative values. It consumes the same complete word as `NextULong()` and interprets
-its bits as signed; it is `nothrow`. Use `NextLong(exclusiveMax)` for a nonnegative
+its bits as signed. It is `nothrow`. Use `NextLong(exclusiveMax)` for a nonnegative
 half-open range. Bounded forms use the existing unbiased rejection sampler and
 can consume more than one generated word. Zero or negative upper bounds and
 empty/reversed intervals throw before advancing the generator. Range arithmetic

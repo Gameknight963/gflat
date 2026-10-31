@@ -2,7 +2,7 @@
 
 `Standard::Text::TextLines` iterates counted text in memory without allocating a string per
 line. It uses the same line endings as `FileLines` and `Console`: LF and CRLF
-terminate lines; a bare CR remains text. Embedded null bytes are preserved.
+terminate lines. A bare CR remains text. Embedded null bytes are preserved.
 
 ```csharp
 using Standard::Text;
@@ -16,7 +16,7 @@ foreach (Span<readonly(char)> line in lines) {
 ```
 
 The example produces two lines. Terminators are excluded from each view.
-Empty input contains no lines. `"\n"` contains one empty line; `"a\n\n"`
+Empty input contains no lines. `"\n"` contains one empty line. `"a\n\n"`
 contains `"a"` and an empty line. A trailing terminator does not introduce an
 additional final line. An unterminated final line is included, preserving any
 final bare CR.
@@ -42,7 +42,7 @@ position and borrowed pointer, never its source bytes.
 
 `GetEnumerator()` and `AsEnumerable()` accept mutable, shallow readonly, and
 immutable sequences. `Current` can be read through a readonly or immutable
-iterator observer; advancing still requires a mutable iterator. These views
+iterator observer. Advancing still requires a mutable iterator. These views
 prevent character writes through their returned spans, but do not freeze the
 backing storage: writes through another live alias remain visible.
 

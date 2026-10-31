@@ -3,14 +3,14 @@
 Optional `core/Text/text_split_once_pattern_span.gf` adds three non-generic overloads on
 `Span<readonly(char)>`, complementing the existing single-character API:
 
-- `TrySplitOnce(separator, count, ref before, ref after)` takes counted bytes.
-- `TrySplitOnce(separator, ref before, ref after)` takes a null-terminated pointer.
+- `TrySplitOnce(separator, count, ref before, ref after)` takes counted bytes
+- `TrySplitOnce(separator, ref before, ref after)` takes a null-terminated pointer
 - `TrySplitOnce(separatorSpan, ref before, ref after)` takes the complete
-  counted contents of a `Span<readonly(char)>`, including NUL bytes.
+  counted contents of a `Span<readonly(char)>`, including NUL bytes
 
 The first complete exact byte match wins. Matching is case-sensitive and has no
 Unicode normalization, quoting, escaping, or word-boundary rules. The separator
-is excluded from both results; later matches remain in the second result.
+is excluded from both results. Later matches remain in the second result.
 Search reuses `ByteSearch`, rather than introducing another pattern algorithm.
 
 An empty separator matches at offset zero: `before` is an empty default span and
@@ -22,20 +22,19 @@ find the terminator and therefore requires readable terminated storage.
 
 Failure returns false and clears both output spans to their default empty state.
 Both successful views are computed before output metadata is assigned. Either
-output may reuse the caller's receiver variable or separator-span variable;
-output references must be distinct from one another.
+output may reuse the caller's receiver variable or separator-span variable.
+Output references must be distinct from one another.
 
 All results borrow the original text storage. Keep it alive and at the same
 address while using either result. Changing source bytes is visible through
 returned views. No separator pointer is retained, so its storage is needed only
-during the call. Sources/separators may overlap each other; output metadata must
+during the call. Sources/separators may overlap each other. Output metadata must
 not overlap the byte storage being searched. Calls do not allocate, change input
 bytes, construct Strings, or require disposal. Ordinary raw-pointer validity
 requirements still apply for nonempty accepted buffers.
 
-Include `Memory/Span.gf`, `Text/ByteSearch.gf`, `Text/CString.gf` and ordinary Span dependencies
-with this optional source. Existing char-based splitting has no new dependency.
-There is no new mutable-receiver family or multi-part iterator in this change.
+Include `Memory/Span.gf`, `Text/ByteSearch.gf`, `Text/CString.gf` and the Span
+dependencies with this optional source.
 
 ```csharp
 using Standard::Text;
@@ -62,7 +61,7 @@ An empty separator matches at the **end**: `before` retains the complete receive
 metadata and `after` is a default empty span. Empty source and separator spans,
 and counted zero-length separator pointers, are accepted without reading their
 data. Missing separators clear both outputs. The same lifetime, no-allocation,
-and distinct-output requirements apply; receiver or separator metadata may be
+and distinct-output requirements apply. Receiver or separator metadata may be
 reused as either output. Both result views are computed before either assignment.
 The optional pattern file has the same source dependencies as first-match splitting.
 

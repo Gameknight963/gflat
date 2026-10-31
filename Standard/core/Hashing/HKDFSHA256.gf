@@ -1,13 +1,13 @@
 namespace Standard::Hashing;
 
-/// RFC 5869 key extraction and expansion using the existing HMAC-SHA256 core.
+/// RFC 5869 key extraction and expansion using HMAC-SHA256.
 /// Successful calls allocate no heap storage and retain no caller pointers.
 public static class HKDFSHA256
 {
     private static const ulong MaximumHashBytes = 2305843009213693951ul;
     private static const ulong MaximumMessageBytes = 2305843009213693887ul;
 
-    /// Returns an independent 32-byte PRK; zero salt count represents absent salt.
+    /// Returns an independent 32-byte PRK. Zero salt count represents absent salt.
     /// Excessive salt/input lengths throw before either input is read.
     public static byte[32] Extract(readonly(char)* salt, nuint saltCount,
         readonly(char)* input, nuint inputCount)

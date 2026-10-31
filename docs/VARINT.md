@@ -1,7 +1,7 @@
 # Variable-length integers
 
 `core/Binary/VarInt.gf` provides `Standard::Binary::VarInt`, a standalone, allocation-free codec
-for unsigned base-128 integers. All methods are `nothrow`; no other Standard source
+for unsigned base-128 integers. All methods are `nothrow`. No other Standard source
 is required.
 
 For position-tracking buffers, optional `Binary/binary_buffer_var_int.gf` adds
@@ -14,22 +14,22 @@ UInt32/UInt64 reads and writes without reading ahead into the next field.
 
 Core [stream varints](STREAM_VARINT.md) expose the same canonical unsigned codec
 and explicit ZigZag operations through borrowed `IByteReader*` / `ITextWriter*`
-endpoints. They request one byte at a time; `FileVarInt` retains its existing
+endpoints. They request one byte at a time. `FileVarInt` retains its existing
 concrete buffered-file path.
 
 Each byte contributes seven value bits, least-significant group first. Bit 7
 means another byte follows. For example, 0 is `00`, 127 is `7F`, 128 is
-`80 01`, and 300 is `AC 02`. UInt32 uses at most five bytes; UInt64 uses at
+`80 01`, and 300 is `AC 02`. UInt32 uses at most five bytes. UInt64 uses at
 most ten. This is the unsigned integer encoding used by Protocol Buffers.
 The ZigZag helpers below compose with it for signed values.
 
 ## Signed values with ZigZag
 
-`ZigZagEncode(int value)` returns `uint`; the `long` overload returns `ulong`.
-`ZigZagDecode(uint value)` returns `int`; the `ulong` overload returns `long`.
+`ZigZagEncode(int value)` returns `uint`. The `long` overload returns `ulong`.
+`ZigZagDecode(uint value)` returns `int`. The `ulong` overload returns `long`.
 These four `nothrow` operations accept every bit pattern, allocate nothing, and
 map `0, -1, 1, -2, 2` to `0, 1, 2, 3, 4` respectively. Signed minima map to
-the corresponding unsigned maximum; signed maxima map to unsigned maximum minus
+the corresponding unsigned maximum. Signed maxima map to unsigned maximum minus
 one. Decoding reverses the mapping for the entire 32-bit or 64-bit range.
 
 Compose the helpers with the matching unsigned length/read/write methods:
@@ -63,11 +63,11 @@ canonical-encoding restriction still applies after ZigZag is added.
 ## Writing
 
 - `GetUInt32Length(uint value)` and `GetUInt64Length(ulong value)` return the
-  exact encoded byte count, including one byte for zero.
+  exact encoded byte count, including one byte for zero
 - `TryWriteUInt32(byte* output, nuint capacity, uint value, ref nuint written)`
-  and the UInt64 counterpart emit the shortest encoding.
+  and the UInt64 counterpart emit the shortest encoding
 - Insufficient capacity returns false, sets `written` to zero, and leaves all
-  destination bytes unchanged. Success sets it to the exact length; bytes
+  destination bytes unchanged. Success sets it to the exact length. Bytes
   beyond that length are unchanged. No terminator is written.
 
 ## Reading
@@ -78,21 +78,21 @@ and the UInt64 counterpart return `VarInt::Status`:
 - `Done`: one complete canonical value was read. `value` holds the result and
   `consumed` holds its encoded length. Any following bytes are ignored.
 - `NeedMore`: the buffer ends at a valid unfinished prefix, including empty
-  input. Supply that same prefix together with more bytes on the next call;
-  the decoder retains no state. A final `NeedMore` means truncated input.
+  input. Supply that same prefix together with more bytes on the next call.
+  The decoder retains no state. A final `NeedMore` means truncated input.
 - `Invalid`: the encoding overflows the destination width, still has a
-  continuation bit in its last permitted byte, or uses more bytes than needed.
+  continuation bit in its last permitted byte, or uses more bytes than needed
 
 Both failure statuses leave `value` unchanged and set `consumed` to zero.
 In particular, `80 00` and `81 00` are rejected even though some protobuf
 readers accept these overlong encodings. This strictness makes the shortest
-representation unique; do not assume it accepts every permissive protobuf
+representation unique. Do not assume it accepts every permissive protobuf
 producer's output.
 
 A zero count/capacity does not dereference the buffer. Otherwise, callers must
 provide readable/writable storage for the indicated range. The metadata `ref`
-arguments must not overlap buffers or each other. Reading never changes input;
-writing uses only the supplied value and output buffer.
+arguments must not overlap buffers or each other. Reading never changes input.
+Writing uses only the supplied value and output buffer.
 
 ```csharp
 using Standard; using Standard::Binary;

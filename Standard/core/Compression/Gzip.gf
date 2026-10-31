@@ -4,13 +4,13 @@ using Standard::Binary;
 using Standard::Hashing;
 
 /// Decodes and validates one gzip member in caller-owned, disjoint counted buffers.
-/// Counts describe consumed header/body/footer bytes and produced bytes, not resumable state.
+/// Counts report consumed header/body/footer bytes and produced bytes.
 public static class Gzip
 {
     public enum Status { Done, NeedInput, OutputTooSmall, InvalidData }
 
     /// A failed checksum or incomplete footer can leave the complete output present.
-    /// Done stops after one footer; concatenated members and trailing bytes are untouched.
+    /// Done stops after one footer. Concatenated members and trailing bytes are untouched.
     public static Status DecompressMember(readonly(byte)* source, nuint count, byte* output, nuint capacity,
         ref nuint consumed, ref nuint written) nothrow
     {

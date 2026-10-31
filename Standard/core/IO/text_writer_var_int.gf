@@ -2,7 +2,7 @@ using Standard::Binary;
 namespace Standard::IO;
 
 /// Sends the canonical shortest UInt32 base-128 representation in one counted Write.
-/// Borrows the sink; failures may leave partial output. Does not flush or close it.
+/// Borrows the sink. Failures may leave partial output. Does not flush or close it.
 public void WriteVarUInt32(ITextWriter* output, uint value)
 {
     byte[5] bytes;
@@ -19,7 +19,7 @@ extension ITextWriter
 }
 
 /// Sends the canonical shortest UInt64 base-128 representation in one counted Write.
-/// Borrows the sink; failures may leave partial output. Does not flush or close it.
+/// Borrows the sink. Failures may leave partial output. Does not flush or close it.
 public void WriteVarUInt64(ITextWriter* output, ulong value)
 {
     byte[10] bytes;

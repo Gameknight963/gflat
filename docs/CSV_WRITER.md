@@ -2,7 +2,7 @@
 
 `Standard::Csv::CsvWriter` writes counted byte fields to a borrowed `ITextWriter*`.
 It does not build a table or allocate temporary strings. The destination can
-allocate or perform IO; the writer itself needs no heap storage.
+allocate or perform IO. The writer itself needs no heap storage.
 
 ```csharp
 using Standard; using Standard::Csv; using Standard::IO;
@@ -32,10 +32,10 @@ This writes the following two records to a binary file, with CRLF line endings:
 ## Fields and record boundaries
 
 - `WriteField(data, count)` writes exactly `count` bytes of field data, inserting
-  a comma before every field after the first in the current record.
+  a comma before every field after the first in the current record
 - Fields containing comma, double quote, CR, or LF are enclosed in double quotes.
-  Each double quote inside a field is doubled. Other fields remain unquoted;
-  leading and trailing spaces are preserved.
+  Each double quote inside a field is doubled. Other fields remain unquoted.
+  Leading and trailing spaces are preserved.
 - `WriteEndRecord()` writes CRLF and starts a fresh record. It does not flush.
   Call it after the last field when producing a terminated final record.
 - These are the bytes passed to the destination. A sink may transform them:
@@ -54,11 +54,11 @@ This writes the following two records to a binary file, with CRLF line endings:
 | One empty field, then `WriteEndRecord()` | CRLF: the same one-empty-field record. |
 | Two empty fields, then `WriteEndRecord()` | Comma followed by CRLF. |
 | One nonempty field, without `WriteEndRecord()` | A final record without a line ending. |
-| One empty field, without `WriteEndRecord()` | Empty bytes; indistinguishable from zero records. |
+| One empty field, without `WriteEndRecord()` | Empty bytes. Indistinguishable from zero records. |
 
 CSV has no separate spelling for a record containing zero fields. Ending a record
 without writing fields therefore emits a one-empty-field record. End a record to
-preserve a sole empty field; there is no automatic end-record operation on scope
+preserve a sole empty field. There is no automatic end-record operation on scope
 exit. Repeated `WriteEndRecord()` calls intentionally emit blank records.
 
 ## Lifetimes and failures
@@ -75,10 +75,10 @@ from copies whose comma positions would disagree. Moving preserves the position.
 Destroying a writer never writes, flushes, closes, or destroys its destination.
 
 A destination exception propagates unchanged. Some bytes may already have been
-written; there is no output rollback. The writer then rejects both `WriteField`
+written. There is no output rollback. The writer then rejects both `WriteField`
 and `WriteEndRecord` with `Exception`, without calling the destination again.
 There is no reset operation: start a new writer only after the caller has dealt
-with the incomplete output. This state is local to each writer copy; a copy made
+with the incomplete output. This state is local to each writer copy. A copy made
 before a failure cannot discover another copy's failure.
 
 Contiguous field runs are passed directly to the sink. There is no complete

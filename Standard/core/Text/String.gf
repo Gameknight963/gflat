@@ -3,9 +3,9 @@ using Standard::Collections;
 namespace Standard::Text;
 
 /// Owns counted bytes, conventionally UTF-8, without validating their encoding.
-/// Length and Capacity exclude the trailing zero; embedded zeros remain counted.
-/// Copies own independent contents; moves transfer storage ownership.
-/// Borrowed pointers do not keep the owner alive; buffer replacement or destruction invalidates them.
+/// Length and Capacity exclude the trailing zero. Embedded zeros remain counted.
+/// Copies own independent contents. Moves transfer storage ownership.
+/// Borrowed pointers do not keep the owner alive. Buffer replacement or destruction invalidates them.
 struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquatable<String>, IComparable<String>
 {
     private char* data;
@@ -34,11 +34,11 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     public bool IsEmpty { immutable get nothrow => length == 0; }
     public static const nuint NotFound = (nuint)0 - (nuint)1;
     /// Borrows readonly storage with a trailing zero, without transferring ownership.
-    /// C-string consumers stop at the first zero; use Length for the complete counted contents.
-    /// Keep the responsible owner alive; mutation may change bytes or replace the buffer.
+    /// C-string consumers stop at the first zero. Use Length for the complete counted contents.
+    /// Keep the responsible owner alive. Mutation may change bytes or replace the buffer.
     public readonly(char)* Data { immutable get nothrow => data; }
 
-    /// Copies bytes before the first zero; use the counted overload for embedded zeros.
+    /// Copies bytes before the first zero. Use the counted overload for embedded zeros.
     public static String From(readonly(char)* text)
     {
         nuint count = 0;
@@ -47,7 +47,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     /// Copies exactly count readable bytes, including zeros, into an owning String.
-    /// The result has a trailing zero after the copied bytes; count zero does not read the input.
+    /// The result has a trailing zero after the copied bytes. Count zero does not read the input.
     public static String From(readonly(char)* text, nuint count)
     {
         String result = new String();
@@ -61,7 +61,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     /// Ensures at least the requested byte capacity without changing Length.
-    /// Growth replaces the buffer and invalidates old borrows; allocation failure preserves it.
+    /// Growth replaces the buffer and invalidates old borrows. Allocation failure preserves it.
     public void Reserve(nuint requested)
     {
         if (requested <= capacity) return;
@@ -78,7 +78,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     /// Releases spare capacity, preserving counted bytes and the trailing zero.
-    /// Buffer replacement invalidates old borrows; allocation failure preserves the original storage.
+    /// Buffer replacement invalidates old borrows. Allocation failure preserves the original storage.
     public void ShrinkToFit()
     {
         if (length == capacity) return;
@@ -101,7 +101,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     /// Sets the counted byte length, preserving the prefix and filling new bytes, including zeros.
-    /// Growth may replace the buffer; existing borrowed views do not update their captured lengths.
+    /// Growth may replace the buffer. Existing borrowed views do not update their captured lengths.
     public void Resize(nuint requested, char fill = '\0')
     {
         if (requested == length) return;
@@ -153,10 +153,10 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     /// Appends all counted bytes, including zeros, and supports input borrowed from this String.
-    /// Growth can replace the buffer; existing views do not grow with the String.
+    /// Growth can replace the buffer. Existing views do not grow with the String.
     public void Append(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }
 
-    /// Appends bytes before the first zero; use the counted overload to preserve embedded zeros.
+    /// Appends bytes before the first zero. Use the counted overload to preserve embedded zeros.
     public void Append(readonly(char)* text)
     {
         nuint count = 0;
@@ -208,7 +208,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     public void Insert(nuint index, immutable(String)* text) { this.Insert(index, text.Data, text.Length); }
 
     /// Returns an independent owning copy of the selected byte range.
-    /// Offsets and counts are bytes, not Unicode characters; invalid ranges throw.
+    /// Offsets and counts are bytes, not Unicode characters. Invalid ranges throw.
     public immutable String Substring(nuint start, nuint count)
     {
         if (start > length || count > length - start) throw new Exception("String substring out of range");
@@ -353,9 +353,9 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         for (nuint i = 0; i < length; i++) if (data[i] == oldValue) data[i] = newValue;
     }
 
-    /// Replaces nonoverlapping counted byte matches from left to right; the old pattern must be nonempty.
-    /// Both inputs may borrow this String; allocation failure preserves its original contents.
-    /// A matching replacement commits new storage and invalidates old borrows; no match leaves it unchanged.
+    /// Replaces nonoverlapping counted byte matches from left to right. The old pattern must be nonempty.
+    /// Both inputs may borrow this String. Allocation failure preserves its original contents.
+    /// A matching replacement commits new storage and invalidates old borrows. No match leaves it unchanged.
     public void Replace(readonly(char)* oldText, nuint oldCount, readonly(char)* newText, nuint newCount)
     {
         if (oldCount == 0) throw new Exception("String replacement pattern is empty");
@@ -481,12 +481,12 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     /// Returns an independent owning copy of all counted bytes, including embedded zeros.
-    /// Can allocate; the returned value has its own lifetime.
+    /// Can allocate. The returned value has its own lifetime.
     public immutable String ToString() => String::From(data, length);
 
-    /// Returns a borrowed readonly pointer, not an owning copy.
+    /// Borrows the String's readonly data pointer.
     /// C-string consumers stop at the first zero even when Length includes later bytes.
-    /// Keep the responsible owner alive; mutation may alter bytes or replace the buffer.
+    /// Keep the responsible owner alive. Mutation may alter bytes or replace the buffer.
     public immutable readonly(char)* ToCString() nothrow => data;
 
     public void Write(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }

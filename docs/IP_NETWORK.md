@@ -27,16 +27,16 @@ int main()
 
 `new IpNetwork(networkAddress, prefixLength)` requires zero host bits after the
 prefix. Prefix lengths are `0` through `32` for IPv4 and `0` through `128` for
-IPv6. An invalid length throws `Exception("IP network prefix is out of range")`;
-a base with host bits throws `Exception("IP network address has host bits")`.
+IPv6. An invalid length throws `Exception("IP network prefix is out of range")`.
+A base with host bits throws `Exception("IP network address has host bits")`.
 
 `IpNetwork::FromAddress(address, prefixLength)` explicitly clears host bits,
 returning the containing network. It uses the same prefix bounds and retains
 the address family. `NetworkAddress` returns an address value copy and
-`PrefixLength` returns an `int`; both getters are immutable and `nothrow`.
+`PrefixLength` returns an `int`. Both getters are immutable and `nothrow`.
 
 `Contains(&address)` tests only prefix membership. It includes every matching
-address, including any network or broadcast address; it does not determine
+address, including any network or broadcast address. It does not determine
 whether an address is suitable for host assignment. Different address families
 return false even for `/0`. IPv4-mapped IPv6 remains IPv6, with no automatic
 conversion. A `/32` IPv4 or `/128` IPv6 prefix contains exactly its own address.
@@ -46,7 +46,7 @@ still retaining IPv6 family. IPv4 and IPv6 `/0` cover their own families only.
 `Contains(&otherNetwork)` tests whether the complete other prefix is inside this
 one, including equality. Sharing a base address alone is insufficient when the
 other prefix is broader. `Overlaps(&otherNetwork)` tests whether the two prefixes
-share any address. Overlap is symmetric; same-family CIDR prefixes either nest
+share any address. Overlap is symmetric. Same-family CIDR prefixes either nest
 or are disjoint. Different families return false for both operations, including
 IPv4 versus mapped IPv6 and either family's `/0`. Both methods accept immutable
 receivers and inputs, are `nothrow`, and allocate nothing.
@@ -64,7 +64,7 @@ IPv6 spellings and mixed dotted tails. Host bits must already be zero: parsing
 Counted input is at most 49 bytes. Zero length or a count above 49 fails without
 reading input. The C-string overload scans at most 50 bytes to find a terminator.
 Both Try methods are `nothrow` and reset output to `0.0.0.0/0` on false. The
-complete result is staged before committing; properly aligned writable output
+complete result is staged before committing. Properly aligned writable output
 may overlap fully backed readable input. Failure resets can overwrite that
 input too. The input remains caller-owned and no pointers are retained.
 
@@ -85,15 +85,15 @@ The `written` reference must be disjoint from output and receiver storage.
 
 `IFormattable.Format(writer)` performs one counted write from stack storage. It
 borrows the writer without retaining, flushing, closing or destroying it. Writer
-exceptions propagate and can leave partial output. There is no String dependency;
-interpolation follows String's normal owning allocation behavior.
+exceptions propagate and can leave partial output. There is no String dependency.
+Interpolation follows String's normal owning allocation behavior.
 
 `IEquatable<IpNetwork>` compares family, complete network address, and prefix.
-`IHashable` includes the address and prefix; equal values have equal hashes.
+`IHashable` includes the address and prefix. Equal values have equal hashes.
 Hashes are collection hashes, not persistent identifiers. Equality, hashing,
 containment and the default constructor are `nothrow` and allocate nothing.
 Ordinary copies retain only values. Throwing errors follow normal Exception
-runtime behavior; caller-selected writers may allocate or throw.
+runtime behavior. Caller-selected writers may allocate or throw.
 
 For selective sources, include `core/Net/IpNetwork.gf`, `core/Net/IpAddress.gf`, their
 equality/hash/formatting interfaces and `core/Hashing/primitive_hashing.gf` with normal Exception

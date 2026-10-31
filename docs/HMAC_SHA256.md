@@ -33,9 +33,9 @@ int main()
   and arbitrary high bytes, and returns false before any input read/state change
   when the complete append would exceed the supported message length.
 - `GetHash()` is an `immutable`, `nothrow` operation returning an independent
-  fixed `byte[32]` result. It finalizes copied state; repeated calls agree and
+  fixed `byte[32]` result. It finalizes copied state. Repeated calls agree and
   later appends continue the same message.
-- `Reset()` is `nothrow` and starts a new empty message with the same key.
+- `Reset()` is `nothrow` and starts a new empty message with the same key
 
 SHA-256 permits at most `2^61 - 1` bytes per hash. HMAC reserves 64 bytes for the
 inner pad, so a message can contain at most `2^61 - 65` bytes. An impossible key
@@ -57,7 +57,7 @@ stored state as secret-key material.
 
 Tests verify [RFC 4231](https://www.rfc-editor.org/rfc/rfc4231) vectors and
 the independent .NET HMAC implementation, including keys longer than one SHA
-block. RFC 4231 case 5 specifies only the first 128 output bits; the library
+block. RFC 4231 case 5 specifies only the first 128 output bits. The library
 always returns all 256 bits and has no truncation option.
 
 Explicit source selection needs `core/Hashing/HMACSHA256.gf`, `core/Hashing/SHA256.gf`,

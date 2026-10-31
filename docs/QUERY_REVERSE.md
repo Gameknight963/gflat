@@ -2,7 +2,7 @@
 
 `Reverse()` returns a repeatable query yielding the input elements in reverse
 order. It leaves the caller's source order unchanged. Each enumerator owns an
-independent `Vector<T>` buffer; this differs from the existing span `Reverse`
+independent `Vector<T>` buffer. This differs from the existing span `Reverse`
 algorithm, which changes a mutable span in place.
 
 ```csharp
@@ -32,11 +32,11 @@ cannot produce its first reversed element.
 
 Source views still follow normal value-copy rules. Built-in borrowed views copy
 only their small metadata. Copy constructors on custom source values can have
-their own allocation or exception effects when wrappers or iterators are copied;
-deferring enumeration does not suppress those ordinary semantics.
+their own allocation or exception effects when wrappers or iterators are copied.
+Deferring enumeration does not suppress those ordinary semantics.
 
 Input changes before the first move are visible during materialization. After
-buffering, the iterator reads its buffered values; another enumeration creates
+buffering, the iterator reads its buffered values. Another enumeration creates
 a new buffer from the then-current source. Keep the backing source alive and
 obey its borrowing rules while the query can still enumerate it. Ordinary
 `T` semantics apply: owning values may be copied and allocate, while pointer
@@ -66,7 +66,7 @@ int main()
 }
 ```
 
-This projection chooses the stored value type explicitly; `Reverse()` does not
+This projection chooses the stored value type explicitly. `Reverse()` does not
 remove qualification automatically. `ToVector()` has the same storage restriction.
 
 `Current` returns an ordinary `T` value, copying buffered owners when required.
@@ -83,7 +83,7 @@ including after exhaustion, and is released on early loop exit or exceptions
 through normal ownership cleanup. Reverse adds no GC allocation of its own.
 
 The operation uses O(n) element storage and materialization work before its first
-result. Later moves are constant-time; element copying retains its usual costs.
+result. Later moves are constant-time. Element copying retains its usual costs.
 Selective source users include `Queries/enumerable_reverse.gf` and
 `Queries/ReverseSource.gf`, along with `Queries/enumerable_to_vector.gf` for
 `ToVector`, the normal enumeration contracts, and `Vector<T>` dependencies.

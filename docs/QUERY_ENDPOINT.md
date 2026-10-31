@@ -26,10 +26,10 @@ int main()
 ```
 
 The endpoint follows normal value semantics when the query is built. Passing
-a named owning value copies it; `Append(move value)` or `Prepend(move value)`
+a named owning value copies it. `Append(move value)` or `Prepend(move value)`
 transfers it into the captured query state. Each enumerator owns its own copy
 of the captured endpoint. Reusable endpoint queries therefore require a stored
-element type that supports that copy; moving a noncopyable owner into the
+element type that supports that copy. Moving a noncopyable owner into the
 factory does not make repeated enumeration possible. No implicit borrowing
 pointer or lifetime extension is introduced. Pointer endpoints copy addresses
 and retain their normal pointee ownership rules.
@@ -45,7 +45,7 @@ endpoint without reading source `Current` again. Finished queries never advance
 the source again.
 
 `Current` returns an ordinary `T` value without moving out of captured state.
-Repeated endpoint reads copy the same stored value; repeated source reads
+Repeated endpoint reads copy the same stored value. Repeated source reads
 delegate to the underlying `Current` and retain its property effects, such as
 repeated `Select` evaluation. `Current` throws before the first successful move,
 after completion, or after a failed move. A failed `Current` copy does not advance
@@ -60,7 +60,7 @@ exit, downstream exceptions, or iterator destruction. The query's separately
 captured endpoint remains available for another enumeration. Usual source view
 lifetime and mutation rules still apply.
 
-The endpoint type is the sequence's existing `T`; these operators do not widen
+The endpoint type is the sequence's existing `T`. These operators do not widen
 types or remove element qualification. The factories transfer their value
 parameter using `move`, which cannot consume outer `readonly` or `immutable`
 storage. Project to an
@@ -71,6 +71,4 @@ some other query terminals.
 
 Selective source users add
 `Queries/EndpointSource.gf` and `Queries/enumerable_endpoints.gf` with the
-normal sequence contracts. The wrapper makes no direct libc or collector calls
-and needs no Vector or String implementation. Dependencies of its element,
-iterator, and exception runtime still apply.
+sequence contracts and the dependencies of the captured value and source iterator.

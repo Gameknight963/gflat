@@ -39,14 +39,14 @@ encoder never flushes or closes its destination.
   input bytes are copied into the writer's state between calls. The input pointer
   is never retained, so the caller may reuse its buffer after `Write` returns.
 - A zero-length write on an open writer does not dereference its input pointer
-  or call the destination.
+  or call the destination
 - `Complete()` emits a final four-character padded group if one or two bytes
   remain. With no pending bytes it emits nothing. It does not write a newline.
   Repeated successful calls do nothing.
 - After successful completion, every `Write`, including a zero-length write,
   throws `Exception`. There is no reset or restart operation.
 - Scope exit never emits padding or calls `Complete`. The caller must complete
-  the stream explicitly; abandoning an incomplete writer discards its carry.
+  the stream explicitly. Abandoning an incomplete writer discards its carry.
 
 For example, writing `a` and then `bc` yields `YWJj`, with no padding. Writing only
 `a` yields no output until `Complete()` emits `YQ==`. An empty stream remains empty.
@@ -55,14 +55,14 @@ For example, writing `a` and then `bc` yields `YWJj`, with no padding. Writing o
 
 Keep the destination alive and usable for every operation. Input must remain alive
 and unchanged during each `Write`. The destination must not overwrite or
-invalidate the input while the writer is reading it; do not encode bytes borrowed
+invalidate the input while the writer is reading it. Do not encode bytes borrowed
 from a `String` into that same owning `String`. Concurrent or reentrant use of the
 writer is unsupported, including calling it again from the destination callback.
 
 Copying the writer duplicates its carry and completion/failure flags while sharing
 the destination pointer. Copies are not independent output streams: do not
 interleave their operations into the same stream. A failure is local to that
-writer; a copy made beforehand cannot discover it. Moving transfers the same
+writer. A copy made beforehand cannot discover it. Moving transfers the same
 state. Destroying any copy never destroys its destination.
 
 A sink exception propagates unchanged, possibly after partial output. The writer
@@ -72,6 +72,6 @@ be used only after the caller has dealt with the incomplete output.
 
 Normal encoding and completion perform no internal heap allocation. Output uses a
 256-byte stack buffer, and carry uses two copied bytes. The destination may
-allocate or throw; rejected operations construct ordinary exceptions and may also
+allocate or throw. Rejected operations construct ordinary exceptions and may also
 allocate. The encoder does not impose a total input-size counter or a complete
 output-size calculation.

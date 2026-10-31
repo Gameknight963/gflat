@@ -1,7 +1,7 @@
 namespace Standard::Text;
 
 /// Forwards each counted write to two borrowed writers, first then second.
-/// Copies share the endpoints; keep both alive and valid during every call.
+/// Copies share the endpoints. Keep both alive and valid during every call.
 public struct TeeWriter : ITextWriter
 {
     private ITextWriter* first;

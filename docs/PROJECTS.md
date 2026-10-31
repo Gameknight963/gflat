@@ -1,7 +1,7 @@
 # MSBuild projects
 
 A `.gfproj` is an MSBuild XML project. Visual Studio opens that same file through
-Microsoft's Common Project System (CPS). No companion project is generated.
+Microsoft's Common Project System (CPS).
 The CLI and language server evaluate it using their bundled MSBuild engine.
 Visual Studio uses its own MSBuild engine for CPS evaluation and IDE builds.
 
@@ -21,9 +21,7 @@ Use the same `build`, `check`, and `clean` commands for this format. Project
 references may use either SDK-style or explicit-import projects. Source selection,
 standard-library selection, configurations, and incremental builds use the same
 build rules. The CLI and language server resolve the SDK from their own package
-and require no registration, NuGet download, or setup command. Their SDK search
-directory is private to those processes; an inherited Visual Studio or .NET SDK
-search path does not select their engine or SDK.
+using a private SDK search directory.
 
 For Visual Studio and its standalone MSBuild, run the Windows extension's
 [SDK setup script](EDITOR_SUPPORT.md#optional-sdk-style-project-setup). This is
@@ -39,8 +37,7 @@ The Windows Visual Studio extension also provides optional
 for SDK-style projects opened by Visual Studio's MSBuild. The explicit-import
 format below works with the CLI's private engine without installing anything.
 
-Projects import the toolchain's build rules explicitly. No MSBuild SDK registration
-or administrator setup command is required:
+Projects can also import the toolchain's build rules explicitly:
 
 ```xml
 <Project DefaultTargets="Build">
@@ -60,19 +57,16 @@ or administrator setup command is required:
 server supply `GflatDefaultSdkRoot` from their own distribution, so a moved project
 can use the currently running toolchain. An explicit `GflatSdkRoot` takes priority.
 Visual Studio supplies that property from the installed VSIX, including during
-initial project evaluation. Its templates contain no installation-specific path.
+initial project evaluation.
 
 For standalone MSBuild, the relative fallback must locate the toolchain. Otherwise
 set `GflatSdkRoot` in the environment or pass `-p:GflatSdkRoot=/path/to/gflat`.
 The directory must contain the complete `build/` directory, including the
-precompiled tasks under `build/tasks/`; keep
-`Standard/` there too when using the standard library. Builds do not install files into
-.NET or Visual Studio.
+precompiled tasks under `build/tasks/`. Keep
+`Standard/` there too when using the standard library.
 
 Downloaded compiler and language-server bundles include MSBuild and the .NET runtime.
-Using them does not require an installed .NET SDK, registering an SDK, or copying
-files into Visual Studio. Clang and the native platform toolchain are still required
-to produce native executables. The .NET SDK is required to build gflat itself from source.
+Clang and the native platform toolchain produce native executables. The .NET SDK is required to build gflat itself from source.
 
 ## Creating a project
 
@@ -103,7 +97,7 @@ The default `OutputType` is `Executable`. A source library uses `SourceLibrary`:
 
 A `SourceLibrary` contributes source files to projects that reference it. Building
 it checks those sources without producing an executable or LLVM output.
-It has no `TargetPath`; inherited executable output settings are ignored. `Clean`
+It has no `TargetPath`. Inherited executable output settings are ignored. `Clean`
 removes its generated source lists and build stamps, leaving other files intact.
 Use an `Executable` project to run the library or emit LLVM output.
 
@@ -122,9 +116,8 @@ The build rules reference the bundled `Standard/Standard.gfproj` unless `NoStdLi
 With `NoStdLib`, no library reference or hidden compiler declarations are added.
 This is how Standard itself builds. Explicit source files and project references remain
 available, so applications can select their own runtime/library implementation.
-Excluding Standard does not turn a bare pointer operation into a library-independent
-operation: features that call allocation or exception services need implementations
-of those services supplied as ordinary inputs.
+Allocation and exception features need their service implementations supplied as
+source inputs.
 
 ```text
 gflat main.gf --no-stdlib --run
@@ -133,8 +126,7 @@ gflat build app.gfproj --no-stdlib
 
 The direct compiler API accepts `CompilationOptions { NoStdLib = true }` for
 checking, emission, and editor analysis. Project/editor builds use the evaluated
-source graph and never inject another copy of Standard. This controls source inputs;
-it is not a promise to link without the host C startup/runtime libraries.
+source graph and never inject another copy of Standard. Host startup and runtime linkage are configured separately.
 
 ## Sources and references
 
@@ -157,9 +149,7 @@ when needed. Set `EnableDefaultCompileItems` to `false` to list sources explicit
 Standard `Directory.Build.props` and `Directory.Build.targets` files apply to
 projects in their directory tree, including editor evaluation. Use them for shared
 settings such as `NoStdLib` and shared build hooks.
-Use one `.gfproj` per directory for editor discovery. The toolchain props and targets
-remain implementation files; projects can still use normal imports for their own
-shared build settings. `GflatSdkRoot` can explicitly select another toolchain root
+Use one `.gfproj` per directory for editor discovery. Use ordinary imports for shared build settings. `GflatSdkRoot` can explicitly select another toolchain root
 using an environment variable or `-p:GflatSdkRoot=/path/to/gflat`.
 
 To pass program arguments, put them after `--`:
@@ -187,9 +177,9 @@ dotnet msbuild examples/hello/hello.gfproj -t:Clean
 ```
 
 `Rebuild` and a no-op `Restore` target are also provided. `Configuration` defaults
-to `Debug` when the project/shared props do not select another value; use
+to `Debug` when the project/shared props do not select another value. Use
 `-p:Configuration=Release` to override it. CLI `--configuration` and `--platform`
-likewise override project settings; without them, the evaluated root configuration
+likewise override project settings. Without them, the evaluated root configuration
 is used for both the build and referenced-project source selection. This
 selects project conditions, output paths, and the default LLVM optimization level
 (Debug: 0, Release: 2). Set `GflatOptimizationLevel` to override that default.
@@ -212,7 +202,7 @@ not remembered by a later clean command. Clean currently requires an `.exe`
 target name.
 
 Direct source builds can use `--source-list PATH` to read one source-file path
-per line. Blank lines are ignored; relative entries use the command's working
+per line. Blank lines are ignored. Relative entries use the command's working
 directory. Pass `.gfproj` files directly rather than through a source list, and
 do not combine project commands with `--source-list`. Direct outputs and Windows
 debug PDBs must differ from every supplied source file and source list.
@@ -227,13 +217,13 @@ if available, or `gflat` from PATH. Keep the installed SDK and its build/Standar
 newer than all inputs. The input manifests include sources, referenced projects,
 evaluated imports, compiler and runtime files, and the native driver. Adding or
 removing sources and changing build options also invalidates the build. A failed
-compilation removes the success stamp; `gflat clean` removes it too. Library
+compilation removes the success stamp. `gflat clean` removes it too. Library
 builds and `gflat check` always run analysis.
 
 An output newer than its configuration's success stamp is rebuilt, including when
 another configuration overwrites a shared output directory. As with other
 timestamp-based build checks, manually restoring old output timestamps can hide
-an external modification; use `Rebuild` after doing so.
+an external modification. Use `Rebuild` after doing so.
 
 Library cleaning removes only intermediate files. Executable cleaning removes the
 configured `TargetPath` and `GflatIROutput`, after checking that neither overlaps
@@ -249,27 +239,25 @@ that does not identify an existing file remains uncached. This uses MSBuild time
 so changing file contents while preserving their timestamps is not detected.
 
 `GflatExceptionReserveBytes` sets the native exception runtime's emergency reserve
-for the executable. The default is 65536 bytes; zero disables the reserve. Set it
+for the executable. The default is 65536 bytes. Zero disables the reserve. Set it
 in a project `PropertyGroup`, or use the **Exception reserve (bytes)** project
 property in Visual Studio. `--exception-reserve-bytes N` overrides the project
 setting for compiler CLI builds; MSBuild also accepts
 `-p:GflatExceptionReserveBytes=N`. Referenced source libraries do not link their
 own runtime or choose a separate reserve. Checking and LLVM-only output validate
-the setting but do not allocate or link a reserve. The setting will not require
-an exception runtime in future builds that omit it.
+the setting but do not allocate or link a reserve.
 
 MSBuild runs build hooks normally. Editor evaluation does not execute targets.
 Files generated by build targets are not automatically generated for editor analysis.
-Explicit source commands (`gflat main.gf helper.gf`) still work without loading
-MSBuild; a future compiler written in gflat can keep that interface.
+Explicit source commands (`gflat main.gf helper.gf`) compile the listed files directly.
 
 Project evaluation, checking, and native builds work on Windows x64 and Linux x64.
 Native builds need Clang and the host's C linker/toolchain. The compiler selects
-the host target; cross-compilation is not supported.
+the host target. Cross-compilation is not supported.
 
 ## Native libraries
 
-Foreign `extern` declarations describe calls; native link requirements provide
+Foreign `extern` declarations describe calls. Native link requirements provide
 the object files or libraries implementing them. Repeat these options on an
 explicit-source command or an executable project build:
 
@@ -279,12 +267,10 @@ explicit-source command or an executable project build:
 | `--native-library-file PATH` | `<NativeLibraryFile Include="PATH" />` | An explicit native object, archive, or other library file accepted by that linker. |
 | `--native-library-dir PATH` | `<NativeLibraryDirectory Include="PATH" />` | A native library search directory. |
 
-Quote paths containing spaces. A library name is not a gflat namespace or a
-source-project reference. Native linking does not add declarations, generate
-bindings, or change the foreign calling convention or type layout.
+Quote paths containing spaces. Supply matching `extern` declarations for the
+native functions you call.
 
-For example, a project can declare a Windows SDK library without adding a
-binding to its functions:
+For example, link a Windows SDK library:
 
 ```xml
 <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
@@ -293,7 +279,7 @@ binding to its functions:
 ```
 
 Use names and binary formats supported by your host toolchain. A native file
-must match the target architecture and ABI; adding a file does not convert it.
+must match the target architecture and ABI.
 Native code and its dependencies are built separately from the gflat sources.
 
 ### Requirements from source libraries
@@ -308,23 +294,22 @@ Native requirements are ordered with each owning project before its referenced
 dependencies, preserving declaration order where dependency ordering allows.
 Shared dependencies follow all their owners. Within a project, evaluated
 `NativeLibrary` and `NativeLibraryFile` entries keep their interleaved order and
-repeats; repeated libraries are not
+repeats. Repeated libraries are not
 removed. This matters for archive linkers that resolve dependencies from left
 to right. Search directories keep first-occurrence order, with duplicates
-removed. Additional CLI requirements append after the project's requirements;
-they do not replace them.
+removed. Additional CLI requirements append after the project's requirements.
+They do not replace them.
 
 For incremental builds, explicit native files are tracked as inputs. Logical
 library names conservatively force a new link because search resolution can change.
 
 `check`, `--check`, and `--emit-ir` validate the source and link metadata without
 linking. Native files and libraries need not be installed for those operations.
-An executable build invokes Clang with the collected requirements; missing or
+An executable build invokes Clang with the collected requirements. Missing or
 incompatible native inputs are then native compiler/linker errors.
 
-Link-time library selection does not configure runtime shared-library lookup.
-The normal operating-system loader policy applies. gflat does not copy DLLs or
-shared libraries beside the executable or add an rpath automatically.
+Deploy shared libraries where the operating system's loader can find them.
+Link-time library selection leaves runtime lookup to the host loader.
 
 ### A small C object
 
@@ -356,9 +341,8 @@ int main() nothrow
 gflat main.gf --no-stdlib --native-library-file native_add.o --run
 ```
 
-The program exits with zero. The explicit object supplies the C symbol; this
-caller needs no standard-library source. Its `nothrow` declaration is the
-foreign contract for this C implementation, not an inferred exception policy.
+The program exits with zero. The object supplies the C symbol. The `nothrow`
+declaration promises that the C implementation will not unwind through the call.
 
 The same input can be recorded in a project, relative to that project file:
 
@@ -383,7 +367,7 @@ work you want to do:
 
 - `gflat.slnx` contains the compiler, command-line tools, language server, and tests.
 - `Standard/Standard.slnx` contains the source standard library and platform providers.
-- `examples/examples.slnx` contains runnable examples; choose a startup project.
+- `examples/examples.slnx` contains runnable examples. Choose a startup project.
 
 Use **Add > Existing Project** to add another `.gfproj` to a solution.
 
@@ -391,22 +375,20 @@ Use **File > New > Project** and search for **gflat** to create a Console
 Application or Source Library directly in your solution. These are native Visual
 Studio project templates, generated from the same starting files as `gflat new`.
 They import the same build rules as CLI and standalone MSBuild projects. CPS
-supplies the bundled toolchain path; no SDK registration is required. Templates
-do not save a version-specific extension path in project files.
+supplies the bundled toolchain path.
 
-No special solution folder is required. Visual Studio's optional
+Visual Studio's optional
 [solution folders](https://learn.microsoft.com/en-us/visualstudio/ide/solutions-and-projects-in-visual-studio#solution-folder)
-only group projects in Solution Explorer; they do not change project loading or builds.
+group projects in Solution Explorer.
 
 CPS owns the project tree, standard file commands, project-file editing and reload,
-configurations, property pages, and MSBuild invocation. The old handwritten
-hierarchy and its custom file dialogs have been removed. The extension supplies a
+configurations, property pages, and MSBuild invocation. The extension supplies a
 `.gf` item template, App/Library project templates, and the bundled compiler and SDK locations.
 
 The compiler solution contains only .NET projects, so `dotnet build/test gflat.slnx`
 can bootstrap the tools without first building gflat programs. Build the standard
 library or examples from their separate solutions after the compiler is available.
-The available configurations are `Debug|AnyCPU` and `Release|AnyCPU`; `AnyCPU` is
+The available configurations are `Debug|AnyCPU` and `Release|AnyCPU`. `AnyCPU` is
 an MSBuild configuration label, not a native ABI selection.
 
 ### Running in Visual Studio
@@ -425,8 +407,8 @@ are resolved from that directory. These settings are stored per configuration in
 It emits LLVM source locations and descriptions of parameters, locals, pointers,
 buffers, and aggregate fields. Windows builds write a PDB beside the executable;
 Linux builds embed DWARF. Standalone compilation uses `--debug` (or `-g`).
-Use `--no-debug` to override the project setting. Optimization is independent;
-start with optimization level 0 for predictable stepping and variable inspection.
+Use `--no-debug` to override the project setting. Optimization is independent.
+Start with optimization level 0 for predictable stepping and variable inspection.
 Watch initially uses the native debugger's expression evaluator, so gflat-specific
 expressions and property evaluation are not fully supported.
 
@@ -436,12 +418,12 @@ Debug builds report gflat exception type names, messages, and codes through the
 native debugger. Use **Debug > Windows > Exception Settings > C++ Exceptions**
 and add a gflat type name (for example `App::Problem`) to break when it is thrown.
 gflat does not enable first-chance breaking by default or override your settings.
-Explicit `throw;` reports a rethrow; internal cleanup propagation does not.
+Explicit `throw;` reports a rethrow. Internal cleanup propagation does not.
 
 An exception reaching a termination boundary reports an unhandled event before
 calling `Exceptions::Unhandled`. Continue execution to run the hook and terminate.
-The preview reads the stored `Exception.message` and `Exception.code` fields;
-it does not execute overridden getters. C++ transport events can still appear in
+The preview reads the stored `Exception.message` and `Exception.code` fields.
+It does not execute overridden getters. C++ transport events can still appear in
 the Debug output and when breaking on all C++ exceptions.
 
 The implementation uses [LLVM debug metadata](https://llvm.org/docs/SourceLevelDebugging.html)
@@ -452,7 +434,7 @@ breakpoint, Watch, exception-settings, rethrow, and continuation test. It instal
 only into a disposable experimental profile and cleans that profile afterward.
 
 The language server discovers the nearest project and includes referenced sources
-and unsaved buffers. Evaluation is cached between edits; source and imported
+and unsaved buffers. Evaluation is cached between edits. Source and imported
 project-file changes invalidate it. Creating a nearer project or shared
 `Directory.Build.props`/`Directory.Build.targets` file also refreshes evaluation.
 Invalid project files produce diagnostics while
@@ -462,26 +444,20 @@ uses `Debug|AnyCPU` independently of the active VS build configuration.
 ## Checking an installation
 
 Run `gflat doctor` to report the host target, compiler directory, SDK location,
-MSBuild project evaluation, and selected Clang executable. It does not install
-software or change your project. `gflat doctor --native` also compiles and runs
+MSBuild project evaluation, and selected Clang executable.  `gflat doctor --native` also compiles and runs
 a small exception unwinding probe, checking the native compiler, linker, and C++
 runtime together. Temporary probe files are removed afterward.
 
-Use `--clang path` to check a specific driver; otherwise selection follows normal
+Use `--clang path` to check a specific driver. Otherwise selection follows normal
 builds, including `GFLAT_CLANG`. Exit code 0 means the requested checks passed;
-2 means at least one check failed. A successful basic check does not establish
-that native linking works; use `--native` for that.
+2 means at least one check failed. Use `--native` to check native linking.
 
-## Remaining work
+## Migrating older projects
 
-Package management and binary libraries are not included.
-
-The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
-an MSBuild `<Project>` with the explicit imports shown above, and replace
-`Sources`/`Reference` with `Compile`/`ProjectReference` items. SDK-style projects
-remain supported as described above. The old CLI SDK registration command has
-been removed; the CLI and language server use their bundled SDK. Visual Studio
-SDK setup is handled separately by the extension's scripts linked above.
+Convert the old `<GflatProject>` XML format to an MSBuild `<Project>` with the
+imports above. Replace `Sources` and `Reference` with `Compile` and
+`ProjectReference` items. For Visual Studio SDK-style projects, use the extension's
+[setup scripts](EDITOR_SUPPORT.md#optional-sdk-style-project-setup).
 
 References: [Microsoft's CPS documentation](https://github.com/microsoft/VSProjectSystem)
 and [MSBuild project files](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference).
@@ -498,14 +474,12 @@ builtin recognition** on the project's General page.
 
 `--builtins` explicitly restores the default behavior and overrides a project's
 `NoBuiltins=true`. If both switches are supplied, the last one wins. Changing this
-setting invalidates incremental compilation; `check` and source-library builds
+setting invalidates incremental compilation. `check` and source-library builds
 accept the same override. The compiler API uses `CompilationOptions.NoBuiltins`.
 
-This is not a guarantee of runtime-independent output. Explicit external calls,
-explicit LLVM intrinsics, and other target lowering requirements can still need
-libc or compiler runtime helpers. It neither excludes Standard sources nor changes
-startup/linker settings; use `NoStdLib` and an appropriate native link setup
-separately when building freestanding code.
+External calls, LLVM intrinsics, and target lowering may still require libc or
+compiler runtime helpers. Freestanding builds also need `NoStdLib` and suitable
+startup and linker settings.
 
 Use `--optimization 0|1|2|3` with standalone compilation or project builds.
 Projects default to 0 in Debug and 2 in Release. Set `GflatOptimizationLevel` in a
@@ -513,9 +487,9 @@ project property group, or use the optimization field in Visual Studio's project
 properties. An explicit CLI option overrides the project setting.
 
 For standalone compilation, `GFLAT_OPT_LEVEL` supplies the default when no CLI
-option is given; otherwise the default is 0. Project builds use their evaluated
+option is given. Otherwise the default is 0. Project builds use their evaluated
 project setting instead of that environment variable. These levels control Clang
-and LLVM optimization; they do not change language semantics.
+and LLVM optimization. They do not change language semantics.
 
 Executable builds give gflat function definitions other than `main` internal LLVM
 linkage, allowing LLVM to remove unused definitions. Native compilation also places
@@ -525,7 +499,7 @@ static initialization and cleanup retain the functions they reference.
 
 `--emit-ir` preserves externally linkable function definitions for callers in
 other native object files and custom entry points. The compiler API likewise
-preserves those definitions by default; use
+preserves those definitions by default. Use
 `CompilationOptions { InternalizeFunctions = true }` for a complete executable
 whose gflat functions are only called through that compilation or passed pointers.
 This controls native linkage independently of gflat `public`/`private` access.

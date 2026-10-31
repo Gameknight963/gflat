@@ -61,8 +61,8 @@ public struct BinaryBufferReader : IByteReader
         position += count; return true;
     }
 
-    /// Borrows the next count bytes without advancing this reader; the child starts at zero.
-    /// Empty success and failure reset the child to empty; keep output separate from this reader and backing bytes.
+    /// Borrows the next count bytes without advancing this reader. The child starts at zero.
+    /// Empty success and failure reset the child to empty. Keep output separate from this reader and backing bytes.
     public immutable bool TryPeekSlice(nuint count, ref BinaryBufferReader slice) nothrow
     {
         if (count > length - position) { slice = new(); return false; }
@@ -73,7 +73,7 @@ public struct BinaryBufferReader : IByteReader
 
     /// Borrows bytes before the first delimiter and consumes through that delimiter.
     /// Missing delimiter preserves Position and resets slice to default empty.
-    /// Empty fields also return an empty child with null Data; no terminator is retained.
+    /// Empty fields also return an empty child with null Data. No terminator is retained.
     /// Keep output disjoint from this reader and its entire captured input.
     public bool TryReadTo(byte delimiter, ref BinaryBufferReader slice) nothrow
     {

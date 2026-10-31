@@ -2,8 +2,8 @@
 
 `Standard::Time::DateTime` combines a Gregorian [Date](DATE.md) with a
 [TimeOfDay](TIME_OF_DAY.md). It describes a calendar date and clock reading,
-without a time zone or UTC offset. It does not identify an instant or consult
-the system clock. Two values compare their calendar and clock readings directly.
+without a time zone or UTC offset. Two values compare their calendar and clock
+readings directly. Use [DateTimeOffset](DATE_TIME_OFFSET.md) for a UTC instant.
 
 ```csharp
 using Standard::Text;
@@ -24,13 +24,13 @@ int main()
 
 The default value is `0001-01-01T00:00:00`. Construction from `Date` and
 `TimeOfDay` preserves their values. Immutable getters expose `Date`, `TimeOfDay`,
-and `Ticks`. Ticks count 100-nanosecond intervals since the default value;
+and `Ticks`. Ticks count 100-nanosecond intervals since the default value.
 `FromTicks(long)` accepts 0 through 3155378975999999999, covering years 1..9999.
 Invalid tick counts throw `Exception`.
 
 `Add(TimeSpan)` and `Subtract(TimeSpan)` return new values and reject results outside that range.
 Subtraction accepts signed durations: a negative duration moves the result later,
-and zero preserves the value. Neither operation changes its receiver; accepted
+and zero preserves the value. Neither operation changes its receiver. Accepted
 arithmetic performs no library allocation.
 `Difference(other)` returns this value minus the other as a `TimeSpan`.
 `AddMonths(int)` and `AddYears(int)` use Date's calendar rules, including clamping
@@ -46,21 +46,19 @@ seven fractional-second digits. The separator is an uppercase `T`. Year zero,
 invalid dates, leap seconds, whitespace, `Z`, offsets, and trailing bytes are
 rejected. Counted embedded NUL bytes are rejected too. C-string overloads stop
 at the first NUL and inspect at most 28 bytes. Try failure resets the result to
-the default value; throwing Parse reports an `Exception`. Try parsing allocates
+the default value. Throwing Parse reports an `Exception`. Try parsing allocates
 nothing and is `nothrow`. Properly backed, aligned result storage may overlap
-the input; parsing commits the result after reading the input it needs.
+the input. Parsing commits the result after reading the input it needs.
 
 `TryFormat(output, capacity, ref written)` writes 19 bytes when the fraction is
 zero, otherwise 27 bytes with exactly seven fractional digits. No NUL terminator
 is appended. Insufficient capacity returns false, sets `written` to zero, and
 leaves output bytes unchanged. Successful formatting allocates nothing and is
-`nothrow`. Output may overlap sufficiently backed receiver storage; `written`
+`nothrow`. Output may overlap sufficiently backed receiver storage. `written`
 must be separate from the receiver and output bytes.
 
 `Format(writer)` sends the same representation in one counted write from a
 stack buffer. Writer errors propagate. Interpolation uses this method through
-`IFormattable`; DateTime itself does not depend on String.
+`IFormattable`. DateTime itself does not depend on String.
 
-The implementation reuses Date and TimeOfDay for calendar validation, parsing,
-and formatting. It provides no current-time lookup, Unix timestamp conversion,
-time-zone rules, or localized formatting.
+For selective builds, include DateTime and its Date/TimeOfDay dependencies.

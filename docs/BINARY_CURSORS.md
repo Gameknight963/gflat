@@ -1,11 +1,10 @@
 # Borrowed binary buffer cursors
 
 `Standard::Binary::BinaryBufferReader` and `Standard::Binary::BinaryBufferWriter` track a position within
-caller-owned bytes. They do not own storage, allocate, or directly call libc. All
-constructors, properties, and methods are `nothrow`. Include their respective
+borrowed byte buffers. All constructors, properties, and methods are allocation-free
+and `nothrow`. Include their respective
 source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/bytes.gf`.
-The reader also requires the interface definition `core/IO/IByteReader.gf`; defining
-the cursor itself does not require the throwing IO helpers or exception runtime.
+The reader also requires `core/IO/IByteReader.gf`.
 
 ```csharp
 using Standard; using Standard::Binary;
@@ -21,38 +20,36 @@ bool success = reader.TryReadUInt16BigEndian(ref tag)
     && reader.TryReadInt32LittleEndian(ref number);
 ```
 
-Construct a reader with `readonly(byte)*` and a readable byte count; construct
+Construct a reader with `readonly(byte)*` and a readable byte count. Construct
 a writer with `byte*` and writable capacity. A parameterless constructor creates
 an empty cursor. `Length` (reader) and `Capacity` (writer) report the captured
 extent. Both have `Position` and `Remaining` getters. `Reset()` sets position to
 zero without modifying storage. `TrySkip(count)` advances only if enough bytes
-remain; a writer skip does not initialize the skipped bytes.
+remain. A writer skip does not initialize the skipped bytes.
 
 `TrySeek(position)` sets an absolute position within the cursor's captured region.
-Positions from zero through `Length` or `Capacity`, including the end, succeed;
-an out-of-range position returns false and leaves the old position unchanged.
+Positions from zero through `Length` or `Capacity`, including the end, succeed.
+An out-of-range position returns false and leaves the old position unchanged.
 It can move forward or backward without reading, writing, clearing or initializing
 bytes, allocating storage or computing an address from `Data`. A default empty
 cursor accepts only zero. Child positions are relative to the child's own region,
 and seeking one cursor does not change a copy's or child's position.
 
-This supports parser checkpoints and packet-header backfill without a destructive
-`Reset()` followed by a potentially failing skip. A writer's `Position` is its
+Use seeking for parser checkpoints and packet-header backfill. A writer's `Position` is its
 current cursor, not a high-water mark: save and restore the end position when
 backfilling, and do not treat a forward seek as proof that bytes were initialized.
 Backing-storage lifetime and validity rules still apply. `Reset` and `TrySkip`
 keep their existing behavior.
 
-
 `Data` exposes the start of the captured region, independently of the current
 position: a reader returns `readonly(byte)*?`, and a mutable or shallow readonly
-writer returns `byte*?`. Inspecting that pointer does not change the cursor;
-shallow readonly protects the header, not the caller-owned bytes. Deep immutable
+writer returns `byte*?`. Inspecting that pointer does not change the cursor.
+Shallow readonly protects the header, not the caller-owned bytes. Deep immutable
 writers cannot expose mutable storage through `Data`. A default cursor has null
 data. This lets a bounded child feed another
 counted API, such as UTF-8 decoding, without copying the payload or adding a Span
 dependency. Direct pointer use requires the caller to respect `Length` or
-`Capacity`; it does not advance the cursor or perform bounds checks.
+`Capacity`. It does not advance the cursor or perform bounds checks.
 
 `TryPeekByte(ref byte value)` observes the next byte without advancing. It returns
 true with that byte, or false with output zero for an empty or exhausted reader.
@@ -66,13 +63,13 @@ reader's fields. A default empty reader accesses no input storage.
 `TryRead` / `TryWrite` followed by `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`,
 `UInt64`, `ExtraLong`, `Float`, or `Double`, and `LittleEndian` or `BigEndian`, matching
 `BinaryPrimitives`. Signed operations preserve two's-complement bits. Floating
-operations preserve IEEE bits, including signed zero and NaN payloads; their
+operations preserve IEEE bits, including signed zero and NaN payloads. Their
 widths are four and eight bytes respectively. `ExtraLong` reads or writes all
 16 bytes of a signed 128-bit `extralong`. Addresses need not be aligned
-for the scalar's width; reads and writes operate one byte at a time.
+for the scalar's width. Reads and writes operate one byte at a time.
 
 On success, a fixed-width operation advances by its byte width. A failure leaves
-position unchanged; reads set their output to zero (positive zero for floating
+position unchanged. Reads set their output to zero (positive zero for floating
 values), and writes leave bytes
 untouched. Operations check remaining capacity before adding an offset, avoiding
 pointer-sized position overflow.
@@ -89,8 +86,8 @@ bytes that a later read will observe.
 
 Zero counts succeed without accessing either pointer, including for a default
 empty cursor. Pointer arguments still have non-null types. For positive counts,
-the caller supplies live readable/writable regions of at least that size;
-neither region may overlap the cursor object's fields. The methods check only
+the caller supplies live readable/writable regions of at least that size.
+Neither region may overlap the cursor object's fields. The methods check only
 the cursor's remaining extent, not the allocation behind a caller pointer.
 
 The [raw-memory linking notes](MEMORY.md#native-linking) also apply: an optimizer
@@ -101,7 +98,7 @@ may generate libc byte-operation calls. Freestanding callers can select
 bytes and returns a reader bounded to just that region. The writer equivalent,
 `TryWriteSlice(count, ref BinaryBufferWriter slice)`, reserves that region and
 returns a bounded writer. Reserving does not initialize the bytes. The parent
-advances immediately; the child's position starts at zero and moves independently.
+advances immediately. The child's position starts at zero and moves independently.
 Both operations accept zero length and return an empty child. On failure the
 parent position is unchanged and the output child is reset to empty.
 
@@ -149,8 +146,8 @@ extension BinaryBufferReader {
 ```
 
 These use canonical unsigned base-128 encoding. Writers advance only after a
-complete write; short buffers leave every byte and the position unchanged.
-Readers advance only on `Done`; `NeedMore` and `Invalid` preserve both the
+complete write. Short buffers leave every byte and the position unchanged.
+Readers advance only on `Done`. `NeedMore` and `Invalid` preserve both the
 position and output value. To retry incomplete input, construct a reader covering
 the enlarged buffer and position it at the same unfinished prefix. An existing
 reader's captured length does not grow when backing bytes are appended.
@@ -160,7 +157,7 @@ All eight methods allocate nothing and are `nothrow`.
 
 The signed helpers apply ZigZag before the same canonical unsigned base-128
 encoding: `0` becomes `0`, `-1` becomes `1`, and `1` becomes `2`. Both signed
-minima and maxima are supported. This is the ZigZag representation; negative
+minima and maxima are supported. This is the ZigZag representation. Negative
 values do not use a signed two's-complement 7-bit encoding. Signed reads preserve
 their previous output and position on `NeedMore` or `Invalid`, and signed writes
 leave every byte and position unchanged when capacity is insufficient.
@@ -199,7 +196,6 @@ int main()
 }
 ```
 
-
 ## Example: header backfill and parser checkpoints
 
 ```csharp
@@ -225,7 +221,6 @@ int main()
 }
 ```
 
-
 ## Peeking at a bounded payload
 
 `TryPeekSlice(count, ref slice)` borrows the next `count` bytes without changing
@@ -238,7 +233,7 @@ input bytes or forms an address from an empty cursor's Data.
 This immutable method works through mutable, readonly and immutable parent views.
 The child can advance independently but exposes only readonly bytes. Its contents
 are a live view, so later edits through a permitted external backing alias remain
-visible. Keep backing storage alive; moving the parent's position does not move
+visible. Keep backing storage alive. Moving the parent's position does not move
 or invalidate the child's captured region. Output must remain separate from the
 parent and its backing bytes, as with the other cursor operations. The method is
 `nothrow`, allocates nothing and copies no payload.
@@ -269,12 +264,12 @@ method requires output to be disjoint from reader state and its entire captured 
 
 A borrowed `IByteReader* input = &reader` lets the same [binary scalar IO](BINARY_IO.md)
 or [stream varint](STREAM_VARINT.md) consumer accept an in-memory cursor, File, or
-TcpClient. That advances this specific cursor; copies still have independent positions.
+TcpClient. That advances this specific cursor. Copies still have independent positions.
 Keep the cursor and its backing storage alive and stable throughout those calls.
 
 The existing cursor `ReadVarUInt32(ref value)` / `ReadVarUInt64(ref value)` extensions
 return `VarInt::Status` and preserve position/value on `NeedMore` or `Invalid`.
 The consuming `IByteReader*` operations `ReadVarUInt32()` / `ReadVarUInt64()` instead
 return values or throw after possible prefix consumption. Select the contract that
-fits the parser; neither operation replaces the other. Stream helper dependencies
+fits the parser. Neither operation replaces the other. Stream helper dependencies
 are needed only when those helpers are used, not merely to define this cursor.

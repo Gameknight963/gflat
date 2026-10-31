@@ -31,15 +31,15 @@ extension Span<readonly(char)> {
 }
 ```
 
-Only the source span's counted bytes are compared; it need not end with a null.
+Only the source span's counted bytes are compared. It need not end with a null.
 Comparisons are case-sensitive byte equality. The counted pattern can contain
-embedded nulls or any byte value; the C-string form stops at its first null.
+embedded nulls or any byte value. The C-string form stops at its first null.
 An empty pattern matches every span, including the default empty span. A pattern
 longer than the span returns false. Counted zero-length and longer-pattern checks
 read no pattern bytes. Pointer arguments still have non-null types.
 
 Source and pattern may overlap. Neither changes, allocates, or retains a pointer.
-The receiver is borrowed; calling the method does not copy the span or source
+The receiver is borrowed. Calling the method does not copy the span or source
 text or extend either buffer's lifetime. Keep both regions readable for the call.
 Mutable spans can use `text.AsReadOnly().StartsWith(...)` or `EndsWith(...)`.
 These extensions use the existing checked Span indexer and do not add a

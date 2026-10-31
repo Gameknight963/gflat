@@ -4,7 +4,7 @@ namespace Standard::IO;
 
 /// Buffers reads in owned or borrowed scratch and borrows one source cursor without closing it.
 /// All consuming access to that cursor must pass through this adapter while it is used.
-/// Move transfers the cursor and storage reference; the Vector owner field prevents copies.
+/// Move transfers the cursor and storage reference. The Vector owner field prevents copies.
 public struct BufferedReader : IByteReader
 {
     private IByteReader* source;
@@ -15,7 +15,7 @@ public struct BufferedReader : IByteReader
     private nuint end;
     private bool failed;
 
-    /// Allocates and initializes one buffer; zero capacity rejects before buffer allocation.
+    /// Allocates and initializes one buffer. Zero capacity rejects before buffer allocation.
     /// Keep the concrete source alive, unmoved and usable throughout adapter use.
     public BufferedReader(IByteReader* input, nuint capacity = 4096)
     {
@@ -34,9 +34,9 @@ public struct BufferedReader : IByteReader
     }
 
     /// Borrows caller scratch without allocating or initializing its bytes.
-    /// Zero capacity rejects before accessing storage; errors use normal exception storage.
+    /// Zero capacity rejects before accessing storage. Errors use normal exception storage.
     /// Keep scratch alive, unmoved and disjoint from reader/source state and their retained input.
-    /// No scratch bytes are freed on destruction; this cursor remains noncopyable.
+    /// No scratch bytes are freed on destruction. This cursor remains noncopyable.
     public BufferedReader(IByteReader* input, char* storage, nuint capacity)
     {
         source = input;
@@ -55,7 +55,7 @@ public struct BufferedReader : IByteReader
 
     /// Returns a buffered prefix or performs one source refill, allowing short results.
     /// Zero count validates the source without consuming buffered bytes or dereferencing data.
-    /// Source errors or over-reporting latch failure; later reads and peeks reject without source calls.
+    /// Source errors or over-reporting latch failure. Later reads and peeks reject without source calls.
     /// Caller output must be writable and disjoint from this adapter, scratch and source state.
     public nuint Read(char* data, nuint count)
     {

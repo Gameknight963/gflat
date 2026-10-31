@@ -36,7 +36,7 @@ public static class FileHash
     }
 
     /// Hashes remaining bytes into a 64-byte digest without closing or rewinding the file.
-    /// Rejects closed files and zero capacity before reading; IO failures may consume input.
+    /// Rejects closed files and zero capacity before reading. IO failures may consume input.
     public static byte[64] SHA512(File* input, char* buffer, nuint capacity)
     {
         if (!input.IsOpen) throw new IOException("File is closed");

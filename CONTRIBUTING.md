@@ -1,14 +1,14 @@
 # Contributing to gflat
 
-gflat itself, the standard library, and compiler are still evolving, and constant breaking changes are expected.
+gflat is experimental. Contributions may require changes as the language evolves.
 
 ## AI policy
 
-AI-Assisted contributions are welcome, However, you are responsible for the code you submit (reviewing, testing, etc.)
+AI-assisted contributions are welcome. Review and test the code you submit.
 
-You don't have to disclose AI usage, but if you do, it will help me better understand the context of the contribution. 
+Mentioning AI usage is optional and can help explain the context of a contribution.
 
-Also, if I have any questions about the change, I don't wanna hear "idk, cause claude said [this thing]."
+Be ready to explain how your change works and why you chose it.
 
 ## Discussing changes
 
@@ -36,16 +36,16 @@ Test failures still fail the job. This does not change local Defender settings.
 For the same setup locally, run `./build/setup-local-tests.ps1` once and accept
 the Windows elevation prompt. It excludes only `%LOCALAPPDATA%/gflat/TestOutputs`
 and saves `GFLAT_TEST_OUTPUT_ROOT` for your user. Compiler tests use that setting
-automatically; reopen existing shells before running package smoke tests.
+automatically. Reopen existing shells before running package smoke tests.
 You can also set `GFLAT_TEST_OUTPUT_ROOT` explicitly for a particular process.
 
 ## Pull requests
 
-- Keep changes focused; submit unrelated changes separately.
-- Follow the surrounding code style.
-- Include a regression test for compiler or editor bugs where practical.
-- Update documentation when changing language behavior.
-- Explain what changed, why, and how you tested it.
+- Submit unrelated changes separately
+- Follow the surrounding code style and [writing guidelines](AGENTS.md#writing)
+- Include a regression test for compiler or editor bugs where practical
+- Update documentation when changing language behavior
+- Explain what changed, why, and how you tested it
 
 You don't need both Windows and Linux to contribute. Mention what you tested locally, since CI checks both platforms.
 

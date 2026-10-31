@@ -35,7 +35,7 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
     }
 
     /// Creates an independent nonnegative owner from the complete unsigned 64-bit range.
-    /// Zero has no limbs or allocation; nonzero construction may throw on allocation failure.
+    /// Zero has no limbs or allocation. Nonzero construction may throw on allocation failure.
     public static BigInteger FromULong(ulong value)
     {
         BigInteger result = new();

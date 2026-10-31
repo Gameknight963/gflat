@@ -1,8 +1,8 @@
 # Integer query sums
 
 `Sum()` consumes a query and returns a checked `long` total. Empty input returns
-`0l`. It uses ordinary implicit conversion to `long` when reading each element;
-it does not cast or truncate values.
+`0l`. It uses ordinary implicit conversion to `long` when reading each element.
+It does not cast or truncate values.
 
 ```csharp
 using Standard; using Standard::Memory; using Standard::Queries;
@@ -30,10 +30,10 @@ If a prefix would exceed the signed 64-bit range, `Sum` throws
 overflowing prefix: `[9223372036854775807l, 1l, -1l]` throws at its second value.
 Conversely, `[2147483647, 1]` succeeds with `2147483648l`, since integer queries
 accumulate in `long`. `IntRange.Sum()` and `FilteredIntRange.Sum()` already use
-that result type; converting their output to a general query keeps those totals.
+that result type. Converting their output to a general query keeps those totals.
 
 One cursor is constructed. Its `Current` is read once per successful
-`MoveNext`; iteration stops at the first source, conversion, or overflow error.
+`MoveNext`. Iteration stops at the first source, conversion, or overflow error.
 Normal cleanup releases the cursor and copied source on success and failure.
 The source collection is not modified, assuming its callbacks and iterator obey
 their normal borrowing contracts.

@@ -8,9 +8,9 @@ namespace floating_parsing_detail
 }
 
 /// Parses a complete C string using the current C locale and native floating grammar.
-/// Rejects empty input, surrounding whitespace and trailing bytes; failure writes positive zero.
+/// Rejects empty input, surrounding whitespace and trailing bytes. Failure writes positive zero.
 /// Native range results, including infinity and underflow to signed zero, are successful conversions.
-/// The wrapper makes no text copy or allocation; input must be terminated and output writable.
+/// Input must be terminated and output writable.
 /// Input and output may overlap: output is committed only after all input reads finish.
 bool TryParseFloat(readonly(char)* text, float* result) nothrow
 {

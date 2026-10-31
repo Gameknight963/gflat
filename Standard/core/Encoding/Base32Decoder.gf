@@ -1,7 +1,7 @@
 namespace Standard::Encoding;
 
 /// Decodes strict padded uppercase Base32 into counted bytes at a borrowed sink.
-/// Complete validates the final group; destruction never writes or closes the sink.
+/// Complete validates the final group. Destruction never writes or closes the sink.
 public struct Base32Decoder : ITextWriter
 {
     private ITextWriter* output;
@@ -64,7 +64,7 @@ public struct Base32Decoder : ITextWriter
         failed = false;
     }
 
-    /// Rejects an incomplete final group; successful completion emits nothing.
+    /// Rejects an incomplete final group. Successful completion emits nothing.
     /// Repeated success is idempotent and every failure permanently rejects reuse.
     public void Complete()
     {

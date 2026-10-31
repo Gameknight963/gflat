@@ -13,32 +13,39 @@ Lists a single little-endian RIFF root and its immediate child chunks. For examp
 0000000000000024 "data" 0
 ```
 
-Each row gives the chunk header's zero-based byte offset (16 hexadecimal digits),
-quoted FourCC, and declared payload byte count (decimal, excluding its header and
-pad). The root row also shows the form type. Identifier bytes outside printable
-ASCII, plus quote and backslash, appear as lowercase `\xhh` escapes.
+## Output
 
-The tool checks the root marker and form field, top-level header completeness,
-child bounds including the required odd-length pad byte, physical truncation,
-and EOF immediately after the declared root. Pad bytes are consumed without
-checking their value. Unknown chunks and LIST payloads are skipped as opaque
-bytes. This lists container structure; it does not validate WAVE/audio data,
-chunk order, nested chunk structure, or format-specific required chunks. RF64,
-RIFX/big-endian input and concatenated roots are unsupported.
+Each row gives the chunk header's zero-based byte offset (16 hexadecimal digits), quoted
+FourCC, and declared payload byte count (decimal, excluding its header and pad). The
+root row also shows the form type. Identifier bytes outside printable ASCII, plus quote
+and backslash, appear as lowercase `\xhh` escapes.
 
-Payloads and pads are discarded sequentially through `File.SkipExactly`; there
-is no seeking. Fixed stack storage bounds memory independently of file/chunk
-sizes, without gflat String or managed allocations on success. libc may allocate
-its stream buffers. Large payloads still require reading their bytes.
+## Format checks
+
+The tool checks the root marker and form field, top-level header completeness, child
+bounds including the required odd-length pad byte, physical truncation, and EOF
+immediately after the declared root. Pad bytes are consumed without checking their
+value. Unknown chunks and LIST payloads are skipped as opaque bytes. The listing covers
+top-level container structure. WAVE/audio data, chunk order, nested structure, and
+format-specific required chunks are outside that check. RF64, RIFX/big-endian input, and
+concatenated roots are unsupported.
+
+Payloads and pads are read sequentially through `File.SkipExactly`. Fixed stack buffers
+bound memory independently of file and chunk sizes. Libc supplies its own stream
+buffering. Large payloads still require reading their bytes.
+
+## Errors
 
 Exit codes: 0 success, 1 malformed/truncated input or file/output error, 2 wrong
-argument count. Errors go to stderr with the filename. Listing streams to stdout;
-the root and earlier complete chunks can already be printed when a later failure
-occurs. A child row is emitted only after its payload and pad have been consumed.
-The input closes on success and during unwinding; success flushes stdout. Input
-bytes are never modified. On Linux, prefix the executable path with `./`;
-the default project output still uses `.exe`.
+argument count. Errors go to stderr with the filename. Listing streams to stdout. The
+root and earlier complete chunks can already be printed when a later failure occurs. A
+child row is emitted only after its payload and pad have been consumed. The input closes
+on success and during unwinding. Success flushes stdout. On Linux, prefix the executable
+path with `./`. The default project output uses `.exe`.
 
-Format references: Microsoft's [RIFF overview](https://learn.microsoft.com/en-us/windows/win32/xaudio2/resource-interchange-file-format--riff-),
-[RIFF services](https://learn.microsoft.com/en-us/windows/win32/multimedia/resource-interchange-file-format-services),
-and [AVI RIFF layout](https://learn.microsoft.com/en-us/windows/win32/directshow/avi-riff-file-reference).
+Format references: Microsoft's [RIFF
+overview](https://learn.microsoft.com/en-us/windows/win32/xaudio2/resource-interchange-file-format--riff-),
+[RIFF
+services](https://learn.microsoft.com/en-us/windows/win32/multimedia/resource-interchange-file-format-services),
+and [AVI RIFF
+layout](https://learn.microsoft.com/en-us/windows/win32/directshow/avi-riff-file-reference).

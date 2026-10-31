@@ -1,51 +1,49 @@
 # Editor support
 
-The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
-bracket matching, automatic bracket/quote closing, selection surrounding, block
-indentation, and line/block comment commands. It also provides scope/member completion,
-hover, signature help, go to definition, Find All References, and semantic highlighting through the built-in LSP UI.
-Reference searches use resolved symbols across the analyzed project, including unsaved
-documents. Same-named locals, members, and overloads remain separate; bound extension
-calls and ordinary calls refer to the same declaration. Results contain source ranges,
-so the editor provides the results list and navigation through its existing LSP UI.
-Document highlights use the same resolved symbol index and mark declarations and
-references within the current document. The native client owns their presentation;
-read and write occurrences are not distinguished yet.
-Rename supports source locals and explicit parameters through the client's native
-rename UI. It updates resolved references, including `nameof`, and requires an
-error-free project. A candidate rename is reanalyzed and rejected if it introduces
-errors or changes another identifier's binding. Member and type rename are not
-implemented. Clients supporting versioned workspace edits receive the current
-unsaved document version; other clients receive standard range edits.
-Workspace symbol search finds source declarations across the analyzed project,
-including unopened files and unsaved changes, through the client's native symbol UI.
-Document-symbol requests provide a source outline of namespaces, types, constructors,
-destructors, operators, fields, properties, and methods. Locals and generated accessors
-are omitted. Clients supporting hierarchical outlines receive the declaration tree;
-other clients receive a flat list with source locations and container names.
-Method hovers show the signature. An optional `Exceptions:` section lists known outgoing
-exceptions, one type per line; it is disabled by default. Caught exceptions and terminating
-`nothrow` boundaries do not appear as outgoing exceptions. Unknown dispatch targets are omitted.
+The Visual Studio extension provides editing, navigation, and native debugging
+for `.gf` projects. Other editors can use the language server through LSP.
 
-Consecutive `///` lines immediately before a named declaration provide plain-prose
-documentation in hover and completion, including native Visual Studio hover. A blank
-`///` line separates paragraphs; a physical blank line or an ordinary comment detaches
-the preceding documentation. Put documentation before any declaration attributes.
-XML tags, Markdown punctuation, and links are shown literally. Generic and inherited
-members use their original declaration's text; aliases use their own documentation.
-Documentation is not inferred for locals or type parameters.
+## Editing and navigation
 
-Type names in hover, completion, signature help, and editor diagnostics use source spelling,
-including nested types and generic specializations. Literal hovers show the checked literal type.
-In Visual Studio, source-backed types in signatures and exception lists can be clicked to
-open their declarations. A small native Quick Info source attaches navigation callbacks
-to VS classified text runs; LSP still supplies the content and locations. Other clients
-continue to use standard LSP hover. Parameter icons use VS's shared Parameter moniker.
-Executable projects support native **Start Debugging** (**F5**) and **Start Without
-Debugging** (**Ctrl+F5**). Debug builds include source locations and variable/type
-information for breakpoints, stepping, Locals, and native Watch expressions.
-[MSBuild projects and CPS](PROJECTS.md) provide
-integration into an existing solution, including native project templates.
+- **Editing:** syntax highlighting, matching and closing brackets and quotes,
+  selection surrounding, indentation, and comment commands
+- **Completion:** visible symbols, members, and context keywords, with signature help
+- **Navigation:** go to definition, Find All References, document highlights,
+  workspace symbol search, and document outlines
+- **Diagnostics:** compiler errors and warnings with source ranges
+- **Debugging:** F5, Ctrl+F5, breakpoints, stepping, Locals, and native Watch expressions
+
+Reference searches include unsaved project documents and distinguish same-named
+symbols and overloads. Extension calls and ordinary calls share their declaration.
+Document outlines include namespaces, types, and members.
+
+The server provides hierarchical outlines when the client supports them and flat
+symbol lists otherwise. Document highlights mark declarations and references alike.
+
+Rename supports locals and explicit parameters, including references in `nameof`.
+It requires an error-free project. The server checks each candidate rename for
+new errors and changed bindings before applying it.
+
+Clients supporting versioned workspace edits receive the unsaved document version.
+Other clients receive range edits.
+
+## Hovers and documentation
+
+Hovers show signatures with source type names. Literal hovers show the checked
+type. Visual Studio adds shared symbol icons and clickable source declarations.
+
+The optional `Exceptions:` section lists known outgoing exception types. It
+excludes caught exceptions and failures terminated by a `nothrow` boundary.
+See [Quick Info preferences](#quick-info-preferences).
+
+Write declaration documentation with consecutive `///` lines immediately before
+the declaration and its attributes:
+
+- A blank `///` line separates paragraphs
+- A physical blank line or ordinary comment detaches the preceding documentation
+- Text is displayed literally, including XML tags, Markdown, and links
+- Generic and inherited members use their original declaration's documentation
+- Aliases use their own documentation
 
 ## Project layout
 
@@ -54,15 +52,14 @@ integration into an existing solution, including native project templates.
 | `gflat.Projects` | MSBuild evaluation snapshots, source membership, and project references |
 | `gflat.Compiler` | Shared parser, type checker, diagnostics, and LLVM IR emitter |
 | `gflat` | Command-line driver and native toolchain invocation |
-| `gflat.LanguageServer` | LSP process; document snapshots, workspace sources, and analysis scheduling |
+| `gflat.LanguageServer` | LSP process, document snapshots, workspace sources, and analysis scheduling |
 | `gflat.Tests` | Compiler, native execution, and CLI regression tests |
 | `gflat.LanguageServer.Tests` | Workspace, protocol, and editor grammar tests |
 | `editors/shared` | Portable TextMate grammar and language configuration |
-| `editors/VisualStudio` | Windows VSIX client and packaging; launches the server over stdio |
+| `editors/VisualStudio` | Windows VSIX client, packaging, and server launch over stdio |
 
-The root solution builds the compiler, CLI, server, and tests. The VS extension has
-its own solution and build script so ordinary .NET builds do not require Visual
-Studio's extension toolchain. Neither the compiler nor the server references VS APIs.
+The root solution builds the compiler, CLI, server, and tests. The extension has
+its own solution and build script. The compiler and server use portable .NET APIs.
 
 ## Visual Studio installation
 
@@ -81,12 +78,10 @@ packages it in:
 editors/VisualStudio/bin/Release/net472/gflat.VisualStudio.vsix
 ```
 
-Open that VSIX to install it, follow the installer's restart instructions, and open
-a `.gf` file. Errors and warnings appear through Visual Studio's LSP support. The
-package bundles a compiler for project builds; Clang must be installed separately. Building the
-package does not install it into your IDE automatically. The bundled compiler and
-server include MSBuild and the .NET runtime; installing the .NET SDK is not required
-to use them. Visual Studio's project system uses Visual Studio's own MSBuild.
+Open the VSIX to install it, follow the installer's restart instructions, and open
+a `.gf` file. The package includes the compiler, language server, MSBuild, and .NET
+runtime. Install Clang separately. Visual Studio's project system uses the IDE's
+MSBuild.
 
 ### Optional SDK-style project setup
 
@@ -99,7 +94,7 @@ script with Visual Studio closed. Right-click **Run with PowerShell**, or run:
 
 If Windows denies write access, the script relaunches itself with a UAC prompt.
 Accept it to continue. The elevated window stays open until you press Enter, so
-you can read success or error messages. `-WhatIf` does not request elevation.
+you can read the result. Use `-WhatIf` to preview the changes.
 
 It selects the newest installed Visual Studio and finds its installed gflat VSIX.
 To select another installation or supply the SDK directory explicitly:
@@ -111,53 +106,40 @@ To select another installation or supply the SDK directory explicitly:
 
 `-SdkRoot` must contain `build/Gflat.props` and `build/Gflat.targets`. The scripts
 create only two forwarding imports and an ownership marker under
-`<Visual Studio>/MSBuild/Sdks/Gflat.Sdk`; the SDK and compiler stay in the VSIX.
+`<Visual Studio>/MSBuild/Sdks/Gflat.Sdk`. The SDK and compiler stay in the VSIX.
 Run install again after updating the VSIX to refresh the forwarding paths. Run
 uninstall before removing the VSIX. Both scripts support `-WhatIf`, and uninstall
 refuses to delete an unrecognized SDK directory or unexpected files. Restart
 Visual Studio after setup. `sdk-paths.ps1` must remain beside the two scripts.
 
-This registration applies to the selected Visual Studio and its MSBuild. The CLI
-and language server bundle their own SDK entry files, so they can use the same
-SDK-style project without this setup. Explicit-import projects also remain
-supported. No runtime patching or CLI setup command is involved.
-`test-sdk-installation.ps1` tests installation, repeated installation,
-updates, uninstall, and SDK-style builds in a temporary fake VS installation.
+This registration applies to the selected Visual Studio and its MSBuild.
+The CLI and language server resolve their bundled SDK independently.
+`test-sdk-installation.ps1` covers install, update, uninstall, and SDK-style builds
+in a temporary fake Visual Studio installation.
 
-The installed server is the packaged copy; it does not automatically track this
-checkout. For an update, increment the VSIX manifest version,
-then rebuild and install the VSIX. For a development rebuild with the same version,
-uninstall the old extension first.
+To update the installed server, increment the VSIX manifest version, rebuild,
+and install the new VSIX. Uninstall the old extension first when rebuilding
+with the same version.
 
 ## Editing features
 
-Version 0.2.0 adds theme-aware highlighting for keywords, built-in types, type
-declarations, function names, numbers, comments, strings, escapes, and custom
-string prefixes such as `my_2string"hello"`. This is lexical highlighting; names
-are not classified using type information. An unfinished quote stops coloring at
-the end of its line, while block comments continue until `*/`.
+Highlighting combines a TextMate grammar with semantic classifications from the
+compiler. Keywords, types, methods, literals, escapes, and custom string prefixes
+follow the active theme.
 
-The editor matches `{}`, `[]`, and `()`, closes brackets and quotes outside
-comments/strings, and supports surrounding selected text with these pairs.
-Angle brackets are not automatically closed because they also mean comparisons.
-Pressing Enter between `{}` creates an indented line. Use Visual Studio's standard
-comment/uncomment commands (`Ctrl+K, Ctrl+C` / `Ctrl+K, Ctrl+U`).
+- `{}`, `[]`, and `()` match and close automatically outside comments and strings
+- Quotes close automatically and can surround a selection
+- Enter between `{}` creates an indented line
+- `Ctrl+K, Ctrl+C` comments a selection, and `Ctrl+K, Ctrl+U` uncomments it
 
-These features use [Visual Studio's TextMate and language configuration support](https://learn.microsoft.com/en-us/visualstudio/extensibility/language-configuration).
-Editor options can disable automatic brace completion or selection surrounding;
-check Text Editor settings if a feature is disabled. Colors follow the current
-theme. The portable definitions live in `editors/shared`; another editor can
-register the same grammar and configuration without depending on Visual Studio.
-
-After installing an update, manually check a `.gf` file in your IDE: keyword and
-comment colors, typing quotes/brackets, Enter inside `{}`, selection surrounding,
-and comment/uncomment commands. Automated tests exercise grammar tokenization and
-packaged assets, but do not drive the Visual Studio UI.
+Automatic completion and selection surrounding follow Visual Studio's editor
+settings. The portable definitions live in `editors/shared` and use
+[TextMate and language configuration support](https://learn.microsoft.com/en-us/visualstudio/extensibility/language-configuration).
 
 ## Source files in a workspace
 
-Without a configuration file, each open `.gf` document is analyzed separately.
-Unrelated programs in the same folder are not combined automatically.
+The server discovers the nearest `.gfproj` and includes its referenced sources.
+For source folders without a project, each open `.gf` file is analyzed separately.
 
 For multiple files, open the source folder in your editor and put
 `gflat-workspace.json` at the workspace root:
@@ -168,9 +150,9 @@ For multiple files, open the source folder in your editor and put
 }
 ```
 
-This is an editor source list, not a build or package format. Paths are relative to
-that file, may include `..`, and must list actual files (no globs). All listed files
-form one compilation. The CLI still takes the same paths as command-line arguments.
+The list selects one compilation for editor analysis. Paths are relative to the
+configuration file and may include `..`. List individual files. Pass the same
+source paths to the CLI when building.
 Malformed configuration, duplicate entries, and unreadable sources produce diagnostics.
 
 Unsaved text overrides disk contents for open files. Closing a configured file makes
@@ -179,7 +161,7 @@ diagnostics. Open files outside the source list are analyzed independently.
 
 The server watches configured source files and the configuration for disk changes.
 Clients may also send `workspace/didChangeWatchedFiles`. This version uses a single
-workspace root (the first folder if a client supplies several); without a root it
+workspace root (the first folder if a client supplies several). Without a root it
 uses the directory of the first opened document. Only `file:` URIs are supported.
 
 ## Other editors
@@ -194,29 +176,22 @@ dotnet /absolute/path/to/gflat.LanguageServer/bin/Debug/net10.0/gflat.LanguageSe
 Use language ID `gflat`, file extension `.gf`, and the source directory as the root.
 The server uses JSON-RPC over stdin/stdout. Stderr is reserved for server logs. It
 advertises full-document synchronization, accepts incremental updates as well,
-uses UTF-16 positions, and publishes versioned diagnostics. It performs no native
-compilation and does not invoke Clang.
+uses UTF-16 positions, and publishes versioned diagnostics.
 
 ## Analysis and maintenance
 
-Analysis waits briefly for typing to pause and runs one compiler analysis at a time.
-New edits invalidate older results. Already-running compiler analysis currently
-finishes in the background; cancellation skips queued work and prevents obsolete
-results from being published. Parsing/type checking are reused directly from the
-compiler. `AnalysisSnapshot` retains the source nodes before lowering together with
-checker results and diagnostics. One editor model is shared by all requests for that
-compilation; it includes unsaved project sources. Symbol references are resolved on the
-analysis worker and reused by hover, definition, and semantic-token requests.
+Analysis waits briefly for typing to pause and runs one compilation at a time.
+New edits invalidate older results. Cancellation skips queued work and suppresses
+obsolete results while running compiler work finishes in the background.
 
-This is whole-compilation analysis, not incremental semantic analysis. Syntax errors
-can prevent semantic checking, and a semantic error may stop checking later members.
-Completion can recover declaration types for incomplete member accesses and unclosed
-blocks. This is not full error-tolerant type checking: ambiguous calls in broken code
-may have no member suggestions, and malformed syntax can prevent a source tree from
-being retained. Generic signatures may show template parameters rather than substituted
-arguments.
-An unexpected compiler exception is reported as `GFLS0002` instead of being presented
-as an ordinary source error; the server can analyze the next edit afterward.
+The server shares parsing and type checking with the compiler. `AnalysisSnapshot`
+retains source nodes, checker results, and diagnostics. Requests reuse one symbol
+index for the compilation, including unsaved sources.
+
+Incomplete member accesses and unclosed blocks have completion recovery.
+Malformed syntax and ambiguous calls can still prevent semantic results. Generic
+signatures may retain template parameters. Unexpected compiler failures produce
+`GFLS0002`, and analysis resumes on the next edit.
 
 Run the portable server and editor grammar tests with:
 
@@ -224,13 +199,16 @@ Run the portable server and editor grammar tests with:
 dotnet test gflat.LanguageServer.Tests
 ```
 
-The root `dotnet test` also runs these tests. The VS packaging CI job builds the VSIX
-and runs tests against the server, grammar, and configuration extracted from the
-package. TextMateSharp is a test-only dependency used to tokenize the grammar; it
-is not bundled into the extension or server. Manual
-IDE checks are still needed for activation, the completion/hover/signature UI, theme
-colors, navigation, squiggles, and the Error List UI. Automated tests exercise protocol
-responses and packaged assets; they do not drive Visual Studio.
+The root `dotnet test` also runs these tests. Package CI tests the extracted server,
+grammar, configuration, and Visual Studio rich-content conversion. Run
+`test-package.ps1` in Windows PowerShell (`powershell.exe`) because its installed
+SDK harness uses .NET Framework APIs.
+
+Check the live IDE after extension changes:
+
+- Extension activation, Error List, and diagnostic squiggles
+- Completion, hover, signature help, navigation, and theme colors
+- Quotes and brackets, Enter inside `{}`, selection surrounding, and comment commands
 
 For CPS changes, also load a `.gfproj` in a solution, add and rename a source file,
 rename its nonempty folder, edit a `Compile Remove` entry externally, and verify
@@ -244,11 +222,11 @@ and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstud
 ## Editor queries and colors
 
 - Completion includes visible locals, parameters, fields, methods, free functions,
-  types, namespaces, and context keywords. `.` and `:` trigger completion; `::`
-  narrows it to namespace/type members. Visual Studio handles filtering and commit.
+  types, namespaces, and context keywords. `.` and `:` trigger completion.
+  `::` narrows it to namespace/type members. Visual Studio handles filtering and commit.
 - Hover shows a declaration signature. Go to definition targets its source name,
   including unsaved files in the same project. Automatically included standard-library
-  symbols navigate to their shipped `.gf` sources; explicit Standard project sources and
+  symbols navigate to their shipped `.gf` sources. Explicit Standard project sources and
   their unsaved edits take precedence over bundled copies.
 - Signature help follows the innermost call and counts arguments without counting
   commas in nested calls.
@@ -256,51 +234,35 @@ and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstud
   legend uses standard LSP names. The VS client sets the initialization option
   `visualStudioClassifications: true` to use the built-in Roslyn classification
   names (class, struct, method, local, parameter, property, control keyword, etc.).
-  Colors come from the active VS theme and Fonts and Colors settings, not RGB values
-  in this extension. Other clients do not need this option.
+  Colors come from the active VS theme and Fonts and Colors settings.
 - Diagnostics preserve compiler start/length spans, including multiline expressions
   and zero-width insertion locations for missing delimiters.
 
 Requests arriving during analysis wait for that generation. `$/cancelRequest` cancels
-queued requests; edits invalidate old requests with LSP ContentModified. Queries do
-not invoke LLVM or repeat compilation.
+queued requests. Edits invalidate old requests with LSP ContentModified.
 
-### Rich hover (VSIX 0.11.0)
+### Rich hover
 
-Visual Studio receives `VSInternalHover` rich content containing classified text
-and image elements. Signatures include modifiers, generic parameters, argument
-names, `nothrow`, and property accessor restrictions. Type and variable hovers show
-size/alignment when the checker has a complete layout; class objects are labeled
-separately from pointers. Primitive type keywords also have layout hovers. Layout
-numbers are omitted for invalid compilations and open generic types.
+Visual Studio receives classified text and shared icons through `VSInternalHover`.
+Signatures include modifiers, generic parameters, argument names, `nothrow`, and
+accessor restrictions. Type hovers can show size and alignment for complete layouts.
 
-The VS client supplies its `KnownMonikers` catalog through the `hoverIcons`
-initialization option. The server sends the native `_vs_rawContent` wire format
-without referencing Windows assemblies. Other clients continue to receive Markdown.
-The tooltip itself is rendered by Visual Studio's existing LSP Quick Info support.
+The client supplies a `KnownMonikers` catalog through `hoverIcons`. The server sends
+`_vs_rawContent` using portable types, and Visual Studio renders it with its LSP
+Quick Info UI. A small native Quick Info source adds navigation callbacks to
+classified runs. Other clients receive Markdown.
 
-The packaged `gflat.tmTheme` maps immediate TextMate classifications to the same VS
-method/type/keyword classifications used by semantic highlighting. It defines no
-RGB colors. In particular, a syntactically recognizable method name uses the method
-classification before background analysis finishes, and `nothrow` uses a declaration
-keyword classification in both paths.
-
-Run `test-package.ps1` in Windows PowerShell (`powershell.exe`, not `pwsh`),
-because the installed VS SDK harness uses .NET Framework APIs.
-On a machine with the full IDE installed, `test-package.ps1` additionally takes a
-real packaged-server hover response and deserializes it using Visual Studio's own
-rich-content converter, checking its catalog icon and classified runs. This checks
-SDK compatibility, not the appearance or interaction of the live tooltip; manual
-IDE checks remain necessary.
+The packaged `gflat.tmTheme` maps lexical highlighting to the same native
+classifications used by semantic highlighting. Method names and declaration
+keywords can therefore use their final colors while analysis runs.
 
 ## Quick Info preferences
 
 The Visual Studio language options include a gflat **IntelliSense** page, registered
 through the SDK's language editor options API. **Show known exceptions** defaults
-to off; **Show type size and alignment** defaults to on. Visual Studio persists
+to off. **Show type size and alignment** defaults to on. Visual Studio persists
 these user preferences. Applying changes updates tooltips without restarting the
-language server. Known exceptions are an analysis summary, not an exhaustive list;
-unknown dispatch does not add a placeholder row.
+language server. The exception list contains types identified by analysis.
 
 Other LSP clients can supply `gflat.showKnownExceptions` and `gflat.showTypeLayout`
 as nested initialization options (`{"gflat":{"showKnownExceptions":true}}`) or

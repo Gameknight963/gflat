@@ -22,9 +22,9 @@ namespace detail
     }
 }
 
-/// Stable matching prefix and nonmatching suffix; returns the matching count.
+/// Stable matching prefix and nonmatching suffix. Returns the matching count.
 /// Calls predicate once per original element, in original left-to-right order.
-/// No heap scratch or element copies; O(n log n) relocations and O(log n) stack.
-/// Predicate exceptions can leave a partial rearrangement; all elements remain owned.
+/// No heap scratch or element copies. O(n log n) relocations and O(log n) stack.
+/// Predicate exceptions can leave a partial rearrangement. All elements remain owned.
 public nuint StablePartition<T>(Span<T> values, bool(immutable(T)*)* predicate)
     => Standard::Collections::detail::StablePartitionHalves<T>(values, predicate);

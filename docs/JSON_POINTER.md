@@ -3,7 +3,7 @@
 `JsonPointer::TryResolve(document, pointer, ref value)` selects a raw JSON value
 using the plain pointer form of [RFC 6901 section 4](https://www.rfc-editor.org/rfc/rfc6901.html#section-4).
 Both inputs and the output have type `Span<readonly(char)>` and contain counted
-UTF-8 bytes. Success replaces the output span; false leaves it unchanged.
+UTF-8 bytes. Success replaces the output span. False leaves it unchanged.
 
 ```csharp
 using Standard; using Standard::Json; using Standard::Memory;
@@ -20,7 +20,7 @@ int main()
 ```
 
 The result borrows the exact value bytes from `document`. Strings retain their
-quotes and escape spelling; numbers retain their spelling; containers retain
+quotes and escape spelling. Numbers retain their spelling. Containers retain
 internal whitespace. Whitespace surrounding the selected value is excluded.
 An empty pointer selects the complete root value, including a scalar or empty
 container. An empty document is invalid JSON.
@@ -29,13 +29,13 @@ The method first validates the **entire JSON document**, including its suffix,
 before checking the pointer. Malformed JSON throws `JsonParseException` with an
 absolute byte offset within the supplied document span, even when the pointer
 is invalid or would miss a member. Pointer failure does not hide JSON errors.
-Allocation failures can throw `BadAllocException`; the method is not `nothrow`.
+Allocation failures can throw `BadAllocException`. The method is not `nothrow`.
 These errors also leave the previous output unchanged.
 
-Pointers must be valid UTF-8. A nonempty pointer begins with `/`; each slash
+Pointers must be valid UTF-8. A nonempty pointer begins with `/`. Each slash
 starts another segment. Empty segments address empty object names, including
 the trailing segment of `/a/`. Counted pointers may contain embedded NUL bytes.
-Only `~0` and `~1` escapes are accepted, decoded once to `~` and `/`; `~01`
+Only `~0` and `~1` escapes are accepted, decoded once to `~` and `/`. `~01`
 therefore names `~1`, not `/`. The complete pointer's UTF-8 and escape syntax
 is checked even if an earlier segment would not resolve.
 
@@ -48,10 +48,10 @@ except `0`. Empty, negative, signed, overflowing, out-of-range, and `-` indices
 return false. Descent through a scalar, a missing member, or invalid pointer
 syntax also returns false with the previous output unchanged.
 
-This API accepts plain pointer text, not a JSON string literal or URI fragment;
-it does not decode JSON quoting or percent escapes in the pointer argument.
+This API accepts plain pointer text, not a JSON string literal or URI fragment.
+It does not decode JSON quoting or percent escapes in the pointer argument.
 Keep document and pointer bytes alive and unchanged throughout the call. Saved
-result spans continue borrowing the document; they do not keep its owner alive.
+result spans continue borrowing the document. They do not keep its owner alive.
 The method neither mutates input bytes nor retains pointers outside the result.
 
 Parsing may allocate reader nesting stacks and one reusable `String` for decoded

@@ -21,13 +21,13 @@ int main()
 
 Construction with `count` creates the fixed universe `0..count-1`, initially
 with one component per element. Default construction and `new(0)` create an
-empty universe. `ElementCount` never changes; `SetCount` decreases when two
+empty universe. `ElementCount` never changes. `SetCount` decreases when two
 different components merge. `Reset()` restores the initial partition of
 single-element components without changing the universe or replacing storage.
 
 `Union(first, second)` returns true when it joins two components. It returns false
 for an existing connection, including an element joined to itself. `Find(index)`
-returns a representative index; `Connected(first, second)` compares components,
+returns a representative index. `Connected(first, second)` compares components,
 and `SizeOf(index)` returns the size of that element's component. Representatives
 are arbitrary members of their components, may change after a union, and need
 not be the smallest index. Do not persist them as stable external identifiers.
@@ -39,7 +39,7 @@ argument is invalid. Every indexed operation on an empty set is invalid.
 ## Ownership and cost
 
 The value owns two vectors and supports moving, not copying. Its destructor
-releases the vectors. Construction reserves their storage; successful unions
+releases the vectors. Construction reserves their storage. Successful unions
 and queries allocate nothing. As with other owning values, let the value leave
 scope normally or explicitly transfer it with `move`.
 
@@ -47,11 +47,11 @@ Union attaches the smaller component's tree to the larger one. Find does not
 compress paths, so queries are immutable and work through protected views
 without hidden writes. Find, Connected, SizeOf, and Union take logarithmic time
 in the worst case. Storage and construction time are linear in the element
-count. Construction can fail through the normal allocation API; partially
+count. Construction can fail through the normal allocation API. Partially
 initialized ownership is cleaned up by the language.
 
-There is no insertion, removal, selective splitting, or concurrent mutation support.
-Map application-specific labels to indices separately. The source is
+Map application-specific labels to the fixed indices. Synchronize access when
+sharing a mutable set across threads. The source is
 `core/Collections/DisjointSet.gf`, using Vector and its ordinary runtime contracts.
 
 ## Reuse a fixed universe
@@ -85,7 +85,6 @@ int main()
 ```
 
 Reset takes linear time in `ElementCount`. It discards all previous connectivity
-and representative meanings; keep application labels separate from component
+and representative meanings. Keep application labels separate from component
 representatives as for unions. Reset mutates the partition and is unavailable
-through readonly or immutable receivers. It adds no source dependencies beyond
-the existing DisjointSet/Vector contracts.
+through readonly or immutable receivers.

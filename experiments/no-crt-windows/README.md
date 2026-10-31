@@ -1,9 +1,7 @@
 # Windows executable without the CRT
 
-An isolated Windows x64 experiment using the existing compiler and
-`<NoStdLib>true</NoStdLib>`. It exercises a small runtime written in gflat,
-with an assembly stack-probing helper. It does not change the compiler or
-the standard library.
+A Windows x64 experiment using `<NoStdLib>true</NoStdLib>`, a small runtime written in
+gflat, and an assembly stack-probing helper.
 
 ## Run
 
@@ -13,38 +11,39 @@ From the repository root, in PowerShell:
 ./experiments/no-crt-windows/build.ps1
 ```
 
-Building requires the .NET 10 SDK, LLVM (`clang`, `lld-link`, `llvm-readobj`,
-and `llvm-objdump`), and the Windows SDK's x64 `kernel32.lib`. This experiment
-does not link MSVC libraries, a C/C++ runtime, or compiler-rt. The resulting
-basic executable runs without .NET.
+Building requires the .NET 10 SDK, LLVM (`clang`, `lld-link`, `llvm-readobj`, and
+`llvm-objdump`), and the Windows SDK's x64 `kernel32.lib`. The resulting basic
+executable links directly to Windows APIs.
 
-The script builds the compiler, emits IR through `NoCrt.gfproj`, then compiles
-and links explicitly. Its optional parameters are `-Compiler` (a prebuilt
-gflat DLL), `-Clang`, `-WindowsSdkLibraryDirectory` (containing `kernel32.lib`),
-and `-OutputDirectory`. Use this script for the native experiment; an ordinary
-project Build still uses the normal hosted linker configuration.
+The script builds the compiler, emits IR through `NoCrt.gfproj`, then compiles and links
+explicitly. Its optional parameters are `-Compiler` (a prebuilt gflat DLL), `-Clang`,
+`-WindowsSdkLibraryDirectory` (containing `kernel32.lib`), and `-OutputDirectory`. Use
+this script for the native experiment. Ordinary project builds use the hosted linker
+configuration.
 
 ## What the basic program does
 
-- Enters the gflat `Start` function directly through the linker's `/ENTRY`.
-- Copies and modifies a fixed-size stack buffer, checking the original remains intact.
-- Writes and verifies a 32 KiB stack buffer, exercising guard-page stack growth.
-- Allocates through our `Memory` API backed by the Windows process heap.
+- Enters the gflat `Start` function through the linker's `/ENTRY`
+- Copies and modifies a fixed-size stack buffer, checking that the original stays intact
+- Writes and verifies a 32 KiB stack buffer, exercising guard-page stack growth
+- Allocates through `Memory` backed by the Windows process heap
 - Constructs a struct in that storage using its implicit default constructor,
-  accesses its field, invokes its destructor, and frees the storage.
-- Writes `gflat without CRT` and exits with status zero.
+  accesses its field, invokes its destructor, and frees the storage
+- Writes `gflat without CRT` and exits with status zero
 
-Allocation currently delegates to `HeapAlloc`; this is not a custom heap manager.
-`StackProbe.S` supplies `__chkstk`, whose register-based calling convention cannot
-be expressed as an ordinary gflat function. It probes each intervening page and
-preserves the requested size and caller's stack pointer. See Microsoft's
-[stack-probing helper documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/-win32-__chkstk).
+## Native helpers and linking
 
-The link uses `/NODEFAULTLIB` and exactly our program object, our stack-probe
-object, and `kernel32.lib`. The script checks the basic executable's six imports:
-`ExitProcess`, `GetProcessHeap`, `GetStdHandle`, `HeapAlloc`, `HeapFree`, and
-`WriteFile`, all from `KERNEL32.dll`. These are direct imports; Windows supplies
-its own underlying dependencies.
+Allocation delegates to `HeapAlloc`. `StackProbe.S` supplies `__chkstk`, whose
+register-based calling convention cannot be expressed as an ordinary gflat function. It
+probes each intervening page and preserves the requested size and caller's stack
+pointer. See Microsoft's [stack-probing helper
+documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/-win32-__chkstk).
+
+The link uses `/NODEFAULTLIB` and exactly our program object, our stack-probe object,
+and `kernel32.lib`. The script checks the basic executable's six imports: `ExitProcess`,
+`GetProcessHeap`, `GetStdHandle`, `HeapAlloc`, `HeapFree`, and `WriteFile`, all from
+`KERNEL32.dll`. These are direct imports. Windows supplies its own underlying
+dependencies.
 
 ## Observed results
 
@@ -52,36 +51,31 @@ Both `-O0` and `-O2` are tested. Measurements on this machine:
 
 | Case | `-O0` | `-O2` |
 | --- | --- | --- |
-| Basic program | Runs; 3,584-byte executable | Runs; 4,608-byte executable |
+| Basic program | 3,584-byte executable, runs | 4,608-byte executable, runs |
 | Placement construction with a user constructor | Runs | Runs |
 | Ordinary allocating `new*` | Exception-runtime symbols unresolved | Exception-runtime symbols unresolved |
 | Throw/catch | Exception-runtime symbols unresolved | Exception-runtime symbols unresolved |
 | `Standard::String` with our Memory implementation | Exception-runtime symbols unresolved | Exception-runtime symbols and `strlen` unresolved |
 
-The constructor is deliberately trivial: it only stores an integer field.
-Originally this probe required exception-runtime symbols at `-O0` because the
-compiler registered GC cleanup even for a type containing no managed references.
-Cleanup registration now checks the type before adding an action. This probe
-runs at both optimization levels and is a required success in the script.
-Constructors that actually require exception cleanup still need runtime support.
+The constructor probe stores one integer field and must pass at both optimization
+levels. Constructors that actually require exception cleanup still need runtime support.
 
-`new*` must support its allocation-failure exception. String also throws for
-allocation failure, overflow, and invalid indexing. These cases need an exception
-implementation even when allocation is supplied independently of libc. The
-optimized String case additionally demonstrates a compiler-generated library call:
-its source contains no explicit `strlen` call. Passing `-ffreestanding` when
-compiling already-generated IR did not prevent that transformation in this run.
+`new*` must support its allocation-failure exception. String also throws for allocation
+failure, overflow, and invalid indexing. These cases need an exception implementation
+even when allocation is supplied independently of libc. The optimized String case
+additionally demonstrates a compiler-generated library call: LLVM introduces `strlen`
+while optimizing the emitted IR. Passing `-ffreestanding` when compiling that IR
+preserved the transformation in this run.
 
-The probes deliberately omit the existing C++ exception bridge. An unresolved
-probe is an experiment result, and the script records its missing symbols.
-Failures in the basic program, the constructor case, compilation, execution, or
-import checks fail the script. Other probes that become linkable are executed
-and checked as well.
+The script records missing symbols for probes that require the exception bridge.
+Failures in the basic program, the constructor case, compilation, execution, or import
+checks fail the script. Other probes that become linkable are executed and checked as
+well.
 
-Artifacts go into ignored `artifacts/no-crt-windows/`: `results.json`, emitted
-IR, objects, executables, link maps, linker logs, import listings, PE headers,
-unwind metadata, and machine-code disassembly. File sizes depend on the toolchain.
+Artifacts go into ignored `artifacts/no-crt-windows/`: `results.json`, emitted IR,
+objects, executables, link maps, linker logs, import listings, PE headers, unwind
+metadata, and machine-code disassembly. File sizes depend on the toolchain.
 
-This establishes that the current `NoStdLib` property is sufficient for the
-experiment's source selection. Startup/linker control and exception-runtime
-independence remain separate requirements for a supported no-CRT configuration.
+`NoStdLib` selects the experiment's sources. The build script supplies its own startup
+and linker configuration. Supporting the remaining probes requires an independent
+exception runtime.

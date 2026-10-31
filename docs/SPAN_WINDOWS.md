@@ -14,7 +14,7 @@ foreach (Span<int> pair in values.Windows(2)) {
 ```
 
 `Windows(nuint width, nuint step = 1)` on `Span<T>` returns
-`SpanWindows<T>`. Every result is a full `Span<T>` of `width` elements; starts are
+`SpanWindows<T>`. Every result is a full `Span<T>` of `width` elements. Starts are
 0, `step`, twice `step`, and so on while the full window fits. No partial final
 window is produced. Width and step must be positive, even for an empty source.
 For nonoverlapping groups that retain a shorter final piece, use
@@ -26,20 +26,20 @@ The view and its nested `Enumerator` copy only a pointer and numeric metadata.
 They do not copy, own, allocate, or destroy source elements. Noncopyable elements
 are supported. Overlapping mutable windows refer to the same elements, so writes
 through an earlier window can change values observed by later windows. `T`'s
-qualifiers are preserved: `AsReadOnly().Windows(...)` protects element storage;
+qualifiers are preserved: `AsReadOnly().Windows(...)` protects element storage.
 `AsImmutable().Windows(...)` also protects storage reached through its elements.
 Enumeration and `AsEnumerable()` require a mutable view header, as with `Span`.
 
 `GetEnumerator()` creates an independent cursor. `Current` throws before the
 first successful `MoveNext()` and after iteration ends. Repeated `MoveNext()`
 after the end returns false. The public constructors reject null storage with a
-nonzero length; the caller supplies a valid extent for non-null storage.
+nonzero length. The caller supplies a valid extent for non-null storage.
 
 The captured pointer and length do not depend on the original span header.
 Changing or destroying that header does not change an existing windows view.
 Source element edits remain visible. The caller keeps the underlying storage
-alive and at the same address for every enumeration and every retained window;
-container operations that invalidate source borrows invalidate these views too.
+alive and at the same address for every enumeration and every retained window.
+Container operations that invalidate source borrows invalidate these views too.
 A view does not extend an owning container's lifetime or root managed storage.
 
 `AsEnumerable()` supports the existing lazy query extensions, without copying

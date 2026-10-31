@@ -30,15 +30,15 @@ int main()
 
 | Function | Behavior |
 | --- | --- |
-| `Swap<T>(ref T left, ref T right)` | Exchange two initialized mutable values by relocation; the same storage is a no-op. |
-| `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
+| `Swap<T>(ref T left, ref T right)` | Exchange two initialized mutable values by relocation. The same storage is a no-op. |
+| `Sort<T>(Span<T>, compare)` | In-place ascending heapsort. O(n log n) comparisons and constant extra storage. Not stable. |
 | `MakeMaxHeap<T>(Span<T>, compare)` | Build a borrowed max-heap in place in O(n) comparisons. |
-| `PushMaxHeap<T>(Span<T>, compare)` | Incorporate the final initialized element into an already heap-ordered prefix; O(log n). |
-| `PopMaxHeap<T>(Span<T>, compare)` | Place the maximum last and heap-order the preceding elements; length and ownership stay unchanged; O(log n). |
-| `IsMaxHeap<T>(Span<immutable(T)>, compare)` | Check parent/child ordering without mutation; O(n), stopping at the first violation. |
-| `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/nth_element.gf`; see [rank selection](../../../docs/NTH_ELEMENT.md). |
-| `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/stable_sort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
-| `NextPermutation<T>(Span<T>, compare)` | Advance lexicographically, or wrap to the first ordering and return false. Optional `Collections/span_permutations.gf`; see [arrangements](../../../docs/PERMUTATIONS.md). |
+| `PushMaxHeap<T>(Span<T>, compare)` | Incorporate the final initialized element into an already heap-ordered prefix. O(log n). |
+| `PopMaxHeap<T>(Span<T>, compare)` | Place the maximum last and heap-order the preceding elements. Length and ownership stay unchanged. O(log n). |
+| `IsMaxHeap<T>(Span<immutable(T)>, compare)` | Check parent/child ordering without mutation. O(n), stopping at the first violation. |
+| `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/nth_element.gf`. See [rank selection](../../../docs/NTH_ELEMENT.md). |
+| `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/stable_sort.gf`. See [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
+| `NextPermutation<T>(Span<T>, compare)` | Advance lexicographically, or wrap to the first ordering and return false. Optional `Collections/span_permutations.gf`. See [arrangements](../../../docs/PERMUTATIONS.md). |
 | `PreviousPermutation<T>(Span<T>, compare)` | Move to the previous ordering, or wrap to the last ordering and return false. Same optional source. |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
@@ -48,38 +48,40 @@ int main()
 | `IsPartitioned<T>(Span<immutable(T)>, predicate)` | Check that true results precede false results, stopping at the first violation. |
 | `PartitionPoint<T>(Span<immutable(T)>, predicate)` | First false index in an already partitioned true-prefix/false-suffix span, or span length when all match. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
-| `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
-| `Includes<T>(Span<immutable(T)>, Span<immutable(T)>, compare)` | Sorted multiset inclusion, including duplicate multiplicities; optional IComparable default. |
-| `FindUnsortedIndex<T>(Span<immutable(T)>, compare)` | First right-hand element that breaks nondecreasing order, or Length when ordered; optional IComparable default. |
+| `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order. Equal elements are allowed. |
+| `Includes<T>(Span<immutable(T)>, Span<immutable(T)>, compare)` | Sorted multiset inclusion, including duplicate multiplicities. Optional IComparable default. |
+| `FindUnsortedIndex<T>(Span<immutable(T)>, compare)` | First right-hand element that breaks nondecreasing order, or Length when ordered. Optional IComparable default. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `CommonPrefixLength<T>(first, second, equal)` | Count matching corresponding elements up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `CommonSuffixLength<T>(first, second, equal)` | Count matching trailing elements from right to left up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `StartsWith<T>(values, prefix, equal)` | Match the leading elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `EndsWith<T>(values, suffix, equal)` | Match the trailing elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
-| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
+| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result. An equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
-| `AllOf<T>(Span<immutable(T)>, predicate)` | Check every borrowed element, stopping at the first false result; empty spans return true. |
-| `AnyOf<T>(Span<immutable(T)>, predicate)` | Test whether any borrowed element matches, stopping at the first true result; empty spans return false. |
-| `NoneOf<T>(Span<immutable(T)>, predicate)` | Test whether no borrowed element matches, stopping at the first true result; empty spans return true. |
+| `AllOf<T>(Span<immutable(T)>, predicate)` | Check every borrowed element, stopping at the first false result. Empty spans return true. |
+| `AnyOf<T>(Span<immutable(T)>, predicate)` | Test whether any borrowed element matches, stopping at the first true result. Empty spans return false. |
+| `NoneOf<T>(Span<immutable(T)>, predicate)` | Test whether no borrowed element matches, stopping at the first true result. Empty spans return true. |
 | `CountIf<T>(Span<immutable(T)>, predicate)` | Count matching borrowed elements in a complete left-to-right scan. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `AdjacentFind<T>(Span<immutable(T)>, predicate)` | Left index of the first matching adjacent pair, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
 | `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
-| `IndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | First contiguous pattern match, or span length when absent; an empty pattern returns zero. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
-| `LastIndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | Last contiguous pattern match, or span length when absent; an empty pattern returns span length. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
+| `IndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | First contiguous pattern match, or span length when absent. An empty pattern returns zero. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
+| `LastIndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | Last contiguous pattern match, or span length when absent. An empty pattern returns span length. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
 | `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. Optional `IEquatable<T>` default in `default_equality.gf`. |
-| `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
-| `StablePartition<T>(Span<T>, predicate)` | Stable matching prefix and nonmatching suffix; optional `Collections/span_stable_partition.gf`, no heap scratch. |
+| `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length. Relative order is not preserved. |
+| `StablePartition<T>(Span<T>, predicate)` | Stable matching prefix and nonmatching suffix. Optional `Collections/span_stable_partition.gf`, no heap scratch. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
+
+## Swapping values
 
 `Swap` supports ordinary values and noncopyable owners such as `Unique<T>`.
 It copies no owned buffers, invokes no user copy constructor or destructor, and
 does not allocate for ordinary values. Managed references use the existing root
 tracking operations. Both values remain initialized after the call. The two
-arguments can be the same storage or distinct fields/elements; partially
+arguments can be the same storage or distinct fields/elements. Partially
 overlapping storage created through unsafe aliases is unsupported. Ref arguments
 are evaluated before the function starts, so a failing argument expression does
 not begin a swap.
@@ -93,6 +95,8 @@ Readonly/immutable values, temporaries, ordinary value properties, uninitialized
 storage, and fields inside managed objects cannot be passed as mutable refs under
 the existing language rules. Native managed-reference slots can be swapped.
 
+## Bounds and equal ranges
+
 Both bounds return the span length if no such element exists, including zero
 for an empty span. Input must already be sorted under the same comparator.
 Their result identifies the insertion position, whether or not the key exists.
@@ -100,19 +104,24 @@ For duplicate keys, `[LowerBound, UpperBound)` describes the matching range.
 
 `EqualRange` returns that range as a borrowed `Span<immutable(T)>`, using two
 logarithmic bound searches and constant extra storage. Input must be sorted under
-the same consistent comparator; equivalence means a zero comparison, which need
-not agree with `Equals`. No elements or keys are copied, moved, or allocated.
+the same consistent comparator. Equivalence means a zero comparison, which need
+not agree with `Equals`. The search borrows elements and keys.
+
 The key may alias an input element. Every empty result has null `Data` and zero
-`Length`, including missing keys before, between, or after elements; use the bounds
+`Length`, including missing keys before, between, or after elements. Use the bounds
 when an insertion index is needed. Empty input reads neither elements nor key and
-never calls the comparator. Keep storage and key alive and stable during the call;
-comparator exceptions propagate unchanged without rolling back callback effects.
+never calls the comparator. Keep storage and key alive and stable during the call.
+Comparator exceptions propagate unchanged without rolling back callback effects.
 Collection mutation can change or invalidate the returned view under its
-container's borrowing rules; keep its backing storage alive for subsequent use.
+container's borrowing rules. Keep its backing storage alive for subsequent use.
+
+## Comparisons
 
 Comparators borrow two elements through `immutable(T)*` pointers and return a negative,
 zero, or positive `int`. They must provide a consistent ordering and must not
 mutate the elements or collection through other aliases.
+
+### Minimum, maximum, and lexicographic order
 
 `MinIndex` and `MaxIndex` scan once and use exactly `Length - 1` comparisons for
 nonempty input, keeping the first element when comparisons are equal. Empty
@@ -124,9 +133,11 @@ These three algorithms allocate nothing, copy no elements, and support immutable
 views of noncopyable owning types. Comparator failures leave their sources
 unchanged, provided the callback does not modify them through another alias.
 
+### Common prefixes
+
 `CommonPrefixLength` compares corresponding borrowed addresses from left to right,
 returning the number of matching elements before the first false callback result.
-If one span is a full prefix, it returns the shorter length; compare lengths too
+If one span is a full prefix, it returns the shorter length. Compare lengths too
 when checking whole-sequence equality. Empty input returns zero without reading
 either span or calling the callback. The algorithm allocates nothing and copies
 or mutates no elements. Overlapping or identical views still invoke the callback
@@ -140,6 +151,8 @@ comparison callback, for example `Sort<int>(span, Comparer<int>::Compare)`.
 `SequenceEqual`. These are static bridges and allocate no comparer objects.
 Explicit custom callbacks remain available for other orderings or equality rules.
 
+### Equality searches
+
 Equality searches borrow the key through `immutable(T)*`, so noncopyable owning
 elements are supported without constructing or copying a search value. Mutable
 spans can be searched through `AsImmutable()`. For example:
@@ -151,50 +164,54 @@ nuint last = LastIndexOf<int>(values.AsImmutable(), &key, EqualityComparer<int>:
 bool found = Contains<int>(values.AsImmutable(), &key, EqualityComparer<int>::Equals);
 ```
 
-`IndexOf` and `Contains` compare from the beginning; `LastIndexOf` compares from
+`IndexOf` and `Contains` compare from the beginning. `LastIndexOf` compares from
 the end. They stop at the first match in that direction. Empty spans never call
 the callback, and both index searches return zero for an empty span. All three
 take O(n) comparisons and constant extra storage without allocating or modifying
-elements. Callbacks may throw; the exception propagates without changing the
+elements. Callbacks may throw. The exception propagates without changing the
 source. Callbacks must keep the span and key alive and must not mutate them
 through another alias. These searches do not require sorted input.
 
+### Predicates
+
 `AllOf` tests borrowed elements once from left to right and returns false at the
 first false predicate result. Empty spans return true without reading storage or
-calling the predicate. It allocates nothing and copies or modifies no elements;
-unlike value-producing query `All`, its `immutable(T)*` callback supports
+calling the predicate. It allocates nothing and copies or modifies no elements.
+Unlike value-producing query `All`, its `immutable(T)*` callback supports
 noncopyable owners. Worst-case time is O(n), with constant extra storage.
-Visited callback exceptions propagate unchanged; later callbacks are skipped
+Visited callback exceptions propagate unchanged. Later callbacks are skipped
 after a false result, and callback effects are not rolled back. Keep backing
 storage alive and stable during the call.
 
 `AnyOf` and `NoneOf` search for the first true predicate result. `AnyOf` returns
-true when one is found; `NoneOf` returns false. With no match, including empty
+true when one is found. `NoneOf` returns false. With no match, including empty
 input, their results are false and true respectively. Both visit borrowed
 `immutable(T)*` addresses once from left to right until that match or a callback
 exception, with no allocation, element copies, or mutation by the algorithm.
 They take O(n) calls in the worst case and constant extra storage. Empty spans
-read no storage and invoke no callback. Original exceptions propagate unchanged;
-later callbacks are skipped after a match, and callback effects are not rolled
+read no storage and invoke no callback. Original exceptions propagate unchanged.
+Later callbacks are skipped after a match, and callback effects are not rolled
 back. Keep backing storage alive and stable during the call.
 
 `CountIf` returns a `nuint` count of matches. It calls the predicate once per
-element from left to right unless a callback throws; empty spans return zero
+element from left to right unless a callback throws. Empty spans return zero
 without reading storage or calling the predicate. It takes O(n) calls and
 constant extra storage, allocating nothing and copying or modifying no elements.
 The callback borrows an `immutable(T)*`, so noncopyable owners are supported.
-Callback exceptions propagate unchanged and callback effects are not rolled back;
-keep storage alive and avoid mutation through other aliases during the scan.
+Callback exceptions propagate unchanged and callback effects are not rolled back.
+Keep storage alive and avoid mutation through other aliases during the scan.
+
+## Rotation and relocation
 
 `Rotate` takes a split index in `[0, Length]`: rotating `[1, 2, 3, 4, 5]` at
 2 produces `[3, 4, 5, 1, 2]`. Zero and `Length` leave the span unchanged.
 An out-of-range split throws before any mutation. Rotation takes linear time
-and constant extra storage, using three reversals; it does not allocate, copy
+and constant extra storage, using three reversals. It does not allocate, copy
 elements, or run their destructors. Existing pointers still address the same
 slots, whose values may change.
 
 `Sort`, `Reverse`, and `Rotate` relocate values rather than copying them. Owning values
-without copy constructors are supported; every value remains responsible for
+without copy constructors are supported. Every value remains responsible for
 its resources in its final slot. These operations do not allocate or free
 storage and do not run element destructors. A comparator may allocate or throw.
 If it throws during sorting, ordering may be partial but every element remains
@@ -202,7 +219,7 @@ alive and owned by the source collection.
 
 `Partition` has the same ownership guarantee if its predicate throws. The
 predicate borrows an element through `immutable(T)*` and runs once per element
-unless an earlier invocation throws. `FindIndex` stops at the first match;
+unless an earlier invocation throws. `FindIndex` stops at the first match.
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.
 
@@ -210,10 +227,10 @@ and compare equal to other empty spans without invoking callbacks.
 
 `IsPartitioned` checks whether all true predicate results precede all false results.
 It visits elements once from left to right and returns false at the first true
-result following a false result. Empty, all-true, and all-false spans return true;
-empty spans never read storage or call the predicate. The scan takes O(n) calls
+result following a false result. Empty, all-true, and all-false spans return true.
+Empty spans never read storage or call the predicate. The scan takes O(n) calls
 in the worst case and constant extra storage, without allocating, copying, or
-modifying elements. Predicate exceptions propagate unchanged; callback effects
+modifying elements. Predicate exceptions propagate unchanged. Callback effects
 are not rolled back. Keep input storage alive and avoid mutation through aliases.
 
 Validation is an explicit linear pass. `PartitionPoint` keeps its logarithmic
@@ -244,12 +261,12 @@ int main()
 for which the predicate returns true must precede every element for which it
 returns false. The predicate must remain consistent throughout the call. Elements
 within either group need not be sorted. Input that does not meet this precondition
-has no specified result; the search does not validate it with a linear scan.
+has no specified result. The search does not validate it with a linear scan.
 
 The result is the first false element's index. All-true input returns `Length`,
 and all-false or empty input returns zero. Empty spans never read element storage
-or call the predicate. Unlike `Partition`, this search does not rearrange elements;
-it can find the boundary of data that was grouped earlier or supplied externally.
+or call the predicate. Unlike `Partition`, this search does not rearrange elements.
+It can find the boundary of data that was grouped earlier or supplied externally.
 
 ```csharp
 using Standard; using Standard::Memory; using Standard::Collections;
@@ -275,20 +292,20 @@ int main()
 ```
 
 For nonempty input the search makes at most `floor(log2(Length)) + 1` predicate
-calls, using constant extra storage. Callbacks borrow `immutable(T)*` pointers;
-the search allocates nothing and never copies, destroys, or modifies elements,
+calls, using constant extra storage. Callbacks borrow `immutable(T)*` pointers.
+The search allocates nothing and never copies, destroys, or modifies elements,
 including noncopyable owners. Keep the backing storage alive and unchanged
 through other aliases. Original predicate exceptions propagate, while callback
 side effects are not rolled back. The function is an ordinary throwing function.
 Selective source users need `Collections/span_algorithms.gf` and the ordinary
-Span dependencies; no ordering or equality interface is required.
+Span dependencies. No ordering or equality interface is required.
 
 ## Adjacent pair search
 
 `AdjacentFind` borrows consecutive elements through two `immutable(T)*` pointers.
 It visits pairs from left to right, calling the predicate once per pair until
 the first match, and returns that pair's **left** index. No match returns
-`Length`; empty and singleton spans never read elements or call the predicate.
+`Length`. Empty and singleton spans never read elements or call the predicate.
 The optional `default_equality.gf` overload uses `EqualityComparer<T>::Equals`
 for `T : IEquatable<T>`, which can find duplicates in sorted input. Custom
 predicates can instead detect transitions without requiring sorted input:
@@ -312,9 +329,9 @@ int main()
 The search takes O(n) predicate calls and constant extra storage. It allocates
 nothing and never copies, destroys, or changes elements, including noncopyable
 owners. Keep the backing storage alive and unchanged through other aliases while
-searching. Predicate exceptions propagate unchanged; callback side effects are
+searching. Predicate exceptions propagate unchanged. Callback side effects are
 not rolled back. Selective source users need `Collections/span_algorithms.gf`
-and ordinary Span dependencies; the default overload additionally needs
+and ordinary Span dependencies. The default overload additionally needs
 `Collections/default_equality.gf`, `Collections/EqualityComparer.gf`, and
 `IEquatable.gf`.
 
@@ -323,11 +340,11 @@ and ordinary Span dependencies; the default overload additionally needs
 `FindLastIndex` visits elements from the end toward the beginning, stopping at
 the first true predicate result. An empty span returns zero without reading
 element storage or invoking the predicate. The callback receives a borrowed
-`immutable(T)*`; elements are never copied or destroyed by the search, including
+`immutable(T)*`. Elements are never copied or destroyed by the search, including
 noncopyable owners. Keep the span's backing owner alive and do not structurally
 mutate it or change elements through another alias during the search. Predicate
 exceptions propagate unchanged. The search itself does not allocate or alter the
-input; callback side effects are not rolled back. The method is not `nothrow`,
+input. Callback side effects are not rolled back. The method is not `nothrow`,
 because an arbitrary predicate can throw.
 
 ```csharp
@@ -372,12 +389,14 @@ The generator belongs to the caller and advances as the shuffle runs. Empty and
 single-element spans do not advance it. The same starting elements and generator
 state produce the same permutation. This is suitable for reproducible simulations
 and games, not security-sensitive randomization. The borrowed span must remain
-valid for the entire call; storage outside it is untouched.
+valid for the entire call. Storage outside it is untouched.
+
+## Binary search
 
 Binary search requires input sorted by the same comparator. It returns the first
 match among duplicates, uses O(log n) comparisons, and returns Length on a miss.
 Use LowerBound instead when you need the insertion position for a missing key.
-Empty spans do not call the comparator. Elements and the key are borrowed; a
+Empty spans do not call the comparator. Elements and the key are borrowed. A
 throwing comparator propagates without modifying the span. The callback must
 keep both alive and must not mutate either through another alias.
 
@@ -388,7 +407,7 @@ algorithm, reusing `Swap` and `Sort` from `Collections/span_algorithms.gf`. It r
 values in place without copying owners or allocating heap scratch storage. On
 success, the selected value has the specified sorted rank, with all earlier
 values no greater and all later values no less. The partitions are not sorted
-or stable. `nth == Length` is a no-op; larger indices throw before storage
+or stable. `nth == Length` is a no-op. Larger indices throw before storage
 access or comparison. Comparator failures can leave a rearranged initialized
 permutation. Ordinary comparator and collector-hook effects still apply.
 See [rank selection](../../../docs/NTH_ELEMENT.md) for the complete example,
@@ -427,13 +446,13 @@ int main()
 
 Primitive ordering is the existing `IComparable<T>` policy: floating-point NaNs
 compare before non-NaNs, all NaNs compare equal, and signed zeros compare equal.
-StableSort preserves encounter order among such ties; Sort need not. Custom
+StableSort preserves encounter order among such ties. Sort need not. Custom
 comparers remain available through the two-argument overloads, without requiring
 the interface.
 
 For ordinary nonallocating comparisons, Sort allocates no storage and relocates
 owners without copies. StableSort keeps its existing two-index-vector allocation
-and comparison-before-relocation behavior. Comparison exceptions propagate;
+and comparison-before-relocation behavior. Comparison exceptions propagate.
 Sort may leave a permutation partially ordered, whereas StableSort leaves the
 input unchanged when allocation or comparison fails. User comparison methods
 must obey the existing ordering, immutability and borrowed-pointer contracts.
@@ -470,14 +489,14 @@ The optional `default_ordering.gf` comparison-contract helpers also include:
 These ordinary overloads require `T : IComparable<T>` and forward through
 `Comparer<T>::Compare` to the existing algorithms. Bounds return Length if their
 insertion position is after the input. Empty searches return zero without reading
-elements or comparing the key; IsSorted is true for empty and singleton spans.
+elements or comparing the key. IsSorted is true for empty and singleton spans.
 Search input must already be sorted using this same default ordering. Equal
 floating-point NaNs and signed zeros follow the existing comparison contract.
 
 Elements and the key are borrowed, never copied, so noncopyable comparable owners
-are supported. The algorithms allocate nothing internally; comparison methods can
+are supported. The algorithms allocate nothing internally. Comparison methods can
 allocate or throw and must obey the existing immutability/lifetime rules. Original
-comparison exceptions propagate without changing input; their external side
+comparison exceptions propagate without changing input. Their external side
 effects are not rolled back. These helpers are ordinary throwing methods.
 
 ```csharp
@@ -509,7 +528,7 @@ The optional `default_ordering.gf` conveniences also provide `MinIndex(values)`,
 They forward to the existing callback algorithms through `Comparer<T>::Compare`.
 Min/max keep the first tied element and return `Length` for an empty span.
 Sequence comparison returns the first nonzero comparison **without changing its
-magnitude**; equal prefixes are ordered by length, returning -1, 0, or 1.
+magnitude**. Equal prefixes are ordered by length, returning -1, 0, or 1.
 
 ```cpp
 using Standard; using Standard::Memory; using Standard::Collections;
@@ -530,7 +549,7 @@ The optional `default_equality.gf` provides `SequenceEqual(first, second)`,
 `IndexOf(values, key)`, `LastIndexOf(values, key)`, and `Contains(values, key)`
 for `IEquatable<T>`, forwarding through `EqualityComparer<T>::Equals`.
 Searches borrow the key and elements. `IndexOf` and `LastIndexOf` return
-`Length` if no match exists; `Contains` returns false.
+`Length` if no match exists. `Contains` returns false.
 Sequence equality rejects unequal lengths before comparing any elements.
 Default floating equality treats NaNs as equal and signed zeros as equal.
 
@@ -551,7 +570,7 @@ int main()
 ```
 
 These helpers do not allocate or copy elements themselves. User comparisons
-and equality methods can allocate or throw; their original exceptions propagate,
+and equality methods can allocate or throw. Their original exceptions propagate,
 and these read-only algorithms do not modify either input. Existing overloads
 with explicit callbacks remain available without either optional source file.
 Selective source users need `span_algorithms.gf`, `Span` and its dependencies, the
@@ -567,12 +586,12 @@ comparison visits the selected leading/trailing region from left to right,
 passing a source address first and a pattern address second. It stops on the
 first false result. Identical and overlapping views still invoke the callback
 normally. A user callback or Equals implementation may allocate, change external state or throw.
-Callback effects are not rolled back; callback exceptions propagate
+Callback effects are not rolled back. Callback exceptions propagate
 unchanged and later elements are not visited. Keep both backing regions alive
 and stable during comparison.
 
-The functions themselves allocate nothing, copy no elements and do not mutate either span;
-noncopyable values can be compared through borrowed callbacks. The overloads
+The functions themselves allocate nothing, copy no elements and do not mutate either span.
+Noncopyable values can be compared through borrowed callbacks. The overloads
 without a callback lazily use `IEquatable<T>` through `EqualityComparer<T>`.
 These are free functions in `Standard::Collections`, following `SequenceEqual`, not
 new extensions on `Span<T>`. The separate `Standard::Text` character-span
@@ -610,15 +629,15 @@ int main()
 `FindRun<T>(values, count, key, equal)` returns the start of the first run of
 `count` elements for which `equal(elementAddress, key)` is true. Absence returns
 `values.Length`. Zero count returns zero without accessing elements, key or the
-callback; a count greater than Length returns Length with the same no-access
+callback. A count greater than Length returns Length with the same no-access
 behavior. Otherwise comparisons visit elements once from left to right and
-stop as soon as the first complete run is found. Matching need not be symmetric;
-the source address is always the first callback argument.
+stop as soon as the first complete run is found. Matching need not be symmetric.
+The source address is always the first callback argument.
 
 The function itself allocates nothing, copies no elements and mutates neither
 source nor key. Keep the span valid throughout the call. The key must be
-readable and stable when `0 < count <= values.Length`; the preflight returns
-do not access it. Callback exceptions propagate unchanged; side effects through other
+readable and stable when `0 < count <= values.Length`. The preflight returns
+do not access it. Callback exceptions propagate unchanged. Side effects through other
 aliases or external state are not rolled back. This searches element runs,
 without string encoding or grapheme semantics.
 
@@ -654,27 +673,27 @@ int main()
 
 `IndexOf<T>(values, pattern, equal)` returns the first start index where every
 pattern element matches the corresponding source element. A missing pattern
-returns `values.Length`; an empty pattern returns zero. A pattern longer than
+returns `values.Length`. An empty pattern returns zero. A pattern longer than
 the source returns Length. Both preflight returns make no comparisons.
-Both spans must remain valid and their backing storage alive and stable; they
+Both spans must remain valid and their backing storage alive and stable. They
 may be identical or overlap.
 
 Candidate starts are tried from left to right. Within a candidate, offsets are
 compared from left to right, source address first and pattern address second,
-until the first mismatch or a complete match. This permits asymmetric callbacks;
-no equality symmetry is assumed. The straightforward search uses O(N*M)
+until the first mismatch or a complete match. This permits asymmetric callbacks.
+No equality symmetry is assumed. The straightforward search uses O(N*M)
 comparisons in the worst case and constant auxiliary storage. The library
 copies no elements, allocates nothing and mutates neither input. Callback
-exceptions propagate unchanged; callback allocations and external side effects
+exceptions propagate unchanged. Callback allocations and external side effects
 are not rolled back.
 
 The explicit overload lives in `span_subsequence_search.gf` with Span's normal
 dependencies. The optional IEquatable default in `default_equality.gf` uses
-`EqualityComparer<T>::Equals`; selective users of that new overload must also
+`EqualityComparer<T>::Equals`. Selective users of that new overload must also
 include the new source and IEquatable/EqualityComparer dependencies. Unused
 generic overloads do not require the new source for existing equality calls.
 The existing `IndexOf(values, keyPointer)` overload keeps its single-element
-meaning; pass a span to request a contiguous pattern. This is element matching,
+meaning. Pass a span to request a contiguous pattern. This is element matching,
 without string encoding or grapheme semantics.
 
 ```csharp
@@ -706,7 +725,7 @@ int main()
 contiguous pattern match, or `values.Length` when absent. An empty pattern
 returns `values.Length`, the last insertion endpoint, consistently with reverse
 counted substring search. Thus empty-pattern success shares the sentinel value.
-An oversized pattern also returns Length; neither preflight invokes comparison.
+An oversized pattern also returns Length. Neither preflight invokes comparison.
 Both spans must remain valid, live and stable, including for preflights, and may
 overlap or be identical.
 
@@ -716,14 +735,14 @@ the source element address first and pattern element address second. Stop at
 the first mismatch for that candidate or the first complete match. Asymmetric
 callbacks therefore have a defined direction and order. Worst-case comparison
 work is O(N*M), with constant auxiliary storage. The library copies no elements,
-allocates nothing and mutates neither input. Callback exceptions propagate;
-callback allocations and external side effects are not rolled back.
+allocates nothing and mutates neither input. Callback exceptions propagate.
+Callback allocations and external side effects are not rolled back.
 
 The explicit overload shares `span_subsequence_search.gf` with forward IndexOf.
 The optional default in `default_equality.gf` uses IEquatable through
-`EqualityComparer<T>::Equals`; selective callers need those files and Span's
+`EqualityComparer<T>::Equals`. Selective callers need those files and Span's
 normal dependencies. Existing single-key `LastIndexOf(values, keyPointer)`
-keeps its meaning; pass a span for a pattern. Unused generic defaults do not add
+keeps its meaning. Pass a span for a pattern. Unused generic defaults do not add
 a source requirement to old equality calls.
 
 ```csharp
@@ -754,17 +773,17 @@ int main()
 
 `FindUnsortedIndex(values, compare)` returns the first index `i` for which
 `compare(&values[i - 1], &values[i]) > 0`, or `Length` when every adjacent pair is
-ordered. Equal neighbors are allowed; empty and singleton spans return their
+ordered. Equal neighbors are allowed. Empty and singleton spans return their
 length without comparisons. For `[1, 3, 2, 4]`, the result is `2`: the record at that
 index breaks ordering, while the prefix `[0, 2)` remains ordered. This diagnoses
-input before a binary search; the full input still needs the required ordering.
+input before a binary search. The full input still needs the required ordering.
 
 The callback receives the previous element first and current element second,
 once per adjacent pair from left to right until the first violation. Work is
 linear with constant storage, no element copies, no library allocation and no
-input mutation. Keep the span valid, live and stable; do not change it through
-callback aliases. Comparator exceptions propagate without library mutation;
-callback allocations and side effects are not rolled back. The optional overload
+input mutation. Keep the span valid, live and stable. Do not change it through
+callback aliases. Comparator exceptions propagate without library mutation.
+Callback allocations and side effects are not rolled back. The optional overload
 in `default_ordering.gf` uses `IComparable<T>` through `Comparer<T>::Compare`,
 matching `IsSorted`.
 
@@ -774,19 +793,19 @@ matching `IsSorted`.
 `Includes(values, required, compare)` checks that sorted `values` contains at
 least as many entries from each comparison-equivalence class as `required`.
 For example, `[17, 17, 42]` includes `[17, 17]` and `[17, 42]`, but not
-`[17, 17, 17]`. Matches may have gaps; this is not contiguous pattern search.
+`[17, 17, 17]`. Matches may have gaps. This is not contiguous pattern search.
 An empty `required` returns true, and an oversized `required` returns false,
 without comparison. Both spans must remain valid and live, including preflights.
 
-Both inputs must already be sorted under the same consistent ordering; this
+Both inputs must already be sorted under the same consistent ordering. This
 precondition is not validated. Zero comparison defines equivalence, which may
 differ from equality. The two-cursor scan compares a source element first and
 required element second. Negative advances the source, zero advances both, and
 positive fails immediately. It stops when all requirements match or the source
 runs out. Work is O(N+M) with constant storage, no element copies, library
-allocation or input mutation. Inputs may overlap or be identical; callbacks
-must not mutate or invalidate either through aliases. Exceptions propagate;
-callback allocations and external effects are not rolled back.
+allocation or input mutation. Inputs may overlap or be identical. Callbacks
+must not mutate or invalidate either through aliases. Exceptions propagate.
+Callback allocations and external effects are not rolled back.
 
 The optional overload in `default_ordering.gf` uses `IComparable<T>` through
 `Comparer<T>::Compare`. It shares the ordering conventions of `IsSorted` and
@@ -816,7 +835,7 @@ constant-extra-storage alternative when preserving both groups' order is unneces
 ## Borrowed max heaps
 
 The heap functions operate on initialized caller storage. A positive comparator
-result means its first argument ranks greater; the greatest element sits at the
+result means its first argument ranks greater. The greatest element sits at the
 front. Reversing the comparator reverses that priority. Keep ordering consistent
 and do not change or invalidate the span through callback aliases.
 
@@ -825,7 +844,7 @@ the final element to be a max-heap. `PopMaxHeap` requires the complete input to 
 a max-heap: it places the maximum in the last slot and leaves the preceding span
 heap-ordered. It neither removes that slot nor destroys its value. A caller can
 then shorten its view, pop the underlying vector, or replace the final element
-and push it again. Empty and singleton spans need no comparisons; `IsMaxHeap`
+and push it again. Empty and singleton spans need no comparisons. `IsMaxHeap`
 returns true for both.
 
 ```csharp
@@ -858,21 +877,23 @@ These functions reuse the relocation helpers used by `Sort`. They call no elemen
 copy constructor or destructor and need constant temporary storage, with no
 algorithm scratch allocation. Managed-reference bookkeeping and callback
 allocations follow their own contracts. Relocated values can change which
-contents occupy a borrowed slot; raw aliases are not retargeted.
+contents occupy a borrowed slot. Raw aliases are not retargeted.
 
 Comparator exceptions propagate. The modifying operations can leave a partial
 ordering, but every slot remains initialized and the same values remain owned.
 They do not promise rollback or heap order after failure. `IsMaxHeap` itself
-changes no elements; it checks children in increasing index order and stops at
+changes no elements. It checks children in increasing index order and stops at
 the first child that compares greater than its parent. Callback side effects
-are not rolled back. `PriorityQueue` owns a min-heap; these functions borrow a
+are not rolled back. `PriorityQueue` owns a min-heap. These functions borrow a
 max-heap.
+
+## Common suffixes
 
 `CommonSuffixLength` examines corresponding trailing elements from right to left,
 stopping at the first failed equality or the shorter span length. It borrows
 immutable element addresses without copying, allocating, mutating, or reversing
-storage. Either empty span returns zero without reading data or calling equality;
-exact aliases and overlapping views are supported. Keep storage alive and stable
+storage. Either empty span returns zero without reading data or calling equality.
+Exact aliases and overlapping views are supported. Keep storage alive and stable
 throughout callbacks. Exceptions propagate unchanged, without rolling back callback
 effects. To locate a changed middle, first obtain `CommonPrefixLength`, then find
 the common suffix of the remaining slices so the retained ends cannot overlap.

@@ -6,21 +6,24 @@ examples/transcode/bin/Debug/transcode.exe utf8-to-utf16le input.txt output.txt
 examples/transcode/bin/Debug/transcode.exe utf16le-to-utf8 output.txt roundtrip.txt
 ```
 
-The default project output uses `.exe` on both Windows and Linux; on Linux,
-prefix the executable paths above with `./`. Conversion is strict: malformed UTF-8, isolated UTF-16
-surrogates, and odd UTF-16 byte counts are errors. Embedded nulls and Unicode
-noncharacters are preserved. No byte-order mark is added or removed: a BOM in
-the input remains the same U+FEFF scalar in the output.
+## Encoding rules
 
-The program uses `FileBytes` and owning input/output byte vectors. It validates
-encoding and computes the exact output size before allocating that result, then
-converts one scalar at a time with `Utf8`, `Utf16`, and explicit little-endian
-`BinaryPrimitives` operations. UTF-16 conversion uses a two-code-unit stack scratch buffer, with no whole-file
-intermediate wide vector. It reads the complete input
-and builds the converted bytes before opening the output. Invalid input
-therefore leaves an existing output file untouched, and input/output may name
-the same file. File-writing failures are not an atomic replacement guarantee.
+The default project output uses `.exe` on Windows and Linux. On Linux, prefix the
+executable paths above with `./`. Malformed UTF-8, isolated UTF-16 surrogates, and odd
+UTF-16 byte counts are errors. Embedded nulls and Unicode noncharacters are preserved. A
+BOM in the input remains the same U+FEFF scalar in the output.
 
-This is a whole-file example, intended for files that fit comfortably in memory.
-Exit codes: 0 for success, 1 for conversion or I/O failure, and 2 for invalid
-arguments. Diagnostics go to stderr.
+## File handling
+
+The program uses `FileBytes` and owning input/output byte vectors. It validates encoding
+and computes the exact output size before allocating that result, then converts one
+scalar at a time with `Utf8`, `Utf16`, and explicit little-endian `BinaryPrimitives`
+operations. It builds the converted bytes before opening the output. Invalid input
+therefore leaves an existing output file untouched, and input/output may name the same
+file. A write failure can leave a truncated destination.
+
+Memory use includes the complete input and converted output.
+## Errors
+
+Exit codes: 0 for success, 1 for conversion or I/O failure, and 2 for invalid arguments.
+Diagnostics go to stderr.

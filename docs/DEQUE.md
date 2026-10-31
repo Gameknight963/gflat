@@ -20,10 +20,10 @@ int main()
 ```
 
 `AddFirst(value)` and `AddLast(value)` insert at either end. Named copyable
-arguments copy normally; `move value` transfers an existing owner. The deque
+arguments copy normally. `move value` transfers an existing owner. The deque
 relocates elements during growth instead of invoking copy constructors.
-`RemoveFirst()` and `RemoveLast()` transfer the removed value to the caller;
-ignoring that return destroys it normally. Both throw on an empty deque.
+`RemoveFirst()` and `RemoveLast()` transfer the removed value to the caller.
+Ignoring that return destroys it normally. Both throw on an empty deque.
 
 `TryRemoveFirst(ref result)` and `TryRemoveLast(ref result)` instead return false
 for an empty deque and leave the initialized result unchanged. On success they
@@ -42,38 +42,38 @@ the deque object's own fields as well.
 Replacement follows ordinary owning assignment, as with `Queue.TryDequeue`
 and `Stack.TryPop`: the endpoint is removed and ring metadata updated before
 the previous output value is destroyed. Destructors follow the language's
-termination-boundary rule if an exception escapes; the Try methods do not catch
+termination-boundary rule if an exception escapes. The Try methods do not catch
 such a failure or roll the deque back.
 
 `Front`, `Back`, and `this[index]` are checked ref properties: they borrow the
 stored element rather than copying it. Index zero is the front. Mutable receivers
-allow updating elements; immutable receivers expose immutable references. `Count`,
+allow updating elements. Immutable receivers expose immutable references. `Count`,
 `Capacity`, and `IsEmpty` report metadata. `Reserve(n)` reserves space for at least
 `n` entries. `Clear()` destroys every element but retains capacity.
 `ShrinkToFit()` reduces capacity to `Count`, preserving front-to-back order even
 when the old ring wraps. Empty storage is released, and an already tight deque
-does nothing. Shrinking relocates owners without copying or destroying them;
-allocation failure preserves the old buffer and all borrows. Successful
+does nothing. Shrinking relocates owners without copying or destroying them.
+Allocation failure preserves the old buffer and all borrows. Successful
 relocation invalidates borrowed elements and iterators just like growth.
 
 The nested `Enumerator` visits elements from front to back and exposes ref
 `Current`. Reading it before a successful `MoveNext` or after exhaustion throws.
 Iteration borrows the deque. Structural changes invalidate borrowed element
-references and iterators; do not move or destroy the owner while using them.
+references and iterators. Do not move or destroy the owner while using them.
 There is no runtime mutation counter or lifetime checking for these borrows.
 
 ## Indexed insertion and removal
 
-`Deque<T>.Insert(index, value)` inserts before the existing logical index;
+`Deque<T>.Insert(index, value)` inserts before the existing logical index.
 `index == Count` appends. Valid insertion indices are `0..Count` inclusive.
 `RemoveAt(index)` accepts `0..Count-1`, removes that element, and returns its
 owner. Ignoring the returned value destroys it normally. Invalid indices throw
 before changing deque contents. Arguments follow ordinary by-value copy/move
-rules; constructing an argument can throw before the method begins.
+rules. Constructing an argument can throw before the method begins.
 
 The endpoints delegate to `AddFirst`/`AddLast` and `RemoveFirst`/`RemoveLast`.
 Middle insertion grows first when required, then moves the logical suffix one
-slot toward the back; middle removal moves it toward the front. Ring wrap does
+slot toward the back. Middle removal moves it toward the front. Ring wrap does
 not change logical order. Relocation transfers owners without element copies
 or element destructor calls. Middle operations take linear suffix-move time.
 
@@ -106,7 +106,7 @@ int main()
 holds the storage address, capacity, head, and count at the time of the call.
 Each enumeration starts an independent existing `Deque<T>::Enumerator` at the
 captured front. Selective source-library builds also include
-`Queries/Enumerable.gf`; query operations live in the usual separate query
+`Queries/Enumerable.gf`. Query operations live in the usual separate query
 extension sources.
 
 ```csharp
@@ -119,8 +119,8 @@ values.AddFirst(0);
 var evens = values.AsEnumerable().Where(&IsEven);
 ```
 
-Replacing an existing element is visible to subsequent reads of that position;
-the view is not a snapshot of element values. Keep the deque alive and at the
+Replacing an existing element is visible to subsequent reads of that position.
+The view is not a snapshot of element values. Keep the deque alive and at the
 same address, and avoid structural mutations, moves, or destruction while using
 a query, its source view, or its iterators. This applies even when a mutation
 retains the same allocation. There is no mutation counter. Temporary owning
@@ -136,10 +136,10 @@ termination destroys iterator metadata without consuming or destroying elements.
 
 Insertion argument-copy failure, capacity overflow, and allocation failure leave
 existing contents unchanged. In particular, failed growth preserves the previous
-buffer and borrowed element addresses. Moving the deque transfers its allocation;
-the deque itself does not implicitly deep-copy. Pointer elements do not own their
+buffer and borrowed element addresses. Moving the deque transfers its allocation.
+The deque itself does not implicitly deep-copy. Pointer elements do not own their
 pointees, while managed elements keep their normal collector behavior.
 
-Both-end insertion is amortized O(1); removal and indexing are O(1). Growth and
+Both-end insertion is amortized O(1). Removal and indexing are O(1). Growth and
 `Clear` are O(n). Although its allocation is contiguous, the logical contents may
 wrap around its end, so the deque does not expose a contiguous span.

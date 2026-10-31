@@ -27,10 +27,10 @@ int main()
 For two nonempty inputs, scratch needs at least `min(first.Length, second.Length)
 + 1` writable `nuint` elements. The function uses the shorter input for columns,
 regardless of argument order. Insufficient scratch returns false before reading
-input bytes or writing scratch or `distance`; their prior contents are preserved.
+input bytes or writing scratch or `distance`. Their prior contents are preserved.
 If either input is empty, the result is the other length, no scratch is needed,
 and no data buffer is read or written. On success `distance` receives the answer.
-Scratch contents become working state and have no public meaning; elements beyond
+Scratch contents become working state and have no public meaning. Elements beyond
 the required prefix remain unchanged.
 
 Both inputs may overlap one another and must remain alive and unchanged during
@@ -42,7 +42,7 @@ pointer and does not validate pointer ownership or overlapping caller storage.
 
 The method is `nothrow` and performs no allocation, formatting, or callbacks.
 It takes O(first.Length * second.Length) time and O(min(lengths)) caller-provided
-workspace; the implementation never multiplies the lengths. Very long inputs can
+workspace. The implementation never multiplies the lengths. Very long inputs can
 therefore still take substantial time. A one-row dynamic program records costs,
 with saturating increments to prevent pointer-width arithmetic wraparound in
 unused high-cost alternatives. The exact distance is always representable because
@@ -50,7 +50,5 @@ it is at most the longer input length.
 
 Explicit source users include `core/Text/EditDistance.gf`, `Memory/Span.gf`, and its ordinary
 Enumerable/IEnumerable declaration dependencies, along with the normal exception
-and runtime declarations required by Span's checked operations. The helper itself
-performs no String/GC allocation or libc call, but selecting these files does not
-make the complete module freestanding: existing Span constructors and checked
-siblings may emit exception support. No Span or compiler behavior is changed.
+and runtime declarations required by Span's checked operations. Span constructors and checked operations can emit exception support. Include
+their runtime dependencies even when calling this `nothrow` helper.

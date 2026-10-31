@@ -1,9 +1,9 @@
 namespace Standard::IO;
 
 /// Returns one byte from 0 through 255, or -1 when the source reports EOF.
-/// Performs one positive one-byte read; malformed counts raise IOException.
+/// Performs one positive one-byte read. Malformed counts raise IOException.
 /// Source exceptions propagate unchanged and may leave consumed input.
-/// Borrows input for this call; does not allocate a buffer, close, or rewind it.
+/// Borrows input for the duration of the call.
 public int ReadByte(IByteReader* input)
 {
     char value = '\0';
@@ -21,7 +21,7 @@ extension IByteReader
 
 /// Reads through short results until count bytes are stored, or throws on early EOF.
 /// Earlier input and buffer writes remain on failure. Zero count still validates the source.
-/// Borrows input and writable data for this call; they must remain alive and disjoint.
+/// Borrows input and writable data for this call. They must remain alive and disjoint.
 public void ReadExactly(IByteReader* input, char* data, nuint count)
 {
     if (count == 0)
@@ -50,9 +50,9 @@ extension IByteReader
 
 /// Pumps remaining bytes through caller scratch into a borrowed synchronous writer.
 /// Source, sink and scratch must not overlap, and must remain alive and unmoved during the call.
-/// Short reads continue; positive-request zero ends input. Returns the number sent to output.
+/// Short reads continue. Positive-request zero ends input. Returns the number sent to output.
 /// Does not retain storage, allocate a buffer, close, flush or finalize either endpoint.
-/// Failure may consume input or leave prior output; no rollback or draining is performed.
+/// Failure may consume input or leave prior output. No rollback or draining is performed.
 public nuint CopyTo(IByteReader* input, ITextWriter* output, char* scratch, nuint capacity)
 {
     if (capacity == 0) throw new IOException("Copy buffer must not be empty");

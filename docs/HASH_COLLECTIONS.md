@@ -15,11 +15,11 @@ names.Add(s"apple");
 bool present = names.Contains(&key);
 ```
 
-`HashMap<K,V>` owns its keys and values; `HashSet<T>` owns its elements. Insertions
+`HashMap<K,V>` owns its keys and values. `HashSet<T>` owns its elements. Insertions
 take values, so use `move` when transferring an existing noncopyable object.
 `TryAdd`/set `Add` return false for duplicates and destroy the unused arguments.
-Map `Add` throws on duplicates; `Set` inserts or replaces the value while keeping
-an existing key. `Reserve(n)` reserves room for at least `n` entries; `Capacity`
+Map `Add` throws on duplicates. `Set` inserts or replaces the value while keeping
+an existing key. `Reserve(n)` reserves room for at least `n` entries. `Capacity`
 reports that usable entry count, matching the other containers.
 
 Keys implement both `IHashable` and `IEquatable<K>`. The current generic syntax
@@ -32,20 +32,20 @@ Default hashes are deterministic and not resistant to malicious
 collision attacks.
 
 Lookups accept a borrowed key pointer and never copy it. `Find` returns a borrowed
-nullable value pointer; `FindImmutable` and `ContainsKey` work on immutable maps.
+nullable value pointer. `FindImmutable` and `ContainsKey` work on immutable maps.
 `FindReadOnly` works on a shallow `readonly` map and returns `readonly(V)*?`:
 the value's inline fields cannot change, but its pointers and managed references
 still permit changes to their targets. `FindImmutable` returns `immutable(V)*?`
 and protects those targets too. Both views borrow the stored value without copies
-or allocation; keys remain immutable under either contract.
+or allocation. Keys remain immutable under either contract.
 The ref indexer throws when the key is absent and allows changing an existing
-value. `Remove(key)` destroys an entry and returns false when absent;
+value. `Remove(key)` destroys an entry and returns false when absent.
 `Clear` destroys every entry but retains storage.
 
 `Remove(key, ref output)` instead transfers the mapped value into an initialized
 output, destroys its previous value and the removed key, and returns true. A
 missing key returns false without changing output. It copies no owners and
-allocates no storage; noncopyable mapped values are supported. Capacity is
+allocates no storage. Noncopyable mapped values are supported. Capacity is
 retained. Output remains valid independently of the map.
 
 ```csharp
@@ -67,8 +67,8 @@ Hashing and lookup complete once before movement. A lookup exception leaves the
 map and output unchanged. The query key may borrow an independently stored part
 of the previous output until lookup finishes. Lookup callbacks must not mutate
 the map, key, or output through another alias. Output must not refer anywhere
-inside the map's backing allocation, including unused buckets and state bytes;
-a successful lookup rejects such addresses before moving any value. A missing
+inside the map's backing allocation, including unused buckets and state bytes.
+A successful lookup rejects such addresses before moving any value. A missing
 lookup does not inspect output storage.
 
 On success, the tombstone, `Count`, and replacement output are committed before
@@ -78,30 +78,32 @@ output through another alias. Destructors retain their normal exception contract
 
 `Extract(key)` removes an entry and transfers its owning `HashMap<K,V>::Entry`
 to the caller. Missing keys throw. Its `Key`, `Value`, `ValueReadOnly`, and `ValueImmutable` members
-expose the transferred objects; noncopyable keys and values are supported.
-`ValueReadOnly` uses a shallow readonly receiver and value pointer;
-`ValueImmutable` uses an immutable receiver and value pointer.
-A successful extraction copies no elements, allocates no storage, and destroys
+expose the transferred objects:
+
+- `ValueReadOnly` uses a shallow readonly receiver and value pointer
+- `ValueImmutable` uses an immutable receiver and value pointer
+
+Extraction supports noncopyable keys and values. A successful extraction copies no elements, allocates no storage, and destroys
 neither transferred owner. The entry remains valid independently of later map
-growth, clearing, or destruction. It is an owning value, not a node handle or a
-promise of allocation-free reinsertion. Destroying it destroys its key and value.
+growth, clearing, or destruction. Destroying it destroys its key and value.
+
 Lookup/hash/equality failure leaves the map unchanged. Passing a key pointer
-borrowed from this map is allowed; lookup finishes before the entry is moved.
+borrowed from this map is allowed. Lookup finishes before the entry is moved.
 Extraction invalidates borrows into that entry and leaves a tombstone so other
 colliding keys remain findable. The collection retains its allocation/capacity.
 
 Maps use open addressing with linear probing, tombstones, and a maximum 50% load.
 Each entry caches its hash, so growth relocates owning values without calling
-user hash or equality functions. Automatic growth doubles usable capacity;
-explicit `Reserve` accepts the requested entry count. Tombstones are compacted
+user hash or equality functions. Automatic growth doubles usable capacity.
+Explicit `Reserve` accepts the requested entry count. Tombstones are compacted
 when too many buckets have been used. Failed allocation or a throwing key comparison
 leaves the existing entries intact. Values are destroyed exactly once.
 
 Enumeration borrows the map and has unspecified order. `HashMap<K,V>::Enumerator`
-returns immutable entry pointers with `Key` and `ValueImmutable`; set enumerators
+returns immutable entry pointers with `Key` and `ValueImmutable`. Set enumerators
 return immutable element pointers. Do not mutate, move, or destroy the collection
 while enumerating. Insertion and `Reserve` may invalidate all borrowed pointers,
-including when tombstone compaction keeps capacity unchanged; removal invalidates
+including when tombstone compaction keeps capacity unchanged. Removal invalidates
 pointers into the removed entry. Collections do not own objects pointed to by
 pointer-valued elements.
 
@@ -111,14 +113,14 @@ pointer-valued elements.
 `IsProperSubsetOf`, `IsProperSupersetOf`, and `Overlaps`. Each takes a
 `immutable(HashSet<T>)*` and works on an immutable receiver. They borrow keys rather
 than copying them, and perform no allocations, so noncopyable owning keys work
-as well. Both empty sets are equal and subsets of each other; proper relations
+as well. Both empty sets are equal and subsets of each other. Proper relations
 require different counts, and an empty set never overlaps another set.
 
 Relations use the same hashing and equality rules as lookups. They short-circuit
 when counts or an early matching/missing element determine the answer. A throwing
 hash/equality callback leaves both sets unchanged. As with individual lookups,
 callbacks must not mutate either set through another alias. Readonly map and set
-enumeration also borrows existing entries; its invalidation rules are unchanged.
+enumeration also borrows existing entries. Its invalidation rules are unchanged.
 
 ## Set mutations
 
@@ -126,7 +128,7 @@ enumeration also borrows existing entries; its invalidation rules are unchanged.
 the number removed. It borrows each occupied key for the callback without
 copying it, so noncopyable owning keys are supported. The set itself allocates
 no storage and does not invoke key hashing or equality. An empty set does not
-call the predicate. Capacity is retained; removed buckets remain tombstones so
+call the predicate. Capacity is retained. Removed buckets remain tombstones so
 colliding survivors can still be found and the set can be reused.
 
 ```csharp
@@ -147,7 +149,7 @@ Traversal order is unspecified. The predicate sees the current key alive.
 Borrowing its pointer does not extend its lifetime past removal. The predicate
 must not structurally mutate, move, or destroy this set through another alias.
 A predicate exception preserves the failing key and
-all unvisited keys; earlier completed removals remain committed. Removed keys
+all unvisited keys. Earlier completed removals remain committed. Removed keys
 are destroyed normally, using the same cleanup behavior as individual removal.
 Destructor exceptions follow the language's termination rules, rather than this
 predicate-failure guarantee. Public iterators and borrowed pointers follow the
@@ -156,54 +158,53 @@ callbacks and user cleanup can perform their ordinary work.
 
 `ExceptWith(immutable(HashSet<T>)* other)` removes matching keys from this set.
 It borrows the other set's keys without copying them, so noncopyable owning keys
-are supported. Passing the same set clears it. It allocates no collection storage;
-removed owners are destroyed normally. The implementation iterates the distinct
+are supported. Passing the same set clears it. It allocates no collection storage.
+Removed owners are destroyed normally. The implementation iterates the distinct
 source, rather than holding an iterator into its changing target.
 
 `IntersectWith(immutable(HashSet<T>)* other)` removes keys absent from the other
 set, retaining this set's existing owners for shared keys. It also supports
 noncopyable keys and allocates no collection storage. Self-intersection does
-nothing; intersection with an empty set clears the target. Its internal map
-helper scans private buckets directly and leaves tombstones for removed entries;
-it does not keep a public enumerator alive during structural mutation. Public
+nothing. Intersection with an empty set clears the target. Its internal map
+helper scans private buckets directly and leaves tombstones for removed entries.
+It does not keep a public enumerator alive during structural mutation. Public
 enumerator invalidation rules remain unchanged.
 
 With `Collections/hash_set_algebra.gf` included and `using Standard::Collections;`,
 `target.UnionWith(&source)` copies missing keys into the target. Existing keys are
 checked before copying, and self-union does nothing. Added owning keys use their
-normal copy constructors; the source stays unchanged. This is a separate
+normal copy constructors. The source stays unchanged. This is a separate
 ref-receiver extension so merely using `HashSet<T>` or `ExceptWith` does not
 require noncopyable keys to gain a copy constructor.
 
 The same optional source adds `target.SymmetricExceptWith(&source)`: shared keys
 are removed, and keys found only in the source are copied into the target. Existing
 target-only owners are retained. Self-symmetric-difference clears the set. As with
-union, instantiating this copying extension requires a copyable element type;
-core intersection and difference remain available for noncopyable owners.
+union, instantiating this copying extension requires a copyable element type.
+Core intersection and difference remain available for noncopyable owners.
 
 These mutations can make partial progress if a later callback, copy, or allocation
-fails. A failing probe does not remove its current key; earlier completed removals
+fails. A failing probe does not remove its current key. Earlier completed removals
 or additions remain. All surviving keys stay owned, and
 a distinct source remains intact. Hash/equality/copy callbacks must not mutate either set
 through other aliases. Structural mutation invalidates target iterators and key
 borrows under the rules above. A borrowed source must stay alive for the call.
 
-
 ## Borrowing the stored equivalent key
 
-`map.FindKey(&query)` returns `immutable(K)*?` pointing to the actual stored key;
+`map.FindKey(&query)` returns `immutable(K)*?` pointing to the actual stored key.
 `set.Find(&query)` returns the same kind of borrow for a set value. A miss returns
 null. These methods use the existing hash/equality lookup, not enumeration, and
 copy no owners or allocate library storage. Query and callback rules are the
-same as Contains; hash/equality exceptions propagate without library mutation.
+same as Contains. Hash/equality exceptions propagate without library mutation.
 Even an empty hash container can call the query's hash method.
 
 This is useful when equality uses an identifier but the stored value carries a
 different payload. Duplicate insertion and existing-key Set preserve that original
 key. The pointer protects all reachable key state and does not own or extend its
-lifetime. Keep the responsible owner alive. Rehash/growth replaces storage;
-removing that key, Clear or destruction ends its borrow. Reacquire when an
-operation may relocate or remove the entry; stable operations do not create a
+lifetime. Keep the responsible owner alive. Rehash/growth replaces storage.
+Removing that key, Clear or destruction ends its borrow. Reacquire when an
+operation may relocate or remove the entry. Stable operations do not create a
 new independently owned key.
 
 ```csharp

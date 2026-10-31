@@ -4,9 +4,8 @@ For path-based lookup returning a borrowed raw value, see
 [JSON Pointer](JSON_POINTER.md).
 
 `Standard::Json::JsonReader` reads one complete JSON document from a borrowed counted UTF-8
-buffer. It emits tokens without allocating strings, converting numbers, or building
-a DOM. Its `Vector<byte>` nesting stack grows as needed; there is no recursive
-parser call stack or fixed nesting limit. Allocation can throw `BadAllocException`.
+buffer. It emits tokens with borrowed string and number bytes. A `Vector<byte>`
+tracks nesting and grows as needed. Allocation can throw `BadAllocException`.
 
 ```cpp
 using Standard; using Standard::Json; using Standard::Memory;
@@ -33,7 +32,7 @@ identify exact byte ranges in the original buffer, including surrounding quotes
 for property names and strings. Number spelling is preserved, including exponent,
 sign, and trailing fractional zeros. Large numbers have no machine numeric range
 restriction. `Depth` is the number of enclosing containers: a root opener and its
-closing delimiter both have depth zero; its immediate contents have depth one.
+closing delimiter both have depth zero. Its immediate contents have depth one.
 `Kind` becomes `None` and `TokenLength` becomes zero on completion or error.
 
 `RawToken` returns a borrowed `Span<readonly(char)>` over the exact current
@@ -45,18 +44,18 @@ after completion or a failed read, and after `Reset`, it returns a canonical
 empty span with null `Data` without accessing input storage.
 
 A saved span borrows the original input rather than the reader. Advancing,
-resetting, moving, or destroying the reader does not invalidate that span;
-the caller must keep the original bytes alive and unchanged for every use.
+resetting, moving, or destroying the reader does not invalidate that span.
+The caller must keep the original bytes alive and unchanged for every use.
 The view neither owns those bytes nor prolongs their lifetime.
 
 `ValueTextEquals(text, count)` compares a current `PropertyName` or `String`
 with counted, unquoted UTF-8 text, without decoding into a buffer or allocating.
 For example, `reader.ValueTextEquals("name", 4)` also matches `"na\u006de"`.
-It has an immutable receiver and is `nothrow`. Comparison is exact decoded text;
-case, normalization, and embedded nulls follow
+It has an immutable receiver and is `nothrow`. Comparison is exact decoded text.
+Case, normalization, and embedded nulls follow
 [`JsonString::ValueTextEquals`](JSON_STRING.md#comparing-decoded-text).
 For any other token kind or `None`, it returns false without examining `text`.
-A mismatch or malformed expected UTF-8 returns false; the predicate may
+A mismatch or malformed expected UTF-8 returns false. The predicate may
 short-circuit and is not a separate input-validation operation. Expected text
 may overlap the borrowed input, but both must remain alive and unchanged.
 
@@ -71,7 +70,7 @@ current. The following `Read()` reaches the next sibling or containing delimiter
 
 On end tokens or `None` (before the first read or after completion), `Skip()`
 does nothing. It does not finish the document or validate trailing data after
-the skipped value; continue calling `Read()` until it returns false.
+the skipped value. Continue calling `Read()` until it returns false.
 
 ```cpp
 using Standard::Json;
@@ -86,7 +85,7 @@ while (reader.Read()) {
 Skipped content is fully validated through the ordinary `Read()` path, including
 UTF-8, escapes, delimiters, and nested grammar. Malformed content still throws
 `JsonParseException` with its original byte offset. Skipping is iterative and
-uses the same nesting stack; growing it can throw `BadAllocException`. A failed
+uses the same nesting stack. Growing it can throw `BadAllocException`. A failed
 reader rejects `Skip()` as well as `Read()` until `Reset()`. Scalar/no-op skips
 do not allocate or advance input.
 
@@ -97,11 +96,11 @@ valid UTF-8 and paired escaped UTF-16 surrogates. Rejecting lone surrogate escap
 is intentionally stricter than the RFC's permissive string ABNF, matching the
 existing `JsonString` contract. The reader rejects a leading UTF-8 BOM, comments,
 trailing commas, unescaped control bytes, and non-JSON whitespace. Duplicate object
-names are emitted unchanged; no uniqueness or normalization policy is imposed.
+names are emitted unchanged. No uniqueness or normalization policy is imposed.
 
 Malformed input throws `JsonParseException`, whose `Offset` is an absolute byte
 offset, possibly equal to the input count at unexpected EOF. Invalid string contents
-report the opening quote's offset; unterminated strings report EOF. Messages give
+report the opening quote's offset. Unterminated strings report EOF. Messages give
 a short reason, rather than a stable machine-readable error code.
 
 After **any** exception from `Read` or `Skip`, including allocation failure, call `Reset()`
@@ -112,7 +111,7 @@ modified, including on errors. Exception allocation follows normal runtime rules
 The caller keeps input alive and unchanged for the reader and every saved raw
 slice. Token offsets can be saved as ordinary numbers but do not keep the input
 alive. The reader owns only its stack and follows ordinary owning-value rules:
-transfer it with `move`; it does not provide a copy constructor. No chunked-input,
+transfer it with `move`. It does not provide a copy constructor. No chunked-input,
 incremental-document, or resumable-error protocol is provided.
 
 For explicit source selection, include `Json/JsonReader.gf`, `Json/JsonTokenKind.gf`,

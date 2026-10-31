@@ -1,7 +1,7 @@
 namespace Standard::Text;
 
 /// Buffers counted writes in borrowed scratch and drains full blocks to a borrowed sink.
-/// Flush sends pending bytes only; destruction performs no output or sink cleanup.
+/// Flush sends pending bytes only. Destruction performs no output or sink cleanup.
 public struct BufferedWriter : ITextWriter
 {
     private ITextWriter* output;
@@ -16,7 +16,7 @@ public struct BufferedWriter : ITextWriter
         used = 0; failed = false;
     }
 
-    /// Copies nonempty input, draining each full block; zero capacity forwards directly.
+    /// Copies nonempty input, draining each full block. Zero capacity forwards directly.
     /// Input must be stable and disjoint from scratch and storage the sink may mutate.
     public void Write(readonly(char)* data, nuint count)
     {

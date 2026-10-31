@@ -1,7 +1,7 @@
 namespace Standard::Encoding;
 
 /// Streams canonical uppercase padded Base32 to one borrowed synchronous sink.
-/// Complete emits the final padding; destruction never writes or closes the sink.
+/// Complete emits the final padding. Destruction never writes or closes the sink.
 public struct Base32Encoder : ITextWriter
 {
     private ITextWriter* output;
@@ -80,7 +80,7 @@ public struct Base32Encoder : ITextWriter
     }
 
     /// Emits canonical padding for a pending tail, without flushing or closing output.
-    /// Repeated success is idempotent; sink failure permanently rejects further use.
+    /// Repeated success is idempotent. Sink failure permanently rejects further use.
     public void Complete()
     {
         this.CheckUsable();

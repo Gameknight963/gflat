@@ -14,10 +14,9 @@ source cursor. Choose its buffer when constructing it:
   or output buffers passed to Read.
 
 Both overloads reject zero capacity with `IOException` before reading source input
-or accessing scratch. Throwing that error uses normal exception runtime storage;
-it is separate from buffer allocation. The existing constructor and default
+or accessing scratch. Throwing that error uses normal exception runtime storage.
+It is separate from buffer allocation. The existing constructor and default
 capacity retain their behavior.
-
 
 Use it when small reads, such as [stream varints](STREAM_VARINT.md) or
 [counted lines](BYTE_READERS.md#read-counted-lines-from-any-byte-source), would
@@ -44,7 +43,7 @@ No global cache or prefetch thread is involved.
 The source controls how long its `Read` blocks. In particular, `File::Read` uses
 `fread`: refilling a large buffer from a pipe or interactive file-like source can
 wait for the requested bytes or EOF. Wrapping such a source can change latency even
-for a one-byte consumer. File already has libc buffering; this adapter is not an
+for a one-byte consumer. File already has libc buffering. This adapter is not an
 unconditional performance improvement for File. TCP `recv` can return a short
 available prefix, which the adapter accepts normally.
 
@@ -52,7 +51,7 @@ available prefix, which the adapter accepts normally.
 
 `PeekByte()` returns the next byte as an int from 0 through 255, or -1 when a refill
 reports EOF. Byte 255 is data. Pending bytes are returned without another source
-read; repeated peeks return the same byte and leave BufferedCount unchanged.
+read. Repeated peeks return the same byte and leave BufferedCount unchanged.
 The next ReadByte, ReadExactly, or Read through this same adapter starts with that
 peeked byte.
 
@@ -71,7 +70,7 @@ provides lookahead without requiring provider pushback.
 The Vector owner field remains noncopyable under existing value rules, including
 when that field is empty in borrowed-buffer mode. Consequently the
 adapter cannot be implicitly copied into a local, argument or field. Explicit move
-transfers the buffer and unread cursor state; no buffer pointer points into the
+transfers the buffer and unread cursor state. No buffer pointer points into the
 adapter itself. Reinitialize a moved local before using it again. Existing pointers
 to the old adapter address do not follow that move.
 
@@ -81,8 +80,8 @@ Do not directly read, seek, clear, move or close the underlying source while usi
 this buffered cursor, or install another independently consuming adapter over it.
 The compiler does not prove every external alias obeys this rule.
 
-Destruction frees an owned buffer only; caller scratch is never freed. It never closes, flushes or rewinds the
-source. Unread prefetched bytes are abandoned when the adapter is destroyed; the
+Destruction frees an owned buffer only. Caller scratch is never freed. It never closes, flushes or rewinds the
+source. Unread prefetched bytes are abandoned when the adapter is destroyed. The
 underlying cursor has already advanced past them. There is no pushback or rollback.
 Do not reuse or modify caller scratch while the adapter may hold unread bytes.
 Moving inline scratch, reallocating its buffer, or freeing it invalidates the borrow.
@@ -95,7 +94,7 @@ source's retained backing storage. Output pointers are borrowed for the call onl
 If an underlying call throws or reports more bytes than requested, the adapter
 latches failure. Further reads and peeks throw `IOException` without touching the source,
 including zero-count reads. Underlying exceptions propagate unchanged and may have
-consumed an unknown prefix; recovery cannot be reconstructed from counters. Pending
+consumed an unknown prefix. Recovery cannot be reconstructed from counters. Pending
 properties remain inspectable, but there is no reset/retry guarantee.
 
 ## One cursor for prefix and body
@@ -145,9 +144,7 @@ own payload-size limits before allocating or reading a declared body.
 
 `core/IO/BufferedReader.gf` uses existing `IByteReader`, `IOException`, Vector and Span
 APIs. Manual source selections must include the normal Vector/Span/query-interface,
-Memory/BadAllocException and Exception dependencies. No buffer elements are accessed
-outside initialized Vector count; reserve alone is not treated as initialized storage.
+Memory/BadAllocException and Exception dependencies. The owned buffer uses initialized Vector elements.
 The normal standard-library source glob includes these dependencies. Construction
-uses the selected Memory allocator in owned mode; borrowed mode retains the same
-source dependencies but makes no buffer allocation. No GC, native IO implementation or compiler hook
-is added by the adapter.
+uses the selected Memory allocator in owned mode. Borrowed mode retains the same
+source dependencies but makes no buffer allocation.

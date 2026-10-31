@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 }
 ```
 
-For SHA-256 the digest is 32 bytes; hex encoding produces 64 characters.
+For SHA-256 the digest is 32 bytes. Hex encoding produces 64 characters.
 For SHA-512, use `byte[64] digest = FileHash::SHA512(argv[1])`, a `char[128]`
 hex buffer, and byte/hex counts 64/128 in the same example. Neither the
 digest nor the local hex buffer needs disposal. The counted output call does not
@@ -37,9 +37,9 @@ require a null terminator.
 | `FileHash::SHA256(path)` | Opens a binary File, hashes the complete file, and closes it before returning. |
 | `FileHash::SHA256(File* input)` | Borrows an open File and hashes from its current position to EOF, using a 4096-byte stack buffer. |
 | `FileHash::SHA256(File* input, char* buffer, nuint capacity)` | Same borrowed behavior, using caller-provided scratch storage. |
-| `FileHash::SHA512(path)` | Owns and closes a binary File; returns a 64-byte digest. |
+| `FileHash::SHA512(path)` | Owns and closes a binary File. Returns a 64-byte digest. |
 | `FileHash::SHA512(File* input)` | Borrows an open File from its current position to EOF, using 4096 stack bytes. |
-| `FileHash::SHA512(File* input, char* buffer, nuint capacity)` | Same borrowed behavior with caller scratch storage; returns 64 bytes. |
+| `FileHash::SHA512(File* input, char* buffer, nuint capacity)` | Same borrowed behavior with caller scratch storage. Returns 64 bytes. |
 
 Borrowed overloads never rewind, close, flush, or clear the File's state. Successful
 hashing leaves it open at EOF. Hashing an already exhausted stream returns the
@@ -48,12 +48,12 @@ owns and closes the File.
 
 The scratch capacity is a byte count, with no terminator reservation. It must be
 positive, and the caller must supply that many writable bytes. Its storage must
-not overlap the File object. The buffer may be reused immediately after the call;
-its contents are scratch data, not an encoded or returned digest. Any positive
+not overlap the File object. The buffer may be reused immediately after the call.
+Its contents are scratch data, not an encoded or returned digest. Any positive
 chunk size produces the same hash of the same remaining bytes.
 
 An empty file is valid and produces the selected algorithm's empty-message digest. Embedded NUL,
-CR/LF, and non-ASCII values are ordinary bytes; no text decoding, BOM stripping,
+CR/LF, and non-ASCII values are ordinary bytes. No text decoding, BOM stripping,
 line-ending conversion, or newline insertion is performed. The path overload
 uses the host's narrow-character file API, like other File conveniences.
 
@@ -64,9 +64,9 @@ failure throws `IOException`. Zero capacity is rejected before consuming input
 or touching scratch storage. On a read failure, the borrowed File remains owned
 by the caller with its ordinary IO error state. No digest is returned.
 
-SHA-256 accepts at most `2^61 - 1` message bytes; SHA-512 accepts at most
+SHA-256 accepts at most `2^61 - 1` message bytes. SHA-512 accepts at most
 `2^125 - 1` bytes. Exceeding the selected core limit throws `Exception`. Input may already have advanced by the
-offending read; there is no stream-position rollback. IO errors can also consume
+offending read. There is no stream-position rollback. IO errors can also consume
 an available prefix before throwing.
 
 The path overload closes its owned File during exception unwinding. On the normal

@@ -1,8 +1,8 @@
 namespace Standard::IO;
 
-/// Creates a deferred byte sequence; no input is read until MoveNext.
+/// Creates a deferred byte sequence. No input is read until MoveNext.
 /// Each yielded byte consumes one source byte, without read-ahead or allocation.
-/// EOF ends that iterator. Errors propagate and invalidate Current; a later
+/// EOF ends that iterator. Errors propagate and invalidate Current. A later
 /// MoveNext retries the source at its then-current position, without rollback.
 public ByteSequence EnumerateBytes(IByteReader* input) => new ByteSequence(input);
 

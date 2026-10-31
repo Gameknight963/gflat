@@ -1,6 +1,6 @@
 # Materialize a query as a hash map
 
-`ToHashMap(keySelector)` returns an owning `HashMap<K, T>`; each selected key is
+`ToHashMap(keySelector)` returns an owning `HashMap<K, T>`. Each selected key is
 paired with its original element. `ToHashMap(keySelector, valueSelector)` instead
 returns `HashMap<K, V>`. Selectors have the ordinary by-value types `K(T)*` and
 `V(T)*`. Keys require `IHashable` and the matching `IEquatable<K>` contract,
@@ -30,7 +30,7 @@ runs first. The two-selector overload then invokes the value selector using that
 same local element. These by-value callback arguments follow ordinary copy/move
 rules and may allocate or throw. The one-selector overload moves the original
 local element into the map, not the callback's argument copy. Both overloads move
-the selected key into the map; the second also moves its selected value.
+the selected key into the map. The second also moves its selected value.
 
 Insertion uses `HashMap.Add`: an equal key throws
 `Exception("Duplicate HashMap key")`. There is no overwrite or merge policy.
@@ -40,7 +40,7 @@ the duplicate. Callbacks and consumed input are not rolled back.
 The returned map owns its keys and values. Borrowed fields inside them retain
 their usual backing-owner lifetime requirements. Do not return a key or value
 borrowing a temporary selector argument. The query receiver/source follow normal
-value-copy/move rules; borrowed adapters still require their backing owners alive
+value-copy/move rules. Borrowed adapters still require their backing owners alive
 and callbacks must respect the source's existing mutation rules.
 
 An empty source returns an empty map without internal allocation or selector
@@ -50,7 +50,7 @@ There is no initial capacity guess or retained source/iterator in the result.
 
 Iterator, selector, hashing, equality, capacity, allocation, and duplicate-key
 failures propagate. Locals, partial maps, and iterators are destroyed normally.
-Failed assignment to an existing map preserves that destination; external side
+Failed assignment to an existing map preserves that destination. External side
 effects and source advancement remain visible.
 
 For explicit source selection include `Queries/enumerable_to_hash_map.gf`, the

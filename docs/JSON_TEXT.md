@@ -11,12 +11,12 @@ Empty input is invalid. Invalid or incomplete input throws `JsonParseException`
 with the reader's message and byte offset. Validation failures, including nesting
 stack allocation failure, produce no output. The reader's stack is released
 before the first output call. A later writer exception propagates unchanged and
-may leave partial output; calls retain no state.
+may leave partial output. Calls retain no state.
 
 Input is borrowed: keep all `count` bytes live and unchanged throughout the call.
 They must not overlap storage that the destination may modify or reallocate.
 The writer consumes each input run synchronously and must not retain its pointer.
-`Minify` uses no owning string, DOM, or output scratch buffer; only the
+`Minify` uses no owning string, DOM, or output scratch buffer. Only the
 reader's nesting stack may allocate.
 
 ## Pretty-printing
@@ -44,7 +44,7 @@ output begins. Invalid input or nesting-stack allocation failure makes no writer
 calls. An indentation length exceeding `nuint` throws
 `Exception("JSON indentation length overflow")` before any output. A root scalar
 or empty root container requires no indentation even if `indentSpaces` is large.
-There is no accumulated total output count; expansion is streamed and the
+There is no accumulated total output count. Expansion is streamed and the
 destination's own capacity and resource limits still apply.
 
 ```csharp
@@ -69,10 +69,10 @@ retained. This does not sort keys or canonicalize JSON.
 Input and writer borrowing rules match `Minify`. The writer must consume the
 temporary space block during each `Write` and must not retain its pointer. The
 formatter never flushes, closes, or destroys the destination. Destination failures
-propagate unchanged and can leave a prefix; a retry can duplicate that prefix.
+propagate unchanged and can leave a prefix. A retry can duplicate that prefix.
 Binary destinations retain LF bytes, while a CRT console in text mode can
 translate them to platform newlines. The adapter itself allocates only the
-reader's nesting stack; a destination writer can allocate normally.
+reader's nesting stack. A destination writer can allocate normally.
 
 For selective source use, include `Json/JsonText.gf` alongside the dependencies of
-`JsonReader` and `ITextWriter`; `String` and `JsonWriter` are not required.
+`JsonReader` and `ITextWriter`. `String` and `JsonWriter` are not required.

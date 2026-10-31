@@ -30,8 +30,8 @@ Factory and ordinary source-copy effects can therefore occur even for
 For positive counts, the first successful move needs `count` withheld values
 plus the current output. Each later successful move reads one more input value.
 Every buffered upstream `Current` is read once. `SkipLast(n).Take(k)` with
-positive `k` consumes at most `k + n` input values, or all input if it ends first;
-this is a mathematical count, not unchecked pointer-sized addition. If the input
+positive `k` consumes at most `k + n` input values, or all input if it ends first.
+This is a mathematical count, not unchecked pointer-sized addition. If the input
 has at most `count` values, it is consumed fully and produces no output.
 A huge count does not reserve that amount upfront: Deque grows only as observed
 input arrives, subject to its checked capacity limits and geometric growth.
@@ -41,27 +41,27 @@ Storage is O(min(input length, count + 1)), including the current buffered outpu
 copy owning values again. The next move destroys that previous buffered front.
 At EOF, the withheld tail is destroyed immediately. Early iterator destruction
 releases every pending value and the upstream iterator. `SkipLast(0)` instead
-forwards moves and `Current` without allocating a Deque buffer; repeated Current
+forwards moves and `Current` without allocating a Deque buffer. Repeated Current
 reads then have the upstream getter's ordinary effects.
 
 Retained values must support ordinary copying from the buffer, including when
 the runtime count is zero. This does not consume borrowed owner headers, support
 retained noncopyable values, or strip outer readonly/immutable qualification.
-Pointer and managed-reference elements retain their ordinary target sharing;
-owning Strings are copied independently. Custom copy/destructor effects remain
+Pointer and managed-reference elements retain their ordinary target sharing.
+Owning Strings are copied independently. Custom copy/destructor effects remain
 ordinary element effects. The wrapper does not structurally mutate source values.
 
 Keep borrowed source backing storage alive. Source values and their captured
 views follow normal copy rules. Consumable file sources advance their shared
 file position by the lookahead and are not rewound. Stopping early can leave
-unread input; a new enumeration starts wherever that source now starts, without
+unread input. A new enumeration starts wherever that source now starts, without
 replaying discarded buffered values. Reiterable sources get independent cursors.
 
 Move, buffering-copy and allocation errors propagate and make this iterator
 finished: later moves return false without retrying, and Current is invalid.
 Pending owners and the upstream cursor are released when the iterator is
 destroyed. A buffered output-copy failure in `Current` leaves position unchanged
-and can be retried; zero-count getter failures have the upstream getter's policy.
-No new runtime hooks or GC objects are introduced. Selective builds include
+and can be retried. Zero-count getter failures have the upstream getter's policy.
+Selective builds include
 `Queries/enumerable_skip_last.gf`, `Queries/SkipLastSource.gf`, the ordinary
 Enumerable contracts, and Deque with its normal dependencies.

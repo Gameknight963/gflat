@@ -6,19 +6,20 @@ Run from the repository or nightly bundle root:
 gflat build examples/managed/managed.gfproj --run
 ```
 
-The example puts `Node^` references in a native `Standard::Collections::Vector<Node^>`. Each node
-also references itself. Collection keeps the nodes alive while the vector holds
-them, then reclaims all 20 cycles after `Clear()` removes those references.
+The example puts `Node^` references in a native `Standard::Collections::Vector<Node^>`.
+Each node also references itself. Collection keeps the nodes alive while the vector
+holds them, then reclaims all 20 cycles after `Clear()` removes those references.
 
-`new^` constructs an object using the provider selected by the global `GC`
-alias, which defaults to `Standard::TracingCollector`. The compiler reports initialized
-managed-reference slots in locals, temporaries, fields, and native vector elements.
-The collector scans those slots and never guesses from unrelated native bytes.
+## Collector selection
 
-The bundled collector is written in gflat, is single-threaded, and does not move
-objects. Managed pointees cannot have destructors. The Vector ends element
-lifetimes before releasing its native buffer; no hidden allocator interception
-is needed to retire its roots.
+`new^` constructs an object using the provider selected by the global `GC` alias, which
+defaults to `Standard::TracingCollector`. The compiler reports initialized
+managed-reference slots in locals, temporaries, fields, and native vector elements. The
+collector scans those slots to find reachable objects.
+
+The bundled collector is written in gflat and uses single-threaded, non-moving
+collection. Managed pointees cannot have destructors. The vector ends element lifetimes
+before releasing its native buffer.
 
 See the [GC API and replacement contracts](../../Standard/libc/README.md) for automatic
 collection, explicit adoption, and custom runtimes.

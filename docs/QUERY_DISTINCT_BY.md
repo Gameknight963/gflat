@@ -34,14 +34,14 @@ int main()
 The selector has ordinary by-value type `K(T)*`, matching `CountBy` and other
 key-selector APIs. A named function can return an owning key such as String.
 `K` implements `IHashable` and the matching `IEquatable<K>` through the existing
-HashSet rules. Equal keys need equal hashes; their hash and equality must stay
+HashSet rules. Equal keys need equal hashes. Their hash and equality must stay
 stable while retained. The exact qualified-key interface contract applies, as
 with `Distinct` and `CountBy`.
 
 ## Evaluation and state
 
-Constructing the query copies its source view and saves the function pointer;
-it does not enumerate. Captured sources follow normal value-copy rules and must
+Constructing the query copies its source view and saves the function pointer.
+It does not enumerate. Captured sources follow normal value-copy rules and must
 support those copies. Each `GetEnumerator()` constructs one upstream iterator
 and its own empty `HashSet<K>`. The empty set allocates no backing storage.
 Custom source copies or iterator construction can allocate or throw. `Take(0)`
@@ -49,8 +49,8 @@ constructs the iterator but never selects keys or allocates seen-key storage.
 
 Each `MoveNext()` advances until it finds an unseen key or reaches EOF. It reads
 upstream `Current` once and invokes the key selector once for each candidate,
-including duplicates. The candidate key is moved into the set on success;
-duplicate candidate owners are destroyed normally. Seen keys remain owned by
+including duplicates. The candidate key is moved into the set on success.
+Duplicate candidate owners are destroyed normally. Seen keys remain owned by
 that iterator until it is destroyed. Separate enumerations have separate sets.
 Stable borrowed views restart normally, while consumable sources such as file
 lines continue at their shared current position.
@@ -58,7 +58,7 @@ lines continue at their shared current position.
 `Current` is not cached: it reads the upstream value again without invoking
 DistinctBy's key selector. Repeated reads repeat the upstream getter, including
 an upstream `Select` callback. `Count()` and `Any()` still select and inspect
-candidate keys because distinctness is determined during advancement; they need
+candidate keys because distinctness is determined during advancement. They need
 not read the accepted value again. The same stable-provider requirement as
 `Distinct` applies: values must keep their intended key and payload meaning at a
 source position. The guarantee concerns first-occurrence positions, not owner
@@ -69,7 +69,7 @@ addresses or a stored snapshot of the selected element.
 By-value selector arguments follow ordinary value semantics. Borrowed owning
 elements such as String are copied into the selector parameter. An upstream
 fresh owning value can transfer into it. A borrowed noncopyable element cannot
-be passed by value; no implicit ownership transfer from source storage occurs.
+be passed by value. No implicit ownership transfer from source storage occurs.
 Returned keys must own their required resources independently, or point to
 external storage that remains alive and stable throughout iteration. In
 particular, a key must not borrow storage owned only by the selector's temporary
@@ -85,7 +85,7 @@ mutate the source or the seen-key set through another alias.
 Before the first successful advance and after EOF, `Current` throws
 `Exception("Enumerator has no current element")`. A failed advance invalidates
 `Current` and may already have advanced the source or retained earlier keys.
-Discard the iterator after such an error; no recovery or rollback is promised.
+Discard the iterator after such an error. No recovery or rollback is promised.
 An error from the upstream getter, selector, hash/equality method, copy, or
 allocation propagates unchanged. A `Current` read does not itself change the
 wrapper's position. Ordinary RAII destroys retained keys and the upstream

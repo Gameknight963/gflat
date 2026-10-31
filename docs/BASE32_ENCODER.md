@@ -8,8 +8,7 @@ one borrowed synchronous sink. It reuses the existing uppercase padded
 
 ## Copy counted input through an encoder
 
-This complete program writes a binary file as Base32 without materializing the full
-input or output in a String. Use distinct input and output files: opening the output
+This program writes a binary file as Base32 in chunks. Use distinct input and output files: opening the output
 truncates an existing file, so it must not name or alias the input.
 
 ```csharp
@@ -32,8 +31,8 @@ int main(int argc, char** argv)
 ```
 
 The shared [byte-reader helper](BYTE_READERS.md) also accepts a TcpClient or a
-caller-defined reader. EOF-based copying over TCP requires the peer to finish sending;
-message-framed protocols should read the bounded payload through their own parser.
+caller-defined reader. EOF-based copying over TCP requires the peer to finish sending.
+Message-framed protocols should read the bounded payload through their own parser.
 File's binary output preserves the exact encoded bytes. The caller closes files
 explicitly to observe buffered IO errors. The encoder never flushes or closes its sink.
 
@@ -49,8 +48,8 @@ explicitly to observe buffered IO errors. The encoder never flushes or closes it
 - `Complete()` emits the final eight-character padded group when one through four
   bytes remain. With no pending bytes it writes nothing. Repeated successful completion
   does nothing. It does not append a newline.
-- Every `Write` after completion, including zero count, throws `Exception`.
-- Scope exit does not call `Complete`; abandoning the value discards any pending tail.
+- Every `Write` after completion, including zero count, throws `Exception`
+- Scope exit does not call `Complete`. Abandoning the value discards any pending tail.
 
 Only `Complete` can emit padding: full five-byte groups produce eight characters
 without padding. For example, writing only `f` emits nothing until completion produces
@@ -67,7 +66,7 @@ that attempt to operate on the encoder during an output write.
 An ordinary value copy duplicates the pending prefix and completion/failure flags,
 while sharing the sink pointer. Such copies are not independent output streams:
 do not interleave operations from their divergent prefixes into one destination. A
-failure affects that value only; an earlier copy cannot discover it. Move transfers
+failure affects that value only. An earlier copy cannot discover it. Move transfers
 the same prefix/state. No copy or destruction owns or closes the sink.
 
 A sink exception propagates unchanged and can follow partial output. The encoder then
@@ -83,7 +82,5 @@ exceptions may allocate. No global total-output length is computed or retained.
 ## Explicit source selection
 
 Include `core/Encoding/Base32Encoder.gf`, `core/Encoding/Base32.gf` and the existing
-ITextWriter / Exception contracts with ordinary exception runtime support. The encoder
-adds no File, libc IO, owning String, GC or compiler-specific source requirement.
-The example additionally uses File and the shared byte-reader helpers normally supplied
-by the standard-library project. The existing Base32 codec remains independently usable.
+ITextWriter / Exception contracts with exception runtime support. The file example
+also needs File and the shared byte-reader helpers.

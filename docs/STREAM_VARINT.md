@@ -81,8 +81,8 @@ Each writer encodes into a five- or ten-byte stack buffer and calls the synchron
 sink's `Write` once with the encoded count. Sink exceptions propagate unchanged and
 can follow partial output. There is no output rollback. Neither side retains an
 endpoint or buffer, closes, flushes or transfers ownership. Keep concrete owners alive,
-unmoved and usable throughout the call. Normal helpers allocate no intermediate data;
-underlying endpoints and exception handling can allocate.
+unmoved and usable throughout the call. Normal helpers allocate no intermediate data.
+Underlying endpoints and exception handling can allocate.
 
 `FileVarInt` remains unchanged, including its concrete `fgetc`-backed byte path and
 four existing unsigned operations. Generic stream extensions do not replace that
@@ -99,5 +99,4 @@ remains a source dependency even for read-only consumers.
 
 Writer extensions live in `core/IO/text_writer_var_int.gf` and require only the
 standalone VarInt codec and existing ITextWriter contract, plus dependencies of the
-chosen sink. They do not require IByteReader, BinaryPrimitives, File, a GC or a new
-native library. Ordinary standard-library source discovery includes both files.
+chosen sink. Ordinary standard-library source discovery includes both files.

@@ -26,11 +26,11 @@ their hash/equality stable. No qualifier is removed to satisfy these requirement
 A primitive or owning `String` query can be materialized directly. Other element
 types follow their existing interface implementations and ordinary value rules.
 
-Reading an element from borrowed storage performs its normal value copy; a
+Reading an element from borrowed storage performs its normal value copy. A
 borrowed noncopyable owning element cannot be materialized this way. Fresh values
 returned by an iterator or projection transfer normally. A `String` result owns
 independent buffers, so later source mutation or destruction does not change it.
-Duplicates retain the first inserted value; unused duplicate arguments are
+Duplicates retain the first inserted value. Unused duplicate arguments are
 destroyed normally. The source is not structurally changed by this terminal.
 
 The iterator and partial set are ordinary scoped owners. If iterator construction,
@@ -43,6 +43,4 @@ owned by their source, subject to ordinary callback behavior.
 Keep borrowed storage alive and structurally unchanged while materializing it.
 Hash/equality/copy callbacks must not mutate the set under construction or source
 through other aliases. Pointer values gain no ownership or interface support from
-this method; the current hash interfaces do not supply built-in pointer adapters.
-The method introduces no GC or runtime policy beyond the existing HashSet,
-iterator, element, and exception behavior.
+this method. The current hash interfaces do not supply built-in pointer adapters.

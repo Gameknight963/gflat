@@ -1,8 +1,8 @@
 namespace Standard::Text;
 
 /// Matches the whole counted byte sequence using *, ?, and backslash escapes.
-/// Case-sensitive, allocation-free, nonrecursive; worst-case O(length * count) work.
-/// Both buffers are borrowed and may overlap; zero lengths do not read that buffer.
+/// Case-sensitive, allocation-free, nonrecursive. Worst-case O(length * count) work.
+/// Both buffers are borrowed and may overlap. Zero lengths do not read that buffer.
 public bool MatchesWildcard(readonly(char)* text, nuint length, readonly(char)* pattern, nuint count) nothrow
 {
     nuint position = 0;

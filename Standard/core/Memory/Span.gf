@@ -2,7 +2,7 @@ using Standard::Queries;
 using Standard::Collections;
 namespace Standard::Memory;
 
-/// Borrows contiguous storage without owning or copying its elements.
+/// Borrows contiguous storage.
 /// Keep the backing buffer alive for every use of this view.
 struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
 {

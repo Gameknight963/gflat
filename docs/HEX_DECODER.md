@@ -34,12 +34,12 @@ character rejects the pair, or `Complete` rejects the odd final length.
 Validated pairs enter a 256-byte stack output buffer. Full blocks and each
 successful call's final nonempty block reach the sink as counted bytes, without
 a terminator or newline. Successful decoding/completion allocate no internal heap
-storage; destinations may allocate. Exceptions may allocate.
+storage. Destinations may allocate. Exceptions may allocate.
 
-- An active zero-length Write reads no input, calls no sink, and preserves carry.
+- An active zero-length Write reads no input, calls no sink, and preserves carry
 - `Complete()` requires an even total length, emits nothing and is idempotent
   after success. Empty input is valid.
-- Every Write after successful completion throws `Exception`, including zero.
+- Every Write after successful completion throws `Exception`, including zero
 - Invalid pairs or odd completion throw `Exception` and permanently fail the
   decoder. Sink exceptions propagate unchanged and also fail it. Failed decoders
   reject all later Write/Complete calls without touching the sink.
@@ -49,7 +49,7 @@ storage; destinations may allocate. Exceptions may allocate.
 Decoding streams rather than validating the entire input transactionally. Earlier
 blocks may already be visible when later input is malformed. A valid buffered
 suffix in the failing call may not have been flushed and can be discarded. The
-visible prefix depends on chunk boundaries and sink behavior; there is no rollback
+visible prefix depends on chunk boundaries and sink behavior. There is no rollback
 or fixed guaranteed prefix length. Use whole-buffer `Hex::TryDecode` when its
 all-input validation and untouched-output failure contract is required.
 
@@ -58,12 +58,11 @@ overwrite or invalidate input through aliases, such as decoding from a String
 into that same String. Concurrent or reentrant mutation is unsupported.
 
 Copies duplicate carry and completion/failure flags but share the sink. Driving
-them sequentially writes both branches into that destination; e.g. copies carrying
+them sequentially writes both branches into that destination. E.g. copies carrying
 `a`, completed with `0` and `f`, write bytes A0 then AF. Flags are independent:
 a copy made before another copy fails does not discover that failure. Moving
 preserves state. Neither copying nor destruction transfers ownership of the sink.
 
 For explicit source selection include `Encoding/HexDecoder.gf`, `Encoding/Hex.gf`
-and the normal `ITextWriter`/exception contracts. No String, GC or libc dependency
-is added by the decoder itself. [Base64Decoder](BASE64_DECODER.md) uses the same
-writer/completion pattern; `WriteHex` performs hexadecimal encoding.
+and the `ITextWriter`/exception contracts. [Base64Decoder](BASE64_DECODER.md) uses the same
+writer/completion pattern. `WriteHex` performs hexadecimal encoding.

@@ -3,8 +3,8 @@ namespace Standard::IO;
 // libc FILE
 public alias FileHandle = void*?;
 
-/// Owns one libc binary byte stream; move transfers it and default construction is closed.
-/// Destruction closes without reporting errors; call Close to check final flushing.
+/// Owns one libc binary byte stream. Move transfers it and default construction is closed.
+/// Destruction closes without reporting errors. Call Close to check final flushing.
 /// Paths are borrowed zero-terminated native bytes, without encoding conversion.
 public struct File : ITextWriter, IByteReader
 {
@@ -22,11 +22,11 @@ public struct File : ITextWriter, IByteReader
     public static File OpenRead(immutable(char*) path) => new File(path, "rb");
     /// Creates or truncates a file for binary writing, throwing IOException if opening fails.
     public static File OpenWrite(immutable(char*) path) => new File(path, "wb");
-    /// Opens for binary append, creating a missing file; opening failure throws IOException.
+    /// Opens for binary append, creating a missing file. Opening failure throws IOException.
     public static File OpenAppend(immutable(char*) path) => new File(path, "ab");
 
     /// Creates a libc-managed temporary binary read/write stream.
-    /// Closing removes its temporary backing file; position and direction follow libc rules.
+    /// Closing removes its temporary backing file. Position and direction follow libc rules.
     public static File OpenTemporary()
     {
         File result = new File();
@@ -44,8 +44,8 @@ public struct File : ITextWriter, IByteReader
         if (file_detail::rename(source, destination) != 0) throw new IOException("File rename failed");
     }
     public bool IsOpen { immutable get => handle != null; }
-    /// Reports the observed EOF indicator; a read attempt must first detect EOF.
-    /// Does not predict the next read; throws IOException when closed.
+    /// Reports the observed EOF indicator. A read attempt must first detect EOF.
+    /// Does not predict the next read. Throws IOException when closed.
     public bool EndOfFile
     {
         immutable get
@@ -56,7 +56,7 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Clears EOF and error indicators without changing position.
-    /// Does not repair the underlying IO problem or retry data; throws when closed.
+    /// Does not repair the underlying IO problem or retry data. Throws when closed.
     public void ClearError()
     {
         if (handle == null) throw new IOException("File is closed");
@@ -64,8 +64,8 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Reads up to count bytes into borrowed caller storage and returns the number read.
-    /// Adds no zero terminator; short EOF reads are normal and IO errors throw IOException.
-    /// An error may leave a consumed prefix in the buffer; a closed file rejects even zero count.
+    /// Adds no zero terminator. Short EOF reads are normal and IO errors throw IOException.
+    /// An error may leave a consumed prefix in the buffer. A closed file rejects even zero count.
     public nuint Read(char* data, nuint count)
     {
         if (handle == null) throw new IOException("File is closed");
@@ -76,7 +76,7 @@ public struct File : ITextWriter, IByteReader
         return read;
     }
 
-    /// Returns a byte from 0 through 255, or -1 at EOF; IO errors throw IOException.
+    /// Returns a byte from 0 through 255, or -1 at EOF. IO errors throw IOException.
     public int ReadByte()
     {
         if (handle == null) throw new IOException("File is closed");
@@ -87,7 +87,7 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Returns the next byte without consuming it on success, or -1 at EOF.
-    /// Read or pushback failure throws IOException; looking ahead at EOF observes EOF.
+    /// Read or pushback failure throws IOException. Looking ahead at EOF observes EOF.
     public int PeekByte()
     {
         int value = this.ReadByte();
@@ -97,7 +97,7 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Requires count bytes or throws EndOfStreamException on short EOF.
-    /// The available prefix is already consumed and stored; actual IO errors throw IOException.
+    /// The available prefix is already consumed and stored. Actual IO errors throw IOException.
     public void ReadExactly(char* data, nuint count)
     {
         if (this.Read(data, count) != count)
@@ -105,8 +105,8 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Sequentially reads and discards count bytes using a 4096-byte stack buffer.
-    /// Short EOF throws EndOfStreamException; IO errors propagate after any consumed prefix.
-    /// Leaves the file open without rollback; a closed file rejects even zero count.
+    /// Short EOF throws EndOfStreamException. IO errors propagate after any consumed prefix.
+    /// Leaves the file open without rollback. A closed file rejects even zero count.
     public void SkipExactly(nuint count)
     {
         if (handle == null) throw new IOException("File is closed");
@@ -122,7 +122,7 @@ public struct File : ITextWriter, IByteReader
 
     /// Borrows both files and the caller buffer, copying from the current source position.
     /// Rejects empty buffers, the same File instance or closed files before reading input.
-    /// Failures may consume input or leave partial output; both files remain open.
+    /// Failures may consume input or leave partial output. Both files remain open.
     public nuint CopyTo(File* destination, char* buffer, nuint capacity)
     {
         if (handle == null || !destination.IsOpen) throw new IOException("File is closed");
@@ -130,7 +130,7 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Streams bytes to a borrowed writer using caller storage without an owning intermediate.
-    /// Sink exceptions propagate after the current chunk is consumed; earlier output remains.
+    /// Sink exceptions propagate after the current chunk is consumed. Earlier output remains.
     public nuint CopyTo(ITextWriter* destination, char* buffer, nuint capacity)
         => this.CopyToWriter(destination, buffer, capacity);
 
@@ -159,7 +159,7 @@ public struct File : ITextWriter, IByteReader
         return this.CopyTo(destination, buffer, 4096);
     }
 
-    /// Copies to a borrowed writer using a 4096-byte stack buffer; the source remains open.
+    /// Copies to a borrowed writer using a 4096-byte stack buffer. The source remains open.
     public nuint CopyTo(ITextWriter* destination)
     {
         char[4096] buffer;
@@ -167,8 +167,8 @@ public struct File : ITextWriter, IByteReader
     }
 
     /// Writes the counted bytes on success, preserving embedded zeros.
-    /// On IO error some bytes may already be written; no automatic retry or rollback occurs.
-    /// Does not flush automatically; a closed file rejects even zero count.
+    /// On IO error some bytes may already be written. No automatic retry or rollback occurs.
+    /// Does not flush automatically. A closed file rejects even zero count.
     public void Write(readonly(char)* data, nuint count)
     {
         if (handle == null) throw new IOException("File is closed");
@@ -202,7 +202,7 @@ public struct File : ITextWriter, IByteReader
     public void WriteLine(immutable(char*) data, nuint count) { this.Write(data, count); this.WriteLine(); }
 
     /// Closes the owned stream, reporting IOException when libc close fails.
-    /// Leaves this File closed even on failure; repeated Close does nothing.
+    /// Leaves this File closed even on failure. Repeated Close does nothing.
     /// Explicit close reports errors that destruction does not report.
     public void Close()
     {

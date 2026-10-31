@@ -27,7 +27,7 @@ the element buffer. Custom source-value copies retain their ordinary effects.
 `Current`, or allocates tail storage. Ordinary source copies may still occur.
 For positive counts, the first `MoveNext` consumes the whole input and disposes
 the upstream iterator before yielding. An infinite source cannot yield a tail.
-`TakeLast(2).Take(1)` still consumes the complete source;
+`TakeLast(2).Take(1)` still consumes the complete source.
 `TakeLast(2).Take(0)` does not start buffering.
 
 Once the tail fills, each next successful upstream move discards the oldest
@@ -40,13 +40,12 @@ storage proportional to the count.
 
 `Current` returns an ordinary `T` value copied from the buffered position, like
 `Reverse()`. Repeated reads can copy an owning value again. Elements must permit
-ordinary copying from retained storage; this is not a way to consume a buffered
-noncopyable owner or to strip outer readonly/immutable element qualification.
+ordinary copying from retained storage. The returned value retains its outer readonly/immutable qualification.
 Pointer and managed-reference values keep their ordinary shared targets, while
 owning Strings retain independent copies. Project qualified scalar values to an
 explicit mutable stored type when necessary, as with `Reverse`/`ToVector`.
 Keep borrowed source storage alive and obey its borrowing rules. Consumable
-sources such as `FileLineSequence` still consume their shared file position; this
+sources such as `FileLineSequence` still consume their shared file position. This
 wrapper does not rewind a file or make a one-shot source repeatable. A new enumeration
 reads the source again and owns a separate tail.
 
@@ -58,11 +57,10 @@ be retried. A successful tail remains owned until enumerator destruction,
 including after exhaustion, and normal loop/exception cleanup releases it.
 
 Buffer storage is O(min(count, input length)), subject to Deque's normal geometric
-capacity growth; buffering performs linear work and later moves are constant-time.
+capacity growth. Buffering performs linear work and later moves are constant-time.
 Element copy/allocation/destruction costs remain their normal costs. Unlike
 `Reverse().Take(count).Reverse()`, this retains only a bounded tail instead of
-materializing every input element. It does not change existing tail tools.
+materializing every input element.
 Selective source users include `Queries/enumerable_take_last.gf`,
 `Queries/TakeLastSource.gf`, the ordinary Enumerable/enumeration contracts,
-and `Deque<T>` plus its normal Span dependencies. No new runtime hooks or GC
-allocation are introduced by the wrapper.
+and `Deque<T>` plus its Span dependencies.

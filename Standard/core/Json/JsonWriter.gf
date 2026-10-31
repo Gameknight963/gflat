@@ -3,10 +3,10 @@ using Standard::Collections;
 namespace Standard::Json;
 
 /// Owns nesting state and borrows the output writer, without buffering the document.
-/// Keep the destination stable and alive; input must not alias storage that writing may modify.
+/// Keep the destination stable and alive. Input must not alias storage that writing may modify.
 /// Destruction writes nothing and does not complete the document, flush or close the destination.
 /// Validation, ordering and pre-output nesting allocation failures remain retryable.
-/// After an output exception, writes and Complete fail; discard this instance, which has no Reset.
+/// After an output exception, writes and Complete fail. Discard this instance, which has no Reset.
 public struct JsonWriter
 {
     private static const byte ArrayFirst = (byte)0;
@@ -21,8 +21,8 @@ public struct JsonWriter
     private bool failed;
     private readonly(bool) indented;
 
-    /// Borrows the destination without clearing it; output is compact by default.
-    /// Indented mode sends two-space indentation and LF to the sink; no final newline is added.
+    /// Borrows the destination without clearing it. Output is compact by default.
+    /// Indented mode sends two-space indentation and LF to the sink. No final newline is added.
     public JsonWriter(ITextWriter* destination, bool indented = false)
     {
         output = destination; stack = new(); rootWritten = false; failed = false;
@@ -127,10 +127,10 @@ public struct JsonWriter
     }
 
     /// Writes an object opener where a value is expected, automatically separating values.
-    /// Reserves nesting capacity before output; allocation failure preserves state and output.
+    /// Reserves nesting capacity before output. Allocation failure preserves state and output.
     public void WriteStartObject() { this.Start(ObjectFirst, "{"); }
     /// Writes an array opener where a value is expected, automatically separating values.
-    /// Reserves nesting capacity before output; allocation failure preserves state and output.
+    /// Reserves nesting capacity before output. Allocation failure preserves state and output.
     public void WriteStartArray() { this.Start(ArrayFirst, "["); }
 
     /// Writes a closing object delimiter when the current object awaits a name or its end.
@@ -164,8 +164,8 @@ public struct JsonWriter
     }
 
     /// Writes a counted strict-UTF-8 property name with JSON quoting, including embedded zeros.
-    /// Requires an object awaiting a name; a value must follow the name.
-    /// Invalid text or ordering writes nothing and is retryable; sink errors can leave partial output.
+    /// Requires an object awaiting a name. A value must follow the name.
+    /// Invalid text or ordering writes nothing and is retryable. Sink errors can leave partial output.
     public void WritePropertyName(readonly(char)* data, nuint length)
     {
         this.CheckUsable();
@@ -189,7 +189,7 @@ public struct JsonWriter
 
     /// Writes counted strict UTF-8 as a JSON string, retaining embedded zeros through escapes.
     /// Input must stay unchanged and separate from destination storage that writing may modify.
-    /// Validation failures emit nothing and are retryable; output exceptions fault this writer.
+    /// Validation failures emit nothing and are retryable. Output exceptions fault this writer.
     public void WriteString(readonly(char)* data, nuint length)
     {
         this.CheckValue();
@@ -245,7 +245,7 @@ public struct JsonWriter
 
     /// Validates exactly one counted JSON number, with no surrounding whitespace or extra data.
     /// Preserves its literal spelling without conversion through a machine numeric type.
-    /// Validation failure writes nothing and is retryable; output failure can partially write and fault.
+    /// Validation failure writes nothing and is retryable. Output failure can partially write and fault.
     public void WriteRawNumber(readonly(char)* data, nuint length)
     {
         this.CheckValue();

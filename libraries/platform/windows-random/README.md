@@ -1,8 +1,7 @@
 # Windows system random bytes
 
-Optional Windows 8 or newer, x64 source library. Reference
-`libraries/platform/windows-random/WindowsRandom.gfproj` to use
-`Windows::SystemRandom::TryFill(byte* output, nuint count)`.
+`Windows::SystemRandom::TryFill(output, count)` fills caller-owned storage using
+BCryptGenRandom's system-preferred generator. It requires Windows 8 or newer, x64.
 
 ```xml
 <ItemGroup>
@@ -10,12 +9,9 @@ Optional Windows 8 or newer, x64 source library. Reference
 </ItemGroup>
 ```
 
-The project explicitly supplies the native `bcrypt` library requirement to the
-final executable. Direct source/CLI consumers must supply `--native-library bcrypt`.
-The current Windows toolchain must already provide the import library; this
-library does not install dependencies. It is separate from `Windows.gfproj`,
-so clock-only consumers acquire neither the random source nor this link requirement.
-It needs no Standard source or runtime definitions.
+Project references propagate the `bcrypt` link requirement. Direct source users
+supply `--native-library bcrypt`. The native toolchain must provide its import
+library. This project can be selected independently of the clock library.
 
 ```csharp
 int main()
@@ -27,21 +23,17 @@ int main()
 }
 ```
 
-The nonthrowing method uses `BCryptGenRandom` with no algorithm handle and the
-system-preferred generator flag. It returns true for `STATUS_SUCCESS` and false
-for other native statuses. It contains no random algorithm, persistent state,
-startup work, handle ownership, or retained buffer pointer. The wrapper performs
-no gflat allocation; Windows may allocate internally.
+## Results and storage
 
-For a positive count, the caller must provide writable storage covering that
-many bytes. Zero succeeds without calling Windows or touching the pointer.
-Requests above 4,294,967,295 bytes are rejected before access, rather than split
-into multiple calls. Positive requests also fail before access if the compiled
-pointer layout is not 64-bit; this check is not operating-system detection.
+- Supply writable storage for the requested count
+- True means the complete range was filled
+- Zero count succeeds without accessing the buffer or calling Windows
+- Counts above 4,294,967,295 bytes and positive requests on a non-64-bit layout
+  return false before accessing storage
+- A native failure returns false. Discard the complete output range because any
+  bytes in it may have changed
 
-Preflight rejection leaves storage unchanged. After a native failure, any bytes
-in the requested range may have changed: discard the entire result. No rollback,
-valid-prefix, automatic retry, or error-status retrieval is provided. The API
-produces bytes rather than passwords, formatted tokens or bounded integers.
+The wrapper is `nothrow`, makes one native call, and retains no buffer pointer.
+It requires only the native API. Windows may allocate internally.
 
-Primary documentation: [BCryptGenRandom](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom).
+Native reference: [BCryptGenRandom](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom).

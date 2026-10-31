@@ -2,10 +2,10 @@
 
 Core provides three independent contracts in `Standard`:
 
-- `IHashable.GetHashCode()` returns `nuint`.
-- `IEquatable<T>.Equals(immutable(T)* other)` compares borrowed values.
+- `IHashable.GetHashCode()` returns `nuint`
+- `IEquatable<T>.Equals(immutable(T)* other)` compares borrowed values
 - `IComparable<T>.CompareTo(immutable(T)* other)` returns a negative value, zero,
-  or a positive value for less than, equal to, or greater than its argument.
+  or a positive value for less than, equal to, or greater than its argument
 
 All three methods have immutable receivers. Equality and comparison borrow their
 argument, so comparing owning values does not copy their resources.
@@ -14,10 +14,10 @@ Each primitive scalar participates through an implementation declared inside
 the corresponding interface. This includes booleans, characters, signed and
 unsigned integers, pointer-sized integers, and floating-point values. The
 primitive type remains built in and does not depend on these interfaces existing.
-Signed 128-bit `extralong` participates as well; its hash processes all 16 bytes
-with FNV-1a, then applies the integer mixer. The bytes use native byte order;
-this is not a portable serialized hash format.
-Character ordering uses unsigned byte values (0 through 255); boolean ordering
+Signed 128-bit `extralong` participates as well. Its hash processes all 16 bytes
+with FNV-1a, then applies the integer mixer. The bytes use native byte order.
+This is not a portable serialized hash format.
+Character ordering uses unsigned byte values (0 through 255). Boolean ordering
 puts false before true.
 
 Equal keys must produce equal hashes. Hash collisions are permitted. A key's
@@ -28,7 +28,7 @@ equality and hash must remain stable while it belongs to a hash collection.
 Interface equality treats every NaN as equal to every other NaN, and treats
 positive and negative zero as equal. This differs from the built-in floating
 `==` operator for NaN. Hashes canonicalize both cases to preserve the equality
-contract. Ordering puts NaN before every non-NaN; NaNs compare equal to each
+contract. Ordering puts NaN before every non-NaN. NaNs compare equal to each
 other. Finite values and infinities use their ordinary numerical order.
 
 ## Strings
@@ -50,7 +50,7 @@ adversarial collision attacks.
 
 `Hashing::Combine(nuint first, nuint second) nothrow` combines two component
 hashes in order, without allocation. Both arguments retain their full
-pointer-sized width during mixing; the result is a 32-bit hash returned as
+pointer-sized width during mixing. The result is a 32-bit hash returned as
 `nuint`, like `Integer`. For example, a coordinate key can hash each field
 before combining:
 
@@ -72,7 +72,7 @@ Equal component hashes produce equal combined hashes. Order participates in
 mixing, so `(x, y)` is not deliberately treated as `(y, x)`. Collisions are still
 possible, including between swapped pairs or different components. Combining
 cannot recover information already lost by a component's own hash.
-For more fields, nest `Combine` in a fixed order; it is not an associative
+For more fields, nest `Combine` in a fixed order. It is not an associative
 operation or a serialized representation. As with the other helpers, results
 are implementation details, not persistent identifiers, cryptographic digests,
 or protection against adversarial keys. No pointers or objects are retained.

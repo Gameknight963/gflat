@@ -30,13 +30,13 @@ Parsing accepts exactly 36 bytes in `8-4-4-4-12` hexadecimal groups separated by
 hyphens. ASCII hex digits may use either letter case. Whitespace, braces, URN
 prefixes, missing hyphens, embedded nulls, and other bytes are invalid. Every bit
 pattern is accepted, including Nil, Max, and values with unrecognized version or
-variant bits. Parsing identifies a value; it does not establish its origin or
+variant bits. Parsing identifies a value. It does not establish its origin or
 uniqueness.
 
 Counted parsing reads only the specified bytes. A count other than 36 fails
 without reading the input. The C-string form scans at most 37 bytes to check the
 terminator after the canonical form. `TryParse` returns false and writes Nil on
-failure; `Parse` throws `Exception`. Parsing completes its reads before committing
+failure. `Parse` throws `Exception`. Parsing completes its reads before committing
 a successful result, so suitably aligned writable input may overlap the result.
 A failure's Nil store also changes overlapping input bytes.
 
@@ -44,7 +44,7 @@ For both `TryParse` overloads and `TryFromBytes`, `result` must always point to
 non-null, properly aligned, writable storage for one `Uuid`, even on failure.
 The previous value is not read. This permits caller-managed raw storage as well
 as an initialized local. An ordinary local must still be initialized before its
-address is passed, for example `Uuid result = new();`; these pointer parameters
+address is passed, for example `Uuid result = new();`. These pointer parameters
 do not provide an `out` initialization contract.
 
 `TryFormat` emits exactly 36 lowercase bytes and no terminator. Capacity below 36
@@ -54,7 +54,7 @@ numeric halves are captured before writing, so an output region large enough
 for all 36 bytes may overlap the receiver's storage. `Format` implements
 `IFormattable` with one 36-byte stack buffer and one `Write` call. Writer failures
 propagate normally and may leave partial destination output. No String is
-required by these value operations; interpolation can format directly into its
+required by these value operations. Interpolation can format directly into its
 own destination.
 
 ## Canonical bytes
@@ -90,7 +90,7 @@ Hashing mixes all 16 canonical bytes with the existing `Hashing` functions.
 Hashes are ordinary collection hashes, not persistent identifiers or
 cryptographic authentication. Constructors, getters, comparisons, hashing, and
 Try operations allocate nothing and are `nothrow` under their pointer-storage
-preconditions. Buffers remain caller-owned; no pointers are retained.
+preconditions. Buffers remain caller-owned. No pointers are retained.
 
 For selective source use, include `Uuid.gf`, `ITextWriter.gf`, `IFormattable.gf`, `IEquatable.gf`,
 `IComparable.gf`, `IHashable.gf`, and `Hashing/primitive_hashing.gf`. Throwing Parse and FromBytes
@@ -142,12 +142,12 @@ Each call invokes `fill` exactly once with a writable 16-byte stack buffer and a
 count of 16. The callback must fill all 16 bytes before returning true. That buffer
 is valid only during the callback: do not retain its address or access it after
 returning. The generator retains no callback or buffer pointers and allocates no
-heap storage on success; the callback may perform its own work or allocate.
+heap storage on success. The callback may perform its own work or allocate.
 
 On success, canonical byte 6 receives the version nibble 4, and canonical byte 8
 receives the variant bits 10. The other 122 bits retain the supplied random bits.
 The result is an ordinary `Uuid` in the same canonical byte order as
-`Uuid::TryFromBytes`. Randomness quality comes from the chosen callback; masking
+`Uuid::TryFromBytes`. Randomness quality comes from the chosen callback. Masking
 these six bits does not make a weak source secure or guarantee uniqueness.
 
 If `fill` returns false, `TryCreateVersion4` discards any partial bytes, writes Nil
@@ -165,11 +165,11 @@ Uuid id = UuidGenerator::CreateVersion4(Windows::SystemRandom::TryFill);
 ```
 
 The Linux counterpart is `Linux::SystemRandom::TryFill`. Reference only the
-platform library appropriate to the application; no platform detection or fallback
+platform library appropriate to the application. No platform detection or fallback
 is performed. Existing platform requirements and native linkage remain those of
 the selected library. A custom callback needs neither optional library.
 
 For selective source use, add `UuidGenerator.gf` alongside `Uuid.gf` and its
 existing contract sources. The throwing convenience method uses the ordinary
-Exception/runtime contracts; the Try method still permits callback exceptions.
+Exception/runtime contracts. The Try method still permits callback exceptions.
 Version 4 layout follows [RFC 9562, section 5.4](https://www.rfc-editor.org/rfc/rfc9562.html#section-5.4).

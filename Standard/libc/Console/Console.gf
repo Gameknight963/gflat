@@ -1,7 +1,7 @@
 namespace Console;
 
 /// Writes bytes through the current stdout text mode up to the first zero.
-/// Adds no newline and does not explicitly flush; failures can leave partial output.
+/// Adds no newline and does not explicitly flush. Failures can leave partial output.
 void Write(immutable(char*) message)
 {
     nuint length = 0;
@@ -10,7 +10,7 @@ void Write(immutable(char*) message)
 }
 
 /// Writes the counted bytes, including embedded zeros, through the current stdout mode.
-/// Does not explicitly flush or retry; failures can leave partial output.
+/// Does not explicitly flush or retry. Failures can leave partial output.
 void Write(immutable(char*) data, nuint length)
 {
     if (length == 0) return;
@@ -35,8 +35,8 @@ void Flush()
 }
 
 /// Reads up to count bytes from the current stdin mode and returns the byte count.
-/// Adds no terminator or line processing; zero count consumes nothing.
-/// IO errors throw IOException after possible partial input; EOF may return fewer bytes.
+/// Adds no terminator or line processing. Zero count consumes nothing.
+/// IO errors throw IOException after possible partial input. EOF may return fewer bytes.
 nuint Read(char* data, nuint count)
 {
     if (count == 0) return 0;
@@ -47,7 +47,7 @@ nuint Read(char* data, nuint count)
     return read;
 }
 
-/// Returns the next byte from zero through 255, or -1 at EOF; IO errors throw IOException.
+/// Returns the next byte from zero through 255, or -1 at EOF. IO errors throw IOException.
 int ReadByte()
 {
     void* stream = __gflat_stdio_stdin();
@@ -58,7 +58,7 @@ int ReadByte()
 }
 
 /// Returns the next stdin byte without consuming it on success, or -1 at EOF.
-/// Read or pushback failure throws IOException; uses the same stream mode and position as other reads.
+/// Read or pushback failure throws IOException. Uses the same stream mode and position as other reads.
 int PeekByte()
 {
     void* stream = __gflat_stdio_stdin();
@@ -77,24 +77,24 @@ int PeekByte()
 void ClearInputError() { clearerr(__gflat_stdio_stdin()); }
 
 /// Requires count bytes or throws EndOfStreamException when EOF arrives early.
-/// The available prefix is already consumed and stored; actual IO errors throw IOException.
+/// The available prefix is already consumed and stored. Actual IO errors throw IOException.
 void ReadExactly(char* data, nuint count)
 {
     if (Read(data, count) != count) throw new Standard::IO::EndOfStreamException();
 }
 
 /// Appends a line without its ending or an added terminator to the borrowed sink.
-/// Does not clear, flush, close or destroy the sink; LF and CRLF endings are removed after host translation.
-/// False means EOF before a line; blank lines and nonempty final unterminated lines return true.
-/// Sink exceptions propagate unchanged; consumed input and prior output are not rolled back.
-/// A sink or IO failure can stop midline; remaining input is not automatically drained.
+/// Does not clear, flush, close or destroy the sink. LF and CRLF endings are removed after host translation.
+/// False means EOF before a line. Blank lines and nonempty final unterminated lines return true.
+/// Sink exceptions propagate unchanged. Consumed input and prior output are not rolled back.
+/// A sink or IO failure can stop midline. Remaining input is not automatically drained.
 bool TryReadLine(ITextWriter* output) { return detail::ReadLine(output); }
 
-/// Reads a line into caller storage; capacity includes room for a trailing zero.
-/// False means EOF before a line; blank lines return true with zero length.
-/// Removes LF and CRLF endings after host input translation; final unterminated lines are returned.
+/// Reads a line into caller storage. Capacity includes room for a trailing zero.
+/// False means EOF before a line. Blank lines return true with zero length.
+/// Removes LF and CRLF endings after host input translation. Final unterminated lines are returned.
 /// Zero capacity throws BufferTooSmallException before accessing stdin or the buffer.
-/// On a completed overflow read, drains the line then throws BufferTooSmallException; its terminated prefix and length remain.
+/// On a completed overflow read, drains the line then throws BufferTooSmallException. Its terminated prefix and length remain.
 bool TryReadLine(char* data, nuint capacity, ref nuint length)
 {
     length = 0;

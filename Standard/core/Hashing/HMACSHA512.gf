@@ -1,7 +1,7 @@
 namespace Standard::Hashing;
 
 /// RFC 2104 HMAC using SHA-512 with independently copied inline keyed state.
-/// GetHash finalizes a snapshot; Reset starts a new message with the same key.
+/// GetHash finalizes a snapshot. Reset starts a new message with the same key.
 public struct HMACSHA512
 {
     private SHA512 innerSeed;

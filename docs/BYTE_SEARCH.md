@@ -1,7 +1,8 @@
 # Counted byte searches
 
-`Standard/core/Text/ByteSearch.gf` is standalone: it needs neither String, Span, libc,
-allocation, nor an exception runtime. All methods are `nothrow`.
+`Standard::Text::ByteSearch` searches counted byte buffers. All methods are
+allocation-free and `nothrow`. For selective builds, include
+`core/Text/ByteSearch.gf`.
 
 ```csharp
 using Standard::Text;
@@ -11,7 +12,7 @@ nuint last = Standard::Text::ByteSearch::LastIndexOf(data, length, pattern, coun
 
 Both pointers borrow readable regions of the specified byte lengths. The
 regions may overlap. Embedded zero bytes and every byte value are ordinary
-data; no terminator is examined. A zero-length region requires no readable
+data. No terminator is examined. A zero-length region requires no readable
 bytes, but the pointer parameters remain nonnullable under the normal type
 rules. Neither input changes, and no pointer is retained after the call.
 
@@ -25,10 +26,9 @@ pattern into two parts and establishes its period, then matching reuses that
 information to avoid repeatedly checking long equal prefixes. Worst-case time
 is linear in `length + count`, with constant extra storage and no pattern-size
 stack buffer. The reverse search applies the same algorithm to virtual reversed
-views of the input and pattern; it does not copy or reverse their bytes.
+views of the input and pattern. It does not copy or reverse their bytes.
 
-This is deliberately a search primitive, not Unicode text matching: it performs
-no decoding, case folding, or normalization.
+Matches compare exact byte values.
 
 ## Searching for any member of a byte set
 
@@ -54,14 +54,13 @@ If either length is zero, both methods return `length` before reading either
 pointer. This differs from substring `IndexOf`'s empty-pattern result of zero.
 All 256 byte values, including embedded NUL, participate normally. Both regions
 are read-only and can overlap. The result is a byte offset, not a Unicode scalar
-or character position; there is no text decoding or normalization.
+or character position. There is no text decoding or normalization.
 
 A fixed four-word membership mask uses 32 bytes of stack storage. The pattern
 is visited once, then the data is scanned in the selected direction until a
 match. Worst-case work is O(`length + count`), independent of duplicate members.
 No allocation, retained pointer, input mutation, or additional source dependency
-is introduced. Both operations are `nothrow`. The membership-mask implementation
-is original code; the existing substring search and its attribution are unchanged.
+is introduced. Both operations are `nothrow`. The membership-mask implementation uses the same counted-buffer contract.
 
 ## String searches
 
@@ -69,7 +68,7 @@ is original code; the existing substring search and its attribution are unchange
 `String.LastIndexOfAny(values, count)` use these counted set searches over the
 String's bytes. They return `String::NotFound` when nothing matches, including
 for an empty set or an empty String. `IndexOfAny` returns an absolute byte offset
-and rejects `start > Length`; `start == Length` returns `NotFound`.
+and rejects `start > Length`. `start == Length` returns `NotFound`.
 
 The one-argument overloads treat `values` as a C string: its first NUL terminates
 the set. Use the counted overloads to search for NUL itself. Sets can borrow the
@@ -114,22 +113,20 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 `ByteSearch::IndexOfAnyExcept(data, length, pattern, count)` returns the first
 byte offset whose data byte is absent from the counted set.
 `LastIndexOfAnyExcept` returns the last such offset. No match returns `length`.
-They search set membership, not a substring; duplicate members and set order
+They search set membership, not a substring. Duplicate members and set order
 have no effect, and all byte values including NUL participate.
 
 Zero data length returns Length before reading either pointer. With a positive
 length and an empty set, every position qualifies: the first method returns
 zero and the last returns `length - 1`, without reading either pointer. These
-preflights require no readable bytes through either pointer; the normal
+preflights require no readable bytes through either pointer. The normal
 nonnullable pointer type rules still apply. Otherwise, both counted regions
 must remain readable and stable. They may overlap. Neither is written to, and
 no pointer is retained.
 
 The methods reuse the existing four-word, 32-byte membership mask and make no
 library allocation. Both are `nothrow`, with O(`length + count`) worst-case work.
-Existing Any methods keep their old empty-set result of Length; substring
-searches and their Two-Way implementation are unchanged. No String or Span
-convenience overload is added.
+The `IndexOfAny` and `LastIndexOfAny` methods return `length` for an empty set.
 
 ```csharp
 using Standard::Text;

@@ -11,7 +11,7 @@ struct HashSet<T : IHashable>
     public void Reserve(nuint count) { storage.Reserve(count); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
     public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
-    /// Borrows the stored equivalent value, or null when absent; no owner copies or library allocation.
+    /// Borrows the stored equivalent value, or null when absent.
     public immutable immutable(T)*? Find(immutable(T)* value) => storage.FindKey(value);
     public bool Remove(immutable(T)* value) => storage.Remove(value);
     public nuint RemoveWhere(bool(immutable(T)*)* predicate)

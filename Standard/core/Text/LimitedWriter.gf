@@ -2,7 +2,7 @@ using Standard::IO;
 namespace Standard::Text;
 
 /// Borrows a writer and accepts at most limit bytes through this adapter.
-/// No buffer, ownership transfer, flush or close is added. Keep the sink alive,
+/// Keep the sink alive,
 /// usable and unmoved. Copies share the sink but have independent allowances.
 public struct LimitedWriter : ITextWriter
 {

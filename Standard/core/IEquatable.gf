@@ -5,7 +5,7 @@ namespace Standard;
 /// Unlike IEEE ==, this treats a NaN as equal to another NaN.
 interface IEquatable<T>
 {
-    /// Compares this value with a borrowed other value; ownership is not transferred.
+    /// Compares this value with a borrowed other value.
     /// Keep equality consistent with GetHashCode when the type is also IHashable.
     immutable bool Equals(immutable(T)* other);
 

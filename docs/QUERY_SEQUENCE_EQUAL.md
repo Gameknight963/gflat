@@ -10,7 +10,7 @@ closed `IEquatable<T>` contract. `SequenceEqual(other, equal)` instead accepts
 `bool(immutable(T)*, immutable(T)*)*` and requires no equality-interface
 implementation. The callback receives the left element first and right element
 second. It can define another matching relation. Element qualifications follow
-ordinary generic inference; readonly element views can use an explicit comparer
+ordinary generic inference. Readonly element views can use an explicit comparer
 without assuming variance between differently constructed equality contracts.
 
 ```csharp
@@ -39,14 +39,14 @@ the right advancement determines whether both sequences ended together. When
 only one advances successfully, the method returns false without reading either
 terminal `Current` for that round. After an unequal pair it performs no further
 advancement or element reads. No count, indexing, buffer-identity, or self-source
-shortcut changes this order; even identical wrappers are enumerated independently.
+shortcut changes this order. Even identical wrappers are enumerated independently.
 
 When both advance, terminal `Current` is read once on the left, then once on the
 right. Both values follow ordinary `T` semantics and are stored in local
 temporaries before comparison. The comparer borrows those temporaries only for
 the call and must not retain their addresses. Owning elements can therefore copy,
 allocate, or throw. Pointer elements remain ordinary borrowed addresses. Upstream
-query operators keep their own advancement and `Current` behavior; for example,
+query operators keep their own advancement and `Current` behavior. For example,
 an upstream `Where` may read an element to test its predicate.
 
 Constructed iterators and temporary owners are destroyed on exhaustion,
@@ -55,7 +55,7 @@ the already-constructed left iterator. Failure reading or copying the right
 element cleans up the left temporary. Original iterator/copy/comparer exceptions
 propagate normally. Keep both backing sources alive and obey their borrowing
 rules throughout the call. Callbacks must not invalidate either source through
-another alias. The operation introduces no collection or GC allocation; source,
+another alias. The operation introduces no collection or GC allocation. Source,
 upstream, callback, and element-copy allocation behavior remains unchanged.
 
 For contiguous spans, the existing
@@ -66,5 +66,4 @@ semantics.
 
 Selective source users include `Queries/enumerable_sequence_equal.gf`, plus
 `Collections/EqualityComparer.gf` and `IEquatable.gf` for default equality, alongside their
-normal source/enumeration dependencies. No new iterator type or compiler feature
-is required.
+source/enumeration dependencies.

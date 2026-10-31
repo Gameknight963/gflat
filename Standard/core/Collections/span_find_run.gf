@@ -2,10 +2,10 @@ using Standard::Memory;
 namespace Standard::Collections;
 
 /// Finds the first count consecutive elements matching the borrowed key, or returns Length.
-/// Zero count returns zero; a count above Length returns Length without accessing pointers or callbacks.
+/// Zero count returns zero. A count above Length returns Length without accessing pointers or callbacks.
 /// Compares each examined element once from left to right, without element copies, library allocation or mutation.
 /// Keep the span valid. The key must be readable and stable when 0 < count <= Length.
-/// Preflight returns do not access key; callback exceptions and external effects propagate.
+/// Preflight returns do not access key. Callback exceptions and external effects propagate.
 public nuint FindRun<T>(Span<immutable(T)> values, nuint count, immutable(T)* key,
     bool(immutable(T)*, immutable(T)*)* equal)
 {

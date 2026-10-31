@@ -2,7 +2,7 @@
 
 `Standard::Time::TimeOfDay` stores a time within one day as a private `long` tick count.
 One tick is 100 nanoseconds. Valid values range from midnight through
-`23:59:59.9999999`; default construction produces midnight.
+`23:59:59.9999999`. Default construction produces midnight.
 
 ```csharp
 using Standard::Text;
@@ -29,7 +29,7 @@ precision. Invalid components or tick counts throw `Exception`.
 
 Immutable, `nothrow` properties expose `Ticks`, `Hour`, `Minute`, `Second`, and
 `Millisecond`. The value implements equality, ordering, hashing, and direct
-writer formatting. Ordering compares times within the same day; no date or
+writer formatting. Ordering compares times within the same day. No date or
 time zone is attached. Use [TimeSpan](TIME_SPAN.md) for signed durations.
 
 ## Arithmetic and ranges
@@ -37,11 +37,11 @@ time zone is attached. Use [TimeSpan](TIME_SPAN.md) for signed durations.
 Immutable `Add(TimeSpan value)` returns the time after a positive or negative
 duration, wrapping within one day. `Add(value, ref int wrappedDays)` also reports
 the signed day crossings. For example, adding minus one tick to midnight returns
-`23:59:59.9999999` with `wrappedDays = -1`; the last tick plus one tick returns
+`23:59:59.9999999` with `wrappedDays = -1`. The last tick plus one tick returns
 midnight with `wrappedDays = 1`. Whole days contribute to this count even when
 the time itself is unchanged. Every signed-long TimeSpan tick count is accepted,
 including its minimum and maximum. Both overloads are `nothrow` and allocate
-nothing; no date, time zone, daylight-saving or clock operation is implied.
+nothing. No date, time zone, daylight-saving or clock operation is implied.
 
 Immutable, `nothrow` `IsBetween(start, end)` includes `start` and excludes `end`.
 When start is later than end, the interval crosses midnight. Equal endpoints
@@ -54,7 +54,7 @@ and [TimeOnly.IsBetween](https://learn.microsoft.com/en-us/dotnet/api/system.tim
 ## Text
 
 `TryParse(text, count, &result)` consumes complete counted ASCII input in the
-form `HH:mm:ss[.fraction]`. Hours, minutes, and seconds require two digits; an
+form `HH:mm:ss[.fraction]`. Hours, minutes, and seconds require two digits. An
 optional fraction contains one through seven digits. Signs, day prefixes,
 whitespace, `24:00:00`, and leap-second spellings are rejected. Failure returns
 false and resets the result to midnight. The C-string overload stops at its
@@ -67,7 +67,7 @@ sets `written` to zero, and leaves output bytes unchanged. `Format(writer)`
 and interpolation use this same representation.
 
 Successful construction, parsing, comparison, and caller-buffer formatting allocate nothing.
-`TryParse` and `TryFormat` are `nothrow`; a writer can allocate or throw normally.
+`TryParse` and `TryFormat` are `nothrow`. A writer can allocate or throw normally.
 Parsing reads input before writing the result, so an aligned result may overlap
 input. Formatting stages its bytes before writing output, allowing output to
 overlap the receiver when enough writable storage backs that region. The

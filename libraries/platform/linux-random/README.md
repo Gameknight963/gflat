@@ -1,9 +1,7 @@
 # Linux system random bytes
 
-Optional libc-based Linux source library, requiring glibc 2.25 or newer and
-Linux kernel 3.17 or newer. Reference
-`libraries/platform/linux-random/LinuxRandom.gfproj` to use
-`Linux::SystemRandom::TryFill(byte* output, nuint count)`.
+`Linux::SystemRandom::TryFill(output, count)` fills caller-owned storage using
+libc `getentropy`. It requires glibc 2.25 or newer and Linux kernel 3.17 or newer.
 
 ```xml
 <ItemGroup>
@@ -11,13 +9,10 @@ Linux kernel 3.17 or newer. Reference
 </ItemGroup>
 ```
 
-This project uses the ordinary Linux toolchain's libc link; no extra native
-library flag is required. It needs no Standard source/runtime definitions. It is
-separate from `Linux.gfproj`, so existing clock-only consumers do not acquire
-its source or newer glibc symbol requirement. Direct source users must target
-an ABI where `nuint` matches C `size_t`; the source does not detect the OS or
-impose a pointer-width restriction. No library installation or older-system
-symbol fallback is supplied.
+The project uses the toolchain's ordinary libc link and can be selected
+independently of the clock library. Direct source users must target an ABI where
+`nuint` matches C `size_t`. The required libc symbol must be available when linking
+and loading the program.
 
 ```csharp
 int main()
@@ -29,23 +24,19 @@ int main()
 }
 ```
 
-The nonthrowing wrapper calls `getentropy` in requests of at most 256 bytes.
-Each successful native call supplies its complete requested chunk. Interrupt
-and short-read handling is delegated to libc; no errno ABI, raw syscall,
-file descriptor, RNG algorithm, persistent state or retained pointer is added.
-The wrapper performs no gflat allocation; libc and the kernel may allocate
-internally. Zero count succeeds without calling libc or touching the pointer.
+## Results and storage
 
-For a positive count, supply live writable storage covering the requested
-extent. A true result means every requested byte was filled. On false, earlier
-chunks and possibly other output bytes may have changed: discard the entire
-result. There is no rollback, valid-prefix or error-status retrieval
-promise. The wrapper makes no further calls after a native failure. The call may block while the
-system entropy pool is initialized, even across handled signals; no timeout or
-cancellation API is provided.
+- Supply live writable storage for the complete requested range
+- True means every byte was filled
+- Zero count succeeds without accessing the buffer or calling libc
+- False means a native call failed. Discard the complete output because earlier
+  chunks and other requested bytes may have changed
 
-The glibc and kernel requirements must already be met. A missing libc symbol
-can prevent loading/linking; it is not turned into a false result.
+The `nothrow` wrapper calls `getentropy` in chunks of at most 256 bytes and stops
+at the first failure. libc handles interrupts and complete chunk delivery. The
+call can block while the system entropy pool initializes, including across
+handled signals. The wrapper retains no buffer pointer and makes no gflat
+allocation. libc and the kernel may allocate internally.
 
-Primary documentation: [getentropy](https://man7.org/linux/man-pages/man3/getentropy.3.html),
-[underlying getrandom](https://man7.org/linux/man-pages/man2/getrandom.2.html).
+Native references: [getentropy](https://man7.org/linux/man-pages/man3/getentropy.3.html),
+[getrandom](https://man7.org/linux/man-pages/man2/getrandom.2.html).

@@ -9,7 +9,7 @@ public static class Zlib
     public enum Status { Done, NeedInput, OutputTooSmall, InvalidData, UnsupportedDictionary }
 
     /// Borrows disjoint counted source/output buffers and independent count outputs.
-    /// Counts are not resumable state. Checksum failures can leave all output present.
+    /// Decodes the complete stream in one call. Checksum failures can leave all output present.
     public static Status Decompress(readonly(byte)* source, nuint count, byte* output, nuint capacity,
         ref nuint consumed, ref nuint written) nothrow
     {

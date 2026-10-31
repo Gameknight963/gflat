@@ -1,8 +1,7 @@
 # CSV reader
 
-`Standard::Csv::CsvReader` reads fields from one complete borrowed byte buffer. It does not
-build a table, allocate field strings, infer a schema, or decode character sets.
-`Read()` emits one validated field at a time; `EndOfRecord` identifies a record's
+`Standard::Csv::CsvReader` reads fields from a borrowed byte buffer.
+`Read()` emits one validated field at a time. `EndOfRecord` identifies a record's
 last field. Read through `false` to validate the whole input. Stopping early does
 not validate its remaining suffix.
 
@@ -10,7 +9,7 @@ not validate its remaining suffix.
 
 This complete program sums the quantity column of a two-column inventory. Quoted
 names may contain commas or doubled quotes. Only the numeric column is decoded
-into a caller-owned buffer; numeric parsing and column-count policy remain explicit.
+into a caller-owned buffer. Numeric parsing and column-count policy remain explicit.
 
 ```csharp
 using Standard; using Standard::Text; using Standard::Csv;
@@ -62,7 +61,7 @@ ASCII-only `TEXTDATA` grammar.
 
 - Commas separate fields. Outside quotes, CRLF or LF ends a record. Bare CR is
   rejected, with the error pointing at the expected LF position or end of input.
-- A field may start with `"`. Inside it, `""` represents one quote; commas and
+- A field may start with `"`. Inside it, `""` represents one quote. Commas and
   arbitrary CR/LF bytes are data. Embedded line endings are preserved exactly.
 - After a closing quote, only comma, a record ending, or EOF is accepted. A quote
   in an unquoted field is an error. Spaces are data, not ignored padding around
@@ -79,20 +78,20 @@ ASCII-only `TEXTDATA` grammar.
 | LF or CRLF | One record with one empty field. |
 | `,` | One record with two empty fields. |
 | `a,` | One record containing `a` and an empty field. |
-| `a` followed by LF | One record containing `a`; no extra record. |
+| `a` followed by LF | One record containing `a`. No extra record. |
 | `a` followed by two LFs | A record containing `a`, then a one-empty-field record. |
 | `""` | One record with one quoted empty field. |
 
 A terminal comma introduces an empty final field. An empty file means zero
-records; use a quoted empty field or a record ending to represent one empty value.
+records. Use a quoted empty field or a record ending to represent one empty value.
 The final record need not have a line ending.
 
 ## Field metadata and decoding
 
 After a successful `Read()`:
 
-- `HasValue` is true, including for a valid empty field.
-- `FieldOffset` is the raw field's byte offset in the original input.
+- `HasValue` is true, including for a valid empty field
+- `FieldOffset` is the raw field's byte offset in the original input
 - `RawField` is a borrowed `Span<readonly(char)>` over the exact lexeme, including
   surrounding quotes and doubled quotes. It excludes the following separator.
 - `ValueLength` counts decoded bytes: outer quotes are removed and doubled quotes
@@ -111,7 +110,7 @@ Before the first read, after completion, after `Reset`, and after a failed read,
 there is no current field. `TryCopyValue` then returns false with `written` zero.
 Metadata is cleared: offsets and lengths are zero, booleans false, and `RawField`
 is a canonical empty span with null `Data`. A valid empty unquoted field also has
-an empty `RawField`; `HasValue` distinguishes it from no current field.
+an empty `RawField`. `HasValue` distinguishes it from no current field.
 
 ## Reusable owning output
 
@@ -138,12 +137,12 @@ int main()
 `CopyValue` does not advance the reader or validate an encoding. It preserves
 embedded NUL bytes and maintains the String's trailing terminator. Empty fields
 clear the string while retaining capacity. Calls without a current field throw
-before changing the output; allocation failure during growth also preserves its
+before changing the output. Allocation failure during growth also preserves its
 old bytes, length, capacity, and allocation. Output storage must be separate from
 the reader and its entire borrowed input, as with `TryCopyValue`.
 
-Include `Csv/CsvReaderText.gf` and the normal String dependencies only when using
-this convenience. `Csv/CsvReader.gf` itself still needs no String implementation.
+For selective builds using this convenience, include `Csv/CsvReaderText.gf`
+and the String dependencies.
 
 ## Lifetimes, aliases, and errors
 
@@ -151,7 +150,7 @@ The caller must keep the entire input alive and unchanged throughout reader use.
 A saved `RawField` borrows the input independently of the reader: advancing,
 resetting, copying, moving, or destroying reader metadata does not free or modify
 those bytes. It does not prolong their lifetime. Copying a reader duplicates its
-cursor state and allows independent advancement; it does not copy input bytes.
+cursor state and allows independent advancement. It does not copy input bytes.
 
 The destination buffer must be disjoint from the entire input and from reader
 storage. The `written` variable must be separate from input, reader storage, and
@@ -159,10 +158,10 @@ the output buffer. In-place or overlapping decoding is not supported by this
 reader: mutating input would invalidate borrowed fields and repeated decoding.
 
 Malformed CSV throws `CsvParseException`, whose readonly `Offset` identifies the
-unexpected byte or EOF. A failed read clears the current field and latches failure;
-another `Read` throws until `Reset()` restarts the same input. `Reset` does not
-change its storage or contents. Successful `Read` and `TryCopyValue` calls allocate nothing;
-constructing or throwing an exception uses the ordinary exception runtime.
+unexpected byte or EOF. A failed read clears the current field and latches failure.
+Another `Read` throws until `Reset()` restarts the same input. `Reset` does not
+change its storage or contents. Successful `Read` and `TryCopyValue` calls allocate nothing.
+Constructing or throwing an exception uses the ordinary exception runtime.
 
 For explicit source selection include `core/Csv/CsvReader.gf`,
 `core/Csv/CsvParseException.gf`, and `Memory/Span.gf` with its query-interface dependencies.

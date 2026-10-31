@@ -1,11 +1,9 @@
 # Dotted numeric versions
 
-Standard::Version is an ordinary value with two through four nonnegative signed
-32-bit integer components: major.minor[.build[.revision]]. It is not SemVer:
-there are no prerelease labels, build metadata, version ranges, or coercions.
-It can describe numeric protocol or file-format revisions.
+`Standard::Version` stores two through four nonnegative signed 32-bit components:
+`major.minor[.build[.revision]]`. Use it for numeric protocol or file-format revisions.
 
-The default value is 0.0. Construct Version(major, minor, build=-1, revision=-1);
+The default value is 0.0. Construct Version(major, minor, build=-1, revision=-1).
 -1 denotes an absent trailing optional component. Required components must be
 nonnegative, optional components cannot be below -1, and revision cannot be
 present when build is absent. Invalid tuples throw Exception("Invalid version components").
@@ -28,7 +26,7 @@ int main()
 }
 ```
 
-Ordering is lexicographic by the four component values; missing parts sort
+Ordering is lexicographic by the four component values. Missing parts sort
 before zero. Thus 1.2, 1.2.0, and 1.2.0.0 are distinct, increasingly ordered
 values. Comparisons use relational checks rather than potentially overflowing
 subtraction. Equality and hashing include missing-component distinctions. Hash
@@ -40,23 +38,22 @@ four nonempty ASCII decimal components separated by single dots. Whitespace,
 signs, suffixes, counted embedded NUL, and component values beyond int maximum
 are rejected. Leading zeroes are accepted and normalized, including inputs
 longer than 43 bytes. Only canonical output has a 43-byte maximum. Counted
-input need not have a terminator; C-string input requires one.
+input need not have a terminator. C-string input requires one.
 
 TryParse writes the default 0.0 result on failure and returns false. Its input
 reads precede the final output assignment, so a suitably aligned output value
 may overlap readable input storage with enough backing space. Parse throws
 Exception("Invalid version"). Result pointers must designate valid writable
-Version storage; there is no null-output shortcut.
+Version storage. There is no null-output shortcut.
 
 TryFormat(char* output, nuint capacity, ref nuint written) writes canonical
 ASCII digits and separators, without a NUL. It retains the specified number of
 components and removes leading zeroes. Failure leaves bytes unchanged and sets
 written to zero. Staging allows receiver/output overlap when backed by enough
-storage; written must be separate from both. Format(ITextWriter*) emits one
+storage. Written must be separate from both. Format(ITextWriter*) emits one
 counted write and propagates writer errors normally. There is no String
-dependency or allocation on valid parse/format/constructor paths; throwing
+dependency or allocation on valid parse/format/constructor paths. Throwing
 errors and the selected writer may allocate.
 
 The value implements IEquatable<Version>, IComparable<Version>, IHashable and
 IFormattable, so it composes with ordinary sets, maps, comparisons and writers.
-

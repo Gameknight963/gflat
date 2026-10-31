@@ -26,7 +26,7 @@ int main()
 
 Both files use binary mode. In particular, the destination preserves NUL, CR, LF,
 and non-ASCII decoded bytes exactly. The caller closes files explicitly to observe
-buffered IO failures; the decoder never flushes or closes its destination.
+buffered IO failures. The decoder never flushes or closes its destination.
 
 ## Strict input and completion
 
@@ -46,7 +46,7 @@ after a padded quartet are rejected. There is no BOM removal or encoding guessin
   is rejected, whether it occurs in the same call or a subsequent call. Empty
   writes remain allowed until `Complete`.
 - A zero-length write on an open decoder does not dereference its input pointer
-  or call the destination.
+  or call the destination
 - `Complete()` verifies that no incomplete quartet remains. It emits nothing and
   is idempotent after success. Empty input is valid and remains empty.
 - After successful completion, every `Write`, including a zero-length write,
@@ -56,7 +56,7 @@ after a padded quartet are rejected. There is no BOM removal or encoding guessin
 
 For example, writing `Y`, then `WJ`, then `j` emits the three bytes `abc`. Writing
 `YQ==` emits `a` and forbids any later nonempty input. Writing only `YQ` does not
-emit a byte; `Complete` rejects the missing padding.
+emit a byte. `Complete` rejects the missing padding.
 
 ## Failure and borrowing
 
@@ -64,10 +64,9 @@ Invalid input or an incomplete `Complete` throws `Exception` and permanently
 fails that decoder. A sink exception propagates unchanged and also fails it.
 Both `Write` and `Complete` subsequently reject use without calling the sink.
 
-This is a streaming transform, not a whole-input validation transaction. A valid
-prefix may already have reached the sink before a later invalid byte is found.
+A valid prefix may already have reached the sink before a later invalid byte is found.
 Unflushed decoded bytes in the failing call may be discarded. The visible prefix
-can therefore depend on chunk boundaries and sink behavior; there is no output
+can therefore depend on chunk boundaries and sink behavior. There is no output
 rollback or guaranteed prefix length. A failed file pipeline can leave a partial
 decoded file.
 
@@ -78,7 +77,7 @@ invalidate it through an alias: do not decode bytes borrowed from an owning
 including callbacks that use or copy the same decoder.
 
 Copying the decoder duplicates its carry and end/completion/failure flags while
-sharing the sink. Copies do not form independent output streams; do not interleave
+sharing the sink. Copies do not form independent output streams. Do not interleave
 them into the same destination. A copy made before another copy's failure cannot
 discover that failure. Moving preserves the state. Destroying a decoder never
 writes to or destroys its destination.

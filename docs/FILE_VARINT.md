@@ -46,7 +46,7 @@ An empty stream or an incomplete integer ending at EOF throws
 `EndOfStreamException`. A noncanonical overlong integer, width overflow, or
 continuation at the maximum byte count throws `IOException`. A closed File or
 underlying IO failure also throws `IOException`. Reads can consume a prefix
-before failure; there is no rollback or recovery promise after malformed or
+before failure. There is no rollback or recovery promise after malformed or
 truncated data. Byte position guarantees do not imply the remainder is valid.
 
 Writes emit the canonical representation in one counted `File.Write` call.
@@ -56,7 +56,7 @@ Buffered host IO can report failures later, so the owner remains responsible for
 Normal operations use at most ten stack bytes for encoded input/output, with no
 application allocator call. libc File buffering and exception storage remain
 separate. Signed values can compose the existing `VarInt::ZigZagEncode` and
-`ZigZagDecode` methods; there is no separate signed file family.
+`ZigZagDecode` methods.
 
 Explicit source selection needs `IO/FileVarInt.gf`, `IO/File.gf`, `Binary/VarInt.gf`, and
 ordinary File exception/runtime dependencies. The core VarInt codec stays

@@ -7,7 +7,7 @@ ordering respectively, it wraps to the opposite endpoint and returns false.
 
 These operations are useful for bounded arrangement searches: enumerate small
 assignment or route candidates without allocating a collection for every order.
-The number of arrangements can still grow factorially; the caller controls the
+The number of arrangements can still grow factorially. The caller controls the
 input size and stopping policy.
 
 ```csharp
@@ -36,14 +36,14 @@ Begin with the first ordering to enumerate every distinct comparator-key
 arrangement using `NextPermutation`, or the last ordering with
 `PreviousPermutation`. Arbitrary starting arrangements are also accepted.
 Duplicate keys are handled without treating comparator-equivalent values as
-different key arrangements. Equal values do not have a stable identity order;
-wrapping can rearrange equivalent owners too.
+different key arrangements. Equal values do not have a stable identity order.
+Wrapping can rearrange equivalent owners too.
 
 Empty and singleton spans return false without comparing or accessing element
-storage. For larger spans, false still means the values were wrapped; it is not
+storage. For larger spans, false still means the values were wrapped. It is not
 a no-op or a failed-capacity result. A custom reversed comparator reverses the
 meaning of first and last. Only the sign of its result matters, including
-non-unit magnitudes or the minimum `int`; no result is negated.
+non-unit magnitudes or the minimum `int`. No result is negated.
 
 Each call uses O(n) comparisons and relocation work, constant extra storage, and
 no heap scratch allocation. It borrows mutable elements and invokes no element
@@ -57,7 +57,7 @@ ordering, must not mutate elements or the span through aliases, and must not
 retain element pointers across calls. All comparisons finish before the first
 swap or reversal, so a comparator exception leaves the original arrangement
 unchanged. External callback side effects are not rolled back. Normal
-collector-hook effects still apply; no extra failure policy is introduced.
+collector-hook effects still apply. No extra failure policy is introduced.
 
 Pointers to element slots continue to refer to those slots, which may now hold
 different owners. Pointers into separately owned allocations keep their address
@@ -68,6 +68,6 @@ borrowing rules.
 Include optional `Collections/span_permutations.gf` and `Collections/span_algorithms.gf`,
 Span and their normal dependencies. `Collections/default_ordering.gf` adds
 one-argument `NextPermutation(values)` and `PreviousPermutation(values)` for
-`T : IComparable<T>`, using `Comparer<T>::Compare`; include `Collections/Comparer.gf` and
+`T : IComparable<T>`, using `Comparer<T>::Compare`. Include `Collections/Comparer.gf` and
 `IComparable.gf` for those conveniences. Explicit callbacks remain available
-without that interface. There is no permutation-sequence wrapper.
+without that interface.

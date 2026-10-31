@@ -3,7 +3,7 @@ using Standard::Collections;
 namespace Standard::IO;
 
 /// Deferred counted lines borrowed from a reader's current position.
-/// Copies and enumerators share the source cursor; none rewind or close it.
+/// Copies and enumerators share the source cursor. None rewind or close it.
 /// Keep the reader alive, open and unmoved while this view or its iterators are used.
 public struct LineSequence : IEnumerable<String, LineSequence::Enumerator>
 {

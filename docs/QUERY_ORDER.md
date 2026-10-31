@@ -3,7 +3,7 @@
 `Order()` returns a query sorted by `Comparer<T>::Compare`, requiring
 `T : IComparable<T>`. `Order(compare)` accepts an ordinary function pointer of
 type `int(immutable(T)*, immutable(T)*)*` without that interface requirement. A
-negative result places the first argument earlier; zero preserves original
+negative result places the first argument earlier. Zero preserves original
 encounter order. For descending order, supply a comparator with reversed order.
 
 ```csharp
@@ -32,12 +32,12 @@ Creating a query or its cursor does not enumerate the underlying source or
 allocate its element buffer. The first `MoveNext` materializes the entire input
 with `ToVector`, then calls the existing `StableSort` once. Only after success
 does the cursor retain that buffer and yield its first item. Even `Take(1)` needs
-the whole input; `Take(0)` never starts materialization. A source that does not
+the whole input. `Take(0)` never starts materialization. A source that does not
 end cannot produce the first ordered element.
 
 Source/query values still follow ordinary copy rules: custom source copies can
 allocate or throw while wrappers are constructed. Built-in borrowed views just
-copy their metadata. Changes before materialization are visible; later changes
+copy their metadata. Changes before materialization are visible. Later changes
 do not alter that cursor's buffered value copies. A new enumeration takes a new
 buffer and sorts independently. Re-enumeration follows the source: a consumable
 source such as FileLineSequence continues from its current position rather than
@@ -47,7 +47,7 @@ by its adapter.
 
 `Current` returns `ref immutable(T)` into the owned buffer. Inspecting it does not
 copy an owning element. The reference borrows that cursor's buffer and must not
-outlive the cursor. MoveNext controls whether Current can be obtained; ordinary
+outlive the cursor. MoveNext controls whether Current can be obtained. Ordinary
 borrow and alias rules still apply. A by-value consumer invokes normal copy
 semantics, so noncopyable values require borrowed access through their concrete
 cursor. Materializing those values also requires a source that produces fresh or
@@ -61,7 +61,7 @@ If source construction, enumeration, copying, allocation, or comparison throws,
 partial materialization/sort storage is destroyed and the original error
 propagates. That cursor stays finished: later moves return false without retrying,
 and Current remains invalid. A new enumeration can try again. Buffered storage is
-released at cursor destruction, including after early exit; successful cursors
+released at cursor destruction, including after early exit. Successful cursors
 retain it after exhaustion until then. Comparators must obey StableSort's existing
 ordering, lifetime, and source-mutation requirements.
 

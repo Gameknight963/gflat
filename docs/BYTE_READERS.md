@@ -32,20 +32,19 @@ Import `Standard::IO` for these extensions on `IByteReader*`:
 - `SkipExactly(count)` discards exactly that many bytes through bounded reads,
   using 4096 bytes of stack scratch. It works without seeking, preserves the same
   zero-count validation, and throws `EndOfStreamException` on early EOF. Requests
-  never extend beyond the remaining count. A buffered source may read ahead;
-  continue consuming through that same adapter to retain its unread bytes.
+  never extend beyond the remaining count. A buffered source may read ahead.
+  Continue consuming through that same adapter to retain its unread bytes.
 - `CopyTo(output, scratch, capacity)` rejects empty scratch, reads until EOF, and sends
   each counted chunk to `ITextWriter*`. It returns the number of bytes sent. A source
   reporting more bytes than requested or a total count overflow throws `IOException`
   before forwarding that chunk.
-- `CopyTo(output)` supplies 4096 bytes of stack scratch.
+- `CopyTo(output)` supplies 4096 bytes of stack scratch
 
 The helpers retain no endpoint or buffer and allocate no intermediate data. They do
 not close, flush, rewind, or call an encoder/decoder's `Complete`. Input, output and
 scratch must be logically distinct, with no overlap between scratch and either
 endpoint's state or retained backing bytes. Do not copy a stream into itself, even
 through different adapters. The generic helper cannot establish endpoint identity.
-Existing concrete `File::CopyTo` validation remains unchanged.
 
 Failure can leave consumed input, a modified output-buffer prefix, or already-written
 chunks. There is no rollback or automatic draining. A reader can fail after consuming
@@ -55,10 +54,10 @@ an unknown prefix, so callers cannot infer consumed bytes from an exception alon
 
 `EnumerateBytes(input)` (or `input.EnumerateBytes()`) returns a `ByteSequence`.
 The factory and `GetEnumerator()` perform no reads. Each successful `MoveNext()`
-consumes one byte; `Current` returns that byte without further input. EOF ends that
+consumes one byte. `Current` returns that byte without further input. EOF ends that
 iterator permanently. `Current` throws `IOException` before the first successful
 advance, after EOF, or after a failed advance.
-The factory accepts a shallow readonly sequence view; its iterator still borrows
+The factory accepts a shallow readonly sequence view. Its iterator still borrows
 the mutable source cursor. Cached `Current` also accepts an immutable iterator
 view and does not advance it. `MoveNext()` remains mutable.
 
@@ -96,21 +95,21 @@ the second match. A filter may consume nonmatching bytes first. Direct foreach i
 also supported: `foreach (byte value in view) { /* consume value */ }`.
 
 Keep the concrete reader, its backing bytes, and any caller scratch alive and
-unmoved; keep an owning source such as File open. Sequence and iterator copies
+unmoved. Keep an owning source such as File open. Sequence and iterator copies
 share that source cursor, although each iterator retains its own Current value.
 A second enumeration continues from the current source position. The sequence
 adds no buffer, read-ahead, closing, or ownership. A source such as BufferedReader
-can itself read ahead; consume the next logical byte through that same adapter,
+can itself read ahead. Consume the next logical byte through that same adapter,
 as above, rather than reading its underlying source directly.
 
 Source exceptions propagate unchanged, and malformed read counts raise IOException.
 A failed advance invalidates Current but does not roll back consumed input. A later
-MoveNext retries the source at its current position; an underlying poisoned reader
+MoveNext retries the source at its current position. An underlying poisoned reader
 can still reject that retry. Successful byte enumeration allocates no buffer.
 
 Basic foreach uses `ByteSequence.gf` and `byte_reader_enumerate_bytes.gf` without
 the query library. The optional `AsEnumerable()` extension is separately defined
-in `byte_sequence_queries.gf`; import `Standard::Queries` to use query operators.
+in `byte_sequence_queries.gf`. Import `Standard::Queries` to use query operators.
 
 ## Read counted lines from any byte source
 
@@ -120,7 +119,7 @@ matching Console's existing convention. Immediate EOF returns false with an empt
 String. `ReadLine()` returns a new owning String and converts immediate EOF to
 EndOfStreamException. A blank terminated line is a successful empty line.
 
-LF and CRLF are removed; a bare CR, embedded zero, and high bytes remain counted
+LF and CRLF are removed. A bare CR, embedded zero, and high bytes remain counted
 data. Final nonempty unterminated lines are returned once. No encoding conversion
 or validation is performed. Console.In still observes its existing host stream
 translation before these byte rules apply.
@@ -153,31 +152,30 @@ int main()
 ```
 
 The helper requests one source byte at a time and does not consume the byte after
-LF. Keep one BufferedReader across calls when buffering is useful; read any later
+LF. Keep one BufferedReader across calls when buffering is useful. Read any later
 bytes through that same object so its read-ahead tail remains available. The
 helper owns no heap buffer, closes nothing, and writes counted stack chunks to the
 sink. String and BufferedReader retain their normal allocation and ownership rules.
 
 Source and writer exceptions propagate unchanged. Consumed input and prior output
-are not rolled back. An uncommitted scratch prefix may be lost on error; the
+are not rolled back. An uncommitted scratch prefix may be lost on error. The
 String convenience has already cleared its old value and may contain an appended
 prefix. Failure does not automatically drain the rest of the line. Existing
 BufferWriter provides a raw-buffer route, but an over-capacity Write can stop
-midline; this differs from Console's explicitly draining raw-buffer overload.
+midline. This differs from Console's explicitly draining raw-buffer overload.
 
 Keep the concrete input/sink alive and unmoved, with disjoint state and captured
 storage. In particular, the input must not borrow the String output's old buffer,
 which clearing or growth can change. Borrowed views of the reused String's old
 contents cannot be relied on across a call. The writer helper is independently
-available in `Standard/core/IO/byte_reader_lines.gf`; the optional String overloads
+available in `Standard/core/IO/byte_reader_lines.gf`. The optional String overloads
 are in `byte_reader_string_lines.gf`.
-
 
 ## Enumerate lines without owning the source
 
 `input.EnumerateLines()` creates a deferred `LineSequence` over any `IByteReader`.
 Its factory accepts shallow readonly sequence views while retaining a mutable
-borrow of the source; a deeply immutable sequence cannot create such an iterator.
+borrow of the source. A deeply immutable sequence cannot create such an iterator.
 It follows `TryReadLine`: LF and CRLF are removed, empty terminated lines are
 yielded, and a final nonempty unterminated line is yielded. Bare CR, embedded
 zeros and high bytes remain counted contents. A trailing LF does not invent an
@@ -220,38 +218,38 @@ int main()
 
 Creating the sequence or iterator does not read input or allocate a line buffer.
 Each iterator owns one String and reuses its capacity between lines. Its
-`ref immutable(String) Current` is available after successful MoveNext; it is
+`ref immutable(String) Current` is available after successful MoveNext. It is
 invalid before the first line, after EOF, and after an exception. A Current borrow
 ends when MoveNext is called or the iterator is moved or destroyed. Use a normal
 `String saved = iterator.Current` copy to retain independent contents.
 `foreach (String line in lines)` likewise produces owning value copies.
 
-The sequence borrows the source; it never closes, rewinds or owns it. Keep the
+The sequence borrows the source. It never closes, rewinds or owns it. Keep the
 concrete reader alive, open and unmoved. Sequence copies and new iterators share
-its cursor; avoid interleaving consumption when whole-line boundaries matter.
+its cursor. Avoid interleaving consumption when whole-line boundaries matter.
 Copying an iterator copies its current String into an independent owning snapshot
 and shares the source cursor. Subsequent advancement of one copy does not replace
 the other's current contents, but it consumes input that either could next read.
 The parser consumes no byte beyond LF. A BufferedReader can prefetch, so retain
 that same buffered reader to consume any remaining bytes, as above.
 
-EOF is final for an individual iterator; further MoveNext calls do not read.
+EOF is final for an individual iterator. Further MoveNext calls do not read.
 Source and String growth exceptions propagate unchanged and invalidate Current.
 A later MoveNext retries from the source's then-current position and clears the
-internal line first. Partially consumed input is not replayed or drained; a
+internal line first. Partially consumed input is not replayed or drained. A
 partially collected prefix from the failed attempt is not yielded. Sources such
 as BufferedReader retain their own error-latching policy.
 
 `AsEnumerable()` is a separate optional query adapter in
 `Standard/core/IO/line_sequence_queries.gf`. Queries that retain String values
-make independent copies; a zero-allocation query chain is not promised.
+make independent copies. The element-copy and materialization costs of each operator apply.
 Take(0) performs no reads. Early breaks and exceptions release the iterator's
 String normally and leave the reader open at its consumed cursor.
 
 For selective sources, direct iteration needs `core/IO/LineSequence.gf`,
 `byte_reader_enumerate_lines.gf`, both `byte_reader_string_lines.gf` and
 `byte_reader_lines.gf`, and their String, reader, writer, exception and collection
-contracts. Supply String's normal memory support; libc File and Console are not
+contracts. Supply String's normal memory support. Libc File and Console are not
 required. The query bridge is optional.
 
 The [distinct-lines tool](../examples/distinct-lines/README.md) combines a
@@ -295,7 +293,7 @@ int main(int argc, char** argv)
 With the optional Windows network project referenced, the same `DecodeHexFrom` accepts
 `&client` for an open `Windows::TcpClient`. For a TCP stream, its peer must end sending
 for EOF-based copying to finish. A persistent connection carrying multiple messages
-needs a separate bounded framing protocol; `CopyTo` does not know message boundaries.
+needs a separate bounded framing protocol. `CopyTo` does not know message boundaries.
 [LimitedReader](../Standard/core/IO/LIMITED_READER.md) exposes one payload as a
 bounded source. To discard its unread allowance explicitly, call
-`frame.SkipExactly(frame.Remaining)`; early EOF still reports a truncated payload.
+`frame.SkipExactly(frame.Remaining)`. Early EOF still reports a truncated payload.

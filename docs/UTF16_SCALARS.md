@@ -22,20 +22,20 @@ The default view and `new(null, 0)` are empty. Null storage with a nonzero lengt
 throws at construction. Non-null storage must remain readable for the supplied
 count throughout use of the view and all its iterators. Creating/copying a view,
 obtaining an iterator, and valid enumeration allocate nothing. They neither copy
-nor own the input; do not release its storage or let it go out of scope while a
+nor own the input. Do not release its storage or let it go out of scope while a
 view or iterator still uses it. Early termination does not release caller data.
 
 The nested `Enumerator` implements `IEnumerator<uint>`, and the view implements
 `IEnumerable<uint, Utf16Scalars::Enumerator>`. Each `GetEnumerator()` starts at
-the beginning. Copying an iterator copies its position and cached current scalar;
-copies subsequently progress independently. Changes to unread borrowed input are
+the beginning. Copying an iterator copies its position and cached current scalar.
+Copies subsequently progress independently. Changes to unread borrowed input are
 visible on later reads. A successful `Current` is cached until the next
 `MoveNext()` and does not change when the underlying units change.
 
 `AsEnumerable()` exposes the concrete lazy-query wrapper for `Where`, `Select`,
 `Take`, and aggregates when their collection source files are included. Both it
 and `GetEnumerator()` accept mutable, shallow readonly, or immutable views.
-The adapter copies only borrowed pointer/count metadata; keep the same backing
+The adapter copies only borrowed pointer/count metadata. Keep the same backing
 units live for every later enumeration. Repeating a query starts again from
 the beginning and observes subsequent changes to backing units. An early
 `Take` can stop before malformed input, preserving the iterator's existing lazy
@@ -45,7 +45,7 @@ Like `Utf8Scalars`, this iterator validates lazily and throws on malformed input
 when `MoveNext()` reaches it. It does not replace isolated/truncated/incorrect
 surrogate sequences. A valid prefix can be read without inspecting its suffix,
 and breaking early does not validate the remaining input. These throwing paths
-require the ordinary exception runtime; use `Utf16::TryDecode` or `Utf16Decoder`
+require the ordinary exception runtime. Use `Utf16::TryDecode` or `Utf16Decoder`
 for a `nothrow` result-based API.
 
 `Current` throws before the first successful move, after reaching the end, and

@@ -2,7 +2,7 @@
 
 `Standard::Collections::SortedSet<T>` owns unique values in comparator order. It wraps
 `SortedMap<T, byte>` and therefore stores its entries contiguously. Lookups use
-binary search; insertion and removal may move later entries. No hash or equality
+binary search. Insertion and removal may move later entries. No hash or equality
 interface is required, and noncopyable owning values work.
 
 ```csharp
@@ -30,14 +30,14 @@ The comparison must define a consistent ordering. A result of zero identifies
 an existing value, even when the two objects have different fields. `Add(value)`
 returns false for a duplicate and destroys the unused argument without replacing
 the stored owner. Use `move` to transfer an existing noncopyable value. `Remove`
-borrows its query and destroys a matching stored value; it returns false on a
+borrows its query and destroys a matching stored value. It returns false on a
 miss. `Clear` destroys all values while retaining capacity. `Reserve`, `Count`,
 `Capacity`, and `IsEmpty` follow the other owning collections.
 
 `Contains` and `GetEnumerator` work on immutable receivers. The nested
 `SortedSet<T>::Enumerator` borrows the storage and exposes `immutable(T)* Current`
 in comparator order. Keys cannot be modified through that pointer. The source
-must remain alive and at a stable address; do not mutate, move, or destroy it
+must remain alive and at a stable address. Do not mutate, move, or destroy it
 while iterating. Structural mutations may invalidate borrowed pointers. If a
 removal query points into this set, lookup finishes before the stored owner is
 destroyed or moved.
@@ -53,7 +53,6 @@ comparisons, so such operations need an explicit compatibility contract first.
 Source-library selection requires `Collections/SortedSet.gf`, `Collections/SortedMap.gf`, `Collections/Vector.gf`,
 `Memory/Span.gf`, and their query interface declarations. No tree nodes or GC allocations
 are introduced. The selected `Memory` implementation supplies vector storage.
-
 
 ## Borrowing the stored equivalent value
 

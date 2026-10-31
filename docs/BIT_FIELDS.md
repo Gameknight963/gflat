@@ -5,10 +5,10 @@ in borrowed byte buffers. It allocates nothing and requires no other Standard so
 
 | API | Effect |
 | --- | --- |
-| `TryReadUInt64(data, count, bitOffset, bitCount, order, ref value)` | Reads a right-aligned `ulong`; failure sets `value` to zero. |
+| `TryReadUInt64(data, count, bitOffset, bitCount, order, ref value)` | Reads a right-aligned `ulong`. Failure sets `value` to zero. |
 | `TryWriteUInt64(data, count, bitOffset, bitCount, order, value)` | Writes a value that fits the field, preserving every other bit. Failure leaves all bytes unchanged. |
 
-`count` is a byte count; `bitOffset` counts bits from the buffer's start. Bytes
+`count` is a byte count. `bitOffset` counts bits from the buffer's start. Bytes
 always advance in address order. `BitOrder::LeastSignificantFirst` visits bit 0
 of each byte first, and the first visited bit becomes bit 0 of the value.
 `BitOrder::MostSignificantFirst` visits bit 7 first, and the first visited bit
@@ -32,14 +32,14 @@ int main() nothrow
 
 Widths outside 0–64, invalid order values, and fields outside the buffer fail.
 Writes also reject values with set bits above the requested width. A zero-width
-operation succeeds only at a position inside the buffer or exactly at its end;
-it touches no buffer bytes. A zero-width write accepts only zero. An unaligned
+operation succeeds only at a position inside the buffer or exactly at its end.
+It touches no buffer bytes. A zero-width write accepts only zero. An unaligned
 64-bit field can span nine bytes. Bounds checks avoid multiplying the byte count
 by eight or adding the width to the bit offset.
 
 Keep buffers alive and valid for their stated extent. Write buffers must be
 readable as well as writable because writes preserve surrounding bits. The read
-output must not overlap the input bytes. Operations are ordinary byte accesses;
-they provide no synchronization. Time is bounded by 64 bit iterations, with
+output must not overlap the input bytes. Operations are ordinary byte accesses.
+They provide no synchronization. Time is bounded by 64 bit iterations, with
 constant temporary storage. With `NoStdLib`, include only
 `Standard/core/Binary/BitPrimitives.gf` alongside the caller.

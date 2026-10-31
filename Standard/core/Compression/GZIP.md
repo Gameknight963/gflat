@@ -1,6 +1,7 @@
 # Gzip members
 
-`Standard::Compression::Gzip::DecompressMember` decodes and validates one gzip member into caller-owned bytes. It allocates nothing, retains no buffers, and needs no GC, exception runtime, or native compression library.
+`Standard::Compression::Gzip::DecompressMember` decodes and validates one gzip
+member into caller-owned bytes. It uses bounded stack scratch and caller buffers.
 
 ```csharp
 using Standard::Compression;
@@ -17,30 +18,66 @@ int main() nothrow
 }
 ```
 
-The operation accepts DEFLATE members, optional extra bytes, terminated names/comments, and optional header checksums. It checks reserved flags, header checksum when supplied, payload CRC32, and uncompressed size modulo 2^32. Extra bytes are opaque; metadata does not alter binary output or cause filesystem access. This framing follows [RFC 1952 sections 2.2-2.3](https://www.rfc-editor.org/rfc/rfc1952.txt). A gzip file can contain several adjacent members, so this deliberately named operation does not claim to validate an entire file.
+## Validation
 
-Source must supply `count` readable bytes and output `capacity` writable bytes. Those ranges must not overlap. The two count outputs must be initialized independent values, disjoint from each other and both buffers. All storage remains caller-owned and alive until return. Zero input count or output capacity does not dereference the corresponding pointer; use valid dummy storage when no bytes are needed. An empty output still requires a complete compressed body and footer.
+The operation accepts DEFLATE members with optional extra bytes, terminated names
+and comments, and header checksums. It checks:
+
+- Reserved flags
+- The header checksum when present
+- The payload CRC32
+- The uncompressed size modulo 2^32
+
+Extra bytes are opaque, and names and comments serve as metadata. Framing follows
+[RFC 1952 sections 2.2–2.3](https://www.rfc-editor.org/rfc/rfc1952.txt).
+For a file containing several members, call the operation for each member.
+
+## Buffers
+
+Source supplies `count` readable bytes and output supplies `capacity` writable
+bytes. The ranges must be disjoint. Both count outputs must be initialized,
+separate from each other and both buffers. Keep all storage alive until return.
+Zero input count or output capacity leaves its corresponding pointer untouched.
+Use valid dummy storage for an empty buffer. Empty output still requires a
+complete compressed body and footer.
+
+## Results
 
 | Status | Meaning |
-|---|---|
-| `Done` | One complete member passed framing, decompression, and integrity checks. |
-| `NeedInput` | A complete required header field, body, or footer was unavailable. |
-| `OutputTooSmall` | The raw decoder's next complete output unit would exceed capacity. |
-| `InvalidData` | Header/body validation or a checksum/size comparison failed. |
+| --- | --- |
+| `Done` | One member passed framing, decompression, and integrity checks |
+| `NeedInput` | A required header field, body, or footer was incomplete |
+| `OutputTooSmall` | The raw decoder's next complete output unit exceeds capacity |
+| `InvalidData` | Header/body validation or a checksum/size comparison failed |
 
-Every status can leave an output prefix. In particular, a truncated or invalid footer can leave the complete decoded output present: only `Done` establishes integrity. The first encountered condition determines the result. A capacity failure does not establish that the rest of the member is valid.
+`written` reports produced bytes, and `consumed` reports structurally consumed
+source bytes. A failure can leave partial output. A truncated or invalid footer
+can leave all decoded bytes present. Treat output as validated only on `Done`.
+The first encountered condition determines the result. A capacity failure leaves
+the remaining member unvalidated.
 
-`written` reports produced bytes. `consumed` reports input consumed by structural fields and the raw decoder, including opaque fields skipped. Neither is a resume token. A retry starts from complete input in a fresh output pass. Bytes beyond `written` remain unchanged.
+Retry from complete input in a fresh output pass. Bytes beyond `written` remain
+unchanged.
 
-Consumption on failures is deliberately field-based:
+## Consumption
 
-- Fewer than ten header bytes: zero consumed and written. Once all ten exist, they are consumed before checking identity, method, and flags.
-- An incomplete two-byte XLEN or FHCRC field is not consumed. A complete XLEN is consumed before checking that all extra bytes exist; incomplete extra bytes remain unconsumed. A complete extra field is skipped together.
-- Names and comments consume examined bytes, including the terminating zero when present. An unterminated field consumes all available bytes.
-- A complete FHCRC is consumed before its comparison. Header failures produce no output.
-- Body failures add the raw decoder's exact consumed/written counts to the header position.
-- Fewer than eight footer bytes: `NeedInput` with consumed at the body's end; no footer bytes are consumed. A complete footer is consumed before comparing either checksum or size.
+- Fewer than ten header bytes consumes and writes zero bytes. A complete header
+  is consumed before checking identity, method, and flags
+- Incomplete XLEN or FHCRC fields remain unconsumed. A complete XLEN is consumed
+  before checking for all extra bytes. Complete extra fields are skipped together
+- Names and comments consume examined bytes, including a terminator when present.
+  An unterminated field consumes all available bytes
+- A complete FHCRC is consumed before comparison. Header failures write no output
+- Body failures add the raw decoder's consumed/written counts to the header offset
+- Fewer than eight footer bytes returns `NeedInput` at the body's end. A complete
+  footer is consumed before comparing checksum and size
 
-On `Done`, consumed includes the eight-byte footer and stops before the next member or any trailing bytes. The underlying raw decoder ignores unused final-byte padding and does not prefetch subsequent whole bytes. Callers can require `consumed == count` for exactly one member, or loop explicitly over adjacent members while enforcing an aggregate output limit. Arbitrary trailing bytes are not validated by a successful member call.
+On `Done`, consumed includes the footer and stops before the next member or
+trailing bytes. Raw DEFLATE padding bits are ignored. Require `consumed == count`
+for exactly one member, or loop over adjacent members with an aggregate output
+limit. Trailing bytes require separate validation.
 
-Input count bounds header scanning; capacity bounds produced output. Work includes at most two header passes, DEFLATE decoding, and a checksum pass over produced bytes. The wrapper adds no unbounded scratch allocation and does not select buffer sizes, grow buffers, or retain streaming state. The raw decoder's documented code-tree tolerances remain unchanged.
+Input count bounds header scanning, and capacity bounds output. Work includes
+at most two header passes, DEFLATE decoding, and one checksum pass over output.
+The decoder retains no buffers between calls. Raw DEFLATE's documented
+[code-tree tolerances](DEFLATE.md#distances-and-code-trees) also apply here.

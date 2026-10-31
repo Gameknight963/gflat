@@ -2,8 +2,7 @@
 
 `Standard::Numerics::Rational` owns a numerator and denominator backed by BigInteger. Every
 successfully constructed value has coprime parts, a positive denominator, and
-canonical zero `0/1`. This is exact fraction arithmetic, without a fixed-width
-overflow representation, floating-point approximation, or special infinity/NaN.
+canonical zero `0/1`. Arithmetic preserves exact fractions within available storage.
 
 ```csharp
 using Standard::Text;
@@ -24,11 +23,11 @@ int main()
 
 Constructors accept no arguments (`0/1`), one signed long (an integer), a pair
 of signed longs, or a pair of owning BigInteger values. BigInteger arguments use
-ordinary value-copy rules; use `move` to transfer existing owners. A negative
+ordinary value-copy rules. Use `move` to transfer existing owners. A negative
 denominator reverses both signs. Zero denominators throw
 `Exception("Rational denominator is zero")` before normalization. Long minimum
 values are handled through BigInteger, without negating them in primitive space.
-The default constructor allocates the ordinary BigInteger denominator `1`; it
+The default constructor allocates the ordinary BigInteger denominator `1`. It
 does not rely on static heap storage or a special zero-denominator sentinel.
 
 `Add`, `Subtract`, `Multiply`, and `Divide` borrow an immutable pointer to the
@@ -40,12 +39,12 @@ refer to the same value. There are no arithmetic operators.
 Copying performs a deep copy of both BigIntegers. `Numerator` and `Denominator`
 return independent owning value copies, rather than pointers into the Rational.
 They may allocate and throw. Moving uses ordinary ownership transfer. Borrowed
-operand pointers must stay valid; do not move or destroy their owners during calls.
+operand pointers must stay valid. Do not move or destroy their owners during calls.
 
 `Equals`, `CompareTo`, and `GetHashCode` use canonical numeric value. Equivalent
-fractions compare equal and hash equally. Comparison uses exact cross-products;
-arithmetic likewise uses straightforward BigInteger products before GCD reduction.
-Intermediate values can be larger than the result; ordinary BigInteger size and
+fractions compare equal and hash equally. Comparison uses exact cross-products.
+Arithmetic likewise uses straightforward BigInteger products before GCD reduction.
+Intermediate values can be larger than the result. Ordinary BigInteger size and
 allocation limits apply.
 Failures clean partial owners, and failed result assignment preserves its old
 destination. Arithmetic methods do not mutate their operands.
@@ -73,13 +72,13 @@ overloads stop at the first NUL and require a readable terminator. Input is
 borrowed for the call. All reads and candidate construction complete before
 replacing the output, so fully readable input in the result's owned storage is
 also supported. No input pointer is retained. The caller must keep the bytes
-valid until parsing returns; no encoding normalization or whitespace trimming
+valid until parsing returns. No encoding normalization or whitespace trimming
 is performed.
 
 Formatting writes the integer numerator when the denominator is `1`, otherwise
 `numerator/denominator`, with decimal BigInteger spelling. It adds no whitespace,
 newline, terminator, or flush. The existing generic `ToString()` extension returns
-an owning String for a named Rational; it borrows the receiver. Writer failures
+an owning String for a named Rational. It borrows the receiver. Writer failures
 propagate and may leave a prefix in the sink without altering the Rational.
 
 For explicit source selection include `Numerics/Rational.gf`, BigInteger's existing

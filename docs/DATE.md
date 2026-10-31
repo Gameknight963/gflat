@@ -1,11 +1,10 @@
 # Calendar dates
 
 `Standard::Time::Date` is an immutable Gregorian calendar value from `0001-01-01` through
-`9999-12-31`. It has no clock, time-of-day, timezone, locale, or OS dependency.
+`9999-12-31`.
 The Gregorian rules apply throughout that range, including before their historical
-adoption. Its single private `int` day number counts days since `0001-01-01`;
-the supported-range bound is a static constant and adds no per-date storage.
-An empty/default construction represents that first day, rather than an invalid date.
+adoption. Its single private `int` day number counts days since `0001-01-01`.
+Default construction represents the first day.
 
 ```csharp
 using Standard::Text;
@@ -23,21 +22,21 @@ the same year/month ranges. Invalid arguments throw `Exception`.
 `DayOfWeek` returns `Standard::Time::DayOfWeek`: `Sunday = 0`, `Monday = 1`, through
 `Saturday = 6`. `DayOfYear` is one-based, from `1` on January 1 through `365`
 (or `366` in a leap year). Both properties are `immutable`, `nothrow`, and
-allocate nothing. These are calendar facts; neither consults a clock or timezone.
+allocate nothing.
 
-`AddDays(int days)` returns a new date; it never mutates the original. It uses a
+`AddDays(int days)` returns a new date. It never mutates the original. It uses a
 64-bit intermediate and throws if the result leaves the supported range, including
 for extreme 32-bit offsets. It does not wrap, clamp, or normalize invalid dates.
 Copying a Date copies its small value without allocating. `IEquatable<Date>`,
 `IComparable<Date>`, and `IHashable` use the day number for equality, chronological
-ordering, and hashing. Hashes are not a serialized representation; use `DayNumber`
+ordering, and hashing. Hashes are not a serialized representation. Use `DayNumber`
 or the documented calendar components when persistence matters.
 
 `AddMonths(int months)` and `AddYears(int years)` perform calendar arithmetic.
 Offsets may be positive, negative, or zero. If the destination month has fewer
 days, the day is clamped to its last day: January 31 plus one month becomes
 February 28 (or 29), and February 29 plus one year becomes February 28.
-Results outside years `1..9999` throw `Exception`; extreme offsets never wrap.
+Results outside years `1..9999` throw `Exception`. Extreme offsets never wrap.
 Both methods preserve the original date and allocate nothing on success.
 
 ```csharp
@@ -56,7 +55,7 @@ from adding a fixed number of days.
 ## ISO week dates
 
 Immutable `IsoWeekYear` and `IsoWeekOfYear` expose ISO week numbering without
-changing the stored Gregorian date. ISO weeks begin on Monday; week 1 contains
+changing the stored Gregorian date. ISO weeks begin on Monday. Week 1 contains
 January 4, equivalently the year's first Thursday. Dates near New Year can
 belong to an adjacent ISO year: `2021-01-01` is week 53 of ISO year 2020.
 Both properties are `nothrow` and allocate nothing. Default Date is Gregorian
@@ -100,11 +99,11 @@ bytes unchanged. Zero capacity does not access output. Keep the `written` locati
 disjoint from both the output buffer and receiver storage, and supply writable
 storage for the stated capacity. Output may overlap the receiver when backed by
 enough writable bytes: all calendar components are captured before output writes.
-A successful overlapping write replaces those receiver bytes with text; it does
+A successful overlapping write replaces those receiver bytes with text. It does
 not preserve the date object stored there.
 
 `IFormattable.Format(writer)` sends that same ten-byte representation in one
-counted write using stack storage; it does not allocate a String or flush/close the
+counted write using stack storage. It does not allocate a String or flush/close the
 writer. Writer failures propagate and may already have produced partial output.
 Ordinary string interpolation uses this interface, so `s$"{date}"` works without
 `ToString()` or a String dependency inside Date. Creating the interpolated String
@@ -120,7 +119,7 @@ Failure returns false and resets `result` to the default date, `0001-01-01`.
 When `count != 10`, input is not read, including at zero length.
 
 `Date::TryParse(cString, &result)` accepts the same format terminated by NUL.
-It examines at most eleven bytes; bytes after the first NUL are outside the
+It examines at most eleven bytes. Bytes after the first NUL are outside the
 C string. A counted input includes any embedded NUL and therefore rejects it.
 Supply readable input and a writable, properly aligned `Date*` result. Result
 storage may overlap input: all needed input is read before the output is committed.

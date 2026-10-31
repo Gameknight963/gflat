@@ -2,9 +2,9 @@ using Standard::Text;
 namespace Standard::Json;
 
 /// Validates and quotes or unquotes counted UTF-8 using caller buffers, owning no storage.
-/// Counts and capacities are bytes; output is counted and has no added zero terminator.
-/// Do not modify input through other aliases during calls; scalar output refs must not overlap either byte buffer.
-/// Quoting requires disjoint buffers; unquoting also permits the exact same starting address.
+/// Counts and capacities are bytes. Output is counted and has no added zero terminator.
+/// Do not modify input through other aliases during calls. Scalar output refs must not overlap either byte buffer.
+/// Quoting requires disjoint buffers. Unquoting also permits the exact same starting address.
 public static class JsonString
 {
     private static nuint EscapedLength(byte value) nothrow
@@ -17,7 +17,7 @@ public static class JsonString
     }
 
     /// Validates strict UTF-8 and returns the exact quoted byte count, including both quotes.
-    /// Embedded zeros are escaped data; empty input requires two quote bytes.
+    /// Embedded zeros are escaped data. Empty input requires two quote bytes.
     /// Invalid UTF-8 or size overflow returns false and sets needed to zero.
     public static bool TryGetQuotedLength(readonly(char)* input, nuint length, ref nuint needed) nothrow
     {
@@ -35,7 +35,7 @@ public static class JsonString
     }
 
     /// Writes one complete quoted JSON string, including its quotes and no zero terminator.
-    /// Full validation and capacity preflight precede writes; false leaves output unchanged and written zero.
+    /// Full validation and capacity preflight precede writes. False leaves output unchanged and written zero.
     /// Requires disjoint byte buffers and scalar output refs disjoint from both.
     public static bool TryQuote(readonly(char)* input, nuint length,
         char* output, nuint capacity, ref nuint written) nothrow
@@ -78,8 +78,8 @@ public static class JsonString
     }
 
     /// Validates one complete quoted literal, without surrounding whitespace or trailing data.
-    /// Reports decoded UTF-8 bytes; invalid syntax or UTF-8 returns false and length zero.
-    /// Validates escapes and paired surrogates; an escaped zero contributes one decoded byte.
+    /// Reports decoded UTF-8 bytes. Invalid syntax or UTF-8 returns false and length zero.
+    /// Validates escapes and paired surrogates. An escaped zero contributes one decoded byte.
     public static bool TryGetUnquotedLength(readonly(char)* input, nuint count, ref nuint length) nothrow
     {
         length = 0;
@@ -100,10 +100,10 @@ public static class JsonString
     }
 
     /// Decodes one complete quoted literal into counted UTF-8, with no added terminator.
-    /// Validates the full input and capacity first; false leaves output bytes unchanged and written zero.
-    /// Supports disjoint buffers or the exact same starting address; other overlap is unsupported.
+    /// Validates the full input and capacity first. False leaves output bytes unchanged and written zero.
+    /// Supports disjoint buffers or the exact same starting address. Other overlap is unsupported.
     /// An empty quoted literal succeeds with written zero and needs no output capacity.
-    /// Scalar output refs must not overlap either byte buffer; do not modify input through other aliases while decoding.
+    /// Scalar output refs must not overlap either byte buffer. Do not modify input through other aliases while decoding.
     public static bool TryUnquote(readonly(char)* input, nuint count,
         char* output, nuint capacity, ref nuint written) nothrow
     {
@@ -125,7 +125,7 @@ public static class JsonString
     }
 
     /// Compares decoded quoted JSON text with counted UTF-8, without allocation or writes.
-    /// Uses exact text including embedded zeros; the two input regions may overlap.
+    /// Uses exact text including embedded zeros. The two input regions may overlap.
     /// False may short-circuit before examining a suffix, so this is not a validation API.
     public static bool ValueTextEquals(readonly(char)* input, nuint count,
         readonly(char)* text, nuint length) nothrow

@@ -28,13 +28,13 @@ writer.Complete();
 `JsonWriter(destination, bool indented = false)` keeps compact output as the
 default. Pass `true` to emit two-space indentation and LF newlines to the destination.
 Array items and object properties start on their own indented lines. Nonempty
-containers put their closing delimiter on a line at their parent's depth; empty
+containers put their closing delimiter on a line at their parent's depth. Empty
 `[]` and `{}` remain inline. Indented properties use one space after the colon.
 Root scalar values receive no extra whitespace, and no final newline is appended.
 There are no locale, custom indentation, or newline options. Indentation writes
 directly to the destination without buffering text or allocating extra storage.
 Destination behavior still applies: a console in host text mode can translate
-line endings; a binary File preserves the emitted LF bytes.
+line endings. A binary File preserves the emitted LF bytes.
 
 ## Operations
 
@@ -46,7 +46,7 @@ line endings; a binary File preserves the emitted LF bytes.
 - `WriteString(text)` writes a null-terminated string. `WriteString(data, length)`
   writes counted text, retaining embedded NULs through JSON escapes. Both names
   and values require strict UTF-8 and use `JsonString`'s escape policy.
-- `WriteBoolean(value)` and `WriteNull()` write their JSON literals.
+- `WriteBoolean(value)` and `WriteNull()` write their JSON literals
 - `WriteNumber(value)` supports `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`,
   `long`, `ulong`, `nint`, `nuint`, and signed 128-bit `extralong`. It uses invariant
   integer formatting in a fixed local buffer (40 bytes for `extralong`, 21 for
@@ -62,9 +62,9 @@ line endings; a binary File preserves the emitted LF bytes.
   container is closed. It emits no bytes and can be called repeatedly. Calling
   it too early does not prevent supplying a missing value or closing delimiter.
 
-Duplicate property names are allowed; no key set or DOM is constructed. Nesting
+Duplicate property names are allowed. No key set or DOM is constructed. Nesting
 is iterative with a growing `Vector<byte>`, rather than recursive or a fixed
-large stack buffer. Only nesting state is buffered; document bytes are forwarded
+large stack buffer. Only nesting state is buffered. Document bytes are forwarded
 to the destination as each operation runs.
 
 ## Failure and ownership
@@ -78,7 +78,7 @@ unchanged. Correct the invalid operation or allocation condition and retry.
 If the destination's `Write` throws, that original exception propagates. Some
 bytes, including a comma or part of an escaped string, may already have been
 written. The JSON writer then rejects every further write and `Complete()` with
-`JsonWriteException`; it cannot roll back external output. Construct a new writer
+`JsonWriteException`. It cannot roll back external output. Construct a new writer
 for another document or destination. There is no reset, automatic completion,
 or implicit flush. Earlier successful output remains after any later failure.
 This also applies if writing indentation, a newline, or the space after a colon
@@ -91,7 +91,7 @@ buffer which the destination may reallocate or modify while writing. The
 `ITextWriter` interface cannot establish arbitrary aliasing or lifetime. Writer
 callbacks must not move or destroy the JSON writer or its borrowed input.
 
-Moving a `JsonWriter` transfers its nesting state; implicit copying is rejected
+Moving a `JsonWriter` transfers its nesting state. Implicit copying is rejected
 because its state owns storage. Moving the destination while it is borrowed is
 also invalid. Call the destination's own flush operation explicitly if needed.
 

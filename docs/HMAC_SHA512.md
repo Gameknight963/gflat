@@ -24,15 +24,15 @@ int main()
 Construction requires an explicit counted key. An empty key uses count zero and
 reads no key bytes. Keys longer than SHA512's 128-byte block are first hashed to
 64 bytes, then zero-padded to the block size. Shorter keys are copied and padded
-directly. The constructor retains no input pointer; later changes or destruction
+directly. The constructor retains no input pointer. Later changes or destruction
 of key storage do not affect the initialized value.
 
 `TryAppend(data, count)` consumes counted bytes including NUL and high bytes.
 Chunk boundaries do not change the result, and consumed input can be reused.
 A zero append reads no input. `GetHash()` is immutable and finalizes a snapshot,
-returning an independent `byte[64]` value; repeated calls agree, and later appends
-continue the original message. Copying duplicates the complete keyed state;
-copies can continue with different suffixes. Moving transfers the ordinary value.
+returning an independent `byte[64]` value. Repeated calls agree, and later appends
+continue the original message. Copying duplicates the complete keyed state.
+Copies can continue with different suffixes. Moving transfers the ordinary value.
 `Reset()` starts an empty message with the original key, without reading key
 storage again.
 
@@ -56,11 +56,11 @@ or automatic protocol framing. It has no truncation or caller-output-buffer API.
 Tests compare all seven [RFC 4231 vectors](https://www.rfc-editor.org/rfc/rfc4231.html#section-4)
 and independent .NET HMACSHA512 results, including long keys, binary inputs,
 unaligned storage, chunking and independent snapshots. RFC case 5 specifies only
-a 128-bit prefix; tests verify that prefix and compare the full result to .NET.
-Seeded private-counter fixtures check overflow preflight, not actual huge messages.
-The shared freestanding utility test is configured for O0/O2 Windows/Linux x64;
-native helper requirements depend on the inspected target and backend.
+a 128-bit prefix. Tests verify that prefix and compare the full result to .NET.
+Seeded private-counter fixtures check overflow preflight.
+The shared freestanding utility test is configured for O0/O2 Windows/Linux x64.
+Native helper requirements depend on the inspected target and backend.
 
 Explicit source selection needs `core/Hashing/HMACSHA512.gf`,
-`core/Hashing/SHA512.gf` and `core/Numerics/BitOperations.gf`; the core has no
+`core/Hashing/SHA512.gf` and `core/Numerics/BitOperations.gf`. The core has no
 Exception, allocator, GC, libc or native-crypto dependency at source level.

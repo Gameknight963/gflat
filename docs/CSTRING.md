@@ -1,8 +1,8 @@
 # Borrowed C strings
 
-`Standard/core/Text/CString.gf` provides standalone `Standard::Text::CString` helpers for raw
-null-terminated strings. Its source has no String, Span, allocation, libc, or
-exception-runtime calls. Every operation is `nothrow`.
+`Standard::Text::CString` provides allocation-free helpers for null-terminated
+byte strings. Every operation is `nothrow`. For selective builds, include
+`core/Text/CString.gf`.
 
 Native optimization can introduce a libc call even when the source contains
 none: LLVM recognizes the unbounded length scan as `strlen`. A native build
@@ -10,7 +10,7 @@ without libc therefore also needs `CompilationOptions.NoBuiltins = true` to
 disable introducing such library calls. The
 [freestanding executable test](FREESTANDING_CORE.md) verifies the scan/comparison helpers at
 O0 and O2 with that policy. Explicit memory intrinsics and other platform ABI helpers
-have separate lowering rules; source independence alone is not a proof that a
+have separate lowering rules. Source independence alone is not a proof that a
 final binary has no runtime imports.
 
 ```csharp
@@ -23,9 +23,8 @@ bool suffix = Standard::Text::CString::EndsWith("hello", "llo");
 bool empty = Standard::Text::CString::IsNullOrEmpty(null);
 ```
 
-Input parameters are borrowed `readonly(char)*` pointers; `IsNullOrEmpty` accepts
-`readonly(char)*?`. These helpers neither
-own nor retain them, and do not free their bytes. `TryCopy` and `TryAppend` write
+Input parameters borrow `readonly(char)*` pointers for the duration of the call.
+`IsNullOrEmpty` accepts `readonly(char)*?`. `TryCopy` and `TryAppend` write
 only to their explicit destination buffers. The caller keeps
 each region alive for the duration of the call.
 
@@ -68,8 +67,8 @@ int main()
 ```
 
 The same calls accept borrowed command arguments such as `argv[1]` after checking
-`argc`. The offsets and derived pointers borrow the original storage; no string
-is copied or allocated. `IndexOf` stops at its first match or terminator;
+`argc`. The offsets and derived pointers borrow the original storage. No string
+is copied or allocated. `IndexOf` stops at its first match or terminator.
 `LastIndexOf` scans to the terminator while retaining the latest match. Inputs
 remain nonnullable and must have a readable terminator.
 
@@ -94,8 +93,8 @@ parameters remain nonnullable under the normal type rules.
 
 The scalar output is written only after the scan completes. It may overlap the
 input when it is valid, naturally aligned `nuint` storage. That final store can
-overwrite bytes in the input region, including on failure when zero is stored;
-the method does not promise to preserve bytes overlapping its explicit output.
+overwrite bytes in the input region, including on failure when zero is stored.
+The method does not promise to preserve bytes overlapping its explicit output.
 
 ## Bounded copy
 
@@ -108,20 +107,19 @@ bool copied = Standard::Text::CString::TryCopy("hello", output, 16);
 `TryCopy(text, output, capacity)` copies through the first null, including that
 terminator. Capacity includes the terminator, so an empty string needs one byte.
 It scans at most `capacity` input bytes using `TryGetLength` before writing.
-If no terminator fits, it returns false without changing any output byte;
-capacity zero returns false without reading or writing either buffer.
+If no terminator fits, it returns false without changing any output byte.
+Capacity zero returns false without reading or writing either buffer.
 
 On success, exactly the string bytes and terminator are copied. Bytes beyond
 the copied terminator remain unchanged. Input and output may overlap in either
-direction or have the same address; copying follows `memmove` order. Embedded
+direction or have the same address. Copying follows `memmove` order. Embedded
 nulls end the input, so subsequent bytes are not part of the copy. Arbitrary
 nonzero byte values are preserved without encoding validation.
 
 Input must be readable through its first terminator, or for `capacity` bytes if
 there is no terminator in that range. Output must designate writable storage for
-the stated capacity. Keep both regions stable during validation and copying;
-the method retains no pointer. There is no allocation, exception, `strcpy`, or
-mandatory additional Standard source. The native-optimizer caveats above still apply.
+the stated capacity. Keep both regions stable during validation and copying.
+The method retains no pointer. The native-optimizer caveats above apply.
 
 ## Bounded append
 
@@ -150,5 +148,5 @@ itself or appending one of its suffixes is supported. The input must be readable
 through its first terminator, or for the remaining capacity if no terminator is
 found. Output must be readable and writable for the full capacity. Keep both
 regions stable during the call. Like `TryCopy`, this operation allocates nothing,
-is `nothrow`, and uses no additional Standard source; the optimizer caveats above
+is `nothrow`, and uses no additional Standard source. The optimizer caveats above
 remain applicable.

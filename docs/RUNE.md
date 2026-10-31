@@ -2,7 +2,7 @@
 
 `Rune` stores one validated Unicode scalar in a `uint`. Its default value is
 U+0000. `new Rune(value)` accepts U+0000 through U+10FFFF except the surrogate
-range U+D800 through U+DFFF; invalid input throws `Exception` with the message
+range U+D800 through U+DFFF. Invalid input throws `Exception` with the message
 `Invalid Unicode scalar value`.
 
 `Value` returns the numeric scalar. `IsAscii` includes U+0000 through U+007F.
@@ -29,11 +29,11 @@ int main()
 It uses four stack bytes and propagates writer failures. Interpolation emits
 that encoding rather than a decimal code-point number. `ToString()` returns an
 independent owning UTF-8 `String`, retaining U+0000 as a byte with length one.
-Counted output preserves this byte; a C-string consumer sees a terminator.
+Counted output preserves this byte. A C-string consumer sees a terminator.
 
 Equality compares scalar values, ordering follows numeric scalar order, and
 equal values have equal hashes. This order is unrelated to linguistic collation.
-`Rune` owns no allocation; string conversion and interpolation use their normal
+`Rune` owns no allocation. String conversion and interpolation use their normal
 owning `String` allocation behavior.
 
 Existing `Utf8Scalars` and `Utf16Scalars` continue yielding `uint`. Construct a
@@ -42,7 +42,6 @@ Existing `Utf8Scalars` and `Utf16Scalars` continue yielding `uint`. Construct a
 current APIs, and `Utf8::TryEncode(rune.Value, ...)` remains available.
 
 A scalar is not necessarily a displayed character or grapheme cluster.
-`Rune` adds no Unicode category tables, case conversion, normalization, display
-width, or cultural rules. Selective source users include `Text/Rune.gf`, `Text/utf8.gf`,
+Selective source users include `Text/Rune.gf`, `Text/utf8.gf`,
 `Text/utf16.gf`, equality/order/hash and text contracts, `Hashing/primitive_hashing.gf`, and `String`
 dependencies for its owning conversion contract.

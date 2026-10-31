@@ -19,14 +19,10 @@ These are bit reinterpretations, rather than numeric casts. For example,
 converting `1.0f` to its bits produces `0x3f800000`, whereas `(uint)1.0f`
 produces the integer one. The functions preserve signed zero, subnormals,
 infinities, and quiet or signaling NaN payloads. They perform no floating-point
-arithmetic; later arithmetic on the resulting value can change a NaN's bits.
+arithmetic. Later arithmetic on the resulting value can change a NaN's bits.
 
-Every function is `nothrow`, allocates nothing, and has no other Standard dependency.
-Include `core/Binary/BitConverter.gf` independently. It is separate from
-`BinaryPrimitives.gf`, which can serve integer-only programs without introducing
-floating-point ABI requirements. On Windows, floating-point code can still need
-the toolchain's `_fltused` marker; lack of Standard dependencies does not remove
-platform ABI requirements.
+Every function is allocation-free and `nothrow`. For selective builds, include
+`core/Binary/BitConverter.gf`. On Windows, floating-point code can require the
+toolchain's `_fltused` marker. See [freestanding startup](FREESTANDING_CORE.md#windows-floating-point-marker).
 
-The returned integers are not serialized byte arrays. Use explicit byte-order
-operations when writing their bits into files or packets.
+Use explicit byte-order operations when writing the returned bits into files or packets.

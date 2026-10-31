@@ -6,11 +6,39 @@ Build and run from the repository root:
 gflat build examples/zip-verify/zip-verify.gfproj --run -- package.zip
 ```
 
-The command reads one archive and verifies the entries referenced by its central directory. It checks stored bytes or decodes raw DEFLATE, then compares the complete uncompressed byte count and IEEE CRC-32 with the directory metadata. It prints only `Verified N entries` after every entry passes. Entry names and payload bytes are never printed, extracted, executed, or used as filesystem paths.
+The command verifies entries referenced by an archive's central directory. It checks
+stored bytes or decodes raw DEFLATE, then compares the uncompressed byte count and IEEE
+CRC-32 with the directory metadata. After every entry passes, it prints `Verified N
+entries`.
 
-Supported input is the classic single-disk ZIP layout with methods 0 (stored) and 8 (DEFLATE). Local headers must agree with central versions, flags, methods, timestamps and counted filename bytes. With general-purpose bit 3 clear, local CRC and sizes must also match. With bit 3 set, local CRC/sizes must be zero and the following classic data descriptor must match the central values. Both descriptors with and without the optional signature are supported. The central sizes bound the payload; the verifier does not scan compressed bytes looking for a descriptor signature.
+## Supported input
 
-For supported methods 0 and 8, zero compressed bytes, zero uncompressed bytes and CRC 0 are accepted as the ZIP container's no-data empty-file case described by APPNOTE section 4.3.8. This does not change the raw DEFLATE API, where empty input means `NeedInput`. As a common reader tolerance, a complete explicitly compressed empty stream such as `03 00` is accepted too. Any nonempty method-8 payload is decoded and must consume exactly its compressed slice, produce exactly the declared count and match the CRC. Zero compressed bytes with a nonzero output count or CRC fails.
+The tool accepts classic single-disk ZIP archives with methods 0 (stored) and 8
+(DEFLATE). Local headers must match central versions, flags, methods, timestamps, and
+counted filename bytes.
+
+- With general-purpose bit 3 clear, local CRC and sizes must match
+- With bit 3 set, local CRC and sizes must be zero, followed by a matching
+  classic data descriptor. The descriptor's signature is optional
+- Central sizes bound each payload and locate its descriptor
+- An empty file may have zero compressed bytes, zero uncompressed bytes, and CRC 0
+- A compressed empty stream such as `03 00` is also accepted
+- Every nonempty DEFLATE payload must consume its exact compressed slice,
+  produce the declared byte count, and match the CRC
+
+Unsupported input:
+
+- ZIP64 sentinels or extra-field ID 1
+- Multiple disks, encryption, or unsupported flag bits
+- Methods other than 0/8 or extraction versions above 2.0
+- Compressed or encrypted directories, digital signatures, or trailing bytes
+  after the archive comment
+- Self-extracting offset adjustments
+
+Extra fields must contain bounded ID/length/value sequences. Other extra-field contents
+remain opaque. Filename bytes are used for header comparison only.
+
+## Limits
 
 The following byte-count limits apply before payload allocation or decoding:
 
@@ -22,14 +50,31 @@ The following byte-count limits apply before payload allocation or decoding:
 | Sum of declared compressed data | 128 MiB |
 | Shared candidate-directory/local-metadata scan budget | 128 MiB |
 
-All entry references are charged, including duplicates or overlapping references. The sum checks use remaining-budget subtraction. Empty-output compressed data still consumes the compressed-work budget. The scan budget charges each plausible EOCD candidate's directory size before walking it, plus each checked local header/name/extra extent. Exhaustion is an error, including when a later archive-comment candidate consumes the budget before an earlier candidate could be tried. Fixed header probes and entry counts are also bounded by the classic format. These are byte/work limits, not a deadline or a total process-memory guarantee.
+All entry references count toward these limits, including duplicates and overlapping
+references. Empty-output compressed data counts toward the compressed-work budget. The
+scan budget includes each candidate's directory size and checked local header, filename,
+and extra fields. Exhaustion is an error, even when a later comment candidate consumes
+the budget before an earlier candidate can be tried.
 
-The archive is held in one owning byte vector, whose storage remains unchanged while readers borrow it. At most one entry's decoded output is held at a time. Vector growth and normal runtime state have their own overhead; the limits describe archive and decoded byte counts.
+The archive occupies one owning byte vector, with at most one entry's decoded output
+held at a time. Memory use also includes spare capacity and runtime state.
 
-ZIP64 sentinels or extra-field ID 1, nonzero disk numbers, encryption, unsupported flag bits, methods other than 0/8, extraction versions above 2.0, compressed/encrypted directories, digital signatures and trailing bytes after the archive comment are unsupported. Extra fields must be structurally bounded ID/length/value sequences; non-ZIP64 contents are otherwise skipped. UTF-8 flags and attributes do not cause filename decoding or path interpretation. There is no SFX offset adjustment, dictionary support, interval/alias canonicalization or inspection of unreferenced bytes. Checksum verification describes the referenced contents and does not authenticate an archive.
+## Directory selection
 
-The EOCD search accepts a candidate only when its comment extent reaches EOF and its bounded central walk contains exactly the declared entries. An invalid candidate in a comment is skipped while the budget permits. A comment containing another fully valid directory/EOCD interpretation can select that later interpretation; this command does not claim a unique canonical interpretation.
+The EOCD search accepts a candidate whose comment reaches EOF and whose bounded
+directory contains exactly the declared entries. Invalid candidates in comments are
+skipped while the budget permits. A comment containing another valid directory/EOCD
+interpretation can select that later interpretation.
 
-Exit codes are 0 for completed verification and output, 1 for input/format/limit/allocation/checksum/output failure, and 2 for an incorrect argument count. Validation happens before stdout output, although a later output error can leave a partial summary. Error reporting on stderr is best effort. The input file is opened for reading only.
+## Errors
 
-Format reference: [PKWARE APPNOTE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT), sections 4.3.7, 4.3.9, 4.3.12, 4.3.16 and 4.4.3-4.4.9. This example adds no public standard-library API or native dependency.
+- 0 for completed verification and output
+- 1 for input, format, limit, allocation, checksum, or output failure
+- 2 for an incorrect argument count
+
+Validation finishes before output. A later output error can leave a partial summary.
+Diagnostics go to stderr when writable. The archive is opened for reading.
+
+Format reference: [PKWARE
+APPNOTE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT), sections 4.3.7,
+4.3.9, 4.3.12, 4.3.16, and 4.4.3–4.4.9.

@@ -32,31 +32,31 @@ int main()
 ```
 
 The terminal reads `Current` only for the selected position. In particular,
-`source.Select(project).ElementAt(2)` calls `project` once, for that element;
-an out-of-range index does not call it. An earlier `Where` may read values to
+`source.Select(project).ElementAt(2)` calls `project` once, for that element.
+An out-of-range index does not call it. An earlier `Where` may read values to
 evaluate its predicate normally. This is sequential enumeration, including for
 sources that also support indexing.
 
 Both methods stop immediately after obtaining the selected element. Skipped
 terminal elements do not have their `Current` read. `TryElementAt` also handles
-the largest `nuint` index by decrementing only nonzero remaining indices; a finite
+the largest `nuint` index by decrementing only nonzero remaining indices. A finite
 sequence can be exhausted without index wraparound.
 
 Results follow ordinary value semantics: owning values such as `String` are
 independent copies when read from a borrowed source. Readonly and immutable
 element views retain their qualifications. Pointer results remain borrowed
 addresses. Keep the source's backing storage alive and obey its normal mutation
-rules throughout the call; returning an address does not extend its lifetime.
+rules throughout the call. Returning an address does not extend its lifetime.
 
 Constructed iterators and their owned fields are destroyed before returning or
 propagating an exception. Iterator construction, advancement, element copying,
-and callbacks may throw; their original exceptions propagate.
+and callbacks may throw. Their original exceptions propagate.
 
 `TryElementAt` is potentially throwing, like `TryFirst`. Iterator construction,
 advancement, `Current`, and element-copy failures before assignment preserve the
 previous output value. A successful assignment destroys its old resources
-normally. This follows the existing owning assignment and destructor contracts;
-the method does not catch errors or reinterpret them as an absent index.
+normally. This follows the existing owning assignment and destructor contracts.
+The method does not catch errors or reinterpret them as an absent index.
 
 Projects selecting standard-library sources explicitly need
 `Standard/core/Queries/enumerable_element_at.gf` alongside their query and source

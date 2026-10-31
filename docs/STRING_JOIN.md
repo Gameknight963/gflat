@@ -25,10 +25,10 @@ fields.Add(s"two");
 String line = fields.AsImmutable().Join(", "); // one, two
 ```
 
-The method borrows the source span; its String elements are never
+The method borrows the source span. Its String elements are never
 copied or consumed. Both overloads preserve every byte of every element, including
-embedded zeros and non-UTF-8 bytes. The C-string separator ends at its first zero;
-the counted overload preserves all separator bytes, including zeros.
+embedded zeros and non-UTF-8 bytes. The C-string separator ends at its first zero.
+The counted overload preserves all separator bytes, including zeros.
 
 An empty span returns an empty String. A singleton returns an independent copy of
 its element. Both cases ignore the separator completely: even the C-string
@@ -37,7 +37,7 @@ their positions. An empty result needs no allocation.
 
 The full result length, including separator multiplication and the final null
 terminator requirement, is checked before allocating output storage. Overflow
-throws `Exception`. A nonempty result reserves its exact payload once; allocation
+throws `Exception`. A nonempty result reserves its exact payload once. Allocation
 failure throws `BadAllocException`. Success always returns a terminated String,
 whose `Length` excludes the terminator. Sources and separator remain unchanged
 after either success or failure.

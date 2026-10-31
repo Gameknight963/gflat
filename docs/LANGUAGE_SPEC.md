@@ -1,27 +1,27 @@
 # gflat language reference
 
-Version 0.3, experimental. This document specifies the supported language contract and distinguishes it from future work.
+Version 0.3, experimental. This document describes the supported language.
 
 ## Design charter
 
 gflat combines familiar object-oriented APIs with control over storage and layout.
-`T` is a value, not a choice of stack allocation: it can be a local, an inline
-field, or an element inside a heap-allocated vector. `T*` borrows or manually
-addresses storage; `T^` uses the configured managed allocator. Allocation and
+`T` is a value. It can be a local, an inline field, or an element in a
+heap-allocated vector. `T*` borrows or manually addresses storage.
+`T^` uses the configured managed allocator. Allocation and
 access qualification are separate from the type's methods and interfaces.
 
 Structs retain constructors, methods, properties, interfaces, and destruction while
 providing inline layout. Classes add a vtable and implementation inheritance. Heap
-storage is requested through allocation expressions or library operations; ordinary
-values are not silently boxed. Fixed integer widths and deterministic cleanup of
-owning values remain language guarantees. Readonly views qualify the same types;
-libraries should not need a duplicate container just to expose immutable elements.
+storage is requested through allocation expressions or library operations.
+Fixed integer widths and deterministic cleanup of owning values remain language
+guarantees. Readonly and immutable views qualify
+existing types.
 
-Raw pointers, explicit reinterpretation casts, and extern declarations are the low-level boundary. They do not establish ownership, bounds, or a valid lifetime. `immutable` restricts access through that view; raw-pointer casts can remove it, but managed-reference casts cannot. The language does not claim complete memory safety. Foreign declarations are trusted contracts.
+Raw pointers, explicit reinterpretation casts, and extern declarations are the low-level boundary. They do not establish ownership, bounds, or a valid lifetime. `immutable` restricts access through that view. Raw-pointer casts can remove it, but managed-reference casts cannot. Foreign declarations are trusted contracts.
 
 Taking an address does not initialize storage. Locals must be initialized before their address is passed to an ordinary pointer parameter. There is currently no `out` parameter contract. Initialize a value explicitly before handing it to a foreign output function.
 
-The native target is **x86_64-pc-windows-msvc** on Windows and **x86_64-unknown-linux-gnu** on Linux. Linux execution is covered by the Ubuntu x64 CI jobs at O0 and O2. The driver accepts only its host target; cross-compilation and other architectures are not supported. The target triple, pointer width, and LLVM data layout are recorded in `TargetInfo`. Fixed-width types are language rules.
+The native target is **x86_64-pc-windows-msvc** on Windows and **x86_64-unknown-linux-gnu** on Linux. Linux execution is covered by the Ubuntu x64 CI jobs at O0 and O2. The driver accepts only its host target. Cross-compilation and other architectures are not supported. The target triple, pointer width, and LLVM data layout are recorded in `TargetInfo`. Fixed-width types are language rules.
 
 Only a non-generic global `main` is the native entry point. It must return `int`
 and cannot be overloaded. Namespace and type members named `main` are ordinary
@@ -29,38 +29,37 @@ functions, with ordinary name mangling and exception propagation.
 
 ## Lexical and grammar rules
 
-Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. They must not be treated as a security boundary. Comments are `//` to end of line or non-nesting `/* ... */`; unterminated comments are errors.
+Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. Comments are `//` to end of line or non-nesting `/* ... */`. Unterminated comments are errors.
 
 LF, CRLF, and bare CR each end a logical source line. Source text and offsets retain the original line-ending characters.
 
-Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`; doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
+Strings use double quotes and escape sequences. Raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`. Doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
-Character literals hold one 8-bit value; characters above U+00FF are rejected.
+Character literals hold one 8-bit value. Characters above U+00FF are rejected.
 The supported escapes in strings and characters are `\n`, `\r`, `\t`, `\0`,
 `\\`, `\'`, and `\"`. Unsupported escapes are errors. Character arithmetic and
 ordering interpret the stored byte as signed, including during constant evaluation.
 
-There is no built-in `string` type or keyword. Plain `"text"` literals have type
+Plain `"text"` literals have type
 `readonly(char)*`: a non-null pointer to static, null-terminated UTF-8 storage.
-Returning that pointer is valid; writing through it is rejected. Embedded nulls
+Returning that pointer is valid. Writing through it is rejected. Embedded nulls
 remain in the stored bytes, although C-string consumers stop at the first null.
 Within a compilation, immutable literals with identical decoded UTF-8 bytes share
 storage, including literals with different escape spellings. Pointer equality
 compares storage addresses, not C-string contents. Constant evaluation preserves
 byte offsets for pointer arithmetic, indexing, and dereferencing, including the
 terminator. One-past addresses may be formed but cannot be read. Ordering or
-subtracting pointers into different constant strings is not a constant operation;
-reinterpreted pointer views are also unsupported during constant evaluation.
+subtracting pointers into different constant strings is not a constant operation.
+Reinterpreted pointer views are also unsupported during constant evaluation.
 A fixed buffer declaration such as `char[6] buffer = "hello"` copies the bytes and
-terminator into writable inline storage. Larger buffers are zero-padded; smaller
+terminator into writable inline storage. Larger buffers are zero-padded. Smaller
 buffers are rejected. `char[] buffer = "hello"` infers the size including the
 terminator. Literal-to-buffer copying also works for fixed buffer fields, returns,
 and arguments. It does not implicitly convert arbitrary string pointers to buffers.
-The standard library's `s"text"` creates an owning `Standard::Text::String`. There is no built-in
-`c` prefix; it is available for custom literal operators.
+The standard library's `s"text"` creates an owning `Standard::Text::String`. The `c` prefix is available for custom literal operators.
 The identifier `string` is available for user declarations.
 
-The following EBNF describes the core expression/type grammar; declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
+The following EBNF describes the core expression/type grammar. Declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
 
 ```ebnf
 type          = ( qualifiedType | "immutable", "(", type, ")" ), { suffix } ;
@@ -77,15 +76,29 @@ block         = "{", { statement }, "}" ;
 foreach       = "foreach", "(", type, name, "in", expression, ")", body ;
 ```
 
-`>>` closes two nested type argument lists in a type context and remains a shift in expression contexts. All array lengths are parsed as expressions and then checked as constants; they must be positive and fit supported layout sizes.
+`>>` closes two nested type argument lists in a type context and remains a shift in expression contexts. All array lengths are parsed as expressions and then checked as constants. They must be positive and fit supported layout sizes.
 
-Expression precedence, from weakest to strongest: assignment (right associative); `||`; `&&`; bitwise `|`, `^`, `&`; equality; ordering; shifts; addition/subtraction; multiplication/division/remainder; prefix operators/casts; postfix calls, indexing, access, nullability suppression (`!`), and increment/decrement. `&&` and `||` short-circuit at both compile time and runtime.
+Expression precedence, weakest to strongest:
+
+1. Assignment (right associative)
+2. `||`
+3. `&&`
+4. Bitwise `|`, `^`, `&`
+5. Equality
+6. Ordering
+7. Shifts
+8. Addition and subtraction
+9. Multiplication, division, and remainder
+10. Prefix operators and casts
+11. Postfix calls, indexing, access, nullability suppression (`!`), and increment/decrement
+
+`&&` and `||` short-circuit at compile time and runtime.
 
 `::` accesses namespaces, nested types, enum values, and static members. `.` accesses instance members, including through pointers. The legacy arrow spelling is rejected semantically. Function pointers are written with their return type, such as `int(int)*`.
 
 A bare function signature, such as `int(int)` or `void()`, is a type that describes
 a function but has no value storage. It can be used as an alias target or generic
-type argument; applying `*` gives a function pointer. Named namespace functions
+type argument. Applying `*` gives a function pointer. Named namespace functions
 and static methods convert implicitly to matching function pointers. Explicit
 `&Function` remains valid. An overloaded function name requires an expected
 function pointer signature that selects exactly one overload. This conversion
@@ -132,7 +145,7 @@ An empty parameter list is written `()`, not `(void)`.
 Explicit integer narrowing retains low bits and interprets them using the destination signedness. Constant casts use the same widths as runtime lowering. `uint -> int` and `ulong -> long` require explicit casts. `float` conversions round to binary32 during constant evaluation. Non-finite and out-of-range constant float-to-integer conversions are errors.
 
 Explicit `u` and `ul` integer suffixes require values within their unsigned 32-bit
-and 64-bit ranges. Decimal `l` literals use the signed 64-bit range; its minimum
+and 64-bit ranges. Decimal `l` literals use the signed 64-bit range. Its minimum
 value can be written with unary minus. Hexadecimal `l` literals retain their
 64-bit signed bit-pattern interpretation. A wider destination does not waive
 an explicit suffix's bounds. Unsuffixed literals retain contextual widening.
@@ -145,12 +158,12 @@ In integer arithmetic, bitwise operations, and comparisons, a representable inte
 literal can adopt the other operand's `nint` or `nuint` type. For example,
 `length != 0` and `2 * length` do not need casts when `length` is `nuint`.
 This applies on either side and preserves the native type's width and signedness.
-Negative literals cannot adopt `nuint`; signed variables do not implicitly become
+Negative literals cannot adopt `nuint`. Signed variables do not implicitly become
 unsigned. Shift counts remain independent of the left operand's type.
 
-Integer arithmetic without overflow flags wraps at its result width. Division by zero, signed division overflow, out-of-range shift counts, and out-of-range runtime float-to-integer conversions are not defined operations; callers must avoid them. Compile-time evaluation diagnoses operations it cannot evaluate. Wider numeric support and more complete runtime checks remain experimental.
+Integer arithmetic without overflow flags wraps at its result width. Division by zero, signed division overflow, out-of-range shift counts, and out-of-range runtime float-to-integer conversions are not defined operations. Callers must avoid them. Compile-time evaluation diagnoses operations it cannot evaluate. Wider numeric support and more complete runtime checks remain experimental.
 
-Floating arithmetic and comparisons support `float` and `double`; mixed floating
+Floating arithmetic and comparisons support `float` and `double`. Mixed floating
 operands widen to `double`. Literal and intermediate `float` values round to
 binary32 in constant evaluation as at runtime. Negation preserves signed zero.
 Floating division and remainder follow IEEE behavior, including infinities and
@@ -160,7 +173,7 @@ target, floating remainder may require the toolchain's math runtime.
 
 Prefix `~value` complements every bit of an integral value, including `char`,
 native integers, `extralong`, and enums. It preserves the operand's integer width
-and enum identity; small integers are not promoted to `int`. Its result is a fresh
+and enum identity. Small integers are not promoted to `int`. Its result is a fresh
 value without the operand storage's readonly/immutable protection. `bool`, floating
 values, and pointers are not builtin operands. For example, `~(byte)0` is byte 255,
 `~0` is int -1, and `~(nuint)0` is the maximum native unsigned value. Compile-time
@@ -186,13 +199,13 @@ int main()
 
 Enums are distinct integral types, optionally with an underlying type such as `uint`. Conversions between enums and numbers, or between different enum types, require explicit casts, including assignments, arguments, returns, and comparisons. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;` and may be declared in namespaces or local scopes. Alias declarations inside classes or structs, including static and generic types, are not supported and are diagnosed at the declaration.
 
-Enum storage currently supports integer underlying types up to 64 bits; `extralong` enum storage is not yet supported. Each member value, including an automatically incremented value, must fit the selected underlying type. Different member names may share the same numeric value.
+Enum storage currently supports integer underlying types up to 64 bits. `extralong` enum storage is not yet supported. Each member value, including an automatically incremented value, must fit the selected underlying type. Different member names may share the same numeric value.
 
 ## Explicit conversions and representation casts
 
 An ordinary `(Target)value` cast requests a conversion or a supported view. Numeric
-casts convert values. Related class/interface views adjust the existing reference;
-raw `void*` recovery, matching pointer qualification changes, and exact-element
+casts convert values. Related class/interface views adjust the existing reference.
+Raw `void*` recovery, matching pointer qualification changes, and exact-element
 array decay remain ordinary casts. Unrelated pointer views, pointer/integer address
 conversions, and function-pointer signature changes require explicit reinterpretation.
 
@@ -201,8 +214,8 @@ must have equal storage size. Raw pointers and function pointers may be reinterp
 as one another or as pointer-sized integers. Arrays and object values are not bitcast,
 and managed references and fat interface pointers cannot be stripped into raw bits.
 The programmer remains responsible for alignment, valid storage, lifetime, and the
-actual function ABI. A raw address may point to an object containing managed fields;
-reinterpreting the address does not convert or untrack those fields.
+actual function ABI. A raw address may point to an object containing managed fields.
+Reinterpreting the address does not convert or untrack those fields.
 
 ```csharp
 int main() {
@@ -222,10 +235,10 @@ representations, except single-precision NaN payloads, which currently require
 runtime evaluation. Symbolic constant addresses cannot become host-process integers.
 
 A class or struct can declare an explicit conversion operator. Exactly one ordinary
-value parameter supplies the source; the return type supplies the target. One endpoint
+value parameter supplies the source. The return type supplies the target. One endpoint
 must be the containing type. Operators are public static methods, can be `const` or
 `nothrow`, and use ordinary copying, movement, cleanup, and exception propagation.
-Selection matches the source and target exactly; it does not chain user conversions
+Selection matches the source and target exactly. It does not chain user conversions
 or silently insert them into assignments and calls. Built-in conversions cannot be
 replaced. Duplicate or ambiguous source/target pairs are errors.
 
@@ -246,8 +259,8 @@ int main() {
 
 `var name = expression;` infers a local's concrete type from its initializer.
 The initializer is evaluated once and ordinary copy, move, immutable, nullability,
-and destructor rules apply. This does not introduce a dynamic type. `var` is
-contextual in a local declaration; fields, parameters, and return types still
+and destructor rules apply. `var` is
+contextual in a local declaration. Fields, parameters, and return types still
 require explicit types. Missing initializers, bare null, and void expressions
 are rejected.
 
@@ -268,8 +281,7 @@ Specializations are invariant: `IValue<int>` and `IValue<long>` are distinct
 contracts. Member types and properties are checked after substituting arguments.
 Static interfaces support the same type parameters and remain provider contracts.
 Constraints can refer to earlier or later parameters in the same parameter list.
-Generic interface **methods** are still unsupported; this feature concerns
-generic interface types.
+Generic interface methods are unsupported.
 
 ```csharp
 interface IValue<T> { T Read(); }
@@ -282,8 +294,8 @@ int main() {
 }
 ```
 
-`IEnumerable<T, Iterator>` in the library names a concrete iterator return type;
-neither this contract nor generic interfaces generally require heap allocation.
+`IEnumerable<T, Iterator>` in the library names a concrete iterator return type.
+Neither this contract nor generic interfaces generally require heap allocation.
 Ordinary interface pointer calls retain the existing interface representation
 and dispatch rules. Interface references support equality and inequality, but
 not ordered comparisons or pointer arithmetic. A pointer to interface-reference
@@ -321,7 +333,7 @@ interfaces can independently implement the same primitive.
 A plain implementation is available through an interface reference or generic
 constraint. Prefixing the block with `extension implementation` also exposes its
 members through ordinary extension lookup. This opt-in follows namespace visibility
-and extension ambiguity rules; it does not add inheritance to the primitive.
+and extension ambiguity rules. It does not add inheritance to the primitive.
 
 An interface can also be used as an immediate cast view, such as
 `((IHashable)value).GetHashCode()` or `((IHashable)42).GetHashCode()`. The receiver is
@@ -336,7 +348,7 @@ does not inherit the enclosing interface's open type parameters. Generic or
 conditional implementation blocks are unsupported.
 
 Targets are the built-in numeric, boolean, and character value types, including
-pointer-sized integers; an alias to such a type is also accepted. Void, enums,
+pointer-sized integers. An alias to such a type is also accepted. Void, enums,
 classes, structs, pointers, managed references, and function signatures are not
 implementation targets. User-defined classes and structs declare interfaces in
 their own base lists as usual.
@@ -348,22 +360,22 @@ destructors, extra methods, static contracts, or property implementations. `this
 is a pointer to the original primitive storage, with the normal immutable rules.
 
 These methods are available through interface views and the corresponding
-generic constraints. They do not add ordinary primitive members; ordinary
+generic constraints. They do not add ordinary primitive members. Ordinary
 extension methods remain available for direct convenience calls. Constraints
 are scoped to their generic declaration and do not leak into a caller or a
 different generic function. `using` directives do not select implementations.
 
 Primitive storage and arithmetic stay built in and remain usable with
 `NoStdLib`. Implementing an interface adds neither object headers nor heap
-allocation. Interface pointers retain their existing two-word representation;
-constrained calls to a known primitive bind directly to its implementation.
+allocation. Interface pointers retain their existing two-word representation.
+Constrained calls to a known primitive bind directly to its implementation.
 
 ## Optional parameters
 
 Functions, methods, extern declarations, and constructors can declare trailing
 optional parameters: `int Read(int count = 42)`. Required parameters must come
 first. Defaults must be compile-time constants and use the declaring namespace,
-type, and imports; they cannot depend on caller locals or parameter values.
+type, and imports. They cannot depend on caller locals or parameter values.
 The compiler supplies omitted arguments after selecting the declaration, without
 changing its ABI. Function pointers require every argument because their types
 do not carry defaults. Default values appear in editor signatures and hovers.
@@ -378,7 +390,7 @@ selected declaration, even when another implementation runs. An explicit
 base. `base()` and implicit base initialization can use optional arguments.
 
 Defaults do not distinguish overloads. Matching supplied argument types take
-priority; when those are tied, an overload needing no defaults wins. Other ties
+priority. When those are tied, an overload needing no defaults wins. Other ties
 are ambiguous. Defaults are not supported on ref parameters, operators,
 indexers, copy constructors, or lambdas. Optional values cannot require
 nontrivial copying or destruction.
@@ -403,7 +415,7 @@ int main() {
 
 Current and enclosing namespaces and the source file's using directives determine
 which extensions are visible. The receiver evaluates once before the arguments.
-Calling an extension borrows the receiver; it never implicitly copies or consumes
+Calling an extension borrows the receiver. It never implicitly copies or consumes
 it. A temporary remains alive until the call finishes. Raw and managed references
 borrow their pointee, as ordinary instance calls do. Nullable references require
 the usual null check or explicit suppression before calling a member.
@@ -416,31 +428,31 @@ when passing or transferring the receiver as an explicit argument is desired.
 
 Bare `readonly` and `immutable` qualify extension receivers just as they qualify
 ordinary instance methods. Return qualifiers remain independent. Callable
-instance members take priority and retain their normal diagnostics; missing or
+instance members take priority and retain their normal diagnostics. Missing or
 non-callable members allow extension lookup. Applicable overloads use normal
 argument ranking, without separate value-versus-reference receiver tiers.
 
-Receiver type parameters belong to the block; additional method parameters
+Receiver type parameters belong to the block. Additional method parameters
 belong to the method. For example, `extension<T> Box<T>` can contain
-`public U Map<U>(U(T)* selector)`; a call infers T from the Box and may specify
+`public U Map<U>(U(T)* selector)`. A call infers T from the Box and may specify
 only U as `box.Map<long>(selector)`. Constraints and declaration-scope imports
 follow the existing generic rules. Extension declarations add no object metadata
 or dynamic dispatch. They do not add properties, operators, bound method groups,
 or static type calls such as `int.Parse()`.
 
-## Weak defaults and explicit replacements
+## Function overloads
 
-Ordinary free functions, static methods, and concrete instance methods support overloads by parameter type and count. Exact argument types are preferred over implicit conversions; a candidate must be no worse for every argument and better for at least one. Equally applicable candidates are ambiguous, independent of declaration order. Constructor calls use the same ranking. Return types, immutable qualifications, and declaration modifiers cannot distinguish overloads.
+Ordinary free functions, static methods, and concrete instance methods support overloads by parameter type and count. Exact argument types are preferred over implicit conversions. A candidate must be no worse for every argument and better for at least one. Equally applicable candidates are ambiguous, independent of declaration order. Constructor calls use the same ranking. Return types, immutable qualifications, and declaration modifiers cannot distinguish overloads.
 
-Namespace functions cannot be `abstract`; use an `expect` declaration for an implementation supplied through `replace`.
+Namespace functions cannot be `abstract`. Use an `expect` declaration for an implementation supplied through `replace`.
 
 Generic functions may overload one another and ordinary functions. Each candidate
-infers its own type arguments; repeated occurrences of a type parameter must infer
+infers its own type arguments. Repeated occurrences of a type parameter must infer
 the same type. Explicit type arguments select matching generic arities and allow
 the normal argument conversions. Constraints determine applicability, but cannot
 distinguish declarations or break a ranking tie. After argument conversion and
-default-argument ranking, an ordinary candidate wins an otherwise equal tie;
-between generic candidates, a more specific parameter pattern wins, such as `T*`
+default-argument ranking, an ordinary candidate wins an otherwise equal tie.
+Between generic candidates, a more specific parameter pattern wins, such as `T*`
 over `T`. Incomparable patterns remain ambiguous. Losing function bodies are not
 instantiated. Return types, generic parameter names, constraints, and defaults do
 not distinguish otherwise identical declarations.
@@ -450,8 +462,7 @@ Substituting a concrete type does not reveal additional interfaces for overload
 applicability or make that parameter match a concrete-only overload. Member
 overloads on a constrained receiver use the signatures of its declared contract.
 Existing single-target template instantiation and unconstrained member lookup
-continue to validate their requirements against the actual type; this is not a
-requirement that every generic body type-check without specialization.
+validate their requirements against the actual type at specialization.
 
 ```gflat
 int Choose<T>(T value) => 1;
@@ -465,13 +476,15 @@ An ordinary overloaded implementation can satisfy an interface's matching
 signature. A function group can be used with or without `&` when the expected
 function-pointer signature selects one overload unambiguously. A known signature
 can also infer a generic function's type arguments. An unresolved method group or
-target-typed `new()` cannot itself infer an enclosing call's type parameters;
-another argument or explicit type arguments must supply them. Function addresses
-cannot discard const-parameter requirements or a variadic calling convention;
-those forms are rejected until callable types can express them. Lambda parameters
+target-typed `new()` cannot itself infer an enclosing call's type parameters.
+Another argument or explicit type arguments must supply them. Function addresses
+cannot discard const-parameter requirements or a variadic calling convention.
+Those forms are rejected until callable types can express them. Lambda parameters
 cannot be `const` for the same reason.
 
-`weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
+## Weak defaults and explicit replacements
+
+`weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter. Reopened namespace blocks share the same scope.
 
 ```csharp
 namespace Settings {
@@ -488,13 +501,13 @@ Selection happens in the compiler before body checking, const evaluation, hierar
 
 A replacement must match parameter types, return type, generic arity and constraints, accessibility, `static`, `virtual`, `override`, `immutable`, `const`, const parameters, and `nothrow`. Parameter names and generic parameter names may differ. Duplicate defaults, multiple replacements, unmatched replacements, and ordinary definitions attempting to replace a default are errors. Selection happens independently for each overload: replacing one signature leaves other signatures intact, and every expected signature needs an implementation. A function family cannot combine language definitions with an extern declaration.
 
-Free functions and concrete class/struct methods support these modifiers. Static methods use `Type::Method(...)` and have no implicit `this`; instance methods use `value.Method(...)`. Replacement stays within the same containing type: inherited dispatch still uses `override`. Constructors, destructors, operators, abstract methods, and interface declarations cannot be weak or replaced. Partial classes are not implemented.
+Free functions and concrete class/struct methods support these modifiers. Static methods use `Type::Method(...)` and have no implicit `this`. Instance methods use `value.Method(...)`. Replacement stays within the same containing type: inherited dispatch still uses `override`. Constructors, destructors, operators, abstract methods, and interface declarations cannot be weak or replaced. Partial classes are not implemented.
 
 ## Pointers and allocation
 
-`T*` expresses non-null intent; `T*?` permits null. Null and zero constants cannot be explicitly cast to a non-null pointer. Explicit casts to non-null pointer types check their result at runtime and trap on null. This check proves neither bounds nor lifetime. Default construction and foreign contracts must not be assumed to prove complete object validity.
+`T*` expresses non-null intent. `T*?` permits null. Null and zero constants cannot be explicitly cast to a non-null pointer. Explicit casts to non-null pointer types check their result at runtime and trap on null. This check proves neither bounds nor lifetime. Default construction and foreign contracts must not be assumed to prove complete object validity.
 
-`new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `Standard::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object; it does not make aliases safe or permit repeated deletion.
+`new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `Standard::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object. It does not make aliases safe or permit repeated deletion.
 
 `new(...)` infers both the constructed type and allocation kind from its target:
 
@@ -522,21 +535,21 @@ An inferred local such as `var value = new()` has no target and is rejected. Cre
 arguments do not determine an enclosing overload: `Use(new())` is ambiguous when both
 `Use(Widget)` and `Use(Widget*)` are viable. Other arguments may select a unique
 overload, after which its parameter supplies the target. Generic inference does not
-infer a type from `new(...)` alone. Inferred `new*(...)` and `new^(...)` are rejected;
-use `new(...)` or an explicitly typed creation expression.
+infer a type from `new(...)` alone. Inferred `new*(...)` and `new^(...)` are rejected.
+Use `new(...)` or an explicitly typed creation expression.
 
 Primitive scalar types use the same construction forms. Zero arguments produce
-the default value; one argument must be implicitly assignable to the scalar type.
+the default value. One argument must be implicitly assignable to the scalar type.
 For example, `new int(42)` produces an `int`, `new* int(42)` produces an allocated
 `int*`, and `new* int(42) at address` initializes existing integer storage.
 
-Constructors must initialize fields that cannot have a default value on every normally completing path. Field initializers and automatic property assignments count. Reading such a field, exposing `this`, or calling an instance method requires the relevant initialization first. The analysis follows branches, loops, returns, and deferred assignments; it does not infer initialization performed inside arbitrary helper methods. Required array fields must be assigned a complete array value. An implicit parameterless constructor is available only when each field has an initializer or a valid default, and the base can be constructed without arguments.
+Constructors must initialize fields that cannot have a default value on every normally completing path. Field initializers and automatic property assignments count. Reading such a field, exposing `this`, or calling an instance method requires the relevant initialization first. The analysis follows branches, loops, returns, and deferred assignments. It does not infer initialization performed inside arbitrary helper methods. Required array fields must be assigned a complete array value. An implicit parameterless constructor is available only when each field has an initializer or a valid default, and the base can be constructed without arguments.
 
-Constructor declarations follow ordinary member accessibility and default to private. Private constructors are accessible from the declaring type and its enclosing or nested types; protected constructors are accessible from the declaring type and derived classes. Construction checks the selected constructor, including target-typed, pointer, managed, placement, and explicit or implicit base construction. An inaccessible best overload is an error; selection does not fall back to a less specific accessible overload. Synthesized constructors retain their existing availability when no user constructor is declared.
+Constructor declarations follow ordinary member accessibility and default to private. Private constructors are accessible from the declaring type and its enclosing or nested types. Protected constructors are accessible from the declaring type and derived classes. Construction checks the selected constructor, including target-typed, pointer, managed, placement, and explicit or implicit base construction. An inaccessible best overload is an error. Selection does not fall back to a less specific accessible overload. Synthesized constructors retain their existing availability when no user constructor is declared.
 
-Instance constructors cannot be `immutable`, `virtual`, `override`, or `abstract`; copy constructors also cannot be `static`. Destructors cannot be `static`, `const`, `immutable`, `override`, or `abstract`.
+Instance constructors cannot be `immutable`, `virtual`, `override`, or `abstract`. Copy constructors also cannot be `static`. Destructors cannot be `static`, `const`, `immutable`, `override`, or `abstract`.
 
-`default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
+`default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates. Their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
 The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `Standard/libc/Memory/allocation.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public signatures and non-throwing callback behavior:
 
@@ -555,18 +568,18 @@ terminates rather than escaping into callers or runtime cleanup. This is the
 ordinary `nothrow` boundary behavior, not a promise that its body cannot call
 potentially throwing functions.
 
-`Allocate` can return null or throw; it has no `nothrow` requirement. The exception
+`Allocate` can return null or throw. It has no `nothrow` requirement. The exception
 runtime uses these same hooks for payload allocation and release. Its allocation
 callback guard uses the emergency reserve for recursive exception storage rather
 than reentering the same allocator. An exhausted reserve can still terminate.
 
-`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `Standard::BadAllocException` on null before initialization; direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
+`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `Standard::BadAllocException` on null before initialization. Direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`. Hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now. Replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 
-Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
+Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers. Allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
-Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Array values require fixed sizes in every dimension, including parameters, return types, and fields. Spell buffer parameters of unknown length as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
+Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Array values require fixed sizes in every dimension, including parameters, return types, and fields. Spell buffer parameters of unknown length as pointers. Array value conversions preserve dimensions and element representation. Cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
 
-Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including immutable qualifications; implicit numeric return conversions do not change a function's calling convention.
+Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including immutable qualifications. Implicit numeric return conversions do not change a function's calling convention.
 
 ```csharp
 struct Point { public int x; public int y; }
@@ -583,7 +596,7 @@ int main()
 
 ## Readonly and immutable views
 
-Ordinary types remain mutable. `readonly(T)` protects T's immediate storage;
+Ordinary types remain mutable. `readonly(T)` protects T's immediate storage.
 `immutable(T)` also propagates protection through its fields, pointers, managed
 references, and array elements. Neither freezes an object globally: another
 mutable alias can still change it. Neither qualifier establishes a valid lifetime.
@@ -594,8 +607,8 @@ mutable alias can still change it. Neither qualifier establishes a valid lifetim
 | `readonly(int)* p` | A reassignable pointer through which the integer cannot be changed |
 | `readonly(int*) p` | A fixed pointer whose pointed-to integer remains mutable |
 | `immutable(int*) p` | Neither the pointer nor its pointee can be changed through this view |
-| `readonly(Buffer)* p` | Fields cannot be assigned through this view; pointer fields can still reach mutable objects |
-| `immutable(Buffer)* p` | Fields and reachable storage are protected; only immutable receiver methods can be called |
+| `readonly(Buffer)* p` | Fields cannot be assigned through this view. Pointer fields can still reach mutable objects |
+| `immutable(Buffer)* p` | Fields and reachable storage are protected. Only immutable receiver methods can be called |
 
 Bare `readonly` and `immutable` on methods qualify the receiver independently of
 the return type. A readonly method cannot assign its fields or inline array
@@ -604,13 +617,13 @@ cannot modify or expose mutable access to storage reached through the receiver.
 For example, `public immutable readonly(char)* Data()` is an immutable method
 returning a pointer to readonly characters. `public readonly(char)* Data()` has a
 mutable receiver and the same result type. Either method may modify independently
-supplied mutable output parameters; the qualifier is not a purity guarantee.
+supplied mutable output parameters. The qualifier is not a purity guarantee.
 
 Mutable receivers can call mutable, readonly, and immutable methods. Readonly
 receivers can call readonly and immutable methods. Immutable receivers can call
 only immutable methods. Interface and virtual contracts preserve that distinction.
 Adding a restriction to a view is permitted when representation and nested
-qualification allow it; an implicit conversion or borrowed parameter cannot
+qualification allow it. An implicit conversion or borrowed parameter cannot
 discard deep protection to obtain a writable path through a shallow view.
 
 On functions and accessors, both bare modifiers require an instance receiver.
@@ -632,20 +645,20 @@ Fields cannot declare generic parameters or be marked `virtual`, `override`, or 
 Copying a shallow readonly value into independent mutable storage follows the
 ordinary copy rules. Copying an immutable aggregate cannot expose writable
 aliases to its reachable storage. An explicit copy constructor must accept the
-source's qualification; a shallow-only source parameter cannot receive an
+source's qualification. A shallow-only source parameter cannot receive an
 immutable aggregate implicitly. Primitive and enum leaf types have the same effective
 protection under readonly and immutable. Nested pointer conversions must preserve
 qualification at every writable level: `int**` can become `immutable(int*)*`,
 but cannot become `readonly(int)**`.
 
 Aliases and generic arguments preserve qualification. Explicit raw-pointer casts
-may remove either qualification; managed-pointer casts cannot discard protection.
+may remove either qualification. Managed-pointer casts cannot discard protection.
 `const` remains the compile-time constant mechanism.
 
 Declaration modifiers must apply to the declaration itself: types, enums, and
 aliases cannot be declared `const`, bare `readonly`, or bare `immutable`. Use a
 qualified alias target such as `alias View = immutable(Buffer)*;`. Only classes
-and interfaces accept `abstract`; aliases cannot be `static`, and nested type,
+and interfaces accept `abstract`. Aliases cannot be `static`, and nested type,
 enum, or alias declarations cannot be `virtual` or `override`.
 
 The old transitive `readonly(T)` behavior is now spelled `immutable(T)`. For
@@ -661,7 +674,7 @@ its pointer slot and its characters. A C-string parameter normally uses
 pointee `T` and collector provider `C`. `T^` abbreviates `managed<T, GC>`, where
 `GC` is a global type alias selected once for the whole compilation. File order
 and `using` directives do not select a different collector. Type-only queries can
-describe the default-reference shape without a provider; creating and tracking
+describe the default-reference shape without a provider. Creating and tracking
 live references requires a concrete binding. `T^?` additionally permits null.
 
 The provider implements `Standard::IGarbageCollector`, a static interface declared in
@@ -670,21 +683,21 @@ alignment)` returning non-null `void*`, `ReferenceAdded(void* slot) nothrow`,
 `ReferenceRemoved(void* slot) nothrow`, and `Collect()` returning `nuint`.
 The first three operations are the compiler integration contract. `Collect` is
 an ordinary library operation: the compiler never inserts collection requests.
-Provider calls are direct; references do not carry a collector tag or dispatch
+Provider calls are direct. References do not carry a collector tag or dispatch
 pointer. Existing interface references retain their object-and-interface-table
 representation.
 
-`new^ T(...)` creates storage using the global provider; `new^ T(...) with C`
+`new^ T(...)` creates storage using the global provider. `new^ T(...) with C`
 selects an explicit provider and returns `managed<T, C>`. Structs, classes, and
 primitive scalars are supported. Scalar creation accepts zero arguments (zero
 initialization) or one initial value. Construction runs with a live temporary
-managed reference; failure retires that reference through normal exception
+managed reference. Failure retires that reference through normal exception
 cleanup. References from different collectors cannot be implicitly converted or
 stored in each other's managed object graphs.
 
 `Standard/libc/GC.gf`, included by projects referencing Standard, declares the default
 `public weak alias GC : Standard::IGarbageCollector = Standard::TracingCollector;`.
-The implementation lives in `Standard/libc/TracingCollector.gf`; direct source builds
+The implementation lives in `Standard/libc/TracingCollector.gf`. Direct source builds
 using this default alias must include that file too.
 Applications select another provider with `replace alias GC = MyCollector;`.
 The constraint validates the selected implementation and limits member access
@@ -696,7 +709,7 @@ and zeroes storage before construction. It collects and retries once after an
 allocation failure, then throws `Standard::BadAllocException`. A returned native
 address that cannot satisfy the requested alignment is freed and rejected.
 Zero-sized managed objects receive one byte of storage. Allocation and collection
-policy belong to the library. There are no legacy `__gflat_gc_*` allocation hooks.
+policy belong to the library.
 Collector bookkeeping also uses `Memory::Allocate` and `Memory::Free`. Failure to
 allocate its process state or root-slot records terminates: the non-throwing
 reference-notification contract cannot report those failures as exceptions.
@@ -707,7 +720,7 @@ constructed, destructor-free allocation to that collector. This is an unsafe
 operation: the caller must own a complete allocation from the matching `Memory`
 allocator, not stack storage, an interior address, or foreign-allocator storage.
 There is no compiler-maintained registry of native allocations. The library
-rejects duplicates and overlap with allocations it already owns; it cannot prove
+rejects duplicates and overlap with allocations it already owns. It cannot prove
 that an arbitrary raw pointer satisfies the precondition. Failed adoption retains
 existing ownership. After successful adoption, raw aliases must not destroy or
 free the object. Adoption does not collect before establishing the returned root.
@@ -716,7 +729,7 @@ The bundled provider is single-threaded and non-moving. `GC::Collect()` explicit
 collects unreachable allocations and returns the number reclaimed. The default
 allocation method also collects when bytes allocated/adopted since the previous
 collection reach `Standard::TracingCollector::CollectionThreshold()`. This ordinary
-weak static method defaults to 65536 bytes; a qualified replacement can return
+weak static method defaults to 65536 bytes. A qualified replacement can return
 another budget, or zero to disable automatic collection. Merely assigning or
 copying a reference does not request collection. There is no compiler polling,
 collection at unrelated calls or loop iterations, or finalization.
@@ -730,30 +743,28 @@ results transfer into caller-owned result storage before callee slots retire.
 
 The tracing provider treats native/local slots as roots, including elements in
 native `Vector<T^>` buffers. Slots inside managed allocations are edges followed
-only when their owner is reachable. Ownership is looked up during collection;
-adopting an object changes its fields from roots into edges. Ordinary payload
+only when their owner is reachable. Ownership is looked up during collection.
+Adopting an object changes its fields from roots into edges. Ordinary payload
 bytes are not roots. Native containers must end element lifetimes before freeing
-their storage; `Memory::Allocate` and `Memory::Free` have no hidden GC callbacks.
+their storage. `Memory::Allocate` and `Memory::Free` have no hidden GC callbacks.
 Raw manual freeing of collector-owned storage is invalid and is not guarded by
 compiler interception. Collection removes registrations for reclaimed objects'
 fields before freeing their storage.
 
 All default tracing bookkeeping and collection algorithms are written in gflat.
 Collector state uses ordinary static fields. Private inline LLVM provides thread
-ownership validation and an unaligned pointer load. There is no native collector runtime linked by
-symbol-name inspection. Other providers are ordinary implementations of the same
-static contract; moving collectors, pinning, and thread rendezvous still require
+ownership validation and an unaligned pointer load. Other providers implement the same static contract. moving collectors, pinning, and thread rendezvous still require
 additional compiler support.
 
 Scope exit does not destroy or free a managed pointee. Types with destructors,
 including inherited destructors and inline fields requiring destruction, cannot
 be managed pointees. Managed-reference arithmetic and `delete` on managed views
 are rejected. Explicit raw-pointer/managed-reference casts are unsafe adapter
-operations; they do not register ownership or validate the allocation. Casting
+operations. They do not register ownership or validate the allocation. Casting
 away managed immutable is rejected. Method receivers can expose borrowed interior
-pointers under current non-moving rules; these borrows are not lifetime checked.
+pointers under current non-moving rules. These borrows are not lifetime checked.
 Managed class upcasts and interface views preserve the collector identity.
-`T^*` denotes native storage containing managed references; its storage lifetime
+`T^*` denotes native storage containing managed references. Its storage lifetime
 remains the caller's responsibility.
 
 Foreign declarations cannot take or return managed references or aggregates
@@ -765,9 +776,9 @@ function pointers and compile-time managed allocation remain unsupported.
 
 ### Array literals
 
-`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right. A local or field declaration supplies its declared element type to the literal, and each element follows ordinary scalar assignment rules. Nested literals use the corresponding declared child type and must match its dimensions. Without a declared element target, literal elements must have the same resolved type, including nested dimensions; numeric overloads do not supply a common element type. This does not permit converting an existing array to another numeric element type.
+`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right. A local or field declaration supplies its declared element type to the literal, and each element follows ordinary scalar assignment rules. Nested literals use the corresponding declared child type and must match its dimensions. Without a declared element target, literal elements must have the same resolved type, including nested dimensions. Numeric overloads do not supply a common element type. This does not permit converting an existing array to another numeric element type.
 
-A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected. A local or field declaration can infer its outer array bound from an array literal or a string literal. Local declarations can also infer that bound from another fixed-size array value. Nested bounds must be explicit. Incomplete array types can still be described by `typeof` or named behind opaque pointers; reading, constructing, or measuring such a value, or using its size for pointer arithmetic, requires a complete shape.
+A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected. A local or field declaration can infer its outer array bound from an array literal or a string literal. Local declarations can also infer that bound from another fixed-size array value. Nested bounds must be explicit. Incomplete array types can still be described by `typeof` or named behind opaque pointers. Reading, constructing, or measuring such a value, or using its size for pointer arithmetic, requires a complete shape.
 
 ```csharp
 int main()
@@ -783,7 +794,7 @@ int main()
 }
 ```
 
-Literals can be indexed, returned, used in `foreach`, and passed to pointer parameters. Constant arrays support constant elements. A pointer initialized directly from a literal refers to temporary stack storage in the enclosing scope; pointers must not outlive that storage. Pointer arguments to calls remain valid for that call.
+Literals can be indexed, returned, used in `foreach`, and passed to pointer parameters. Constant arrays support constant elements. A pointer initialized directly from a literal refers to temporary stack storage in the enclosing scope. Pointers must not outlive that storage. Pointer arguments to calls remain valid for that call.
 
 Destructor-bearing elements must be fresh values, explicit moves, or values supporting copying. If evaluating an element throws, previously initialized elements are destroyed in reverse order. Once initialization succeeds, the array owns all elements and uses normal array cleanup. Constant arrays cannot contain destructor-bearing elements.
 
@@ -791,9 +802,9 @@ Destructor-bearing elements must be fresh values, explicit moves, or values supp
 
 Local scalar reads require definite assignment. Struct fields can be initialized individually. An assignment on only a skipped logical operand or only inside a potentially empty loop does not initialize a value after that operation. Return values are evaluated before deferred actions.
 
-Assignments evaluate the destination receiver and indices once, before the right-hand side. A simple `=` computes the destination address without reading its stored value. Compound assignments capture both the destination address and its old value before evaluating the right operand. This order also applies to pointer dereferences and ref-returning properties or indexers. If evaluating the destination throws, the right-hand side is not evaluated. If the right-hand side throws, the assignment does not overwrite or destroy the destination's old value; side effects performed while evaluating either operand still occur.
+Assignments evaluate the destination receiver and indices once, before the right-hand side. A simple `=` computes the destination address without reading its stored value. Compound assignments capture both the destination address and its old value before evaluating the right operand. This order also applies to pointer dereferences and ref-returning properties or indexers. If evaluating the destination throws, the right-hand side is not evaluated. If the right-hand side throws, the assignment does not overwrite or destroy the destination's old value. Side effects performed while evaluating either operand still occur.
 
-`defer` executes in reverse registration order at lexical scope exit, including return, break, continue, and supported exception paths. Deferred code binds variables at its declaration site, even if a later scope shadows a name. Deferred reads are checked at cleanup; deferred writes do not take effect at registration. Nested defer is not supported.
+`defer` executes in reverse registration order at lexical scope exit, including return, break, continue, and supported exception paths. Deferred code binds variables at its declaration site, even if a later scope shadows a name. Deferred reads are checked at cleanup. Deferred writes do not take effect at registration. Nested defer is not supported.
 
 Deferred code cannot return from its enclosing function or use `break` or
 `continue` to leave the deferred body. Loops declared inside that body may use
@@ -814,7 +825,7 @@ Owning values (types requiring destruction) can be initialized, passed by value,
 returned, and replaced. Fresh values transfer directly. Owned parameters are destroyed
 by the callee unless transferred onward. If a later argument fails, earlier arguments
 are cleaned up by the caller. Replacement builds the new value before destroying the
-old one; a failed right-hand side leaves the old value intact.
+old one. A failed right-hand side leaves the old value intact.
 
 An ordinary value copy duplicates the value using its copy constructor when one exists:
 
@@ -835,11 +846,11 @@ int main() {
 A copy constructor takes exactly one non-null immutable pointer to its own type.
 It may throw like other constructors. A type with a user-written destructor is noncopyable unless
 it supplies a copy constructor. Aggregates without a user-written destructor copy
-their fields and base value; all of those must be copyable. Fixed buffers copy each
+their fields and base value. All of those must be copyable. Fixed buffers copy each
 element. If a copy fails, completed subobjects are destroyed. Nontrivial copying is
 not supported during constant evaluation. `foreach` initializes each iteration
 value using ordinary value-initializer rules. Array elements and borrowed iterator
-elements require copying; fresh values returned by an iterator's `Current` getter
+elements require copying. Fresh values returned by an iterator's `Current` getter
 or method transfer into the loop variable, including noncopyable owning values.
 
 An explicit value cast follows the same copy contract: casting an existing value requires its accessible copy implementation, while a fresh or moved operand transfers without another copy. An owning cast result is destroyed when discarded or after temporary member use. `default(T)` and cast results support field, property, method, and fixed-buffer element access with the normal temporary lifetime.
@@ -847,11 +858,11 @@ An explicit value cast follows the same copy contract: casting an existing value
 For a custom collection, `foreach` calls `GetEnumerator()` using ordinary method
 resolution, including visible extension methods. The returned iterator must provide
 a `bool MoveNext()` method and a readable `Current` member. `Current` may be a
-parameterless method, property, reference-returning property, or field; a method
+parameterless method, property, reference-returning property, or field. A method
 takes precedence when present. Access restrictions, immutable receivers, and value
 copy rules apply as they do to ordinary calls and member reads. A reference-returning
-`Current` is copied into the loop variable and must support the required copy;
-this does not introduce reference iteration or implicitly move from borrowed storage.
+`Current` is copied into the loop variable and must support the required copy.
+This does not introduce reference iteration or implicitly move from borrowed storage.
 
 The collection expression is evaluated once. A temporary collection is kept alive
 until iteration ends, and the iterator is destroyed before that temporary collection.
@@ -861,7 +872,7 @@ Normal completion, `break`, and exceptions use the usual scope cleanup rules.
 responsibility. The source becomes uninitialized: it cannot be read or moved again
 until assigned a new value, and its previous value is not destroyed there. This rule
 also applies to primitive values. No move constructor runs, and no empty replacement
-is created. Owning locals may be declared without an initializer; initialize them as
+is created. Owning locals may be declared without an initializer. Initialize them as
 whole values before use. Owning fields must also be initialized as whole values before
 writing nested fields. Returning a whole owning local implicitly transfers it.
 Returning borrowed fields or indexed elements requires copying.
@@ -881,30 +892,30 @@ General field and indexer moves are not supported. Raw storage has an explicit m
 path: `move *source` transfers the value stored at a raw pointer, and `move *source at destination` constructs it at another address. `move local at destination` consumes
 a local directly into that storage. These return a value or destination `T*`, respectively.
 The destination must be uninitialized, non-null, suitably aligned storage for exactly
-that type. Null and alignment are checked; allocation size, liveness, and overlap are
+that type. Null and alignment are checked. Allocation size, liveness, and overlap are
 not. Source and destination must not overlap. After raw relocation, do not destroy the
-old value; release its old allocation separately if appropriate. The compiler does not
+old value. Release its old allocation separately if appropriate. The compiler does not
 track initialization through raw pointers.
 
 By-value calls, returns, and relocation do not promise stable object addresses. Types
 storing pointers into themselves need a different representation or stable indirection.
 There are no custom move constructors or pinning guarantees in this version. Raw-pointer
-validity remains the caller's responsibility; there is no borrow checker or alias
+validity remains the caller's responsibility. There is no borrow checker or alias
 invalidation analysis.
 
 Extern declarations must use explicit pointers for owning types. Owning objects cannot
 be sliced to a base value. Operator overloads currently require trivial value operands
 and results. Lambdas borrow nontrivial parameters through pointers and cannot return
-nontrivial values; use a named function for those signatures. Indexer arguments must
+nontrivial values. Use a named function for those signatures. Indexer arguments must
 also be trivial values (their element type need not be).
 
-Struct and class destruction runs the destructor body, then inline object fields in reverse declaration order, then the class base destructor. Returning early from a destructor still runs this cleanup. Containers with destructor-bearing fields receive synthesized cleanup. Discarded fresh object values and temporary method or field receivers are destroyed after their use. Temporaries on skipped logical operands are neither constructed nor destroyed; exceptions during evaluation clean up only successfully created temporaries. These rules are not a complete ownership proof.
+Struct and class destruction runs the destructor body, then inline object fields in reverse declaration order, then the class base destructor. Returning early from a destructor still runs this cleanup. Containers with destructor-bearing fields receive synthesized cleanup. Discarded fresh object values and temporary method or field receivers are destroyed after their use. Temporaries on skipped logical operands are neither constructed nor destroyed. Exceptions during evaluation clean up only successfully created temporaries.
 
-Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer and copy only when their elements support copying; initialization preserves the array size. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
+Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer and copy only when their elements support copying. Initialization preserves the array size. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
 
-Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests; use pointers and primitive C interfaces for interoperation.
+Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests. Use pointers and primitive C interfaces for interoperation.
 
-## Properties
+## Static classes and provider contracts
 
 Static classes are closed declaration scopes: their methods and properties must be static, and they cannot be constructed, inherited from, or used as instance types (including pointers). Nested types remain ordinary types. Static classes may be generic, and a closed specialization can be named with an alias. They emit no instance layout, vtable, instance constructor, or destructor. Static fields and a parameterless static constructor are supported.
 
@@ -917,7 +928,7 @@ alias Integers = Values<int>;
 int Example() => Integers::Identity(42);
 ```
 
-Declare a provider contract with `static interface`: all methods and property accessors are implicitly static, including in an empty contract. An ordinary interface with explicitly static members also remains supported. Static classes, ordinary classes, and structs can implement the contract with public static methods or static properties. Generic code calls these members with `P::Member`; specialization selects the implementation directly, without an instance or dispatch table. Such interfaces cannot be used as pointer or managed-reference types. Mixing static and instance members in one interface, generic interface methods, and overloaded interface methods are not yet supported. Constraints resolve in the declaring library's scope, not the caller's.
+Declare a provider contract with `static interface`: all methods and property accessors are implicitly static, including in an empty contract. An ordinary interface with explicitly static members also remains supported. Static classes, ordinary classes, and structs can implement the contract with public static methods or static properties. Generic code calls these members with `P::Member`. Specialization selects the implementation directly, without an instance or dispatch table. Such interfaces cannot be used as pointer or managed-reference types. Mixing static and instance members in one interface, generic interface methods, and overloaded interface methods are not yet supported. Constraints resolve in the declaring library's scope, not the caller's.
 
 ```csharp
 interface ITransform { static int Apply(int value); }
@@ -930,6 +941,8 @@ static class Pipeline<P : ITransform> {
 alias Selected = Pipeline<Increment>;
 int Example() => Selected::Run(40);
 ```
+
+## Properties
 
 Classes and structs support explicit accessors, expression-bodied getters, and auto-properties:
 
@@ -951,19 +964,19 @@ class Player
 }
 ```
 
-`get` and `set` are contextual identifiers. The setter receives an implicit parameter named `value` with the property's type and returns `void`. Accessors accept blocks or `=> expression;`; a property-level `=> expression;` is shorthand for a getter. An explicit property may have only a getter or only a setter. An auto-property must have a getter, and all its accessors must use `;`. Auto-property storage is private and follows normal field initialization in declaration order: eligible fields default-initialize, while required fields need an initializer or constructor assignment. A get-only auto-property can also be assigned through `this` in its declaring instance constructor.
+`get` and `set` are contextual identifiers. The setter receives an implicit parameter named `value` with the property's type and returns `void`. Accessors accept blocks or `=> expression;`. A property-level `=> expression;` is shorthand for a getter. An explicit property may have only a getter or only a setter. An auto-property must have a getter, and all its accessors must use `;`. Auto-property storage is private and follows normal field initialization in declaration order: eligible fields default-initialize, while required fields need an initializer or constructor assignment. A get-only auto-property can also be assigned through `this` in its declaring instance constructor.
 
-Properties use ordinary member accessibility. On a property with both accessors, one accessor may declare more restrictive access, such as `private set` or `protected set`. Access is checked separately for reads and writes. `immutable get` allows calls through an immutable receiver while permitting a mutable setter. Non-virtual instance auto-getters are implicitly immutable when the stored value can be returned through an immutable receiver. `immutable(T)` qualifies the property's result type; bare `immutable` qualifies the receiver, as on methods.
+Properties use ordinary member accessibility. On a property with both accessors, one accessor may declare more restrictive access, such as `private set` or `protected set`. Access is checked separately for reads and writes. `immutable get` allows calls through an immutable receiver while permitting a mutable setter. Non-virtual instance auto-getters are implicitly immutable when the stored value can be returned through an immutable receiver. `immutable(T)` qualifies the property's result type. Bare `immutable` qualifies the receiver, as on methods.
 
 An auto-property with a `immutable(T)` result still permits its non-immutable setter to replace the stored value. Reads preserve the result's immutable qualification, including pointed-to storage. This does not permit writes to ordinary immutable fields or assignments through immutable receivers. Get-only auto-properties retain their constructor-only assignment rules.
 
-Scalar, immutable-pointer, and immutable managed-reference results remain available through immutable receivers. Auto-getters returning writable raw pointers, writable managed references, or aggregates containing these require a mutable receiver, preserving the full result type. An explicitly `immutable get` must satisfy the ordinary immutable return rules; it cannot expose writable storage through its result.
+Scalar, immutable-pointer, and immutable managed-reference results remain available through immutable receivers. Auto-getters returning writable raw pointers, writable managed references, or aggregates containing these require a mutable receiver, preserving the full result type. An explicitly `immutable get` must satisfy the ordinary immutable return rules. It cannot expose writable storage through its result.
 
-Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value; prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. An ordinary by-value property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
+Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value. Prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. An ordinary by-value property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
 
-Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Accessors follow ordinary exception rules and may declare `get nothrow` or `set nothrow`.
+Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`. Implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Accessors follow ordinary exception rules and may declare `get nothrow` or `set nothrow`.
 
-Current restrictions: `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
+Current restrictions: `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration. They are not copied onto synthetic accessors or backing fields.
 
 ### Namespace properties
 
@@ -978,7 +991,7 @@ public int Output { set { putchar(value); } }
 ```
 
 Read or assign them with `Settings::Limit` and `Settings::Output`. Unqualified
-access follows the enclosing namespace and `using` directives; local variables
+access follows the enclosing namespace and `using` directives. Local variables
 take precedence. Global properties can be qualified with `global::`.
 Getters and setters follow normal call and exception rules, including compound
 assignment and increment. A private property or accessor is accessible only
@@ -986,7 +999,7 @@ within its declaring source file.
 
 Namespace properties have no receiver and do not use `static`, receiver
 `immutable`, `virtual`, `override`, or `abstract`. Auto-properties may have
-initializers; a get-only namespace auto-property cannot subsequently be assigned.
+initializers. A get-only namespace auto-property cannot subsequently be assigned.
 Namespace indexers and `ref` returns are not supported.
 
 ### Global and static storage
@@ -994,8 +1007,8 @@ Namespace indexers and `ref` returns are not supported.
 Global/namespace fields and static fields in classes or structs have persistent,
 addressable storage. Static fields are excluded from instance layout, copying,
 construction, and destruction. Access them through `Type::Field`, or unqualified
-inside the containing type. Global fields follow enclosing namespace lookup;
-private globals are private to their source file. A closed generic type has its
+inside the containing type. Global fields follow enclosing namespace lookup.
+Private globals are private to their source file. A closed generic type has its
 own static fields, for example `Cache<int>::Count` and `Cache<char>::Count`.
 
 Storage is default-initialized before dynamic initialization. A type without a
@@ -1009,18 +1022,18 @@ within each source file. They may call ordinary functions and construct values.
 
 A parameterless `static TypeName() { ... }` runs once, after that type's static
 field initializers. It has no receiver or base-constructor initializer. Static
-auto-properties use static backing fields; get-only static auto-properties and
+auto-properties use static backing fields. Get-only static auto-properties and
 immutable static scalar fields can be assigned by their declaring static constructor.
-A non-defaultable field still requires an explicit initializer; assigning it only
+A non-defaultable field still requires an explicit initializer. Assigning it only
 inside a static constructor is not currently sufficient.
 
 Successfully initialized owning globals are destroyed in reverse initialization
 order on normal process shutdown, including `exit`. Managed static storage stays
 registered as roots until shutdown. An initializer failure destroys completed
-owning globals before invoking the unhandled-exception boundary; the failing value
+owning globals before invoking the unhandled-exception boundary. The failing value
 is never treated as fully constructed. Hosted shutdown registration uses the C
 runtime's `atexit`, only when static cleanup is needed. `NoStdLib` excludes bundled
-library inputs; it does not select a freestanding executable or remove the host CRT.
+library inputs. It does not select a freestanding executable or remove the host CRT.
 
 Trivial static state with constant/default initializers does not require startup
 functions or shutdown registration. Explicit calls that terminate the process
@@ -1038,7 +1051,7 @@ reference result on both mutable and shallow readonly receivers. For example,
 `public ref T Value { readonly get => *data; }` can borrow mutable pointed-to
 storage without changing the owner's pointer field. Ordinary return checking
 rejects borrowing a mutable reference to the owner's protected inline fields or
-array elements; declare `ref readonly(T)` when that is the intended result.
+array elements. Declare `ref readonly(T)` when that is the intended result.
 An immutable receiver cannot call this shallow-only getter. An unqualified
 `get` retains its existing receiver-dependent readonly result projection.
 
@@ -1048,8 +1061,8 @@ Obvious local/temporary returns are rejected, including fields and inline array
 elements of those values. Storage obtained through an explicit pointer or another
 reference getter remains a borrow whose lifetime the caller must respect. Keep
 the returned storage alive. Explicit by-value getters may return fresh owning
-values. An owning setter takes ownership like an ordinary function;
-its assignment expression has type `void` to prevent duplicating that ownership.
+values. An owning setter takes ownership like an ordinary function.
+Its assignment expression has type `void` to prevent duplicating that ownership.
 Automatic owning getters remain invalid because they would copy their backing field.
 
 ### Indexers
@@ -1067,11 +1080,11 @@ struct IntBuffer {
 }
 ```
 
-`buffer[i]` calls the getter; `buffer[i] = value` calls the setter. `this[int row, int column]` is accessed as `grid[row, column]`. Getter-only expression bodies (`public int this[int i] => ...;`), setter-only bodies, and restricted setters follow property rules. The receiver is evaluated first, then indices from left to right. Assignments evaluate the value afterward; compound updates call the getter before evaluating the right operand, then the setter. Receiver and indices are evaluated once, including for `++` and `--`. Accessor calls use normal exception and temporary cleanup rules. Indexers do not add automatic bounds checks; the implementation supplies them.
+`buffer[i]` calls the getter. `buffer[i] = value` calls the setter. `this[int row, int column]` is accessed as `grid[row, column]`. Getter-only expression bodies (`public int this[int i] => ...;`), setter-only bodies, and restricted setters follow property rules. The receiver is evaluated first, then indices from left to right. Assignments evaluate the value afterward. Compound updates call the getter before evaluating the right operand, then the setter. Receiver and indices are evaluated once, including for `++` and `--`. Accessor calls use normal exception and temporary cleanup rules. Indexers do not add automatic bounds checks. The implementation supplies them.
 
-Indexers work in generic types, classes, structs, and interfaces, including virtual and abstract accessors. Readonly getters follow ordinary immutable receiver and return-type rules. Managed pointers and interface views dispatch the pointee's indexer. Raw `T*` indexing retains its built-in array-of-pointees meaning; use `(*p)[i]` to call an indexer on a raw pointee. Interface pointers have no inline element layout, so `p[i]` on an `I*` dispatches the interface indexer.
+Indexers work in generic types, classes, structs, and interfaces, including virtual and abstract accessors. Readonly getters follow ordinary immutable receiver and return-type rules. Managed pointers and interface views dispatch the pointee's indexer. Raw `T*` indexing retains its built-in array-of-pointees meaning. Use `(*p)[i]` to call an indexer on a raw pointee. Interface pointers have no inline element layout, so `p[i]` on an `I*` dispatches the interface indexer.
 
-Ordinary indexer results are values, not storage references. Modifying a field of a returned aggregate or taking its address is rejected; an explicitly returned pointer can expose underlying storage. Current restrictions: one indexer declaration per type, no static or automatic indexers, no indexer initializers or `const` index parameters, and no parameter named `value`. The existing property restrictions on result types, constant evaluation, and throwing interface accessors also apply.
+Ordinary indexer results are values, not storage references. Modifying a field of a returned aggregate or taking its address is rejected. An explicitly returned pointer can expose underlying storage. Current restrictions: one indexer declaration per type, no static or automatic indexers, no indexer initializers or `const` index parameters, and no parameter named `value`. The existing property restrictions on result types, constant evaluation, and throwing interface accessors also apply.
 
 
 ## Reference parameters
@@ -1089,36 +1102,36 @@ int Example() {
 }
 ```
 
-The parameter is an alias: assignment writes to the caller's value. No object is copied on entry or destroyed on exit. The caller must supply initialized, addressable storage of the exact type; numeric conversions, temporaries, ordinary value properties, and raw references into managed storage are rejected. A mutable argument can bind to `ref immutable(T)`. Borrowed parameters cannot be consumed with `move`; use explicit raw-pointer operations for manual lifetime management. References do not extend an object's lifetime or provide exhaustive alias tracking.
+The parameter is an alias: assignment writes to the caller's value. No object is copied on entry or destroyed on exit. The caller must supply initialized, addressable storage of the exact type. Numeric conversions, temporaries, ordinary value properties, and raw references into managed storage are rejected. A mutable argument can bind to `ref immutable(T)`. Borrowed parameters cannot be consumed with `move`. Use explicit raw-pointer operations for manual lifetime management. References do not extend an object's lifetime or provide exhaustive alias tracking.
 
-Fields, fixed-buffer elements, pointer dereferences, and ref properties/indexers can supply storage. Generic, constructor, interface, virtual, and lambda parameters support the same contract. A function pointer spells the parameter as `void(ref int)*`; it is distinct from `void(int)*`. Reference parameters use native pointer arguments. This does not add general ref locals or ref-returning methods.
+Fields, fixed-buffer elements, pointer dereferences, and ref properties/indexers can supply storage. Generic, constructor, interface, virtual, and lambda parameters support the same contract. A function pointer spells the parameter as `void(ref int)*`. It is distinct from `void(int)*`. Reference parameters use native pointer arguments. This does not add general ref locals or ref-returning methods.
 
 Generic call inference inspects typed function pointers recursively, using their
 return and parameter types, including nested callbacks. Repeated type parameters
 must agree. This also applies to generic extension arguments. Callback arity, ref
 parameters, nullability, immutable qualifiers, and calling conventions still obey
-normal function-pointer compatibility; inference does not add conversions or
+normal function-pointer compatibility. Inference does not add conversions or
 untyped lambda parameters.
 
 Ordinary function declarations require a body, including generic functions and
 struct methods. A declaration such as `int Missing();` is an error. Use `extern`
-for a function implemented elsewhere; interface and abstract method declarations
+for a function implemented elsewhere. Interface and abstract method declarations
 retain their bodyless forms. Namespace extern declarations support accessibility
 modifiers: `private extern int abs(int value);` and `extern private int abs(int value);`
 are equivalent. A private extern is accessible throughout its source file, including
 from other namespaces in that file, but cannot be called or addressed from another
-file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers before the return type; `static` and `protected` are not supported.
+file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers before the return type. `static` and `protected` are not supported.
 
 Private externs still participate in ordinary namespace declaration uniqueness.
-Repeating the same qualified declaration name in multiple source files is rejected;
-privacy restricts access rather than creating a file-local declaration namespace.
+Repeating the same qualified declaration name in multiple source files is rejected.
+Privacy restricts access rather than creating a file-local declaration namespace.
 Different gflat namespaces may independently declare the same native C symbol,
 provided their native signatures and `nothrow` contracts agree.
 An extern may declare a trailing `nothrow` contract, for example
 `private extern int abs(int value) nothrow;`. This promises that the foreign
 implementation never unwinds through the call. The compiler emits an LLVM
 `nounwind` declaration and omits exception handling for direct calls. It cannot
-enforce this promise inside foreign code; violating it is invalid native
+enforce this promise inside foreign code. Violating it is invalid native
 behavior. Ordinary gflat `nothrow` bodies still enforce their termination
 boundary. Repeated declarations of one native symbol must agree on `nothrow`.
 Converting the function to an ordinary function pointer does not preserve this
@@ -1126,13 +1139,13 @@ contract: calls through that pointer remain potentially throwing.
 
 Private namespace functions are also accessible only within their declaring source file.
 
-A declaration permits at most one explicit accessibility modifier. Repeated or conflicting modifiers are errors, including qualifiers split across an `extern` keyword; implicit defaults do not count as explicit modifiers.
+A declaration permits at most one explicit accessibility modifier. Repeated or conflicting modifiers are errors, including qualifiers split across an `extern` keyword. Implicit defaults do not count as explicit modifiers.
 
 Namespace classes, structs, interfaces, and enums default to `internal`, including static classes and static interfaces.
 
-Class and struct fields and methods default to `private`. Access through another instance follows the same visibility rules as ordinary member access; the declaring type can access its own instances' private members.
+Class and struct fields and methods default to `private`. Access through another instance follows the same visibility rules as ordinary member access. The declaring type can access its own instances' private members.
 
-Scalar function boundaries use the host C ABI consistently for ordinary functions, externs, and function-pointer calls. Both supported targets zero-extend `bool`; Linux x64 also sign-extends signed 8/16-bit integers (including `char`) and zero-extends unsigned 8/16-bit integers. These LLVM ABI attributes do not change function-pointer type identity. Aggregate and fixed-buffer values do not thereby gain C ABI compatibility; use explicit pointers at those boundaries.
+Scalar function boundaries use the host C ABI consistently for ordinary functions, externs, and function-pointer calls. Both supported targets zero-extend `bool`; Linux x64 also sign-extends signed 8/16-bit integers (including `char`) and zero-extends unsigned 8/16-bit integers. These LLVM ABI attributes do not change function-pointer type identity. Aggregate and fixed-buffer values do not thereby gain C ABI compatibility. Use explicit pointers at those boundaries.
 
 ## Control flow, exceptions, and constants
 
@@ -1140,60 +1153,76 @@ Non-void functions must return or throw on every reachable path, or never termin
 
 Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. `throws` has been removed. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across gflat frames, but gflat types do not yet have C++ RTTI or typed C++ catch interoperability.
 
-Exception payloads first use `Memory::Allocate`; if it returns null, the native
+Exception payloads first use `Memory::Allocate`. If it returns null, the native
 exception runtime uses a process-wide emergency reserve. Its own ownership records
 and catch handles similarly fall back from system allocation to that reserve.
 Released blocks are reused, including when released by another thread. Reserve
 storage is never passed to `Memory::Free`. Exhaustion terminates rather than
 recursively throwing another allocation failure. The default reserve is 65536
-bytes, including internal block metadata; `--exception-reserve-bytes N` selects a
-nonnegative byte count, and zero disables it. This is a native link setting, not a
-language feature or a requirement for future builds without the exception runtime.
+bytes, including internal block metadata. `--exception-reserve-bytes N` selects a
+nonnegative byte count, and zero disables it. This setting controls native linking.
 The host C++ runtime still owns native exception transport storage and its own
-allocation-failure policy; this setting does not configure its emergency pool.
+allocation-failure policy. This setting does not configure its emergency pool.
 
 If the payload allocator reenters exception allocation, the nested request uses
 the reserve directly instead of calling that allocator again. An unavailable or
-exhausted reserve terminates. This prevents recursive allocation failures; it
+exhausted reserve terminates. This prevents recursive allocation failures. It
 does not relax the allocation hooks' non-throwing callback contract.
 
-`throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type; `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available; its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions; typed gflat catches do not.
+`throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type. `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available. Its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions. Typed gflat catches do not.
 
 The default `Exception` borrows its null-terminated message pointer. Its constructors
 do not copy or take ownership of the bytes, and `GetMessage()` returns the stored
 pointer. Keep the backing storage alive while the exception or any copy can be
-inspected, including after stack unwinding; string literals satisfy this contract.
+inspected, including after stack unwinding. String literals satisfy this contract.
 Throwing or copying an exception does not extend external message storage's lifetime.
 
-Scope destructors and deferred actions run during unwinding. Failed construction destroys completed owning fields and the completed base, without invoking the incomplete object's destructor. Failed `new*` frees its fresh storage; failed placement construction leaves storage ownership with the caller. Raw resources acquired during construction still require explicit cleanup on failure paths.
+Scope destructors and deferred actions run during unwinding. Failed construction destroys completed owning fields and the completed base, without invoking the incomplete object's destructor. Failed `new*` frees its fresh storage. Failed placement construction leaves storage ownership with the caller. Raw resources acquired during construction still require explicit cleanup on failure paths.
 
-`void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.
+`void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary. Outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates. Cleanup may catch its own failures locally.
 
 An implementation or override may strengthen a potentially throwing interface or
 base method by declaring `nothrow`. It cannot weaken an existing `nothrow`
 contract. This includes static interface implementations, primitive
 implementations, and property accessors. Calls use the guarantee visible through
-their receiver's declared type; a stronger concrete implementation does not make
+their receiver's declared type. A stronger concrete implementation does not make
 all calls through a potentially throwing interface nonthrowing.
 
-Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. When declared, this runtime entry point must provide a public, non-generic namespace function returning `void` and taking exactly one mutable nullable `Exception` pointer. Other overloads may coexist; termination selects the canonical signature, including its overload symbol. This weak `void` function lives in `Standard/libc/Exceptions/unhandled.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. To use allocating `new*`, it must also support the standard `(message, code)` constructor used by the automatically included `Standard::BadAllocException`, or supply its own `Standard::BadAllocException` with a public constructor callable without arguments. Process termination does not unwind the remaining stack.
+Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed
+pointer, or null for a foreign exception. Its canonical signature is a public,
+non-generic namespace function returning `void` and taking one mutable nullable
+`Exception` pointer. Other overloads may coexist.
 
-Native exceptions use a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM. Programs that need only the standard-stream accessor bridge compile that small shim as C and link with the C driver. This still requires the host C runtime development inputs (including the Windows SDK/native runtime on Windows); it does not remove the C++ requirement for programs using exceptions.
+The default weak implementation lives in `Standard/libc/Exceptions/unhandled.gf`:
 
-`const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
+- It calls libc `exit` with the exception's code, or 1 for a foreign exception
+- Exception constructors default their code to 1
+- It exits without printing
+
+A replacement should terminate explicitly. If it returns or throws, the runtime
+exits with status 1. Process termination does not unwind the remaining stack.
+
+A custom root `Exception` must supply `GetCode()`. Allocating `new*` also needs
+either the standard `(message, code)` exception constructor used by
+`Standard::BadAllocException`, or a custom `Standard::BadAllocException` with a
+public constructor callable without arguments.
+
+Native exceptions use a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM. Programs that need only the standard-stream accessor bridge compile that small shim as C and link with the C driver. This still requires the host C runtime development inputs (including the Windows SDK/native runtime on Windows). It does not remove the C++ requirement for programs using exceptions.
+
+`const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler. Unsupported operations produce a constant-evaluation diagnostic.
 
 Constants follow lexical scope: a local or parameter can shadow a namespace
 constant without becoming constant itself. Constant evaluation uses the resolved
 declaration, rather than another constant with the same spelling.
 
 Taking a constant variable's address materializes immutable storage for that
-declaration. Repeated addresses of the same declaration are stable; distinct
+declaration. Repeated addresses of the same declaration are stable. Distinct
 declarations retain distinct storage even when their constant values are equal.
 Constant array reads and addresses refer to the same underlying buffer.
 
 Generic bodies resolve names in their declaration context. Specialization does
 not capture the caller's locals, aliases, local enums, or control-flow state.
-Local enums belong to their enclosing block; identically named enums in different
+Local enums belong to their enclosing block. Identically named enums in different
 functions remain distinct types and retain their source names in type metadata.
 
 Ordinary overload signatures in generic types are checked when the containing
@@ -1217,7 +1246,7 @@ This runs complete destruction: the user-written destructor, if any, followed
 by field and base cleanup. Compiler-generated destructors work too. For a type
 with no cleanup, including primitives and pointer values, no destructor code
 is needed. Destroying a pointer value does not destroy its pointee. Class
-destruction uses the same virtual destructor dispatch as `delete`. All classes have a destructor slot, even when their own cleanup is empty. Interface tables also carry a destruction entry; `delete I*` destroys the concrete object and releases its storage. As with any `delete`, the pointer must own an appropriate allocation, not refer to a local or borrowed object.
+destruction uses the same virtual destructor dispatch as `delete`. All classes have a destructor slot, even when their own cleanup is empty. Interface tables also carry a destruction entry. `delete I*` destroys the concrete object and releases its storage. As with any `delete`, the pointer must own an appropriate allocation, not refer to a local or borrowed object.
 
 Destructor calls take no arguments and return `void`. Null receivers trap,
 including null hidden by `!`. Managed pointers, immutable pointees, `void*`,
@@ -1228,8 +1257,8 @@ The pointer retains its address, but the object is no longer live. Its storage
 can be reused with `new* T(args) at pointer` or released separately through
 `Memory::Free`. Do not subsequently `delete` the destroyed object unless
 it has been reconstructed: `delete` already performs both destruction and
-deallocation. Explicit destruction does not cancel automatic scope cleanup;
-an automatically cleaned-up local destroyed through its address must be
+deallocation. Explicit destruction does not cancel automatic scope cleanup.
+An automatically cleaned-up local destroyed through its address must be
 reconstructed before scope exit. Lifetime correctness through raw pointers
 remains the caller's responsibility.
 
@@ -1238,7 +1267,7 @@ remains the caller's responsibility.
 `new* T(arguments) at destination` initializes a scalar, struct, or class directly in
 caller-supplied storage and returns its `T*`. It performs normal field and class
 metadata initialization and constructor overload resolution, without allocating.
-Only `new*` supports `at`; value and managed construction do not. `at` is contextual
+Only `new*` supports `at`. Value and managed construction do not. `at` is contextual
 and remains available as an identifier elsewhere.
 
 ```csharp
@@ -1264,11 +1293,11 @@ The caller manages the object's lifetime and its surrounding allocation.
 The destination must be a non-null raw pointer to the exact mutable constructed
 type. Null and misaligned addresses trap before initialization, including when
 nullability was suppressed with `!`. The caller must provide writable, sufficiently
-large storage not occupied by a live object; these conditions are not checked.
+large storage not occupied by a live object. These conditions are not checked.
 Use `delete` only when the pointer is also a valid independently allocated block.
 Placement construction cannot execute during constant evaluation.
 
-The destination accepts pointer arithmetic and postfix expressions; comparisons
+The destination accepts pointer arithmetic and postfix expressions. Comparisons
 and assignments bind outside the placement expression. Parenthesize a more
 complex destination. To access a member of the constructed object, write
 `(new* T() at destination).Member`.
@@ -1296,18 +1325,16 @@ follow bindings across shadowing, rather than matching names alone. Fields and
 properties are not narrowed by this first implementation.
 
 Assignment invalidates or updates the affected local's fact. Passing a slot by
-`ref` or taking its address marks it as exposed; later calls and unknown writes
+`ref` or taking its address marks it as exposed. Later calls and unknown writes
 invalidate facts for exposed slots. Implicit user calls, copies and destructor
 cleanup count too. A write to an exposed slot also invalidates other exposed
-slots' facts because ref parameters may alias. Ref parameters are exposed from entry. This is conservative
-null checking, not alias, lifetime, or ownership proof; unsafe raw-memory access
-can bypass its assumptions.
+slots' facts because ref parameters may alias. Ref parameters are exposed from entry. Unsafe raw-memory access can bypass these null-checking assumptions.
 
 Loops initially discard incoming and initializer facts. A loop condition can
-establish fresh facts for its body; facts do not carry out of the loop or through
+establish fresh facts for its body. Facts do not carry out of the loop or through
 its increment. Catch bodies start without assumptions about outer nullable
 locals. Deferred bodies must establish their own facts because they execute
-later; their possible writes invalidate affected facts at registration and scope
+later. Their possible writes invalidate affected facts at registration and scope
 exit. These restrictions can require an additional guard or explicit `!`.
 
 ## Nullability suppression
@@ -1362,9 +1389,9 @@ int main()
 
 The prefix is an ordinary case-sensitive identifier, including names such as `my_2string`. The empty `""` marker must immediately follow the identifier in the declaration. At the use site, the prefix must immediately precede the literal's opening quote.
 
-Prefixes are visible in their declaring namespace, its descendants, and namespaces imported by `using`. An explicit qualifier such as `Text::s"hello"` works without an import. Nested namespaces use `::`, including in `using` directives. Duplicate prefixes within one namespace are errors; multiple visible candidates from different namespaces require qualification. Result types do not disambiguate prefixes.
+Prefixes are visible in their declaring namespace, its descendants, and namespaces imported by `using`. An explicit qualifier such as `Text::s"hello"` works without an import. Nested namespaces use `::`, including in `using` directives. Duplicate prefixes within one namespace are errors. Multiple visible candidates from different namespaces require qualification. Result types do not disambiguate prefixes.
 
-`data` points to immutable, null-terminated static storage containing UTF-8 bytes after escape processing. Supported escapes are `\n`, `\r`, `\t`, `\0`, `\\`, `\"`, and `\'`; unknown escapes are errors. `length` is the number of bytes excluding the final terminator; embedded null bytes count toward it. The storage lasts for the program's lifetime. An operator may keep an immutable view or copy the bytes into its own storage, and decides whether to allocate. The compiler adds no intermediate string object. Returned objects follow normal scope and temporary cleanup rules.
+`data` points to immutable, null-terminated static storage containing UTF-8 bytes after escape processing. Supported escapes are `\n`, `\r`, `\t`, `\0`, `\\`, `\"`, and `\'`. Unknown escapes are errors. `length` is the number of bytes excluding the final terminator. Embedded null bytes count toward it. The storage lasts for the program's lifetime. An operator may keep an immutable view or copy the bytes into its own storage, and decides whether to allocate. The compiler adds no intermediate string object. Returned objects follow normal scope and temporary cleanup rules.
 
 Literal operators have no implicit instance (`this`), but retain access to their containing type's private members through explicit instances. `const` literal operators, generic owners, and raw-literal extensions are not supported in this version.
 
@@ -1407,7 +1434,7 @@ segments and holes in source order. Literal segments call `Write` with UTF-8 byt
 and their explicit count. A writer must consume or copy these bytes before returning.
 It may not retain either the input pointer or a formatter's borrowed destination.
 
-Custom values, pointers, and managed references implement `IFormattable`; holes call
+Custom values, pointers, and managed references implement `IFormattable`. Holes call
 `Format` with the destination. Alternatively, `IStringConvertable` declares
 `immutable Standard::Text::String ToString()`: the hole converts once, writes the returned
 string's counted bytes, and destroys the owning temporary. `IFormattable` takes
@@ -1416,16 +1443,15 @@ receivers require a checked cast or unchecked postfix `!`. Primitives call the e
 `global::Standard::Format(value, writer)` overload independently of local using directives.
 Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
 `uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
-arrays are not implicitly converted to text; provide an explicit string value.
+arrays are not implicitly converted to text. Provide an explicit string value.
 Signed 128-bit formatting uses `Standard/core/Text/IntegerFormatting.gf` and the optional
 `Standard/core/extra_long_format.gf` writer adapter. Both are included by the full
-standard library; explicit source selections must include them together.
+standard library. Explicit source selections must include them together.
 
-Formatting does not imply a heap allocation, a terminator scan, or a caller-owned
-C-string. `Standard::Text::String` writes its existing counted bytes, preserving embedded nulls.
+`Standard::Text::String` writes its existing counted bytes, preserving embedded nulls.
 Its `ToString()` method returns an independent owning string. Its optional
 `ToCString()` method borrows immutable data, valid only while the original buffer
-remains alive and unchanged; interpolation never implicitly uses that operation.
+remains alive and unchanged. Interpolation never implicitly uses that operation.
 
 Each hole is evaluated once. Temporary receivers remain alive through formatting
 and are then destroyed. If formatting or writing throws, the partial destination
@@ -1450,25 +1476,36 @@ class Priority : Attribute
 int main() { return 0; }
 ```
 
-`[Tag]` and `[Tag()]` invoke the parameterless constructor. `[Tag(arguments)]` uses ordinary constructor overload resolution and conversions, and checks constructor accessibility. Names must match exactly; there is no implicit `Attribute` suffix. Namespace and nested-type qualification use `::`. Multiple annotations are allowed and retained in source order.
+`[Tag]` and `[Tag()]` invoke the parameterless constructor. `[Tag(arguments)]` uses ordinary constructor overload resolution and conversions, and checks constructor accessibility. Names must match exactly. There is no implicit `Attribute` suffix. Namespace and nested-type qualification use `::`. Multiple annotations are allowed and retained in source order.
 
-Arguments and construction must be evaluable at compile time. Constructors need not be marked `const`; functions they call must be. Evaluation runs base constructors, field initializers, and the selected constructor body, subject to the compile-time execution limits. Runtime input, extern calls, managed allocation, destructors, and unsupported evaluator operations are rejected. Attribute objects exist only as compiler metadata; annotation sites perform no runtime construction or allocation.
+Arguments and construction must be evaluable at compile time. Constructors need not be marked `const`. Functions they call must be. Evaluation runs base constructors, field initializers, and the selected constructor body, subject to the compile-time execution limits. Runtime input, extern calls, managed allocation, destructors, and unsupported evaluator operations are rejected. Attribute objects exist only as compiler metadata. Annotation sites perform no runtime construction or allocation.
 
-Annotations can precede types, functions, extern declarations, fields, properties, constructors, destructors, operators, and aliases. They are retained on generic declarations and copied to specializations; arguments on generic definitions must be evaluable independently of their type parameters. Parameter, local-variable, and assembly annotations are not supported. Arguments are positional; named property arguments, target restrictions, suffix lookup, and runtime reflection remain future work. User-defined attributes do not change compiler behavior by themselves.
+Annotations can precede types, functions, extern declarations, fields, properties, constructors, destructors, operators, and aliases. They are retained on generic declarations and copied to specializations. Arguments on generic definitions must be evaluable independently of their type parameters. Parameter, local-variable, and assembly annotations are not supported. Arguments are positional. Named property arguments, target restrictions, suffix lookup, and runtime reflection remain future work. User-defined attributes do not change compiler behavior by themselves.
 
 ## Compilation across source files
 
-A compilation accepts multiple named source snapshots and produces one LLVM module. Each file is parsed independently; declarations are collected across all files before bodies are checked. Source argument order does not select definitions. Namespaces may span files, while classes cannot be split across declarations (partial classes remain unsupported).
+A compilation accepts multiple named source snapshots and produces one LLVM module. Each file is parsed independently. Declarations are collected across all files before bodies are checked. Source argument order does not select definitions. Namespaces may span files, while classes cannot be split across declarations (partial classes remain unsupported).
 
-`using` directives apply only to their source file. They affect name lookup, not which files are compiled. Imported namespaces expose their child namespace names: `using Standard;` permits `Hashing::Integer(...)`. Lexical and global namespace names take precedence over imported child namespaces; multiple different imported children with the same name require qualification. Import names themselves resolve lexically, without other imports. Types and generic functions have namespace-qualified identities; same-named types in separate namespaces remain distinct. Ambiguous type and child-namespace imports require explicit qualification. Generic bodies and extension signatures retain their definition's namespace and imports when instantiated from another file.
+`using` directives apply only to their source file. They affect name lookup, not which files are compiled. Imported namespaces expose their child namespace names: `using Standard;` permits `Hashing::Integer(...)`. Lexical and global namespace names take precedence over imported child namespaces. Multiple different imported children with the same name require qualification. Import names themselves resolve lexically, without other imports. Types and generic functions have namespace-qualified identities. Same-named types in separate namespaces remain distinct. Ambiguous type and child-namespace imports require explicit qualification. Generic bodies and extension signatures retain their definition's namespace and imports when instantiated from another file.
 
-A type name may start with `global::`, such as `global::Library::Item`, to resolve from the compilation root instead of lexical scopes or imports. This applies to declared types and aliases, including generic arguments, nested types, base types, signatures, casts and construction. Root qualification preserves the same nominal type identity; it does not create a separate type. A missing root name is an error, and a namespace alone is not a value type.
+A type name may start with `global::`, such as `global::Library::Item`, to resolve from the compilation root instead of lexical scopes or imports. This applies to declared types and aliases, including generic arguments, nested types, base types, signatures, casts and construction. Root qualification preserves the same nominal type identity. It does not create a separate type. A missing root name is an error, and a namespace alone is not a value type.
 
-Defined functions with the same name in imported namespaces participate together in overload resolution. Calls select by their arguments; function values select by their target signature. Import order does not select a function, and repeated imports do not duplicate candidates. A callable declaration in the nearest lexical scope shadows imported functions even when it cannot accept the call. Equally good imported matches remain ambiguous and require qualification. Combining candidates does not combine their declarations or change their emitted identities. Each candidate retains its own declaration imports, default arguments, and generic constraints; imported alternatives cannot expose capabilities hidden by a constrained alias or generic parameter view. This rule does not introduce overloading of foreign `extern` declarations.
+Defined functions with the same name in imported namespaces participate together in overload resolution. Calls select by their arguments. Function values select by their target signature. Import order does not select a function, and repeated imports do not duplicate candidates. A callable declaration in the nearest lexical scope shadows imported functions even when it cannot accept the call. Equally good imported matches remain ambiguous and require qualification. Combining candidates does not combine their declarations or change their emitted identities. Each candidate retains its own declaration imports, default arguments, and generic constraints. Imported alternatives cannot expose capabilities hidden by a constrained alias or generic parameter view. This rule does not introduce overloading of foreign `extern` declarations.
 
-Compilation setup automatically includes `Standard/core/Attribute.gf`, `Standard/core/Exception.gf`, `Standard/core/ITextWriter.gf`, `Standard/core/IFormattable.gf`, and `Standard/libc/Memory/allocation.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these Standard-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
+Unless `NoStdLib` is selected, compilation includes these runtime sources from
+the bundled `Standard` directory:
 
-The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through `Compiler.Check(IEnumerable<SourceFile>, diagnostics)` and `Compiler.Emit(IEnumerable<SourceFile>, diagnostics)`. The path identifies the snapshot; the compiler does not read its text from disk. This permits unsaved editor buffers and independent command-line or IDE hosts. Source spans use UTF-16 offsets and one-based lines and columns. Diagnostics expose their source span, code, severity, message, and related declaration locations.
+- `core/Attribute.gf` and `core/Exception.gf`
+- `core/BadAllocException.gf`, `core/TypeInfo.gf`, and `core/IGarbageCollector.gf`
+- `core/ITextWriter.gf` and `core/IFormattable.gf`
+- `libc/Memory/allocation.gf` and `libc/Exceptions/unhandled.gf`
+
+Explicit inputs at the same Standard-relative paths take precedence. A program
+may also supply its own root `Exception`. `weak` and `replace` selection covers
+the complete compilation. Duplicate-declaration diagnostics include both source
+locations.
+
+The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through `Compiler.Check(IEnumerable<SourceFile>, diagnostics)` and `Compiler.Emit(IEnumerable<SourceFile>, diagnostics)`. The path identifies the snapshot. The compiler does not read its text from disk. This permits unsaved editor buffers and independent command-line or IDE hosts. Source spans use UTF-16 offsets and one-based lines and columns. Diagnostics expose their source span, code, severity, message, and related declaration locations.
 
 ## Compiler use
 
@@ -1478,11 +1515,11 @@ dotnet run --project gflat -- source.gf --emit-ir -o program.ll
 dotnet run --project gflat -- source.gf --run
 ```
 
-The CLI accepts one or more explicit source paths. No project file is required, and `using` does not load files. Without `-o`, the output name is derived from the first input path. Duplicate input paths are rejected; output may not overwrite any input.
+The CLI accepts one or more explicit source paths. No project file is required, and `using` does not load files. Without `-o`, the output name is derived from the first input path. Duplicate input paths are rejected. Output may not overwrite any input.
 
-Compilation does not execute output unless `--run` is requested. `--clang path` or `GFLAT_CLANG` selects Clang; otherwise PATH and Visual Studio installations are searched. `--target` accepts the supported triple only. Native compilation and execution have timeouts and concurrently captured output.
+Compilation does not execute output unless `--run` is requested. `--clang path` or `GFLAT_CLANG` selects Clang. Otherwise PATH and Visual Studio installations are searched. `--target` accepts the supported triple only. Native compilation and execution have timeouts and concurrently captured output.
 
-`GFLAT_OPT_LEVEL` selects Clang optimization (`0`, `1`, `2`, or `3`; default `0`). It applies to native CLI compilation and executable tests. CI runs the suite at both `-O0` and `-O2`. To reproduce the optimized run in PowerShell:
+`GFLAT_OPT_LEVEL` selects Clang optimization (`0`, `1`, `2`, or `3`. Default `0`). It applies to native CLI compilation and executable tests. CI runs the suite at both `-O0` and `-O2`. To reproduce the optimized run in PowerShell:
 
 ```powershell
 $env:GFLAT_OPT_LEVEL = '2'
@@ -1494,7 +1531,10 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 
 ## Future work
 
-Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, member reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
+Possible additions include more target ABIs, verified output parameters, partial
+moves, managed finalizers, moving collectors, member reflection, and C++
+interoperability. The compiler currently shares a control-flow graph across its
+analyses. A richer checked representation could replace parts of AST-based lowering.
 
 ## Name queries
 
@@ -1502,7 +1542,7 @@ Additional target ABIs, verified out parameters, full ownership and partial move
 final identifier's source spelling. It accepts local and parameter names, types,
 aliases, namespaces, and qualified member names. Overloaded methods name the
 method group without selecting an overload. Instance members may be named through
-a type, nullable reference, or uninitialized variable; no receiver is read and no
+a type, nullable reference, or uninitialized variable. No receiver is read and no
 getter or setter runs. Normal member accessibility still applies. Calls, object
 creation, indexing, and other runtime expressions are not named entities and are
 rejected. Generic parameter names retain their source spelling after specialization.
@@ -1513,18 +1553,18 @@ rejected. Generic parameter names retain their source spelling after specializat
 alignment in bytes. Both produce an `int` compile-time constant, can appear in
 constant expressions and fixed-array lengths, and work through aliases and generic
 specialization. Like `sizeof`, `alignof` also accepts a simple variable name to query
-its declared type; it does not evaluate a value expression.
+its declared type. It does not evaluate a value expression.
 
 Concrete array and aggregate layouts are currently limited to 2147483647 bytes.
 `sizeof` and construction diagnose layouts exceeding this implementation
-limit, including field and tail padding; size arithmetic does not wrap. Declaring
+limit, including field and tail padding. Size arithmetic does not wrap. Declaring
 a raw pointer does not require calculating its pointee's complete size. Inline value
 fields and base classes must form a finite layout: direct or indirect cycles are
 rejected even in unused declarations. Raw pointers and managed references do not
 embed their pointee's instance layout and may be recursive. Static fields do not
 form part of their declaring type's instance layout.
-Nested generic type and function specialization share a limit of 64 active specializations;
-this compiler resource limit prevents unbounded generic expansion from exhausting
+Nested generic type and function specialization share a limit of 64 active specializations.
+This compiler resource limit prevents unbounded generic expansion from exhausting
 the compiler stack and does not limit the total number of specialized types or functions.
 
 For a class type these queries describe the complete object, including its vptr
@@ -1551,7 +1591,7 @@ int main() {
 operator, or property accessor. It is an optimization hint, not a guarantee, and
 changes neither visibility nor linkage. On a property it applies to its accessors.
 Abstract and extern declarations cannot use it. Optimization level 0 generally
-keeps calls; optimized builds let LLVM decide whether inlining is beneficial.
+keeps calls. Optimized builds let LLVM decide whether inlining is beneficial.
 
 ```csharp
 inline int Add(int left, int right) => left + right;
@@ -1565,17 +1605,17 @@ queried type. It works through aliases and generic specialization. Its immutable
 fields are `Name`, `Size`, `Alignment`, `IsPointer`, `IsManaged`, `IsNullable`,
 `IsReadOnly`, and `HasDestructor`. It also exposes `Kind`, `HasLayout`,
 `ElementType`, `HasFixedLength`, `Length`, `ReturnType`, `ParameterTypes`, and
-`ParameterCount`. Sizes, alignments, lengths, and counts use `nuint`; names are
+`ParameterCount`. Sizes, alignments, lengths, and counts use `nuint`. Names are
 borrowed, null-terminated strings with static lifetime. Aliases resolve to their
 underlying type name.
 
 `Kind` distinguishes primitives, classes, structs, enums, interfaces, raw pointers,
 managed pointers, arrays, function pointers, and references. `ElementType` points
-to immutable static metadata for a pointer/managed/array/reference element; it is
+to immutable static metadata for a pointer/managed/array/reference element. It is
 null for other kinds. Nested elements remain available during constant evaluation.
 Function pointers have a non-null `ReturnType` descriptor, including for void
 returns, and a `ParameterCount`. `ParameterTypes` points to a contiguous immutable
-array of descriptors; it is null when the count is zero. Index only within that
+array of descriptors. It is null when the count is zero. Index only within that
 count. Nested function signatures and reference/immutable/nullable parameter
 layers remain available recursively and during constant evaluation. Non-function
 kinds use null return/parameter pointers and a zero count. No GC allocation is
@@ -1590,19 +1630,18 @@ For `int**`, follow `ElementType` twice to inspect the `int` metadata.
 
 `IsImmutable` records deep qualification at the current layer. Primitive and enum leaves
 canonicalize immutable protection to readonly protection because there is no
-deeper storage to protect; their `IsImmutable` flag is false. Aggregate and
+deeper storage to protect. Their `IsImmutable` flag is false. Aggregate and
 reference layers retain the distinction.
 
 `HasLayout` is false for void and interface elements, whose `Size` and `Alignment`
 are zero. Their pointers have their own valid layouts. Direct `typeof(I)` remains
 invalid when `I` is an interface, while `typeof(I*).ElementType` describes it.
-`HasFixedLength` is true only for fixed arrays; `Length` is their element count,
+`HasFixedLength` is true only for fixed arrays. `Length` is their element count,
 zero otherwise. Array and pointer element metadata do not flatten qualifiers.
 
 Traits describe the queried type itself: `typeof(Resource*).HasDestructor` is
 false even when `Resource` has a destructor. `IsPointer` describes raw and function
-pointers; managed references use `IsManaged`. This is not a runtime type registry
-and does not yet enumerate fields, methods, or properties. `typeof(expression)`
+pointers. Managed references use `IsManaged`. Member enumeration is not supported. `typeof(expression)`
 is not supported.
 
 ```csharp
@@ -1631,7 +1670,7 @@ int main() {
 Advanced code can call `__llvm<Result>("body IR", arguments...)`. This reserved
 unqualified builtin emits a private `alwaysinline` helper whose argument types
 come from the gflat expressions and whose result type is explicit. LLVM arguments
-are `%0`, `%1`, and so on; the body must provide its own terminator.
+are `%0`, `%1`, and so on. The body must provide its own terminator.
 
 ```csharp
 int Add(int a, int b) => __llvm<int>("%sum = add i32 %0, %1\nret i32 %sum", a, b);
@@ -1641,8 +1680,8 @@ int main() => Add(20, 22);
 `__llvm_module<Result>("module IR", "entry", arguments...)` also accepts external
 declarations and helper definitions, for example LLVM intrinsics. Its entry must
 be an unquoted symbol defined in that module, with exactly matching types and the
-default calling convention. Defined symbols receive unique names per call site;
-identical external declarations are shared. Quoted symbol names, target
+default calling convention. Defined symbols receive unique names per call site.
+Identical external declarations are shared. Quoted symbol names, target
 directives, attribute groups, metadata, comdats, variadic entries, and entry ABI
 parameter attributes are currently unsupported. Function attributes written
 inline remain available. An explicit `nounwind` attribute on the selected module
@@ -1652,18 +1691,16 @@ functions, metadata names, comments, and string data do not establish this contr
 
 Both forms require ordinary string literals. Arguments are evaluated once, in
 source order. Primitive values, enums, function pointers, and raw pointers are
-supported; managed references, language references, interface fat pointers, and
+supported. Managed references, language references, interface fat pointers, and
 aggregate values are rejected. Use explicit raw pointers for aggregate storage.
 The raw code must respect pointed-to storage lifetimes, must not unwind through
 the helper, and must not bypass managed-reference bookkeeping. LLVM instructions,
 calling conventions, alignment requirements, and target portability are the
-caller's responsibility. Native compilation verifies the supplied LLVM syntax;
+caller's responsibility. Native compilation verifies the supplied LLVM syntax.
 `--check` does not parse or validate LLVM instructions.
 
-This escape hatch is experimental. It does not configure a GC strategy on gflat
-functions, emit stack maps/statepoints, or supply a collector integration protocol.
-Those remain separate work; using an LLVM GC intrinsic alone does not establish
-that integration.
+Inline LLVM is experimental. GC strategies, stack maps, and statepoints require
+additional compiler integration.
 
 
 ### Expected implementations and provider aliases
@@ -1695,9 +1732,9 @@ multiple replacements, and replacement of an ordinary alias are errors. Alias
 constraints follow `:`. They validate the selected implementation and limit
 static member access through the alias to the declared contract.
 Overload selection through a constrained alias considers only signatures exposed
-by that contract; extra overloads on the selected implementation cannot hijack a
+by that contract. Extra overloads on the selected implementation cannot hijack a
 call. The alias retains its implementation's nominal type identity, including
 when used as a generic argument.
-Provider aliases are namespace declarations; nested provider aliases inside types
+Provider aliases are namespace declarations. Nested provider aliases inside types
 are not supported yet. Ordinary local aliases retain a constrained provider's
 contract, and generic forwarding does not expose implementation-only members.

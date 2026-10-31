@@ -21,7 +21,7 @@ length before allocating storage. Invalid UTF-8, overlong sequences, surrogate
 scalar encodings, or isolated/truncated UTF-16 surrogates throw `Exception`.
 Length overflow throws rather than wrapping. No replacement characters are
 silently substituted. Output allocation failure throws `BadAllocException`.
-Empty input accesses no input bytes and allocates no output storage; a nonempty
+Empty input accesses no input bytes and allocates no output storage. A nonempty
 result reserves exactly once. Inputs remain unchanged on success or failure.
 
 ```csharp
@@ -32,7 +32,7 @@ String utf8 = UnicodeText::FromUtf16(source, 3);
 Vector<ushort> utf16 = UnicodeText::ToUtf16(utf8.Data, utf8.Length);
 ```
 
-The caller keeps the input alive and unchanged for the whole call; results no
+The caller keeps the input alive and unchanged for the whole call. Results no
 longer borrow input afterward. The algorithms reuse `UnicodeTranscoding`, `Utf8`,
 and `Utf16` with small stack chunks. They do not cast away String protection or
 write into uninitialized Vector elements.
@@ -42,7 +42,7 @@ stream. Serialized UTF-16 bytes need an explicit endian decoder. This API does
 not assume that a platform's `wchar_t` is 16 bits. For a native API explicitly
 requiring null-terminated UTF-16 units, append `(ushort)0` to the returned Vector,
 then borrow its data while the owner remains alive and unmodified. Embedded zeros
-still terminate such native calls early; use counted native APIs when necessary.
+still terminate such native calls early. Use counted native APIs when necessary.
 
 Explicit source selections need `Text/UnicodeText.gf`, `Text/UnicodeTranscoding.gf`,
 `Text/utf8.gf`, `Text/utf16.gf`, String and Vector with their ordinary dependencies. The

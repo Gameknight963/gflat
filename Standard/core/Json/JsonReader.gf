@@ -2,9 +2,9 @@ using Standard::Memory;
 using Standard::Collections;
 namespace Standard::Json;
 
-/// Reads tokens from borrowed counted UTF-8 input and owns only its nesting stack.
+/// Reads tokens from borrowed counted UTF-8 input and owns its nesting stack.
 /// Keep input alive and unchanged for reader use and every retained raw token view.
-/// Nesting state can allocate; no owning strings, DOM or numeric conversions are created.
+/// Nesting state grows as needed and can throw BadAllocException.
 public struct JsonReader
 {
     private static const byte ArrayFirst = (byte)0;
@@ -28,7 +28,7 @@ public struct JsonReader
     private nuint depth;
 
     /// Borrows count bytes without copying them or requiring a zero terminator.
-    /// Starts before the first token; construction does not validate the document.
+    /// Starts before the first token. Construction does not validate the document.
     public JsonReader(readonly(char)* data, nuint count)
     {
         input = data; length = count; position = 0; stack = new();
@@ -36,18 +36,18 @@ public struct JsonReader
         kind = JsonTokenKind::None; tokenOffset = 0; tokenLength = 0; depth = 0;
     }
 
-    /// Current token kind; None before reading, after completion or failure, and after Reset.
+    /// Current token kind. None before reading, after completion or failure, and after Reset.
     public JsonTokenKind Kind { immutable get nothrow => kind; }
     /// Current lexeme byte offset in the original input, meaningful when Kind is not None.
     public nuint TokenOffset { immutable get nothrow => tokenOffset; }
-    /// Current raw byte count, including string or property-name quotes; zero when Kind is None.
+    /// Current raw byte count, including string or property-name quotes. Zero when Kind is None.
     public nuint TokenLength { immutable get nothrow => tokenLength; }
-    /// Enclosing container count; matching opening and closing delimiters have the same depth.
+    /// Enclosing container count. Matching opening and closing delimiters have the same depth.
     public nuint Depth { immutable get nothrow => depth; }
     /// Borrows the exact current lexeme, keeping quotes, escapes and original number spelling.
-    /// Container lexemes are single delimiters; None returns a canonical empty span.
-    /// Saved spans borrow input, not reader state; reading, resetting, moving or destroying the reader preserves them.
-    /// Keep input alive and unchanged for every use; the getter copies no bytes and allocates nothing.
+    /// Container lexemes are single delimiters. None returns a canonical empty span.
+    /// Saved spans borrow input, not reader state. Reading, resetting, moving or destroying the reader preserves them.
+    /// Keep input alive and unchanged for every use. The getter copies no bytes and allocates nothing.
     public Span<readonly(char)> RawToken
     {
         immutable get
@@ -58,8 +58,8 @@ public struct JsonReader
     }
 
     /// Compares decoded text of a current String or PropertyName with counted UTF-8, without allocation.
-    /// Other token kinds return false without reading text; the input regions may overlap.
-    /// May stop at a mismatch; this is not a separate full-input validation operation.
+    /// Other token kinds return false without reading text. The input regions may overlap.
+    /// Stops at the first mismatch.
     public immutable bool ValueTextEquals(readonly(char)* text, nuint count) nothrow
     {
         if (kind != JsonTokenKind::String && kind != JsonTokenKind::PropertyName) return false;
@@ -157,9 +157,9 @@ public struct JsonReader
         }
     }
 
-    /// On a property name, first reads its value; an opener advances through its matching closer.
-    /// Leaves that closing token current; other scalar, end and None tokens do not advance.
-    /// Validates skipped content, not later or trailing input; keep reading until Read returns false.
+    /// On a property name, first reads its value. An opener advances through its matching closer.
+    /// Leaves that closing token current. Other scalar, end and None tokens do not advance.
+    /// Validates skipped content, not later or trailing input. Keep reading until Read returns false.
     /// Any exception requires Reset before another Read or Skip, including nesting allocation failure.
     public void Skip()
     {
@@ -173,10 +173,10 @@ public struct JsonReader
         }
     }
 
-    /// Returns true for the next token; false only after one root and trailing JSON whitespace are validated.
-    /// Stopping early does not validate the rest; reads after successful completion keep returning false.
-    /// Malformed or incomplete data throws JsonParseException; nesting growth can throw BadAllocException.
-    /// Any exception latches failure until Reset; completion or error leaves Kind None and TokenLength zero.
+    /// Returns true for the next token. False only after one root and trailing JSON whitespace are validated.
+    /// Stopping early does not validate the rest. Reads after successful completion keep returning false.
+    /// Malformed or incomplete data throws JsonParseException. Nesting growth can throw BadAllocException.
+    /// Any exception latches failure until Reset. Completion or error leaves Kind None and TokenLength zero.
     public bool Read()
     {
         if (failed) this.Fail("Reset JSON reader after a failed read", position);

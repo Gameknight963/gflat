@@ -1,8 +1,7 @@
 # Windows TCP client
 
-Optional `Windows::TcpClient` for blocking numeric IPv4/IPv6 TCP connections on
-64-bit Windows. Reference `WindowsNetwork.gfproj`; its source-library reference
-propagates the `ws2_32` native link dependency. It is separate from portable Standard.
+`Windows::TcpClient` owns a blocking numeric IPv4/IPv6 TCP connection on 64-bit
+Windows. Reference its source project to include the `ws2_32` native library:
 
 ```xml
 <ItemGroup>
@@ -10,38 +9,21 @@ propagates the `ws2_32` native link dependency. It is separate from portable Sta
 </ItemGroup>
 ```
 
-Direct source/CLI consumers also supply `--native-library ws2_32`. Project
-references propagate that requirement to the final executable.
+Direct source users supply `--native-library ws2_32`.
 
-The move-only value owns its socket and WinSock startup reference. Default
-construction is closed. `Connect(IpEndpoint)` opens a connection; `IsOpen` reports
-whether it still owns a socket. It implements counted `ITextWriter::Write` and
-`Standard::IO::IByteReader::Read`.
+## Connecting and exchanging bytes
+
+Default construction is closed. `Connect(IpEndpoint)` opens a connection, and
+`IsOpen` reports socket ownership. The move-only value owns its socket and WinSock
+startup reference. It implements `ITextWriter` and `Standard::IO::IByteReader`.
 
 | API | Behavior |
 | --- | --- |
-| `Read(char* data, nuint count)` | One read, up to 2,147,483,647 bytes; returns the actual count, zero at peer EOF. |
-| `ReadExactly(char* data, nuint count)` | Loops over short reads; early EOF throws `Standard::IO::EndOfStreamException`. |
-| `Write(readonly(char)* data, nuint count)` | Sends all counted bytes on success; embedded zeros are preserved. |
-| `ShutdownSend()` | Ends sending while receiving remains available. |
-| `Close()` | Checks native close/cleanup errors; successful repeated close is a no-op. |
-
-Closed clients reject I/O and shutdown, including zero-count I/O. Read/Write errors
-can follow an already consumed/sent prefix. `SocketException` derives from
-`Standard::IO::IOException`; `GetCode()` returns the captured native WSA error.
-A failed socket close retains ownership for retry. If the socket closes but
-WinSock cleanup fails, `IsOpen` is false and another `Close` retries that cleanup.
-Destruction attempts cleanup without reporting errors.
-
-Keep borrowed buffers valid for the full count. Coordinate calls on a shared
-client; Close must not race with I/O. Write success means the OS accepted bytes,
-not that the peer received them. Use protocol-appropriate half-close and receive
-until EOF before closing when graceful delivery matters. The last WinSock cleanup
-can discard queued data, so destruction performs no hidden blocking drain.
-
-IPv6 uses scope0; zone identifiers, DNS, TLS, async, listeners, socket options and
-timeout configuration are outside this API. Blocking operations follow native OS
-waiting behavior. No global initializer, background thread, or polling is used.
+| `Read(data, count)` | Reads up to 2,147,483,647 bytes and returns the actual count, or zero at peer EOF |
+| `ReadExactly(data, count)` | Fills the range or throws `EndOfStreamException` on early EOF |
+| `Write(data, count)` | Sends all counted bytes, including embedded zeros |
+| `ShutdownSend()` | Ends sending while receiving remains available |
+| `Close()` | Reports native close and cleanup errors. Repeated successful close is a no-op |
 
 For a protocol where the peer replies after request EOF and then ends its reply:
 
@@ -62,9 +44,32 @@ void PrintReply(Standard::Net::IpEndpoint endpoint)
 }
 ```
 
-TCP is a byte stream; read boundaries are independent of write boundaries.
-Other protocols may use lengths or delimiters instead of EOF.
+TCP supplies a byte stream. A read can return a different grouping of bytes than
+the sender's writes. Follow the protocol's framing rules, such as lengths,
+delimiters, or EOF.
 
-Native lifetime details: [WSAStartup](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsastartup),
+## Lifetime and failures
+
+- Keep buffers valid for the full count and coordinate shared-client calls.
+  `Close` must not race with IO
+- Closed clients reject IO and shutdown, including zero-count IO
+- IO failures can leave an already consumed or sent prefix
+- `SocketException` derives from `IOException` and captures the WSA error code
+- A failed socket close retains ownership for retry
+- If socket close succeeds but WinSock cleanup fails, `IsOpen` is false and
+  another `Close` retries cleanup
+- Destruction attempts cleanup without reporting errors
+
+Write success means the OS accepted the bytes. To confirm protocol delivery,
+perform the appropriate half-close and receive through the peer's completion
+signal before closing. Final WinSock cleanup can discard queued data.
+
+## Scope
+
+Endpoints are numeric IPv4 or IPv6 with scope zero. Operations block according to
+native OS behavior. DNS, TLS, listeners, socket options, timeouts, and async IO
+would require additional APIs.
+
+Native lifetime references: [WSAStartup](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsastartup),
 [closesocket](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-closesocket),
-and [WSACleanup](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsacleanup).
+[WSACleanup](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsacleanup).

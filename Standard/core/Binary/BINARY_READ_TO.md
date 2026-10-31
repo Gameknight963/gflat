@@ -1,6 +1,8 @@
 # Bounded delimiter fields
 
-`BinaryBufferReader.TryReadTo(byte delimiter, ref BinaryBufferReader slice)` borrows the bytes before the first delimiter in the remaining counted input. It excludes the delimiter from the child and always consumes it in the parent. It allocates nothing and adds no text decoding or ownership transfer.
+`BinaryBufferReader.TryReadTo(delimiter, ref slice)` borrows the bytes before the
+first matching byte in the remaining input. It advances the parent past the
+delimiter and starts the child at position zero.
 
 ```csharp
 using Standard::Binary;
@@ -17,10 +19,21 @@ int main() nothrow
 }
 ```
 
-The delimiter can be any byte, including zero and 255. No Unicode, CRLF, escaping, multi-byte delimiter, or C-string validation is implied. This is useful for required terminated fields inside a captured binary table: the table's length bounds the entire search.
+## Results
 
-When found, the child starts at Position=0 and contains only the preceding bytes. A delimiter at the current position succeeds with an empty child, Length=0 and Data=null, exactly like `TryReadSlice(0)`, while the parent advances one byte. The empty child is a counted empty view, not a C-string pointer retaining the terminator.
+- A match returns true. `slice` contains the preceding bytes
+- A delimiter at the current position produces an empty slice with null `Data`
+- A missing delimiter returns false, leaves the parent position unchanged, and
+  resets `slice` to empty
+- Empty input returns false without reading storage
 
-When absent, the operation returns false, preserves parent Position/Remaining, and resets the output child to default empty, including Position=0 and Data=null. Repeating that failed call repeats the bounded search; there is no retained continuation state. Empty remaining input returns false without dereferencing its buffer.
+Any byte can be a delimiter, including zero and 255. The search is bounded by the
+reader's length and allocates nothing. Repeating a failed call searches the same
+remaining bytes again.
 
-Keep the child object disjoint from the parent object and all captured source bytes. Parent and child borrow the same storage; neither owns or extends its lifetime. Keep that source alive and valid while either reader is used. Copies have independent cursor positions over the same bytes. A child read never advances the parent, and the parent can continue immediately after the delimiter.
+## Storage lifetime
+
+Keep the child object separate from the parent and captured source bytes. Both
+readers borrow the same storage, which must remain alive while either is used.
+Their cursor positions are independent. Reading the child leaves the parent at
+the byte after the delimiter.

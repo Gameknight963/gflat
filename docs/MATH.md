@@ -1,8 +1,7 @@
 # Scalar math
 
 `Standard/core/Numerics/Math.gf` provides `Standard::Numerics::Math`, with scalar helpers and checked integer
-operations. It does not directly call C math functions. The checked operations
-still require the normal exception and allocation support.
+operations. Checked operations require exception and allocation support.
 
 ## Integers
 
@@ -12,7 +11,7 @@ overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`
 as its arguments, including exact signed 128-bit comparisons without
 conversion through floating point.
 `Clamp` includes both bounds and throws `Exception` if minimum exceeds maximum.
-Use matching argument types; these APIs do not define mixed signed/unsigned
+Use matching argument types. These APIs do not define mixed signed/unsigned
 comparison rules of their own.
 
 Every `Min` and `Max` overload is `nothrow`. `Clamp` retains its throwing
@@ -27,12 +26,12 @@ wrapping or invoking signed overflow. This check also applies to pointer-sized
 
 `GreatestCommonDivisor(a, b)` and `TryLeastCommonMultiple(a, b, ref result)`
 have `uint`, `ulong`, and `nuint` overloads. Use matching unsigned argument and
-result types; no signed absolute-value convention is implied.
+result types. No signed absolute-value convention is implied.
 
 GCD returns the greatest common divisor using Euclid's algorithm.
 `GreatestCommonDivisor(0, value)` returns `value`, and GCD of two zeroes is zero.
 LCM returns true with the exact least common multiple when it fits. If either
-operand is zero it succeeds with zero; overflow returns false and sets `result`
+operand is zero it succeeds with zero. Overflow returns false and sets `result`
 to zero. It divides out the GCD before checking multiplication, so a large
 intermediate `a * b` does not itself cause rejection.
 
@@ -54,7 +53,7 @@ same `uint`, `ulong`, and `nuint` overloads. It returns the exact value when it
 fits, including zero if either operand is zero, and throws
 `Exception("Least common multiple overflow")` otherwise. It delegates to the
 same checked calculation as `TryLeastCommonMultiple`, so a common factor is
-removed before multiplication. Successful calls allocate nothing; throwing uses
+removed before multiplication. Successful calls allocate nothing. Throwing uses
 ordinary exception support. These overloads are not `nothrow`.
 
 Use the value-returning form when a combined period must fit, or the Try form
@@ -79,7 +78,7 @@ int main()
 `IsNaN`, `IsFinite`, `Abs`, `Min`, `Max`, `Truncate`, `Floor`, `Ceiling`, and `Round` overloads.
 `IsFinite` excludes both infinities and all NaNs, and includes zeros
 and subnormals. `Abs` clears the sign bit, including for negative zero and NaNs.
-All floating-point helpers are `nothrow`; the signed-integer `Abs` overloads
+All floating-point helpers are `nothrow`. The signed-integer `Abs` overloads
 retain their overflow exceptions.
 
 `CopySign(magnitude, sign)` returns the first argument with its sign bit replaced
@@ -89,13 +88,13 @@ sign even though comparing them with zero would not detect it. Both overloads
 use ordinary integer bit operations and allocate nothing.
 
 `BitIncrement(value)` returns the next representable value toward positive
-infinity; `BitDecrement(value)` steps toward negative infinity. These are not
+infinity. `BitDecrement(value)` steps toward negative infinity. These are not
 additions or subtractions of a fixed epsilon: spacing changes with magnitude.
 Both positive and negative zero increment to the smallest positive subnormal
 and decrement to the smallest negative subnormal. A step back from those
 subnormals retains the corresponding zero sign.
 
-Positive infinity stays unchanged when incremented; negative infinity stays
+Positive infinity stays unchanged when incremented. Negative infinity stays
 unchanged when decremented. Stepping either infinity in the opposite direction
 returns the largest finite value of that sign. NaNs retain their exact bits,
 including sign, payload and signaling bit. Both operations are `nothrow`, use
@@ -119,7 +118,7 @@ They allocate nothing on their normal paths.
 
 ### Integral rounding
 
-These functions return the same floating-point type as their input; they do not
+These functions return the same floating-point type as their input. They do not
 convert to an integer type or impose an integer range limit:
 
 | Method | Result |
@@ -132,11 +131,11 @@ convert to an integer type or impose an integer range limit:
 For example, `Round(2.5)` is `2.0`, `Round(3.5)` is `4.0`, and `Round(-0.5)`
 is negative zero. `Truncate(-0.25)` and `Ceiling(-0.25)` also return negative
 zero, whereas `Floor(-0.25)` returns `-1.0`. Every method preserves an input's
-zero sign. Already integral values, infinities, and NaNs are returned unchanged;
+zero sign. Already integral values, infinities, and NaNs are returned unchanged.
 NaN signs, payloads, and signaling bits are preserved in the returned value.
 
 The implementation uses IEEE binary32/binary64 bit masks. `Floor` and `Ceiling`
-adjust a truncated value by an exactly representable one only when required;
+adjust a truncated value by an exactly representable one only when required.
 `Round` examines discarded bits and the retained integer's parity. All eight
 overloads are `nothrow`, allocate nothing, and use no C math functions, LLVM
 rounding intrinsics, or floating-to-integer conversions. They do not offer
@@ -146,16 +145,16 @@ applies to `Math.gf`.
 
 ### Square root
 
-`Sqrt(float value)` returns `float`; `Sqrt(double value)` returns `double`.
-Both are `nothrow`. Positive finite inputs produce the IEEE square root;
-positive infinity remains positive infinity, and both signs of zero retain
+`Sqrt(float value)` returns `float`. `Sqrt(double value)` returns `double`.
+Both are `nothrow`. Positive finite inputs produce the IEEE square root.
+Positive infinity remains positive infinity, and both signs of zero retain
 their sign. Negative nonzero inputs, including negative infinity, produce NaN.
-NaN inputs produce NaN; their exact payload, sign, and signaling state are not
+NaN inputs produce NaN. Their exact payload, sign, and signaling state are not
 promised for this arithmetic operation.
 
 The implementation uses existing `__llvm_module` support to call
 `llvm.sqrt.f32` / `llvm.sqrt.f64`. No new compiler recognition of `Math` is
-involved. The tiny LLVM helpers are `alwaysinline nounwind`; no fast-math flags,
+involved. The tiny LLVM helpers are `alwaysinline nounwind`. No fast-math flags,
 approximations, or assumptions excluding NaNs, infinities, or signed zero are
 enabled. As specified by the [LLVM 22.1 intrinsic contract](https://releases.llvm.org/22.1.0/docs/LangRef.html#llvm-sqrt-intrinsic),
 the operation does not set C `errno` or provide floating-point traps. It uses
@@ -173,4 +172,4 @@ even an application using only `Sqrt` must satisfy the checked integer methods'
 exception/allocation declarations during compilation. Selecting actual
 `Math.gf` and `Exception.gf` with `NoStdLib` currently fails for missing
 `Memory::Allocate` before linking. The square-root tests use the real library
-and its normal contracts; this API does not claim a whole-Math no-CRT proof.
+and its normal contracts.

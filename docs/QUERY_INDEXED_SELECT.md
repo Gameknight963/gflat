@@ -22,12 +22,12 @@ Each enumerator starts at index zero. Its index advances on successful
 selector every time, with the same index until the next successful move.
 Projected values are not cached. `Count()` and `Any()` need not invoke a
 selector or read its input value. A preceding filter changes which encounters
-are indexed; a following filter does not renumber the projection.
+are indexed. A following filter does not renumber the projection.
 
 A failing upstream `MoveNext` invalidates `Current` without advancing the
 assigned index. Retrying follows the upstream iterator's ordinary behavior,
 as with the one-argument `Select`. A failing input `Current` or selector leaves
-the position and index unchanged; the caller can retry the getter.
+the position and index unchanged. The caller can retry the getter.
 
 Indices do not wrap. If an upstream move succeeds after index `nuint` maximum,
 the adapter throws `Sequence index overflow`, with that upstream value consumed
@@ -36,14 +36,13 @@ maximum valid index returns false normally.
 
 Source views and cursor owners follow the same copy and lifetime rules as
 ordinary `Select`. Both factories and repeated enumeration retain their source's
-behavior; a consumable file is not rewound. The adapter uses no heap buffer,
+behavior. A consumable file is not rewound. The adapter uses no heap buffer,
 but callbacks, source factories and ordinary element copies can allocate.
 The callback takes `T` by value: borrowed owning values are copied, while fresh
 owners can transfer normally. A selector result must not borrow storage owned
-only by its temporary by-value argument. Capturing closures are not supported;
-use a named function for an owning value parameter such as `String`.
+only by its temporary by-value argument. Capturing closures are not supported.
+Use a named function for an owning value parameter such as `String`.
 
 Selective builds include `Queries/IndexedSelectSource.gf` and
 `Queries/enumerable_indexed_select.gf` alongside the ordinary Enumerable,
-iterator, span and exception sources. The existing adapter for a one-parameter
-selector keeps its implementation and layout.
+iterator, span and exception sources.

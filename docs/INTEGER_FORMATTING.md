@@ -14,12 +14,12 @@ bool success = Standard::Text::IntegerFormatting::TryFormat(-123, buffer, 20, re
 ```
 
 Output is invariant ASCII decimal: no grouping, leading plus sign, padding, or
-leading zeros. Negative values have a leading minus sign; zero is one byte.
+leading zeros. Negative values have a leading minus sign. Zero is one byte.
 Signed minimum values are supported without signed negation overflow. Pointer
 integers use the target's pointer width.
 
 The result is counted bytes with **no null terminator**. A 20-byte buffer is
-sufficient for the ten types through 64 bits; `extralong` needs 40 bytes.
+sufficient for the ten types through 64 bits. `extralong` needs 40 bytes.
 Callers needing a C string must reserve
 another byte and append the terminator themselves after success.
 
@@ -27,7 +27,7 @@ Each call first counts decimal digits, then writes directly backwards into the
 output after checking capacity. No temporary-buffer copy or libc helper is needed.
 Insufficient capacity returns false, sets `written` to zero, and leaves every
 output byte untouched. A zero capacity does not access output storage. On success
-exactly `written` bytes change; bytes outside that range remain unchanged.
+exactly `written` bytes change. Bytes outside that range remain unchanged.
 The caller supplies writable storage for the stated capacity and must keep
 `written` storage disjoint from the output buffer.
 
@@ -54,31 +54,31 @@ digit, including when `minimumDigits` is zero. Both cases use invariant digits.
 
 `minimumDigits` is a padding width, not a limit: natural digits are never
 truncated, and larger widths prepend zeros even beyond eight or sixteen digits.
-For example, `-1` as an `int` produces `FFFFFFFF`; as a `long` it produces
-`FFFFFFFFFFFFFFFF`. These are the original type's two's-complement bits; an
+For example, `-1` as an `int` produces `FFFFFFFF`. As a `long` it produces
+`FFFFFFFFFFFFFFFF`. These are the original type's two's-complement bits. An
 `int` is not sign-extended to 64 bits. Likewise, `sbyte` -1 produces `FF`,
 `short` -1 produces `FFFF`, and `nint` uses the target pointer width.
-An `extralong` negative value uses all 32 hexadecimal digits; positive values
+An `extralong` negative value uses all 32 hexadecimal digits. Positive values
 omit leading zeros unless padding is requested. For example, `(extralong)-1`
 produces 32 `F` digits. A 32-byte buffer holds any unpadded `extralong` result.
-A width of 20 pads shorter results with leading zeros to reach 20 characters;
-longer results are never truncated.
+A width of 20 pads shorter results with leading zeros to reach 20 characters.
+Longer results are never truncated.
 
 The whole result is preflighted before writing. Insufficient capacity sets
 `written` to zero and leaves all output bytes unchanged, including for an
 extremely large requested padding width. Required length is the greater of
-natural digit count and padding width; it does not add values that could
+natural digit count and padding width. It does not add values that could
 overflow. The decimal buffer lifetime and count-output separation rules above
 apply equally here. All hexadecimal overloads are `nothrow`, allocate nothing,
 and add no source or runtime dependencies.
 
 Decimal `TryFormat(extralong)` uses four 32-bit limbs and 64-bit long division
-by ten. Its signed minimum is supported using complement and carry; it does not
+by ten. Its signed minimum is supported using complement and carry. It does not
 use 128-bit division or introduce a compiler-runtime dependency. Counting and
 writing use scalar locals, with no temporary-buffer copy.
 
 The optional `Standard/core/extra_long_format.gf` supplies writer-based
 `Format(extralong, ITextWriter*)`. Include `Text/IntegerFormatting.gf` and the normal
 `ITextWriter` contract when selecting sources explicitly. It writes the counted
-result once using a 40-byte local buffer; destination exceptions propagate
+result once using a 40-byte local buffer. Destination exceptions propagate
 unchanged. Full standard-library builds include both sources automatically.

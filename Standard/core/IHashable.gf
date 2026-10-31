@@ -4,7 +4,7 @@ namespace Standard;
 /// Pair with consistent equality when using a custom key type.
 interface IHashable
 {
-    /// Returns a hash consistent with equality; unequal values may share a hash.
+    /// Returns a hash consistent with equality. Unequal values may share a hash.
     /// Hash codes are not persistent identifiers.
     immutable nuint GetHashCode();
 

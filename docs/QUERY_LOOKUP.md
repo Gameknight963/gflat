@@ -4,7 +4,7 @@
 `HashMap<K, Vector<T>>`. `ToLookup(keySelector, valueSelector)` returns
 `HashMap<K, Vector<V>>`. This is a plain map of vectors: map enumeration order is
 unspecified, while each group's vector follows source encounter order. A missing
-key behaves like any other missing HashMap key; there is no lazy lookup wrapper.
+key behaves like any other missing HashMap key.
 
 ```csharp
 using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
@@ -29,8 +29,8 @@ int main()
 
 Selectors use ordinary by-value signatures `K(T)*` and `V(T)*`. Keys require
 `IHashable` and matching `IEquatable<K>`, as with HashMap. Hash and equality must
-agree, and stored keys must keep stable identity. Equal keys group together;
-the first stored key remains the representative, and later temporary keys are
+agree, and stored keys must keep stable identity. Equal keys group together.
+The first stored key remains the representative, and later temporary keys are
 destroyed normally. They do not trigger duplicate-key errors.
 
 Each source element reads terminal `Current` once into a local value, invokes
@@ -43,7 +43,7 @@ pointers are never retained across map insertion or selector calls. Ordinary
 allocator contracts still apply when a group's vector grows.
 
 The result owns its keys and vectors. Borrowed fields inside a key or grouped
-value keep their usual backing-owner lifetime obligations; do not select a view
+value keep their usual backing-owner lifetime obligations. Do not select a view
 borrowing a temporary selector argument. Source/query values follow ordinary
 copy/move rules, and borrowed adapters still require their backing owners alive.
 Callbacks must respect the source's normal mutation and lifetime rules.
@@ -51,7 +51,7 @@ Callbacks must respect the source's normal mutation and lifetime rules.
 The map indexer returns a reference to its vector, so `lookup[&key].AsSpan()`
 borrows the group's elements without copying the vector. Keep the map alive and
 avoid changes that invalidate that group or its storage while using the span.
-Use `Find` when the key may be absent; the indexer throws for a missing key.
+Use `Find` when the key may be absent. The indexer throws for a missing key.
 
 An empty source returns an empty map without internal allocation or selector
 calls. A source iterator can itself allocate. Nonempty inputs allocate map and

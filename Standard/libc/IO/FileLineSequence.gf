@@ -8,7 +8,7 @@ public struct FileLineSequence : IEnumerable<String, FileLineSequence::Enumerato
 {
     private File* input;
     public FileLineSequence(File* source) { input = source; }
-    public Enumerator GetEnumerator() => new Enumerator(input);
+    public readonly Enumerator GetEnumerator() => new Enumerator(input);
     public Enumerable<String, FileLineSequence, FileLineSequence::Enumerator> AsEnumerable()
         => new Enumerable<String, FileLineSequence, FileLineSequence::Enumerator>(*this);
 

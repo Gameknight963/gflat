@@ -24,6 +24,8 @@ int main()
 `Lines()` constructs a small borrowed pointer view. `GetEnumerator()` creates an
 iterator with an empty owned String. Neither operation reads the file or allocates
 line storage. An ordinary empty-input enumeration also allocates no line storage.
+The iterator factory accepts shallow readonly sequence views. It does not accept
+deeply immutable views, since the new iterator can advance the borrowed file.
 `MoveNext()` reads one line, reusing its String buffer on later calls. LF and CRLF
 end a line and are removed; bare CR and embedded null bytes remain counted data.
 An unterminated final line is yielded, and an empty terminated line is a line.

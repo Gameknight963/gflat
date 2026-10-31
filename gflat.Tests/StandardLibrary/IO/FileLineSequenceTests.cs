@@ -18,6 +18,42 @@ public sealed class FileLineSequenceTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void ReadonlyFactoriesShareFilePositionButOwnIndependentLineBuffers(int optimization)
+        => Run(Encoding.UTF8.GetBytes("first\nsecond\nthird\n"), path => Counters + $$"""
+            int main() {
+                {
+                    File input = File::OpenRead({{path}});
+                    FileLineSequence sequence = input.Lines();
+                    readonly(FileLineSequence)* view = &sequence;
+                    {
+                        FileLineSequence::Enumerator first = view.GetEnumerator();
+                        FileLineSequence::Enumerator second = view.GetEnumerator();
+                        if (allocations != 0 || !input.IsOpen || input.PeekByte() != 'f') return 1;
+                        if (!first.MoveNext() || first.Current.Length != 5 || first.Current[0] != 'f') return 2;
+                        readonly(char)* firstAddress = first.Current.Data;
+                        if (!second.MoveNext() || second.Current.Length != 6 || second.Current[0] != 's') return 3;
+                        int before = allocations;
+                        if (first.Current.Data != firstAddress || first.Current[0] != 'f' || allocations != before) return 4;
+                        if (!first.MoveNext() || first.Current.Length != 5 || first.Current[0] != 't') return 5;
+                        if (second.Current.Length != 6 || second.Current[0] != 's') return 6;
+                        if (first.MoveNext() || second.MoveNext() || !input.IsOpen) return 7;
+                    }
+                    if (allocations != releases || !input.IsOpen) return 8;
+                }
+                return allocations - releases;
+            }
+            """, optimization);
+
+    [Fact]
+    public void ImmutableSequenceCannotExposeAMutableFileThroughAnIterator()
+        => RunCompileFailure(_ => Counters + """
+            void Inspect(immutable(FileLineSequence)* view) { view.GetEnumerator(); }
+            int main() => 0;
+            """);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void CountedLinesPreserveZerosBareCrAndFinalLineAndMaterializeIndependentStrings(int optimization)
         => Run(Encoding.UTF8.GetBytes("\r\none\nA\0B\rX\r\nlast\r"),path=>Counters+$$"""
             int main(){ {

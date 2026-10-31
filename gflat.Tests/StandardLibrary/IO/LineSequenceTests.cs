@@ -68,6 +68,46 @@ public sealed class LineSequenceTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void ReadonlyFactoriesBorrowTheCursorButKeepIndependentLineBuffers(int optimization)
+        => Run("""
+            int main()
+            {
+                {
+                    Source source = new("first\nsecond\nthird\n", 19);
+                    LineSequence sequence = EnumerateLines(&source);
+                    readonly(LineSequence)* view = &sequence;
+                    LineSequence::Enumerator first = view.GetEnumerator();
+                    LineSequence::Enumerator second = view.GetEnumerator();
+                    if (source.Calls != 0 || allocations != 0) return 1;
+                    if (!first.MoveNext() || first.Current.Length != 5 || first.Current[0] != 'f') return 2;
+                    readonly(char)* firstAddress = first.Current.Data;
+                    if (!second.MoveNext() || second.Current.Length != 6 || second.Current[0] != 's') return 3;
+                    nuint calls = source.Calls; int before = allocations;
+                    if (first.Current.Data != firstAddress || first.Current[0] != 'f' || first.Current.Length != 5) return 4;
+                    if (source.Calls != calls || allocations != before) return 5;
+                    if (!first.MoveNext() || first.Current.Length != 5 || first.Current[0] != 't') return 6;
+                    if (second.Current[0] != 's' || second.Current.Length != 6 || source.Position != 19) return 7;
+                    if (first.MoveNext() || second.MoveNext()) return 8;
+                    calls = source.Calls;
+                    if (first.MoveNext() || second.MoveNext() || source.Calls != calls) return 9;
+                }
+                return allocations - releases;
+            }
+            """, optimization);
+
+    [Fact]
+    public void ImmutableSequenceCannotExposeAMutableReaderThroughAnIterator()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
+            void Inspect(immutable(LineSequence)* view) { view.GetEnumerator(); }
+            int main() => 0;
+            """), options: new() { NoStdLib = true }));
+        Assert.Contains("non-immutable method 'GetEnumerator'", error.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void DeferredCountedLinesPreserveBoundariesAndStickyEof(int optimization)
         => Run("""
             int main()

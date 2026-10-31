@@ -176,6 +176,8 @@ are in `byte_reader_string_lines.gf`.
 ## Enumerate lines without owning the source
 
 `input.EnumerateLines()` creates a deferred `LineSequence` over any `IByteReader`.
+Its factory accepts shallow readonly sequence views while retaining a mutable
+borrow of the source; a deeply immutable sequence cannot create such an iterator.
 It follows `TryReadLine`: LF and CRLF are removed, empty terminated lines are
 yielded, and a final nonempty unterminated line is yielded. Bare CR, embedded
 zeros and high bytes remain counted contents. A trailing LF does not invent an

@@ -10,7 +10,7 @@ public struct LineSequence : IEnumerable<String, LineSequence::Enumerator>
     private IByteReader* input;
 
     public LineSequence(IByteReader* source) { input = source; }
-    public Enumerator GetEnumerator() => new Enumerator(input);
+    public readonly Enumerator GetEnumerator() => new Enumerator(input);
 
     public struct Enumerator
     {

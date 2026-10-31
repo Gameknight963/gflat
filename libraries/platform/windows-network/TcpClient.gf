@@ -1,5 +1,6 @@
 using Standard::IO;
 using Standard::Net;
+
 namespace Windows;
 
 namespace tcp_detail
@@ -15,8 +16,8 @@ namespace tcp_detail
     private extern int closesocket(nuint socket) nothrow;
 }
 
-/// Owns one blocking WinSock TCP connection and its startup reference.
-/// Default construction is closed; move transfers both resources.
+// Owns one blocking WinSock TCP connection and its startup reference.
+// Default construction is closed; move transfers both resources.
 public struct TcpClient : ITextWriter, IByteReader
 {
     private struct Session
@@ -64,8 +65,8 @@ public struct TcpClient : ITextWriter, IByteReader
 
     private static bool HasCompatibleLayout() nothrow => sizeof(nuint) == 8;
 
-    /// Connects a numeric IPv4 or IPv6 endpoint. IPv6 flow and scope are zero.
-    /// This is blocking; no DNS lookup, proxy, timeout or TLS layer is added.
+    // Connects a numeric IPv4 or IPv6 endpoint. IPv6 flow and scope are zero.
+    // This is blocking; no DNS lookup, proxy, timeout or TLS layer is added.
     public static TcpClient Connect(IpEndpoint endpoint)
     {
         if (!HasCompatibleLayout()) throw new IOException("TcpClient requires Windows 64-bit");
@@ -110,8 +111,8 @@ public struct TcpClient : ITextWriter, IByteReader
         if (handle == (nuint)0 - 1) throw new IOException("TcpClient is closed");
     }
 
-    /// Reads up to count bytes. A short read is normal; zero means peer EOF.
-    /// Does not append a terminator. A closed client rejects even zero count.
+    // Reads up to count bytes. A short read is normal; zero means peer EOF.
+    // Does not append a terminator. A closed client rejects even zero count.
     public nuint Read(char* data, nuint count)
     {
         this.RequireOpen();
@@ -127,8 +128,8 @@ public struct TcpClient : ITextWriter, IByteReader
         return (nuint)read;
     }
 
-    /// Loops through short reads; peer EOF before count throws EndOfStreamException.
-    /// Earlier input has already been consumed and stored when an error escapes.
+    // Loops through short reads; peer EOF before count throws EndOfStreamException.
+    // Earlier input has already been consumed and stored when an error escapes.
     public void ReadExactly(char* data, nuint count)
     {
         this.RequireOpen();
@@ -141,8 +142,8 @@ public struct TcpClient : ITextWriter, IByteReader
         }
     }
 
-    /// Sends every counted byte on success, preserving embedded zeros.
-    /// Failure may follow a sent prefix; success does not promise peer delivery.
+    // Sends every counted byte on success, preserving embedded zeros.
+    // Failure may follow a sent prefix; success does not promise peer delivery.
     public void Write(readonly(char)* data, nuint count)
     {
         this.RequireOpen();
@@ -162,7 +163,7 @@ public struct TcpClient : ITextWriter, IByteReader
         }
     }
 
-    /// Half-closes sending. Receiving remains available until EOF or Close.
+    // Half-closes sending. Receiving remains available until EOF or Close.
     public void ShutdownSend()
     {
         this.RequireOpen();
@@ -173,8 +174,8 @@ public struct TcpClient : ITextWriter, IByteReader
         }
     }
 
-    /// On socket-close failure ownership remains here. On successful socket close,
-    /// IsOpen becomes false; a cleanup failure retains the startup ref for retry.
+    // On socket-close failure ownership remains here. On successful socket close,
+    // IsOpen becomes false; a cleanup failure retains the startup ref for retry.
     public void Close()
     {
         if (handle != (nuint)0 - 1)

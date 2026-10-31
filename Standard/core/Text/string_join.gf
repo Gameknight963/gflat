@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Borrow the source owners; only the returned String owns new storage.

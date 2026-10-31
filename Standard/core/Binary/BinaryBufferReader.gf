@@ -1,4 +1,5 @@
 using Standard::IO;
+
 namespace Standard::Binary;
 
 // Borrows counted bytes. Copies retain independent positions over the same storage.
@@ -31,9 +32,9 @@ public struct BinaryBufferReader : IByteReader
         position += count; return true;
     }
 
-    /// Consumes up to count bytes, returning a short prefix or zero at EOF.
-    /// Zero requests and empty cursors do not dereference either storage pointer.
-    /// Output must be disjoint from this reader and its entire captured input.
+    // Reads up to count bytes and advances Position. EOF returns zero.
+    // Zero count and empty input leave both storage pointers untouched.
+    // Output must be separate from this reader and its captured input.
     public nuint Read(char* output, nuint count) nothrow
     {
         nuint take = length - position;
@@ -61,8 +62,9 @@ public struct BinaryBufferReader : IByteReader
         position += count; return true;
     }
 
-    /// Borrows the next count bytes without advancing this reader. The child starts at zero.
-    /// Empty success and failure reset the child to empty. Keep output separate from this reader and backing bytes.
+    // Borrows the next count bytes as a child reader starting at zero, preserving Position.
+    // Failure or an empty slice resets the child to empty.
+    // The child output must be separate from this reader and its backing bytes.
     public immutable bool TryPeekSlice(nuint count, ref BinaryBufferReader slice) nothrow
     {
         if (count > length - position) { slice = new(); return false; }
@@ -71,10 +73,9 @@ public struct BinaryBufferReader : IByteReader
         return true;
     }
 
-    /// Borrows bytes before the first delimiter and consumes through that delimiter.
-    /// Missing delimiter preserves Position and resets slice to default empty.
-    /// Empty fields also return an empty child with null Data. No terminator is retained.
-    /// Keep output disjoint from this reader and its entire captured input.
+    // Borrows the bytes before a delimiter and advances past it.
+    // A missing delimiter preserves Position and resets the slice to empty.
+    // Empty fields have null Data. The slice output must be separate from this reader and its input.
     public bool TryReadTo(byte delimiter, ref BinaryBufferReader slice) nothrow
     {
         slice = new();

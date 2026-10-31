@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Unit-cost Levenshtein distance over counted bytes, using one caller-owned row.

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 struct TakeWhileSource<T, Source, Iterator>

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public bool SequenceEqual<T, LS, LE, RS, RE>(Enumerable<T, LS, LE> left,

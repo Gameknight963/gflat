@@ -1,4 +1,5 @@
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // Owns a ring buffer. Structural mutation invalidates borrowed values/iterators.

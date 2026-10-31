@@ -1,10 +1,10 @@
 using Standard::Text;
 using Standard::Collections;
+
 namespace Standard::IO;
 
-/// Deferred counted lines borrowed from a reader's current position.
-/// Copies and enumerators share the source cursor. None rewind or close it.
-/// Keep the reader alive, open and unmoved while this view or its iterators are used.
+// Deferred counted lines from a borrowed reader's current position.
+// Copies and enumerators share its cursor. Keep the reader alive, open, and unmoved.
 public struct LineSequence : IEnumerable<String, LineSequence::Enumerator>
 {
     private IByteReader* input;
@@ -40,8 +40,8 @@ public struct LineSequence : IEnumerable<String, LineSequence::Enumerator>
             return true;
         }
 
-        /// Borrows the current line until MoveNext, iterator movement or destruction.
-        /// Copy into String to retain an independent line.
+        // Borrows the current line until MoveNext, iterator movement or destruction.
+        // Copy into String to retain an independent line.
         public ref immutable(String) Current
         {
             immutable get

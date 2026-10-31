@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 bool TryParseByte(Span<readonly(char)> text, byte* result) nothrow
 => text.TryParseByte(result);

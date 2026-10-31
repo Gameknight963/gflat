@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 // Sort indices first so allocation and comparison finish before any owner moves.

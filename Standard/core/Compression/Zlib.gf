@@ -3,13 +3,13 @@ namespace Standard::Compression;
 using Standard::Binary;
 using Standard::Hashing;
 
-/// Decodes and validates one RFC 1950 stream without allocating or retaining buffers.
+// Decodes and validates a zlib stream into caller storage.
 public static class Zlib
 {
     public enum Status { Done, NeedInput, OutputTooSmall, InvalidData, UnsupportedDictionary }
 
-    /// Borrows disjoint counted source/output buffers and independent count outputs.
-    /// Decodes the complete stream in one call. Checksum failures can leave all output present.
+    // Decodes the complete stream in one call. Checksum failure can leave all output present.
+    // Source, output, and count locations must be disjoint.
     public static Status Decompress(readonly(byte)* source, nuint count, byte* output, nuint capacity,
         ref nuint consumed, ref nuint written) nothrow
     {

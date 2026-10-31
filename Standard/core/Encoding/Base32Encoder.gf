@@ -1,7 +1,8 @@
 namespace Standard::Encoding;
 
-/// Streams canonical uppercase padded Base32 to one borrowed synchronous sink.
-/// Complete emits the final padding. Destruction never writes or closes the sink.
+// Streams padded uppercase Base32 to a borrowed writer.
+// Call Complete to write final padding. Keep the destination alive through completion.
+// Destruction discards the pending tail.
 public struct Base32Encoder : ITextWriter
 {
     private ITextWriter* output;
@@ -35,8 +36,8 @@ public struct Base32Encoder : ITextWriter
         output.Write(encoded, written);
     }
 
-    /// Accepts counted binary bytes, retaining at most four copied bytes between calls.
-    /// Input must be stable and disjoint from encoder and storage the sink can mutate.
+    // Encodes binary chunks, retaining at most four pending bytes.
+    // Input must be separate from encoder state and storage the sink can mutate.
     public void Write(readonly(char)* data, nuint count)
     {
         this.CheckUsable();
@@ -79,8 +80,8 @@ public struct Base32Encoder : ITextWriter
         failed = false;
     }
 
-    /// Emits canonical padding for a pending tail, without flushing or closing output.
-    /// Repeated success is idempotent. Sink failure permanently rejects further use.
+    // Writes padding for the pending tail. Repeated successful completion is allowed.
+    // A sink failure permanently prevents further use.
     public void Complete()
     {
         this.CheckUsable();

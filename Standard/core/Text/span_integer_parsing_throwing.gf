@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 byte ParseByte(Span<readonly(char)> text)
 => text.ParseByte();

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public Enumerable<T, WhereSource<T, S, E>, WhereSource<T, S, E>::Enumerator> Where<T, S, E>(Enumerable<T, S, E> source, bool(T)* predicate)

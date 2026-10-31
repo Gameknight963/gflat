@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public bool Any<T, S, E>(Enumerable<T, S, E> source)

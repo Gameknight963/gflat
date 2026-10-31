@@ -1,9 +1,9 @@
 using Standard::Collections;
+
 namespace Standard::IO;
 
-/// Deferred, single-pass bytes borrowed from a reader's current position.
-/// Copies and enumerators share the source cursor. None rewind or close it.
-/// Keep the reader alive, open and unmoved while this view or its iterators are used.
+// Deferred bytes from a borrowed reader's current position.
+// Copies and enumerators share its cursor. Keep the reader alive, open, and unmoved.
 public struct ByteSequence : IEnumerable<byte, ByteSequence::Enumerator>
 {
     private IByteReader* input;

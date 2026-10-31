@@ -1,12 +1,8 @@
 namespace Standard::IO;
 
-/// Sequentially discards exactly count bytes through bounded reads, without seeking.
-/// Uses 4096 bytes of stack scratch.
-/// Short reads continue. Early EOF throws EndOfStreamException. Source errors propagate.
-/// Failures leave any consumed prefix discarded, without rollback or extra draining.
-/// Zero count still validates the source through Read(data, 0), like ReadExactly.
-/// Borrows input until return. Keep its cursor alive, unmoved and exclusively consumed here.
-/// Requests never exceed the remaining count. The source may have its own read-ahead policy.
+// Discards count bytes through sequential reads, throwing EndOfStreamException on early EOF.
+// Failure leaves already consumed bytes discarded. Zero count still validates the source.
+// Requests stay within the remaining count, though a buffered source can read ahead.
 public void SkipExactly(IByteReader* input, nuint count)
 {
     char[4096] scratch;

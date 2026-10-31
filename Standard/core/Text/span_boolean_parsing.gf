@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Optional counted view adapter; parsing and failure policy stay in the codec.

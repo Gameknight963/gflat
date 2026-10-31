@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public Enumerable<T, SliceSource<T, S, E>, SliceSource<T, S, E>::Enumerator> Take<T, S, E>(Enumerable<T, S, E> source, nuint count)

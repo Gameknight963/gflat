@@ -1,7 +1,7 @@
 namespace Standard::Encoding;
 
-/// Streams strict hexadecimal pairs into a borrowed sink, retaining at most one input byte.
-/// Complete rejects an odd final length. Input or sink failure permanently rejects reuse.
+// Streams hexadecimal pairs into a borrowed writer.
+// Call Complete to check the final length. Any input or sink failure prevents reuse.
 public struct HexDecoder : ITextWriter
 {
     private ITextWriter* output;
@@ -24,7 +24,7 @@ public struct HexDecoder : ITextWriter
         if (failed) throw new Exception("Hex decoder cannot continue after failure");
     }
 
-    /// Accepts arbitrary chunks. Complete pairs are validated through Hex before output.
+    // Decodes chunks, retaining one pending hex digit until its pair arrives.
     public void Write(readonly(char)* data, nuint count)
     {
         this.CheckUsable();
@@ -57,7 +57,7 @@ public struct HexDecoder : ITextWriter
         failed = false;
     }
 
-    /// Validates the final length without writing, flushing or closing the sink.
+    // Rejects an unmatched final hex digit.
     public void Complete()
     {
         this.CheckUsable();

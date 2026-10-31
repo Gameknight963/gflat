@@ -1,7 +1,6 @@
 namespace Standard::Text;
 
-/// Forwards each counted write to two borrowed writers, first then second.
-/// Copies share the endpoints. Keep both alive and valid during every call.
+// Forwards writes to two borrowed writers, first then second. Keep both endpoints alive.
 public struct TeeWriter : ITextWriter
 {
     private ITextWriter* first;
@@ -13,8 +12,8 @@ public struct TeeWriter : ITextWriter
         this.second = second;
     }
 
-    /// Forwards zero counts too. An exception stops forwarding without rollback.
-    /// Input must stay stable and disjoint from storage either endpoint may mutate.
+    // Forwards the bytes, including zero-count calls. An exception stops before later forwarding.
+    // Input must be independent of storage either endpoint can mutate.
     public void Write(readonly(char)* data, nuint count)
     {
         first.Write(data, count);

@@ -1,11 +1,12 @@
 using Standard::Binary;
+
 namespace Standard::IO;
 
 // Fixed-width scalar reads borrow the source and tolerate short positive reads.
 // Early EOF or failure may consume a prefix; no rewind, close or rollback occurs.
 // Exact-width stack buffers guarantee the corresponding codec succeeds.
 
-/// Reads 2 bytes in little-endian order, preserving all representation bits.
+// Reads 2 bytes in little-endian order, preserving all representation bits.
 public ushort ReadUInt16LittleEndian(IByteReader* input)
 {
     byte[2] buffer;
@@ -21,7 +22,7 @@ extension IByteReader
     => Standard::IO::ReadUInt16LittleEndian(this);
 }
 
-/// Reads 2 bytes in big-endian order, preserving all representation bits.
+// Reads 2 bytes in big-endian order, preserving all representation bits.
 public ushort ReadUInt16BigEndian(IByteReader* input)
 {
     byte[2] buffer;
@@ -37,7 +38,7 @@ extension IByteReader
     => Standard::IO::ReadUInt16BigEndian(this);
 }
 
-/// Reads 4 bytes in little-endian order, preserving all representation bits.
+// Reads 4 bytes in little-endian order, preserving all representation bits.
 public uint ReadUInt32LittleEndian(IByteReader* input)
 {
     byte[4] buffer;
@@ -53,7 +54,7 @@ extension IByteReader
     => Standard::IO::ReadUInt32LittleEndian(this);
 }
 
-/// Reads 4 bytes in big-endian order, preserving all representation bits.
+// Reads 4 bytes in big-endian order, preserving all representation bits.
 public uint ReadUInt32BigEndian(IByteReader* input)
 {
     byte[4] buffer;
@@ -69,7 +70,7 @@ extension IByteReader
     => Standard::IO::ReadUInt32BigEndian(this);
 }
 
-/// Reads 8 bytes in little-endian order, preserving all representation bits.
+// Reads 8 bytes in little-endian order, preserving all representation bits.
 public ulong ReadUInt64LittleEndian(IByteReader* input)
 {
     byte[8] buffer;
@@ -85,7 +86,7 @@ extension IByteReader
     => Standard::IO::ReadUInt64LittleEndian(this);
 }
 
-/// Reads 8 bytes in big-endian order, preserving all representation bits.
+// Reads 8 bytes in big-endian order, preserving all representation bits.
 public ulong ReadUInt64BigEndian(IByteReader* input)
 {
     byte[8] buffer;
@@ -101,7 +102,7 @@ extension IByteReader
     => Standard::IO::ReadUInt64BigEndian(this);
 }
 
-/// Reads 2 bytes in little-endian order, preserving all representation bits.
+// Reads 2 bytes in little-endian order, preserving all representation bits.
 public short ReadInt16LittleEndian(IByteReader* input)
 {
     byte[2] buffer;
@@ -117,7 +118,7 @@ extension IByteReader
     => Standard::IO::ReadInt16LittleEndian(this);
 }
 
-/// Reads 2 bytes in big-endian order, preserving all representation bits.
+// Reads 2 bytes in big-endian order, preserving all representation bits.
 public short ReadInt16BigEndian(IByteReader* input)
 {
     byte[2] buffer;
@@ -133,7 +134,7 @@ extension IByteReader
     => Standard::IO::ReadInt16BigEndian(this);
 }
 
-/// Reads 4 bytes in little-endian order, preserving all representation bits.
+// Reads 4 bytes in little-endian order, preserving all representation bits.
 public int ReadInt32LittleEndian(IByteReader* input)
 {
     byte[4] buffer;
@@ -149,7 +150,7 @@ extension IByteReader
     => Standard::IO::ReadInt32LittleEndian(this);
 }
 
-/// Reads 4 bytes in big-endian order, preserving all representation bits.
+// Reads 4 bytes in big-endian order, preserving all representation bits.
 public int ReadInt32BigEndian(IByteReader* input)
 {
     byte[4] buffer;
@@ -165,7 +166,7 @@ extension IByteReader
     => Standard::IO::ReadInt32BigEndian(this);
 }
 
-/// Reads 8 bytes in little-endian order, preserving all representation bits.
+// Reads 8 bytes in little-endian order, preserving all representation bits.
 public long ReadInt64LittleEndian(IByteReader* input)
 {
     byte[8] buffer;
@@ -181,7 +182,7 @@ extension IByteReader
     => Standard::IO::ReadInt64LittleEndian(this);
 }
 
-/// Reads 8 bytes in big-endian order, preserving all representation bits.
+// Reads 8 bytes in big-endian order, preserving all representation bits.
 public long ReadInt64BigEndian(IByteReader* input)
 {
     byte[8] buffer;
@@ -197,7 +198,7 @@ extension IByteReader
     => Standard::IO::ReadInt64BigEndian(this);
 }
 
-/// Reads 4 bytes in little-endian order, preserving all representation bits.
+// Reads 4 bytes in little-endian order, preserving all representation bits.
 public float ReadFloatLittleEndian(IByteReader* input)
 {
     byte[4] buffer;
@@ -213,7 +214,7 @@ extension IByteReader
     => Standard::IO::ReadFloatLittleEndian(this);
 }
 
-/// Reads 4 bytes in big-endian order, preserving all representation bits.
+// Reads 4 bytes in big-endian order, preserving all representation bits.
 public float ReadFloatBigEndian(IByteReader* input)
 {
     byte[4] buffer;
@@ -229,7 +230,7 @@ extension IByteReader
     => Standard::IO::ReadFloatBigEndian(this);
 }
 
-/// Reads 8 bytes in little-endian order, preserving all representation bits.
+// Reads 8 bytes in little-endian order, preserving all representation bits.
 public double ReadDoubleLittleEndian(IByteReader* input)
 {
     byte[8] buffer;
@@ -245,7 +246,7 @@ extension IByteReader
     => Standard::IO::ReadDoubleLittleEndian(this);
 }
 
-/// Reads 8 bytes in big-endian order, preserving all representation bits.
+// Reads 8 bytes in big-endian order, preserving all representation bits.
 public double ReadDoubleBigEndian(IByteReader* input)
 {
     byte[8] buffer;
@@ -261,7 +262,7 @@ extension IByteReader
     => Standard::IO::ReadDoubleBigEndian(this);
 }
 
-/// Reads 16 bytes in little-endian order, preserving all representation bits.
+// Reads 16 bytes in little-endian order, preserving all representation bits.
 public extralong ReadExtraLongLittleEndian(IByteReader* input)
 {
     byte[16] buffer;
@@ -277,7 +278,7 @@ extension IByteReader
     => Standard::IO::ReadExtraLongLittleEndian(this);
 }
 
-/// Reads 16 bytes in big-endian order, preserving all representation bits.
+// Reads 16 bytes in big-endian order, preserving all representation bits.
 public extralong ReadExtraLongBigEndian(IByteReader* input)
 {
     byte[16] buffer;

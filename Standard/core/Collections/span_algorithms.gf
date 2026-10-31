@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 namespace detail
@@ -172,9 +173,8 @@ public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
     return first;
 }
 
-/// Borrows the contiguous comparer-equivalent range in an already sorted span.
-/// Use a consistent ordering. Empty results have null Data and zero Length.
-/// Elements and key are not copied. Comparator exceptions propagate.
+// Borrows the comparison-equivalent range in an already sorted span.
+// Use the same consistent order as the sort. An empty result has null Data.
 public Span<immutable(T)> EqualRange<T>(Span<immutable(T)> values, immutable(T)* key,
     int(immutable(T)*, immutable(T)*)* compare)
 {
@@ -183,9 +183,8 @@ public Span<immutable(T)> EqualRange<T>(Span<immutable(T)> values, immutable(T)*
     return values.Slice(first, last - first);
 }
 
-/// Checks that all true predicate results precede all false results.
-/// Visits borrowed elements once from left to right, stopping at the first violation.
-/// Empty spans return true without calling the predicate. Predicate exceptions propagate.
+// Tests whether every true predicate result precedes every false result.
+// Checks left to right and stops at the first violation. Empty spans return true.
 public bool IsPartitioned<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {
     bool seenFalse = false;
@@ -198,10 +197,8 @@ public bool IsPartitioned<T>(Span<immutable(T)> values, bool(immutable(T)*)* pre
     return true;
 }
 
-/// Finds the first false predicate result in an already partitioned span.
-/// True results must precede false results. Keep the predicate consistent.
-/// Returns Length when all match. Empty spans never call the predicate.
-/// Borrows elements without allocation or copying. Predicate exceptions propagate.
+// Finds the first false predicate result in an already partitioned span.
+// True results must precede false results. All-true input returns Length.
 public nuint PartitionPoint<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {
     nuint first = 0;
@@ -238,9 +235,8 @@ public bool IsSorted<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(
     return true;
 }
 
-/// First element that breaks nondecreasing order, or Length if every pair is ordered.
-/// Compares borrowed previous/current elements left to right. Empty and singleton spans make no calls.
-/// Does not copy elements or allocate storage. Comparator exceptions propagate.
+// Returns the first index that breaks nondecreasing order, or Length.
+// Compares neighboring elements left to right. Empty and singleton spans make no comparisons.
 public nuint FindUnsortedIndex<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
 {
     for (nuint i = 1; i < values.Length; i++)
@@ -248,9 +244,8 @@ public nuint FindUnsortedIndex<T>(Span<immutable(T)> values, int(immutable(T)*, 
     return values.Length;
 }
 
-/// Tests sorted multiset inclusion, respecting comparison-equivalent duplicate counts.
-/// Both spans must use the same consistent ordering. Overlapping spans are permitted.
-/// Comparator receives source then required. No element copies or library allocation.
+// Tests sorted multiset inclusion, including the required duplicate counts.
+// Both spans must use the same ordering. Comparisons receive source then required.
 public bool Includes<T>(Span<immutable(T)> values, Span<immutable(T)> required,
     int(immutable(T)*, immutable(T)*)* compare)
 {
@@ -277,7 +272,8 @@ public bool SequenceEqual<T>(Span<immutable(T)> first, Span<immutable(T)> second
     return true;
 }
 
-/// Tests the leading borrowed elements. An empty prefix matches and an oversized prefix reads nothing.
+// Tests whether the span begins with prefix.
+// An empty prefix matches. An oversized prefix fails before comparisons.
 public bool StartsWith<T>(Span<immutable(T)> values, Span<immutable(T)> prefix,
     bool(immutable(T)*, immutable(T)*)* equal)
 {
@@ -285,7 +281,7 @@ public bool StartsWith<T>(Span<immutable(T)> values, Span<immutable(T)> prefix,
     return Standard::Collections::SequenceEqual<T>(values.Slice(0, prefix.Length), prefix, equal);
 }
 
-/// Tests the trailing borrowed elements from left to right, without copying or changing storage.
+// Tests whether the span ends with suffix, comparing left to right.
 public bool EndsWith<T>(Span<immutable(T)> values, Span<immutable(T)> suffix,
     bool(immutable(T)*, immutable(T)*)* equal)
 {
@@ -293,7 +289,7 @@ public bool EndsWith<T>(Span<immutable(T)> values, Span<immutable(T)> suffix,
     return Standard::Collections::SequenceEqual<T>(values.Slice(values.Length - suffix.Length, suffix.Length), suffix, equal);
 }
 
-/// Counts matching corresponding borrowed elements, stopping at the first difference or shorter length.
+// Counts matching corresponding borrowed elements, stopping at the first difference or shorter length.
 public nuint CommonPrefixLength<T>(Span<immutable(T)> first, Span<immutable(T)> second,
     bool(immutable(T)*, immutable(T)*)* equal)
 {
@@ -304,9 +300,7 @@ public nuint CommonPrefixLength<T>(Span<immutable(T)> first, Span<immutable(T)> 
     return count;
 }
 
-/// Counts matching trailing elements from right to left, stopping at a difference or shorter length.
-/// Borrows elements without copies, allocation or mutation. Empty input never calls equal.
-/// Keep both spans valid and stable. Callback exceptions and effects propagate unchanged.
+// Counts equal trailing elements, comparing right to left until a difference or shorter length.
 public nuint CommonSuffixLength<T>(Span<immutable(T)> first, Span<immutable(T)> second,
     bool(immutable(T)*, immutable(T)*)* equal)
 {
@@ -352,8 +346,8 @@ public int SequenceCompare<T>(Span<immutable(T)> first, Span<immutable(T)> secon
     return 0;
 }
 
-/// Tests borrowed elements from left to right, stopping at the first false result.
-/// Empty spans return true without calling the predicate. Exceptions propagate.
+// Returns true if every element passes the predicate. Empty spans return true.
+// Tests left to right and stops at the first failure.
 public bool AllOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {
     for (nuint i = 0; i < values.Length; i++)
@@ -361,18 +355,15 @@ public bool AllOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
     return true;
 }
 
-/// Tests borrowed elements from left to right, stopping at the first true result.
-/// Empty spans return false without calling the predicate. Exceptions propagate.
+// Returns true at the first passing element. Empty spans return false.
 public bool AnyOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
     => Standard::Collections::FindIndex<T>(values, predicate) != values.Length;
 
-/// Tests borrowed elements from left to right, stopping at the first true result.
-/// Returns true when none match, including empty spans. Exceptions propagate.
+// Returns false at the first passing element. Empty spans return true.
 public bool NoneOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
     => Standard::Collections::FindIndex<T>(values, predicate) == values.Length;
 
-/// Counts matches while borrowing each element once from left to right.
-/// Empty spans return zero without calling the predicate. Exceptions propagate.
+// Counts passing elements, testing each once from left to right.
 public nuint CountIf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {
     nuint count = 0;

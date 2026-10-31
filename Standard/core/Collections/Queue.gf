@@ -1,4 +1,5 @@
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // An owning FIFO ring buffer. Structural mutation invalidates borrowed elements and iterators.

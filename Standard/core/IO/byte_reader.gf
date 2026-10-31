@@ -1,9 +1,7 @@
 namespace Standard::IO;
 
-/// Returns one byte from 0 through 255, or -1 when the source reports EOF.
-/// Performs one positive one-byte read. Malformed counts raise IOException.
-/// Source exceptions propagate unchanged and may leave consumed input.
-/// Borrows input for the duration of the call.
+// Returns one byte from 0 through 255, or -1 at EOF.
+// Makes one one-byte read and throws IOException for an invalid count.
 public int ReadByte(IByteReader* input)
 {
     char value = '\0';
@@ -19,9 +17,8 @@ extension IByteReader
     => Standard::IO::ReadByte(this);
 }
 
-/// Reads through short results until count bytes are stored, or throws on early EOF.
-/// Earlier input and buffer writes remain on failure. Zero count still validates the source.
-/// Borrows input and writable data for this call. They must remain alive and disjoint.
+// Fills count bytes through short reads, throwing EndOfStreamException on early EOF.
+// Failures can leave consumed input and a written prefix. Zero count still validates the source.
 public void ReadExactly(IByteReader* input, char* data, nuint count)
 {
     if (count == 0)
@@ -48,11 +45,9 @@ extension IByteReader
     => Standard::IO::ReadExactly(this, data, count);
 }
 
-/// Pumps remaining bytes through caller scratch into a borrowed synchronous writer.
-/// Source, sink and scratch must not overlap, and must remain alive and unmoved during the call.
-/// Short reads continue. Positive-request zero ends input. Returns the number sent to output.
-/// Does not retain storage, allocate a buffer, close, flush or finalize either endpoint.
-/// Failure may consume input or leave prior output. No rollback or draining is performed.
+// Copies remaining bytes to output through caller scratch and returns the byte count.
+// Source, sink, and scratch must be independent. Failure can leave consumed input and partial output.
+// Both endpoints stay open. Flush or complete the sink when required.
 public nuint CopyTo(IByteReader* input, ITextWriter* output, char* scratch, nuint capacity)
 {
     if (capacity == 0) throw new IOException("Copy buffer must not be empty");
@@ -77,8 +72,8 @@ extension IByteReader
     => Standard::IO::CopyTo(this, output, scratch, capacity);
 }
 
-/// Copies using 4096 bytes of stack scratch, borrowing both endpoints until return.
-/// Has the same EOF, disjointness, lifetime and partial-failure rules as the scratch overload.
+// Copies remaining input using 4096 bytes of stack scratch.
+// Both endpoints stay open. Failure can leave consumed input and partial output.
 public nuint CopyTo(IByteReader* input, ITextWriter* output)
 {
     char[4096] scratch;

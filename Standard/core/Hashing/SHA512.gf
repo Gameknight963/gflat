@@ -1,9 +1,9 @@
 using Standard::Numerics;
+
 namespace Standard::Hashing;
 
 // Scalar algorithm: RFC 6234 sections 4.2, 5.2, 6.3 and 6.4.
-/// Incremental SHA-512 over counted bytes with independently copied inline state.
-/// GetHash finalizes a snapshot, allowing repeated digests and further appends.
+// Incremental SHA-512. GetHash reads a snapshot, allowing further appends.
 public struct SHA512
 {
     private ulong[8] state;
@@ -47,9 +47,9 @@ public struct SHA512
         lengthHigh = 0ul;
     }
 
-    /// Appends counted bytes without retaining input. Zero count reads no input.
-    /// Input must remain readable and stable during the call, disjoint from this state.
-    /// False rejects an excessive total length before reading input or changing state.
+    // Appends bytes. Zero count leaves input untouched.
+    // An excessive total length returns false before reading input or changing state.
+    // Input must be separate from this hashing state.
     public bool TryAppend(readonly(char)* data, nuint count) nothrow
     {
         // Two words count bytes; shifting into the 128-bit bit count reserves
@@ -145,7 +145,7 @@ public struct SHA512
         this.ProcessBlock(((byte*)block).reinterpret<readonly(char)*>());
     }
 
-    /// Returns an independent 64-byte digest without consuming or resetting this state.
+    // Returns the current 64-byte digest while keeping the running hash available for appends.
     public immutable byte[64] GetHash() nothrow
     {
         SHA512 snapshot = *this;

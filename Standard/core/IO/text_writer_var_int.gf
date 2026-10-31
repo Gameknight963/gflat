@@ -1,8 +1,9 @@
 using Standard::Binary;
+
 namespace Standard::IO;
 
-/// Sends the canonical shortest UInt32 base-128 representation in one counted Write.
-/// Borrows the sink. Failures may leave partial output. Does not flush or close it.
+// Writes the shortest base-128 UInt32 representation in one call.
+// A writer failure can leave partial output.
 public void WriteVarUInt32(ITextWriter* output, uint value)
 {
     byte[5] bytes;
@@ -18,8 +19,8 @@ extension ITextWriter
     => Standard::IO::WriteVarUInt32(this, value);
 }
 
-/// Sends the canonical shortest UInt64 base-128 representation in one counted Write.
-/// Borrows the sink. Failures may leave partial output. Does not flush or close it.
+// Writes the shortest base-128 UInt64 representation in one call.
+// A writer failure can leave partial output.
 public void WriteVarUInt64(ITextWriter* output, ulong value)
 {
     byte[10] bytes;
@@ -34,7 +35,7 @@ extension ITextWriter
     => Standard::IO::WriteVarUInt64(this, value);
 }
 
-/// ZigZag-encodes Int32 before canonical base-128 output, including signed extrema.
+// ZigZag-encodes Int32 before canonical base-128 output, including signed extrema.
 public void WriteZigZagInt32(ITextWriter* output, int value)
     => WriteVarUInt32(output, VarInt::ZigZagEncode(value));
 
@@ -44,7 +45,7 @@ extension ITextWriter
     => Standard::IO::WriteZigZagInt32(this, value);
 }
 
-/// ZigZag-encodes Int64 before canonical base-128 output, including signed extrema.
+// ZigZag-encodes Int64 before canonical base-128 output, including signed extrema.
 public void WriteZigZagInt64(ITextWriter* output, long value)
     => WriteVarUInt64(output, VarInt::ZigZagEncode(value));
 

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 struct EndpointSource<T, Source, Iterator>

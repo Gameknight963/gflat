@@ -1,7 +1,7 @@
 namespace Standard::Text;
 
-/// Buffers counted writes in borrowed scratch and drains full blocks to a borrowed sink.
-/// Flush sends pending bytes only. Destruction performs no output or sink cleanup.
+// Buffers writes in borrowed scratch and sends full blocks to a borrowed sink.
+// Flush sends the pending tail. Destruction discards it.
 public struct BufferedWriter : ITextWriter
 {
     private ITextWriter* output;
@@ -16,8 +16,8 @@ public struct BufferedWriter : ITextWriter
         used = 0; failed = false;
     }
 
-    /// Copies nonempty input, draining each full block. Zero capacity forwards directly.
-    /// Input must be stable and disjoint from scratch and storage the sink may mutate.
+    // Buffers bytes and drains full blocks. Zero capacity forwards directly.
+    // Input must be separate from scratch and storage the sink can mutate.
     public void Write(readonly(char)* data, nuint count)
     {
         if (failed) throw new Exception("Buffered writer cannot continue after output failure");
@@ -41,8 +41,8 @@ public struct BufferedWriter : ITextWriter
         }
     }
 
-    /// Drains this buffer without flushing the underlying device or closing the sink.
-    /// A sink exception propagates and makes later Write and Flush calls reject.
+    // Sends pending bytes to the sink. Flush the underlying device separately if needed.
+    // A sink exception prevents further Write or Flush calls.
     public void Flush()
     {
         if (failed) throw new Exception("Buffered writer cannot continue after output failure");

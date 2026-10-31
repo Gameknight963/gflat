@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 TextParts Split(Span<readonly(char)> text, char delimiter, bool removeEmpty = false)

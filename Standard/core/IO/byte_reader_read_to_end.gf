@@ -1,11 +1,10 @@
 using Standard::Text;
+
 namespace Standard::IO;
 
-/// Clears text and fills it with the remaining counted bytes, reusing its capacity.
-/// Throws IOException if input exceeds maximumBytes or reports an invalid count.
-/// Earlier chunks remain after failure. Input may have consumed additional bytes.
-/// Borrows input until return and leaves it open. Source state and storage must be independent
-/// of text, and source callbacks must not access text through another alias.
+// Clears text and reads the remaining bytes into it, reusing capacity.
+// Exceeding maximumBytes throws IOException. Failures retain earlier chunks and may consume more input.
+// Source state and storage must be independent of text, including access through callback aliases.
 public void ReadToEnd(IByteReader* input, ref String text, nuint maximumBytes = (nuint)0 - (nuint)1)
 {
     text.Clear();
@@ -25,8 +24,8 @@ public void ReadToEnd(IByteReader* input, ref String text, nuint maximumBytes = 
     }
 }
 
-/// Returns an owning String containing the remaining bytes, including embedded zeros.
-/// The source stays open. A byte limit applies to input length, excluding String overhead.
+// Returns the remaining counted bytes as an owning String and leaves the source open.
+// The limit counts input bytes, excluding String capacity and overhead.
 public String ReadToEnd(IByteReader* input, nuint maximumBytes = (nuint)0 - (nuint)1)
 {
     String text = new();

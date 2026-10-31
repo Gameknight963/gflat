@@ -1,4 +1,5 @@
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // Owns nodes and values. Borrowed node addresses survive insertion and list moves.

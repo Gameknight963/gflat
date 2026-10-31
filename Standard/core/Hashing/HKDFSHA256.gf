@@ -1,14 +1,13 @@
 namespace Standard::Hashing;
 
-/// RFC 5869 key extraction and expansion using HMAC-SHA256.
-/// Successful calls allocate no heap storage and retain no caller pointers.
+// RFC 5869 key extraction and expansion using HMAC-SHA256.
 public static class HKDFSHA256
 {
     private static const ulong MaximumHashBytes = 2305843009213693951ul;
     private static const ulong MaximumMessageBytes = 2305843009213693887ul;
 
-    /// Returns an independent 32-byte PRK. Zero salt count represents absent salt.
-    /// Excessive salt/input lengths throw before either input is read.
+    // Returns a 32-byte pseudorandom key. Zero salt count selects absent salt.
+    // Excessive salt or input lengths throw before either input is read.
     public static byte[32] Extract(readonly(char)* salt, nuint saltCount,
         readonly(char)* input, nuint inputCount)
     {
@@ -20,8 +19,8 @@ public static class HKDFSHA256
         return hash.GetHash();
     }
 
-    /// Writes exactly 1..8160 requested bytes, or rejects before input reads/output writes.
-    /// Output may overlap PRK, but must not overlap nonempty info storage.
+    // Writes exactly 1..8160 requested bytes, or rejects before input reads/output writes.
+    // Output may overlap PRK, but must not overlap nonempty info storage.
     public static bool TryExpand(readonly(char)* prk, nuint prkCount,
         readonly(char)* info, nuint infoCount, byte* output, nuint outputLength) nothrow
     {

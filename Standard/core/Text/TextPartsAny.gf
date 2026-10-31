@@ -1,6 +1,7 @@
 using Standard::Memory;
 using Standard::Queries;
 using Standard::Collections;
+
 namespace Standard::Text;
 
 // Borrowed source with a copied set of delimiter bytes.

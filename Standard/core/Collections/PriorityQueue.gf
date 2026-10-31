@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 // Owns a min-heap. The borrowed comparator returns negative for a higher priority.

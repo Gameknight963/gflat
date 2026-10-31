@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Eager owning groups; HashMap additionally needs the matching IEquatable<K>.

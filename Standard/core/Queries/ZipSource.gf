@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 struct ZipSource<T, U, R, LeftSource, LeftIterator, RightSource, RightIterator>

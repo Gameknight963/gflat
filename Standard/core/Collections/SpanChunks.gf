@@ -1,5 +1,6 @@
 using Standard::Memory;
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // Borrows contiguous storage; the final nonoverlapping chunk may be shorter.

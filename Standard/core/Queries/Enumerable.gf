@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // A reusable sequence. Source supplies GetEnumerator(); Iterator supplies

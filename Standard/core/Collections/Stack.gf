@@ -1,5 +1,6 @@
 using Standard::Memory;
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // Owns its elements. Views and iterators borrow storage; structural mutation invalidates them.

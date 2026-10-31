@@ -7,9 +7,9 @@ namespace random_detail
 
 public static class SystemRandom
 {
-    /// Fills caller storage using libc getentropy in requests of at most 256 bytes.
-    /// Zero count succeeds without a native call or pointer access.
-    /// A failure may leave partial output; discard the whole requested result on false.
+    // Fills caller storage using libc getentropy in requests of at most 256 bytes.
+    // Zero count succeeds without a native call or pointer access.
+    // A failure may leave partial output; discard the whole requested result on false.
     public static bool TryFill(byte* output, nuint count) nothrow
     {
         nuint offset = 0;

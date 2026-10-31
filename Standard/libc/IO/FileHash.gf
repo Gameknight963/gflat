@@ -1,4 +1,5 @@
 using Standard::Hashing;
+
 namespace Standard::IO;
 
 // Optional file IO convenience. Core SHA256 and SHA512 remain independent of libc.
@@ -35,8 +36,8 @@ public static class FileHash
         return digest;
     }
 
-    /// Hashes remaining bytes into a 64-byte digest without closing or rewinding the file.
-    /// Rejects closed files and zero capacity before reading. IO failures may consume input.
+    // Hashes remaining file bytes into a 64-byte digest, leaving the file open.
+    // Closed files and zero capacity reject before reading. IO failure can leave input consumed.
     public static byte[64] SHA512(File* input, char* buffer, nuint capacity)
     {
         if (!input.IsOpen) throw new IOException("File is closed");
@@ -52,14 +53,14 @@ public static class FileHash
         return state.GetHash();
     }
 
-    /// Borrows an open file, using a 4096-byte stack buffer and leaving it at EOF.
+    // Hashes an open file through 4096 bytes of stack scratch, leaving it at EOF.
     public static byte[64] SHA512(File* input)
     {
         char[4096] buffer;
         return FileHash::SHA512(input, buffer, 4096);
     }
 
-    /// Opens a binary file and closes it before returning an independent 64-byte digest.
+    // Hashes a binary file and closes it before returning the 64-byte digest.
     public static byte[64] SHA512(immutable(char*) path)
     {
         File input = File::OpenRead(path);

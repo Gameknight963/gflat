@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // The explicit ref overload requires existing storage and never copies the owner.

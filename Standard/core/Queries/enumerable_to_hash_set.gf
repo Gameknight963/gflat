@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Materializes ordinary value copies; duplicate arguments are destroyed by Add.

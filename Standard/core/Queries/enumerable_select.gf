@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public Enumerable<U, SelectSource<T, U, S, E>, SelectSource<T, U, S, E>::Enumerator> Select<T, U, S, E>(Enumerable<T, S, E> source, U(T)* selector)

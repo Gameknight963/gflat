@@ -1,5 +1,6 @@
 using Standard::Memory;
 using Standard::Numerics;
+
 namespace Standard::Collections;
 
 // Fisher-Yates shuffle. Borrows the elements and advances the caller's generator.

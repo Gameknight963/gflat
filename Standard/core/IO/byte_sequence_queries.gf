@@ -1,4 +1,5 @@
 using Standard::Queries;
+
 namespace Standard::IO;
 
 extension ByteSequence

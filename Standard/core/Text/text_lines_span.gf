@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 TextLines Lines(Span<readonly(char)> text) => text.Lines();

@@ -1,4 +1,4 @@
-﻿namespace Standard::Time;
+namespace Standard::Time;
 
 // Gregorian civil date and wall-clock time. No time zone, offset, or instant is implied.
 public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable, IFormattable
@@ -33,7 +33,7 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
         return FromTicks(current + delta);
     }
 
-    /// Returns this civil date and time minus the signed duration, rejecting results outside years 1 through 9999.
+    // Subtracts the signed duration, rejecting results outside years 1 through 9999.
     public immutable DateTime Subtract(TimeSpan value)
     {
         long current = this.Ticks;

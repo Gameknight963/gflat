@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard::Json;
 
 public enum JsonTokenKind

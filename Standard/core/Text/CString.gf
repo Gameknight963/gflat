@@ -1,20 +1,18 @@
 namespace Standard::Text;
 
-/// Helpers for borrowed C strings and bounded byte buffers.
-/// Unbounded inputs require a readable zero terminator. Bounded operations use their capacities.
-/// Operations use byte values without Unicode decoding or encoding validation.
+// Byte operations for borrowed zero-terminated strings and bounded buffers.
 public static class CString
 {
     public static const nuint NotFound = (nuint)0 - (nuint)1;
 
-    /// Returns true for null or an initial zero, reading at most the first byte of a nonnull input.
+    // Returns true for null or an initial zero byte.
     public static bool IsNullOrEmpty(readonly(char)*? text) nothrow
     {
         if (text == null) return true;
         return text![0] == '\0';
     }
 
-    /// Counts bytes before the first readable zero. The terminator is excluded.
+    // Counts bytes before the first readable zero. The terminator is excluded.
     public static nuint Length(readonly(char)* text) nothrow
     {
         nuint length = 0;
@@ -22,8 +20,7 @@ public static class CString
         return length;
     }
 
-    /// Searches logical bytes before the first zero. The zero itself never matches.
-    /// Returns the first matching byte offset, or NotFound.
+    // Returns the first matching byte offset, or NotFound. The terminating zero never matches.
     public static nuint IndexOf(readonly(char)* text, char value) nothrow
     {
         nuint index = 0;
@@ -35,7 +32,7 @@ public static class CString
         return NotFound;
     }
 
-    /// Returns the last matching byte offset before the first zero, or NotFound. Zero never matches.
+    // Returns the last matching byte offset, or NotFound. The terminating zero never matches.
     public static nuint LastIndexOf(readonly(char)* text, char value) nothrow
     {
         nuint result = NotFound;
@@ -48,9 +45,8 @@ public static class CString
         return result;
     }
 
-    /// Scans at most capacity readable bytes for a zero, returning true and its byte offset.
-    /// Returns false and sets length to zero when no terminator is found.
-    /// Zero capacity does not read input. Length is still set to zero.
+    // Finds a zero within capacity bytes and returns its offset through length.
+    // A missing terminator returns false and sets length to zero. Zero capacity reads no bytes.
     public static bool TryGetLength(readonly(char)* text, nuint capacity, ref nuint length) nothrow
     {
         for (nuint i = 0; i < capacity; i++)
@@ -65,9 +61,8 @@ public static class CString
         return false;
     }
 
-    /// Copies bytes and their first zero when they fit. Capacity includes the terminator.
-    /// Failure leaves output unchanged. Zero capacity accesses neither byte buffer.
-    /// Successful copies allow overlap and leave bytes beyond the copied terminator unchanged.
+    // Copies bytes and their terminator when capacity allows. Overlap is supported.
+    // Failure preserves output. Zero capacity accesses neither buffer.
     public static bool TryCopy(readonly(char)* text, char* output, nuint capacity) nothrow
     {
         nuint length = 0;
@@ -83,9 +78,9 @@ public static class CString
         return true;
     }
 
-    /// Appends terminated input to terminated output. Capacity is the entire output extent.
-    /// Failure leaves output unchanged. Zero capacity accesses neither byte buffer.
-    /// Overlap is allowed. An unterminated output returns false without reading input.
+    // Appends a C string within the output buffer's total capacity. Overlap is supported.
+    // Failure preserves output. An unterminated destination returns false before reading input.
+    // Zero capacity accesses neither byte buffer.
     public static bool TryAppend(readonly(char)* text, char* output, nuint capacity) nothrow
     {
         nuint length = 0;
@@ -93,8 +88,7 @@ public static class CString
         return TryCopy(text, output + length, capacity - length);
     }
 
-    /// Compares unsigned bytes through the first zero, returning -1, zero or 1.
-    /// Compares exact byte values.
+    // Compares unsigned bytes through the first zero, returning -1, zero, or 1.
     public static int Compare(readonly(char)* left, readonly(char)* right) nothrow
     {
         nuint index = 0;
@@ -109,7 +103,7 @@ public static class CString
         }
     }
 
-    /// Tests equality of bytes before the first zero in each input.
+    // Tests equality of bytes before the first zero in each input.
     public static bool Equals(readonly(char)* left, readonly(char)* right) nothrow
         => Compare(left, right) == 0;
 

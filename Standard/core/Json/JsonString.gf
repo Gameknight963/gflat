@@ -1,10 +1,10 @@
 using Standard::Text;
+
 namespace Standard::Json;
 
-/// Validates and quotes or unquotes counted UTF-8 using caller buffers, owning no storage.
-/// Counts and capacities are bytes. Output is counted and has no added zero terminator.
-/// Do not modify input through other aliases during calls. Scalar output refs must not overlap either byte buffer.
-/// Quoting requires disjoint buffers. Unquoting also permits the exact same starting address.
+// Quotes and unquotes counted UTF-8 using caller buffers.
+// Output is counted. Scalar outputs must be separate from both byte buffers.
+// Quoting requires separate buffers. Unquoting also accepts the same starting address.
 public static class JsonString
 {
     private static nuint EscapedLength(byte value) nothrow
@@ -16,9 +16,8 @@ public static class JsonString
         return 6;
     }
 
-    /// Validates strict UTF-8 and returns the exact quoted byte count, including both quotes.
-    /// Embedded zeros are escaped data. Empty input requires two quote bytes.
-    /// Invalid UTF-8 or size overflow returns false and sets needed to zero.
+    // Validates UTF-8 and counts its quoted JSON bytes, including quotes.
+    // Invalid text or size overflow returns false and resets needed to zero.
     public static bool TryGetQuotedLength(readonly(char)* input, nuint length, ref nuint needed) nothrow
     {
         if (!Utf8::IsValid(input, length)) { needed = 0; return false; }
@@ -34,9 +33,9 @@ public static class JsonString
         return true;
     }
 
-    /// Writes one complete quoted JSON string, including its quotes and no zero terminator.
-    /// Full validation and capacity preflight precede writes. False leaves output unchanged and written zero.
-    /// Requires disjoint byte buffers and scalar output refs disjoint from both.
+    // Writes a complete quoted JSON string to separate output storage.
+    // Validation or capacity failure preserves output and resets written to zero.
+    // Keep written separate from both byte buffers.
     public static bool TryQuote(readonly(char)* input, nuint length,
         char* output, nuint capacity, ref nuint written) nothrow
     {
@@ -77,9 +76,8 @@ public static class JsonString
         return true;
     }
 
-    /// Validates one complete quoted literal, without surrounding whitespace or trailing data.
-    /// Reports decoded UTF-8 bytes. Invalid syntax or UTF-8 returns false and length zero.
-    /// Validates escapes and paired surrogates. An escaped zero contributes one decoded byte.
+    // Validates one complete quoted literal and counts its decoded UTF-8 bytes.
+    // Invalid syntax, UTF-8, or surrogate pairing returns false and resets length to zero.
     public static bool TryGetUnquotedLength(readonly(char)* input, nuint count, ref nuint length) nothrow
     {
         length = 0;
@@ -99,11 +97,9 @@ public static class JsonString
         return true;
     }
 
-    /// Decodes one complete quoted literal into counted UTF-8, with no added terminator.
-    /// Validates the full input and capacity first. False leaves output bytes unchanged and written zero.
-    /// Supports disjoint buffers or the exact same starting address. Other overlap is unsupported.
-    /// An empty quoted literal succeeds with written zero and needs no output capacity.
-    /// Scalar output refs must not overlap either byte buffer. Do not modify input through other aliases while decoding.
+    // Decodes one quoted literal into counted UTF-8. Empty text needs zero output capacity.
+    // Validation or capacity failure preserves output and resets written to zero.
+    // Buffers must be separate or start at the same address. Keep written separate from both.
     public static bool TryUnquote(readonly(char)* input, nuint count,
         char* output, nuint capacity, ref nuint written) nothrow
     {
@@ -124,9 +120,8 @@ public static class JsonString
         return true;
     }
 
-    /// Compares decoded quoted JSON text with counted UTF-8, without allocation or writes.
-    /// Uses exact text including embedded zeros. The two input regions may overlap.
-    /// False may short-circuit before examining a suffix, so this is not a validation API.
+    // Compares decoded JSON text with counted UTF-8. The inputs may overlap.
+    // Stops at a difference, leaving any later syntax unvalidated.
     public static bool ValueTextEquals(readonly(char)* input, nuint count,
         readonly(char)* text, nuint length) nothrow
     {

@@ -1,17 +1,17 @@
 using Standard::Text;
+
 namespace Standard::IO;
 
-/// Clears line first and reuses its capacity, matching Console's ref-String contract.
-/// False leaves line empty. Errors may leave an already-appended prefix. No rollback or drain.
-/// Input must not borrow line's storage, which Clear or later growth can change.
+// Clears line and reads into its reusable storage. EOF returns false with an empty String.
+// An error can leave a partial line. Input must be independent of the String's backing storage.
 public bool TryReadLine(IByteReader* input, ref String line)
 {
     line.Clear();
     return Standard::IO::TryReadLine(input, &line);
 }
 
-/// Returns an owning counted line, or throws EndOfStreamException before any line.
-/// Empty terminated lines return an empty String. Errors use normal local cleanup.
+// Returns an owning line, or throws EndOfStreamException if EOF precedes it.
+// An empty terminated line returns an empty String.
 public String ReadLine(IByteReader* input)
 {
     String line = new();

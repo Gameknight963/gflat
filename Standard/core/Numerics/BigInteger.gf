@@ -1,5 +1,6 @@
 using Standard::Text;
 using Standard::Collections;
+
 namespace Standard::Numerics;
 
 // Decimal-oriented signed integer. Limbs are least-significant first in base
@@ -34,8 +35,7 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         }
     }
 
-    /// Creates an independent nonnegative owner from the complete unsigned 64-bit range.
-    /// Zero has no limbs or allocation. Nonzero construction may throw on allocation failure.
+    // Constructs the exact nonnegative value from the full unsigned 64-bit range.
     public static BigInteger FromULong(ulong value)
     {
         BigInteger result = new();

@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard;
 
 // Optional writer adapter; the caller-buffer formatter itself stays freestanding.

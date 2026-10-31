@@ -1,12 +1,10 @@
 namespace Standard;
 
-/// Ordering contract used by Comparer and default ordering algorithms.
-/// Primitive float/double implementations order all NaNs before non-NaNs.
-/// All NaNs compare equivalent to each other. Both signed zeros compare equivalent.
+// Ordering contract for Comparer and default ordering algorithms.
+// Primitive floating implementations order NaNs before numbers. All NaNs compare equal, as do signed zeroes.
 interface IComparable<T>
 {
-    /// Returns a negative value, zero, or a positive value for less, equivalent, or greater.
-    /// Borrows other without ownership transfer. Zero defines ordering equivalence.
+    // Returns negative for less, zero for equivalent, or positive for greater.
     immutable int CompareTo(immutable(T)* other);
 
     implementation byte : IComparable<byte>

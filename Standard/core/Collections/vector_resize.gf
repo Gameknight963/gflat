@@ -1,7 +1,7 @@
 namespace Standard::Collections;
 
-/// Changes the initialized length, default-constructing new elements without copying.
-/// Constructor failure restores Count and the old contents. Capacity may have grown and borrows may be invalid.
+// Changes Count, default-constructing new elements when growing.
+// Constructor failure restores the old Count and contents. Capacity growth can still invalidate borrows.
 public void Resize<T>(ref Vector<T> target, nuint count)
 {
     if (count <= target.Count) { target.Truncate(count); return; }

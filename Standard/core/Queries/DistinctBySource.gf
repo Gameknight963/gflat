@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 struct DistinctBySource<T, K : IHashable, Source, Iterator>

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // HashMap additionally requires the matching IEquatable<K> contract.

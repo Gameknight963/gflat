@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard::Text;
 
 // Borrow counted String bytes, including embedded nulls; no copy or allocation.

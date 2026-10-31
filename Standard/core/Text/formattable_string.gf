@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard::Text;
 
 // Borrow the formatter, including noncopyable values. The returned String owns its bytes.

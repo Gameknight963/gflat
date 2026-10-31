@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Copies values into a new owning vector. Pointer elements remain pointers:

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public Enumerable<T, OrderSource<T, S, E>, OrderSource<T, S, E>::Enumerator>

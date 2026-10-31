@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard::Text;
 
 // A validated Unicode scalar, formatted as its counted UTF-8 encoding.

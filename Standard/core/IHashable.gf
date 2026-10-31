@@ -1,11 +1,9 @@
 namespace Standard;
 
-/// Hashing contract used by default hash collections.
-/// Pair with consistent equality when using a custom key type.
+// Hashing contract for default hash collections.
 interface IHashable
 {
-    /// Returns a hash consistent with equality. Unequal values may share a hash.
-    /// Hash codes are not persistent identifiers.
+    // Returns a hash for collection lookup. Equal values must have equal hashes.
     immutable nuint GetHashCode();
 
     implementation byte

@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard::Text;
 
 // Optional alongside ExtraLongFormatting.gf; no float/libc formatting dependency.

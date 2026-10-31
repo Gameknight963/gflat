@@ -1,4 +1,5 @@
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // Owns a resizable sequence of packed bits. New bits start clear.

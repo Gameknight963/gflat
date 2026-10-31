@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 private inline void ValidateIntRange(int start, int count)

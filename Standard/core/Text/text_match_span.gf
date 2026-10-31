@@ -1,5 +1,6 @@
 using Standard::Text;
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Counted byte comparisons over borrowed text; no terminator is read from text.

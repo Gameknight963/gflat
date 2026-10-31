@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Optional throwing adapter; include Text/boolean_parsing_throwing.gf as well.

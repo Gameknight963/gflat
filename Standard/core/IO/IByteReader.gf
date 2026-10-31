@@ -1,13 +1,12 @@
 namespace Standard::IO;
 
-/// Synchronous source of counted bytes. Reading never transfers source or buffer ownership.
-/// For a positive request, zero means EOF and a short positive read is normal.
-/// No terminator, decoding or line processing is added. Errors may consume an unknown prefix.
+// Synchronous source of counted bytes.
+// A positive request returning zero means EOF. Short positive reads can continue.
+// An error may leave input consumed.
 public interface IByteReader
 {
-    /// Writes at most count bytes to caller storage and returns the number written.
-    /// Zero count consumes nothing and must not dereference data. State validation may throw.
-    /// The writable buffer must not overlap the reader's state or retained backing storage.
-    /// Storage is borrowed only until this call returns and must not be retained.
+    // Writes at most count bytes and returns the number written.
+    // Zero count consumes nothing and leaves data untouched, but may validate source state.
+    // Data is borrowed for this call and must be separate from reader state and backing storage.
     nuint Read(char* data, nuint count);
 }

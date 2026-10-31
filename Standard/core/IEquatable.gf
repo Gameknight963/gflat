@@ -1,12 +1,11 @@
 namespace Standard;
 
-/// Equality contract used by EqualityComparer and default collection equality.
-/// Primitive float/double implementations equate all NaNs and both signed zeros.
-/// Unlike IEEE ==, this treats a NaN as equal to another NaN.
+// Equality contract for EqualityComparer and collections.
+// Primitive floating implementations equate all NaNs and both signed zeroes.
 interface IEquatable<T>
 {
-    /// Compares this value with a borrowed other value.
-    /// Keep equality consistent with GetHashCode when the type is also IHashable.
+    // Compares this value with a borrowed other value.
+    // Keep equality consistent with GetHashCode when the type is also IHashable.
     immutable bool Equals(immutable(T)* other);
 
     implementation byte : IEquatable<byte>

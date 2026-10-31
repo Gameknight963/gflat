@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Materializes owning keys. HashMap also requires the matching IEquatable<K>.

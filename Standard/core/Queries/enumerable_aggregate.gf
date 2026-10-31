@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public U Aggregate<T, U, S, E>(Enumerable<T, S, E> source, U seed, U(U, T)* accumulate)

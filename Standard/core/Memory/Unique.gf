@@ -1,20 +1,17 @@
 namespace Standard::Memory;
 
-/// Owns one separately allocated object and deletes it on destruction.
-/// Move transfers deletion responsibility without relocating the pointee. Copying is prohibited.
-/// Borrows do not keep the owner alive. Replacement or destruction invalidates them.
+// Move-only owner of one allocated object. Move preserves the object's address.
+// Replacement or destruction invalidates borrowed references.
 public struct Unique<T>
 {
     private T*? storage;
 
     public Unique() nothrow { storage = null; }
-    /// Adopts one live object suitable for ordinary delete, without allocating.
-    /// Do not delete it or adopt it again while this owner is responsible.
+    // Takes ownership of a live object suitable for delete.
     public Unique(T* value) nothrow { storage = value; }
 
-    /// Returns the stored pointer and leaves this owner empty and usable.
-    /// Transfers deletion responsibility to the caller without destroying or freeing the object.
-    /// An empty owner returns null. Existing borrows now rely on whoever owns the released object.
+    // Transfers the stored pointer to the caller and leaves this owner empty.
+    // An empty owner returns null. The caller takes responsibility for deletion.
     public T*? Release() nothrow
     {
         T*? result = storage;
@@ -24,9 +21,8 @@ public struct Unique<T>
 
     public bool IsEmpty { immutable get nothrow => storage == null; }
 
-    /// Borrows the actual object by mutable reference, throwing when empty.
-    /// Available through shallow readonly owners, but not through deep immutable owners.
-    /// Keep the owner alive while using the reference.
+    // Borrows the object by mutable reference, throwing when empty.
+    // Keep the owner alive. Shallow readonly owners permit this access.
     public ref T Value
     {
         readonly get
@@ -36,9 +32,8 @@ public struct Unique<T>
         }
     }
 
-    /// Borrows the same object through a deep immutable reference, throwing when empty.
-    /// Other mutable aliases can still change the object.
-    /// Keep the responsible owner alive while using the reference.
+    // Borrows an immutable reference, throwing when empty. Keep the owner alive.
+    // Other aliases can still change the object.
     public ref immutable(T) ValueImmutable
     {
         immutable get

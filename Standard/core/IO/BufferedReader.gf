@@ -1,10 +1,10 @@
 using Standard::Collections;
 using Standard::Memory;
+
 namespace Standard::IO;
 
-/// Buffers reads in owned or borrowed scratch and borrows one source cursor without closing it.
-/// All consuming access to that cursor must pass through this adapter while it is used.
-/// Move transfers the cursor and storage reference. The Vector owner field prevents copies.
+// Buffers reads in owned or borrowed scratch while borrowing one source cursor.
+// Keep the source alive and unmoved. Consume through this adapter while it holds unread bytes.
 public struct BufferedReader : IByteReader
 {
     private IByteReader* source;
@@ -15,8 +15,8 @@ public struct BufferedReader : IByteReader
     private nuint end;
     private bool failed;
 
-    /// Allocates and initializes one buffer. Zero capacity rejects before buffer allocation.
-    /// Keep the concrete source alive, unmoved and usable throughout adapter use.
+    // Allocates a buffer. Zero capacity throws before allocation.
+    // Keep the source alive and unmoved throughout adapter use.
     public BufferedReader(IByteReader* input, nuint capacity = 4096)
     {
         source = input;
@@ -33,10 +33,8 @@ public struct BufferedReader : IByteReader
         scratch = storage.Data!;
     }
 
-    /// Borrows caller scratch without allocating or initializing its bytes.
-    /// Zero capacity rejects before accessing storage. Errors use normal exception storage.
-    /// Keep scratch alive, unmoved and disjoint from reader/source state and their retained input.
-    /// No scratch bytes are freed on destruction. This cursor remains noncopyable.
+    // Borrows caller scratch until the adapter is destroyed. Zero capacity throws.
+    // Keep scratch alive, unmoved, and separate from reader state and retained source input.
     public BufferedReader(IByteReader* input, char* storage, nuint capacity)
     {
         source = input;
@@ -53,10 +51,9 @@ public struct BufferedReader : IByteReader
     public nuint BufferedCount { immutable get nothrow => end - start; }
     public nuint Capacity { immutable get nothrow => capacity; }
 
-    /// Returns a buffered prefix or performs one source refill, allowing short results.
-    /// Zero count validates the source without consuming buffered bytes or dereferencing data.
-    /// Source errors or over-reporting latch failure. Later reads and peeks reject without source calls.
-    /// Caller output must be writable and disjoint from this adapter, scratch and source state.
+    // Reads a buffered prefix or refills once, allowing short results.
+    // Zero count validates the source while preserving buffered input.
+    // A source error prevents further reads or peeks. Output must be separate from adapter and source storage.
     public nuint Read(char* data, nuint count)
     {
         if (count == 0)
@@ -76,9 +73,8 @@ public struct BufferedReader : IByteReader
         return take;
     }
 
-    /// Returns the next byte from 0 through 255, or -1 when a refill reports EOF.
-    /// Does not consume buffered input. Empty buffers may read ahead through the source.
-    /// Keep using this same adapter to consume the peeked byte and retained suffix.
+    // Returns the next byte, or -1 at EOF, keeping it buffered.
+    // An empty buffer can read ahead. Continue through this adapter to retain that input.
     public int PeekByte()
     {
         if (!EnsureBuffered()) return -1;

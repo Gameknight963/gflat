@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Views borrow the current counted bytes, never the terminator or spare capacity.

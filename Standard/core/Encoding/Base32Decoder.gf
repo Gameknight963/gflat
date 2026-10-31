@@ -1,7 +1,8 @@
 namespace Standard::Encoding;
 
-/// Decodes strict padded uppercase Base32 into counted bytes at a borrowed sink.
-/// Complete validates the final group. Destruction never writes or closes the sink.
+// Streams strict padded uppercase Base32 into a borrowed writer.
+// Call Complete to validate the final group. Keep the destination alive through completion.
+// Destruction discards pending input.
 public struct Base32Decoder : ITextWriter
 {
     private ITextWriter* output;
@@ -26,9 +27,9 @@ public struct Base32Decoder : ITextWriter
         if (failed) throw new Exception("Base32 decoder cannot continue after failure");
     }
 
-    /// Accepts arbitrary counted chunks, retaining at most seven copied encoded bytes.
-    /// Input must be stable and disjoint from decoder and storage the sink can mutate.
-    /// A valid prefix may already have reached the sink before a later error.
+    // Decodes encoded chunks, retaining at most seven pending bytes.
+    // Input must be separate from decoder state and storage the sink can mutate.
+    // A later error can leave a valid prefix already written.
     public void Write(readonly(char)* data, nuint count)
     {
         this.CheckUsable();
@@ -64,8 +65,8 @@ public struct Base32Decoder : ITextWriter
         failed = false;
     }
 
-    /// Rejects an incomplete final group. Successful completion emits nothing.
-    /// Repeated success is idempotent and every failure permanently rejects reuse.
+    // Rejects an incomplete final group. Repeated successful completion is allowed.
+    // A failure permanently prevents further use.
     public void Complete()
     {
         this.CheckUsable();

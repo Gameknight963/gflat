@@ -1,5 +1,6 @@
 using Standard::Text;
 using Standard::Queries;
+
 namespace Standard::IO;
 
 extension LineSequence

@@ -1,5 +1,6 @@
 using Standard::Text;
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Trim ASCII whitespace by slicing the borrowed view, never changing its bytes.

@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public nuint Count<T, S, E>(Enumerable<T, S, E> source)

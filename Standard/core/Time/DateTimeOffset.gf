@@ -79,10 +79,12 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
             throw new Exception("DateTimeOffset subtraction is outside years 1 through 9999");
         return Create(Standard::Time::DateTime::FromTicks(wall - delta), offsetTicks);
     }
-    /// Shift the civil calendar, clamping the day and preserving time and offset. Both wall and UTC results must remain valid.
+    // Shifts calendar months, clamping the day and preserving time and offset.
+    // Both wall time and UTC must stay within the supported range.
     public immutable DateTimeOffset AddMonths(int months)
         => new DateTimeOffset(clock.AddMonths(months), TimeSpan::FromTicks(offsetTicks));
-    /// Shift the civil year with the same clamping, time, offset and range rules as AddMonths.
+    // Shifts calendar years, clamping the day and preserving time and offset.
+    // Both wall time and UTC must stay within the supported range.
     public immutable DateTimeOffset AddYears(int years)
         => new DateTimeOffset(clock.AddYears(years), TimeSpan::FromTicks(offsetTicks));
 

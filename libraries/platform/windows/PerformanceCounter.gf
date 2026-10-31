@@ -1,4 +1,5 @@
 using Standard::Time;
+
 namespace Windows;
 
 namespace performance_counter_detail

@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 // Kept outside Vector<T>: only calls to this copying operation instantiate its

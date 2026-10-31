@@ -1,4 +1,5 @@
 using Standard::Text;
+
 namespace Standard::Text;
 
 public String ToString(byte value)

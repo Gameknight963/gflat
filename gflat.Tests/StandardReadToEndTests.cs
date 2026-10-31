@@ -3,7 +3,10 @@ namespace gflat.Tests;
 public sealed class StandardReadToEndTests
 {
     private const string PatternReader = """
-        using Standard; using Standard::IO; using Standard::Text;
+        using Standard;
+        using Standard::IO;
+        using Standard::Text;
+
         char Pattern(nuint offset) nothrow => (char)(offset * 73 + 19);
         struct Source : IByteReader {
             public nuint Position; public nuint Length; public nuint Calls;
@@ -124,7 +127,9 @@ public sealed class StandardReadToEndTests
     [InlineData(2)]
     public void ReaderFailuresAndOverReportsPreserveEarlierChunksWithoutFurtherReads(int optimization)
         => Run("""
-            using Standard::IO; using Standard::Text;
+            using Standard::IO;
+            using Standard::Text;
+
             class InputFailure : IOException { public InputFailure() : base("source failed") { code = 73; } }
             struct Source : IByteReader {
                 public nuint Position; public nuint Calls; private int mode;
@@ -214,7 +219,9 @@ public sealed class StandardReadToEndTests
             File.WriteAllBytes(path, [65, 0, 255, 13, 10, 66]);
             string literal = "\"" + path.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
             Run($$"""
-                using Standard::IO; using Standard::Text;
+                using Standard::IO;
+                using Standard::Text;
+
                 int main() {
                     File file = File::OpenRead({{literal}}); IByteReader* input = &file;
                     String text = input.ReadToEnd(6);

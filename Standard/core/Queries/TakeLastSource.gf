@@ -1,4 +1,5 @@
 ﻿using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Each enumerator buffers its own bounded tail on the first move.

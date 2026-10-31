@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // The reusable source owns no seen-key set; each enumerator creates its own.

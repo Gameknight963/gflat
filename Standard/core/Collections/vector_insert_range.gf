@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 // Optional copying operation: merely including it does not require copyable T.

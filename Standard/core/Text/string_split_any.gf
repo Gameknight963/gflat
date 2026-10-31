@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 TextPartsAny SplitAny(ref immutable(String) text, Span<readonly(char)> separators, bool removeEmpty = false)

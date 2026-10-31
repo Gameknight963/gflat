@@ -7,11 +7,10 @@ namespace floating_parsing_detail
     private extern int isspace(int value) nothrow;
 }
 
-/// Parses a complete C string using the current C locale and native floating grammar.
-/// Rejects empty input, surrounding whitespace and trailing bytes. Failure writes positive zero.
-/// Native range results, including infinity and underflow to signed zero, are successful conversions.
-/// Input must be terminated and output writable.
-/// Input and output may overlap: output is committed only after all input reads finish.
+// Parses a complete C string using the current C locale and native floating grammar.
+// Syntax errors, whitespace, or trailing bytes return false and write positive zero.
+// Overflow to infinity and underflow to signed zero are successful conversions.
+// Input and output may overlap. Output is assigned after reading input.
 bool TryParseFloat(readonly(char)* text, float* result) nothrow
 {
     float value = 0.0f;
@@ -27,7 +26,7 @@ bool TryParseFloat(readonly(char)* text, float* result) nothrow
     return valid;
 }
 
-/// Double-precision counterpart of TryParseFloat, with the same C-string and locale contract.
+// Double-precision counterpart of TryParseFloat, with the same C-string and locale contract.
 bool TryParseDouble(readonly(char)* text, double* result) nothrow
 {
     double value = 0.0;

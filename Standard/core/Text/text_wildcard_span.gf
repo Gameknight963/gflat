@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 public bool MatchesWildcard(Span<readonly(char)> text, readonly(char)* pattern, nuint count) nothrow

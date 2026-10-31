@@ -1,4 +1,5 @@
 using Standard::Binary;
+
 namespace Standard::IO;
 
 // Frame one encoded value without consuming a byte from the following field.
@@ -13,8 +14,8 @@ private nuint ReadVarIntBytes(IByteReader* input, byte* bytes, nuint maximum)
     return maximum;
 }
 
-/// Reads one canonical unsigned base-128 UInt32, borrowing the source.
-/// Makes at most five one-byte reads, with no prefetch. EOF or errors may consume a prefix.
+// Reads one canonical base-128 UInt32 in at most five one-byte reads.
+// EOF or malformed data can leave a consumed prefix.
 public uint ReadVarUInt32(IByteReader* input)
 {
     byte[5] bytes;
@@ -32,8 +33,8 @@ extension IByteReader
     => Standard::IO::ReadVarUInt32(this);
 }
 
-/// Reads one canonical unsigned base-128 UInt64, borrowing the source.
-/// Makes at most ten one-byte reads, with no prefetch. EOF or errors may consume a prefix.
+// Reads one canonical base-128 UInt64 in at most ten one-byte reads.
+// EOF or malformed data can leave a consumed prefix.
 public ulong ReadVarUInt64(IByteReader* input)
 {
     byte[10] bytes;
@@ -51,7 +52,7 @@ extension IByteReader
     => Standard::IO::ReadVarUInt64(this);
 }
 
-/// Decodes a canonical UInt32 varint using ZigZag, not signed LEB128 or protobuf int32.
+// Reads a canonical UInt32 varint and applies ZigZag decoding.
 public int ReadZigZagInt32(IByteReader* input)
     => VarInt::ZigZagDecode(ReadVarUInt32(input));
 
@@ -61,7 +62,7 @@ extension IByteReader
     => Standard::IO::ReadZigZagInt32(this);
 }
 
-/// Decodes a canonical UInt64 varint using ZigZag, not signed LEB128 or protobuf int64.
+// Reads a canonical UInt64 varint and applies ZigZag decoding.
 public long ReadZigZagInt64(IByteReader* input)
     => VarInt::ZigZagDecode(ReadVarUInt64(input));
 

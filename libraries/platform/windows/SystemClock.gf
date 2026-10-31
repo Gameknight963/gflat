@@ -1,4 +1,5 @@
 using Standard::Time;
+
 namespace Windows;
 
 namespace system_clock_detail

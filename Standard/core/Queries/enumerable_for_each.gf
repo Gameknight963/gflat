@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public void ForEach<T, S, E>(Enumerable<T, S, E> source, void(T)* action)

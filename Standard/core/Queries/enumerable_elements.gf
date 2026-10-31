@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public T First<T, S, E>(Enumerable<T, S, E> source)

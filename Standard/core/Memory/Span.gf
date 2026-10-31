@@ -1,9 +1,9 @@
 using Standard::Queries;
 using Standard::Collections;
+
 namespace Standard::Memory;
 
-/// Borrows contiguous storage.
-/// Keep the backing buffer alive for every use of this view.
+// Borrows contiguous elements. Keep the backing storage alive and stable.
 struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
 {
     private T*? data;

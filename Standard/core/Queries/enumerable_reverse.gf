@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public Enumerable<T, ReverseSource<T, S, E>, ReverseSource<T, S, E>::Enumerator>

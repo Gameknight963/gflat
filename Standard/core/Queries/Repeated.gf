@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Owns one captured value. Each iterator owns a copy; Current copies normally.

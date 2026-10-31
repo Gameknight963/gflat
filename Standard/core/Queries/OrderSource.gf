@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Query copies retain only the source and comparator; each cursor owns its buffer.

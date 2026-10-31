@@ -1,6 +1,7 @@
 using Standard::Memory;
 using Standard::Queries;
 using Standard::Collections;
+
 namespace Standard::Text;
 
 // Borrowed counted lines. LF and CRLF terminate lines; a bare CR is text.

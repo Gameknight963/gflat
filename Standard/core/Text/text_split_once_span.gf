@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Text;
 
 // Borrow both sides of the first separator; output references must be distinct.

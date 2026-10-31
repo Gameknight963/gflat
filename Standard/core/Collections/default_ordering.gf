@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 // Optional comparison-contract conveniences; explicit comparator APIs stay independent.

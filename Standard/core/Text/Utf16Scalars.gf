@@ -1,5 +1,6 @@
 using Standard::Queries;
 using Standard::Collections;
+
 namespace Standard::Text;
 
 // Borrows counted UTF-16 host ushort units. Input must remain alive throughout enumeration.

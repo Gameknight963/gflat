@@ -1,12 +1,10 @@
 namespace Standard;
 
-/// Creates version 4 UUIDs using an explicitly supplied random-byte callback.
-/// Successful calls use a fixed stack buffer.
+// Creates version 4 UUIDs using a supplied random-byte callback.
 public static class UuidGenerator
 {
-    /// Calls fill once with a temporary writable 16-byte buffer. True requires all bytes filled.
-    /// The buffer is valid only during the callback and must not be retained.
-    /// False discards partial bytes and writes Nil. Callback exceptions propagate.
+    // Calls fill once with a temporary 16-byte buffer. True requires all bytes filled.
+    // The callback must not retain the buffer. False resets result to Nil.
     public static bool TryCreateVersion4(bool(byte*, nuint)* fill, ref Uuid result)
     {
         byte[16] bytes;
@@ -23,8 +21,7 @@ public static class UuidGenerator
         return true;
     }
 
-    /// Returns a version 4 UUID or throws Exception when fill returns false.
-    /// Callback exceptions propagate unchanged.
+    // Returns a version 4 UUID, throwing Exception if fill returns false.
     public static Uuid CreateVersion4(bool(byte*, nuint)* fill)
     {
         Uuid result = new();

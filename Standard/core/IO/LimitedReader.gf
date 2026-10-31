@@ -1,9 +1,7 @@
 namespace Standard::IO;
 
-/// Borrows one source cursor and permits at most the specified number of bytes.
-/// No read-ahead, buffer allocation, closing or ownership transfer is performed.
-/// Keep the source alive and unmoved. Do not interleave other consuming access.
-/// Copies share the source cursor but have independent remaining allowances.
+// Borrows a source cursor and permits at most limit bytes.
+// Keep the source alive and unmoved. Copies share its cursor but track separate allowances.
 public struct LimitedReader : IByteReader
 {
     private IByteReader* source;
@@ -17,15 +15,13 @@ public struct LimitedReader : IByteReader
         failed = false;
     }
 
-    /// Unused allowance, not the source length. Early EOF leaves this positive.
-    /// After failure it remains the last validated allowance. Reads then reject.
+    // Unused byte allowance. Early EOF can leave it positive.
+    // An input error preserves this value and prevents further reads.
     public nuint Remaining { immutable get nothrow => remaining; }
 
-    /// Performs at most one source read, capped to the unused allowance.
-    /// Zero count or exhausted allowance never calls source or touches data.
-    /// Source errors/over-reporting latch failure because consumption is unknown.
-    /// Caller output must hold min(count, Remaining) writable bytes.
-    /// Caller storage must be disjoint from this adapter and its source state.
+    // Reads once, capped to the remaining allowance.
+    // Zero count or exhausted allowance returns without accessing source or output.
+    // Input errors and invalid counts prevent further reads. Output must be separate from adapter and source state.
     public nuint Read(char* data, nuint count)
     {
         if (failed) throw new IOException("Limited reader cannot continue after input failure");

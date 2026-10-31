@@ -1,4 +1,5 @@
 using Standard::Binary;
+
 namespace Standard::IO;
 
 // Optional canonical base-128 integers on borrowed File streams.

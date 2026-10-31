@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 public Enumerable<T, TakeWhileSource<T, S, E>, TakeWhileSource<T, S, E>::Enumerator> TakeWhile<T, S, E>(Enumerable<T, S, E> source, bool(T)* predicate)

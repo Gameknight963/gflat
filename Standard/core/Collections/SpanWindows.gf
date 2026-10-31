@@ -1,5 +1,6 @@
 using Standard::Memory;
 using Standard::Queries;
+
 namespace Standard::Collections;
 
 // Borrows contiguous storage; each result is a full, possibly overlapping view.

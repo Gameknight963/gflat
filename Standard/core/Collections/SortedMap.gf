@@ -1,4 +1,5 @@
 using Standard::Memory;
+
 namespace Standard::Collections;
 
 // Owns sorted contiguous entries. Ordering equivalence identifies duplicate keys.
@@ -60,7 +61,7 @@ struct SortedMap<K, V>
     public immutable bool ContainsKey(immutable(K)* key)
         => this.Matches(this.LowerBound(key), key);
 
-    /// Borrows the stored comparison-equivalent key, or null when absent.
+    // Borrows the stored comparison-equivalent key, or null when absent.
     public immutable immutable(K)*? FindKey(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);

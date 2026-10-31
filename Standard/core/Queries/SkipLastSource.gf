@@ -1,4 +1,5 @@
 using Standard::Collections;
+
 namespace Standard::Queries;
 
 // Retains a bounded lookahead, rather than materializing the whole input.

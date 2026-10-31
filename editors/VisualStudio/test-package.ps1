@@ -163,6 +163,23 @@ int main() nothrow {
         & $compiler $gzipMember @gzipSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "gzip-member-o$optimization.exe")
         if ($LASTEXITCODE -ne 0) { throw "Packaged gzip member decoder failed at O$optimization" }
     }
+    $zlibStream = Join-Path $extracted 'zlib-stream.gf'
+    @'
+using Standard::Compression;
+int main() nothrow {
+    byte[11] input = [120,1,0x4b,0x4c,0x4a,0x06,0,2,77,1,39];
+    byte[3] output; nuint consumed = 0; nuint written = 0;
+    if (Zlib::Decompress(input, 11, output, 3, ref consumed, ref written) != Zlib::Status::Done) return 1;
+    if (consumed != 11 || written != 3 || output[0] != 97 || output[1] != 98 || output[2] != 99) return 2;
+    return 0;
+}
+'@ | Set-Content -LiteralPath $zlibStream
+    $zlibSources = @('Compression/Zlib.gf', 'Compression/Deflate.gf', 'Hashing/Adler32.gf', 'Binary/BinaryPrimitives.gf') |
+        ForEach-Object { Join-Path $extracted "Sdk/Standard/core/$_" }
+    foreach ($optimization in @(0, 2)) {
+        & $compiler $zlibStream @zlibSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "zlib-stream-o$optimization.exe")
+        if ($LASTEXITCODE -ne 0) { throw "Packaged zlib decoder failed at O$optimization" }
+    }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }

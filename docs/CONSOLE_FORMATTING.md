@@ -42,6 +42,9 @@ int main()
 The ref overload borrows the value during formatting. WriteLine adds its newline
 after Format succeeds. A formatter or output error can leave partial text.
 
+[Managed objects](CONSOLE_MANAGED_FORMATTING.md) can be passed directly, including
+temporary and returned references.
+
 Selective builds use `Console/value_formatting.gf` with the primitive
 formatter and stdout writer. Floating and 128-bit output live in
 `floating_formatting.gf` and `extra_long_formatting.gf`, alongside

@@ -77,7 +77,7 @@ String still has three bytes. Substring search takes O(text length + pattern len
 | `Remove(start, count)` | Removes bytes and shifts the suffix |
 | `Replace(char, char)` | Changes matching bytes in place |
 | `Replace(oldText, newText)` | Replaces nonoverlapping matches from left to right |
-| `Trim`, `TrimStart`, `TrimEnd` | Remove ASCII whitespace in place |
+| `Trim`, `TrimStart`, `TrimEnd` | Remove ASCII whitespace or selected bytes in place |
 | `PadLeft(width, byte)`, `PadRight(width, byte)` | Grow to a byte width, using space by default |
 | `Substring(start, count)` | Returns an independent String |
 
@@ -86,9 +86,32 @@ including initialized spare bytes. String-pattern Replace requires a nonempty
 old pattern. An empty replacement removes matches. A match builds replacement
 storage before committing, while no match retains the original storage.
 
-Trimming removes space, tab, CR, LF, vertical tab, and form feed. Padding and
-offsets measure bytes rather than displayed columns. For line-ending conversion,
+Parameterless trimming removes space, tab, CR, LF, vertical tab, and form feed.
+Padding and offsets measure bytes rather than displayed columns. For line-ending conversion,
 use [`ReplaceLineEndings`](LINE_ENDINGS.md).
+
+## Trimming selected bytes
+
+`Trim(value)`, `TrimStart(value)`, and `TrimEnd(value)` remove a selected byte
+from the corresponding ends of the String. The pointer/count overloads accept
+a set of bytes, including embedded zeros. An empty set leaves the String unchanged.
+
+```csharp
+using Standard::Text;
+
+int main()
+{
+    String quoted = String::From("\"name\"");
+    quoted.Trim('"');
+    if (!quoted.Equals("name")) return 1;
+    String field = String::From(";,value,;");
+    field.Trim(";,", 2);
+    if (!field.Equals("value")) return 2;
+    return 0;
+}
+```
+
+The set may borrow the String's own contents.
 
 ## Capacity and length
 

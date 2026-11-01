@@ -526,6 +526,41 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.TrimStart();
     }
 
+    public void TrimStart(char value) nothrow { this.TrimBytes(&value, 1, true, false); }
+    public void TrimEnd(char value) nothrow { this.TrimBytes(&value, 1, false, true); }
+    public void Trim(char value) nothrow { this.TrimBytes(&value, 1, true, true); }
+
+    public void TrimStart(readonly(char)* values, nuint count) nothrow
+        => this.TrimBytes(values, count, true, false);
+    public void TrimEnd(readonly(char)* values, nuint count) nothrow
+        => this.TrimBytes(values, count, false, true);
+    public void Trim(readonly(char)* values, nuint count) nothrow
+        => this.TrimBytes(values, count, true, true);
+
+    private static bool IsTrimByte(char value, readonly(char)* values, nuint count) nothrow
+    {
+        for (nuint index = 0; index < count; index++)
+            if (values[index] == value) return true;
+        return false;
+    }
+
+    private void TrimBytes(readonly(char)* values, nuint count, bool trimStart, bool trimEnd) nothrow
+    {
+        if (count == 0 || length == 0) return;
+        nuint start = 0;
+        nuint end = length;
+        if (trimStart)
+            while (start < end && IsTrimByte(data[start], values, count)) start++;
+        if (trimEnd)
+            while (end > start && IsTrimByte(data[end - 1], values, count)) end--;
+        if (start == 0 && end == length) return;
+        // Determine both boundaries before writing: the trim set can borrow this string.
+        if (start != 0)
+            for (nuint index = 0; index < end - start; index++) data[index] = data[start + index];
+        length = end - start;
+        data[length] = '\0';
+    }
+
     // Sets Length to zero and preserves termination while retaining allocated capacity.
     public void Clear() nothrow
     {

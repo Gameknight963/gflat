@@ -179,7 +179,7 @@ public class EditorTests
             column += data[i + 1];
             if (EditorModel.TokenTypes[data[i + 3]] == "modifier") keywords.Add(source.Substring(column, data[i + 2]));
         }
-        Assert.Equal(new[] { "copy", "ref", "move", "at" }, keywords);
+        Assert.Equal(new[] { "copy", "ref", "new", "move", "at" }, keywords);
     }
 
     [Fact]

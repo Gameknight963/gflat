@@ -45,7 +45,16 @@ public sealed class EditorClassificationConsistencyTests
     {
         string text = declaration + " Item { public Item() {} }";
         var (model, source) = Analyze(text);
-        Assert.Equal(expected, Classification(model, source, text.LastIndexOf("Item", StringComparison.Ordinal)));
+        int offset = text.LastIndexOf("Item", StringComparison.Ordinal);
+        Assert.Equal(expected, Classification(model, source, offset));
+        var icons = JsonSerializer.SerializeToElement(new Dictionary<string, object> {
+            ["method.public"] = new { guid = Guid.Empty, id = 7 }
+        });
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, offset, new VisualStudioHover(icons)), Protocol.JsonOptions);
+        var header = hover.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
+        Assert.Equal("method", header[0].GetProperty("AutomationName").GetString());
+        Assert.Contains(header[1].GetProperty("Runs").EnumerateArray(), run =>
+            run.GetProperty("Text").GetString() == "Item" && run.GetProperty("ClassificationTypeName").GetString() == expected + " name");
     }
 
     [Theory]

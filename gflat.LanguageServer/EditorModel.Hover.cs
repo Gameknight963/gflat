@@ -422,6 +422,7 @@ public sealed partial class EditorModel
         string kind = symbol.Syntax.Node switch
         {
             FieldDeclaration { IsConst: true } or VariableDeclaration { IsConst: true } => "constant",
+            ConstructorDeclaration or MethodDeclaration => "method",
             FieldDeclaration => "field", AliasDeclaration => "type", _ => symbol.Classification
         };
         string access = symbol.Access switch { TokenKind.Private => "private", TokenKind.Protected => "protected", TokenKind.Internal => "internal", _ => "public" };

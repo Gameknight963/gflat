@@ -160,4 +160,39 @@ public sealed class WorkspaceAnalysisReuseTests : IDisposable
         var second = Workspace.Analyze(root, documents, new ProjectWorkspace());
         Assert.NotSame(first.Models![main], second.Models![main]);
     }
+
+    [Fact]
+    public void FocusedSnapshotsCannotReplaceFullAnalysisAndFullSnapshotsCanServeFocusedQueries()
+    {
+        Write("app.gfproj", ProjectFileFixture.Xml());
+        string main = Write("main.gf", "int main() => Answer();");
+        string other = Write("other.gf", "int Answer() => missing;");
+        var documents = new Dictionary<string, OpenDocument>(Workspace.Paths) { [main] = new(main, File.ReadAllText(main), 1) };
+        var projects = new ProjectWorkspace();
+        var partial = Workspace.Analyze(root, documents, projects, bodyPaths: new HashSet<string>(Workspace.Paths) { main });
+        Assert.True(partial.IsPartial);
+        Assert.Empty(partial.Diagnostics[other]);
+        var full = Workspace.Analyze(root, documents, projects);
+        Assert.False(full.IsPartial);
+        Assert.NotSame(partial.Models![main], full.Models![main]);
+        Assert.Contains(full.Diagnostics[other], diagnostic => diagnostic.Message.Contains("missing"));
+        var reused = Workspace.Analyze(root, documents, projects, bodyPaths: new HashSet<string>(Workspace.Paths) { main });
+        Assert.Same(full.Models[main], reused.Models![main]);
+        Assert.False(reused.IsPartial);
+    }
+
+    [Fact]
+    public void ChangingTheFocusedFileDoesNotReuseAnIncompleteBodyModel()
+    {
+        Write("app.gfproj", ProjectFileFixture.Xml());
+        string main = Write("main.gf", "int main() => Answer();");
+        string other = Write("other.gf", "int Answer() => missing;");
+        var documents = new Dictionary<string, OpenDocument>(Workspace.Paths) { [main] = new(main, File.ReadAllText(main), 1) };
+        var projects = new ProjectWorkspace();
+        var first = Workspace.Analyze(root, documents, projects, bodyPaths: new HashSet<string>(Workspace.Paths) { main });
+        var second = Workspace.Analyze(root, documents, projects, bodyPaths: new HashSet<string>(Workspace.Paths) { other });
+        Assert.True(second.IsPartial);
+        Assert.NotSame(first.Models![main], second.Models![main]);
+        Assert.Contains(second.Diagnostics[other], diagnostic => diagnostic.Message.Contains("missing"));
+    }
 }

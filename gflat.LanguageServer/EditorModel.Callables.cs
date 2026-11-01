@@ -47,6 +47,8 @@ public sealed partial class EditorModel
         {
             if (syntax.Node is NewExpression creation && syntax.Span.Source?.Path is { } creationPath)
             {
+                if (snapshot.BodySources is { } focus && syntax.Span.SourceId is { } sourceId &&
+                    !focus.Contains(sourceId) && checker.GetResolvedConstructor(creation) == null) continue;
                 var creationToken = tokens[creationPath].FirstOrDefault(t => t.Start == syntax.Span.Start && t.Kind == TokenKind.New);
                 Symbol[] creationFamily;
                 if (creation.Type is NamedTypeExpression creationType &&

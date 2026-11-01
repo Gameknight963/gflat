@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="gflat.LanguageServer.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../gflat.Compiler/gflat.Compiler.csproj" />
   </ItemGroup>
   <ItemGroup>

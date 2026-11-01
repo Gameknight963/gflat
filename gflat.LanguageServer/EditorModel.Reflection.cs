@@ -63,9 +63,9 @@ public sealed partial class EditorModel
         }
     }
 
-    private AstNode? ReflectionReceiver(string path, int separatorIndex)
+    private AstNode? ReflectionReceiver(string path, int separatorIndex, bool insertedSeparator = false)
     {
-        if (separatorIndex < 1 || tokens[path][separatorIndex].Kind != TokenKind.Dot) return null;
+        if (separatorIndex < 1 || !insertedSeparator && (separatorIndex >= tokens[path].Length || tokens[path][separatorIndex].Kind != TokenKind.Dot)) return null;
         int end = tokens[path][separatorIndex - 1].End + 1;
         return nodes[path].Where(n => n.Span.Start + n.Span.Length == end &&
             n.Node is IdentifierExpression or MemberAccessExpression or IndexExpression or ReflectExpression or TypeofExpression)
@@ -73,9 +73,9 @@ public sealed partial class EditorModel
             .FirstOrDefault(node => ExpressionType(node, path, end) is { } type && TypeChecker.IsReflectionType(type));
     }
 
-    private object? ReflectionCompletion(string path, int offset, int index, TextRange range)
+    private object? ReflectionCompletion(string path, int offset, int index, TextRange range, bool insertedSeparator = false)
     {
-        if (snapshot.Checker is not { } checker || ReflectionReceiver(path, index - 1) is not { } receiver) return null;
+        if (snapshot.Checker is not { } checker || ReflectionReceiver(path, index - 1, insertedSeparator) is not { } receiver) return null;
         checker.TryGetConstValue(receiver, out var constant);
         var value = constant as ConstValue.Reflection;
         var names = new List<string> { "Name", "QualifiedName", "Kind", "IsType" };

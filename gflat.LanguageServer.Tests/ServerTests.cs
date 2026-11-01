@@ -5,7 +5,7 @@ using gflat.LanguageServer;
 
 namespace gflat.LanguageServer.Tests;
 
-public sealed class ServerTests
+public sealed partial class ServerTests
 {
     [Fact]
     public async Task SdkStyleProjectLoadsReferencesAndHonorsExcludedSources()

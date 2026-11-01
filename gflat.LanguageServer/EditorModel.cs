@@ -26,6 +26,7 @@ public sealed partial class EditorModel
         public IReadOnlyList<Parameter>? Parameters => IsTypeParameter ? null : BoundParameters ?? (Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null });
     }
     private readonly AnalysisSnapshot snapshot;
+    public bool IsPartialAnalysis => snapshot.BodySources != null;
     private readonly Dictionary<string, SourceFile> sources;
     private readonly Dictionary<string, Token[]> tokens = new(Workspace.Paths);
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
@@ -57,7 +58,7 @@ public sealed partial class EditorModel
         foreach (var file in allFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            try { tokens[file.Path] = Lexer.Tokenize(file, new DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
+            try { tokens[file.Path] = (snapshot.SourceTokens.TryGetValue(file.Id, out var capturedTokens) ? capturedTokens : Lexer.Tokenize(file, new DiagnosticBag())).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
             catch (TypeCheckException) { tokens[file.Path] = []; }
             nodes[file.Path] = nodesBySource.GetValueOrDefault(file.Id) ?? [];
             var braces = new Stack<int>();
@@ -337,11 +338,11 @@ public sealed partial class EditorModel
 
     private IEnumerable<Symbol> SymbolsNamed(string? name) => name == null ? symbols : symbolsByName.GetValueOrDefault(name) ?? [];
 
-    private IEnumerable<Symbol> Members(string path, int offset, int separatorIndex, string? name = null)
+    private IEnumerable<Symbol> Members(string path, int offset, int separatorIndex, string? name = null, Token? insertedSeparator = null)
     {
         var ts = tokens[path];
         if (separatorIndex < 1) return [];
-        var separator = ts[separatorIndex];
+        var separator = insertedSeparator ?? ts[separatorIndex];
         var left = ts[separatorIndex - 1];
         if (separator.Kind == TokenKind.DoubleColon)
         {
@@ -757,7 +758,9 @@ public sealed partial class EditorModel
     }
     private int TokenAt(string path, int offset) => Array.FindIndex(tokens[path], t => t.Start <= offset && t.End >= offset);
 
-    public object Completion(string path, int offset)
+    public object Completion(string path, int offset) => Completion(path, offset, null);
+
+    private object Completion(string path, int offset, TextRange? replacementRange)
     {
         var ts = tokens[path];
         if (InCommentOrLiteral(path, offset)) return new { isIncomplete = false, items = Array.Empty<object>() };
@@ -766,7 +769,7 @@ public sealed partial class EditorModel
         int start = offset;
         if (index > 0 && ts[index - 1].Kind == TokenKind.Identifier && ts[index - 1].End + 1 >= offset) { index--; start = ts[index].Start; }
         int end = index < ts.Length && ts[index].Kind == TokenKind.Identifier && ts[index].Start <= offset ? ts[index].End + 1 : offset;
-        var range = Workspace.ToRange(sources[path].Span(start, end - start));
+        var range = replacementRange ?? Workspace.ToRange(sources[path].Span(start, end - start));
         if (ReflectionCompletion(path, offset, index, range) is { } reflectionCompletion) return reflectionCompletion;
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
         var completionContext = CompletionContext(path, index);

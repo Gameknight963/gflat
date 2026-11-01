@@ -11,7 +11,7 @@ public sealed record Location(string Uri, TextRange Range);
 public sealed record RelatedInformation(Location Location, string Message);
 public sealed record EditorDiagnostic(TextRange Range, int Severity, string Code, string Source, string Message,
     RelatedInformation[]? RelatedInformation = null);
-public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null, string[]? ProjectDiscoveryDirectories = null);
+public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null, string[]? ProjectDiscoveryDirectories = null, bool IsPartial = false);
 
 public static class Workspace
 {
@@ -26,7 +26,7 @@ public static class Workspace
     public static string FileUri(string path) => new Uri(Path.GetFullPath(path)).AbsoluteUri;
 
     public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents, ProjectWorkspace? projects = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, IReadOnlySet<string>? bodyPaths = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var output = new Dictionary<string, List<EditorDiagnostic>>(Paths);
@@ -100,7 +100,7 @@ public static class Workspace
         }
         foreach (var document in documents.Values)
             if (!configured.Contains(document.Path) && document.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)) Check([document.Path]);
-        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models, discoveryDirectories.ToArray());
+        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models, discoveryDirectories.ToArray(), models.Values.Any(model => model.IsPartialAnalysis));
 
         void WatchDiscovery(string path)
         {
@@ -132,7 +132,8 @@ public static class Workspace
                 if (options?.NoStdLib != true && !snapshots.Any(s => Paths.Equals(s.Path, open.Path))) snapshots.Add(new(open.Path, open.Text));
             try
             {
-                var (analysis, model) = projects.Analyses.Get(snapshots, options, cancellationToken);
+                var bodySources = bodyPaths == null ? null : snapshots.Where(source => bodyPaths.Contains(source.Path)).Select(source => source.Id).ToHashSet();
+                var (analysis, model) = projects.Analyses.Get(snapshots, options, cancellationToken, bodySources);
                 foreach (var source in analysis.Nodes.Select(n => n.Span.Source).OfType<SourceFile>().DistinctBy(s => s.Id))
                     if (StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(source.Path, relative))) watched.Add(source.Path);
                 foreach (var source in snapshots) models[source.Path] = model;

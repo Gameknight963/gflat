@@ -4,16 +4,15 @@ using System.Threading.Channels;
 namespace gflat.LanguageServer;
 
 /// <summary>One event loop owns documents and stdout. Analysis runs serially in the background.</summary>
-public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
+public sealed partial class LanguageServer(Stream input, Stream output, TextWriter log)
 {
     private abstract record Event;
     private sealed record Message(byte[] Body) : Event;
-    private sealed record Finished(long Generation, Analysis Result) : Event;
+    private sealed record Finished(long Generation, Analysis Result, IReadOnlyDictionary<string, OpenDocument> Documents, long ProjectRevision) : Event;
     private sealed record Changed(string Path) : Event;
     private sealed record InputEnded(Exception? Error) : Event;
     private readonly Channel<Event> events = Channel.CreateUnbounded<Event>(new() { SingleReader = true });
     private readonly Dictionary<string, OpenDocument> documents = new(Workspace.Paths);
-    private readonly HashSet<string> published = new(Workspace.Paths);
     private readonly HashSet<string> watchedPaths = new(Workspace.Paths);
     private readonly HashSet<string> projectDirectories = new(Workspace.Paths);
     private readonly HashSet<string> projectDiscoveryDirectories = new(Workspace.Paths);
@@ -26,7 +25,11 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private string? root;
     private bool initialized, shutdown;
     private Analysis? latest;
+    private IReadOnlyDictionary<string, OpenDocument>? latestDocuments;
+    private long latestProjectRevision = -1;
     private long analyzedGeneration = -1;
+    private long fullyAnalyzedGeneration = -1;
+    private TaskCompletionSource<bool>? interactiveRequested;
     private sealed record EditorRequest(JsonElement Id, string Method, JsonElement Parameters, long Generation);
     private readonly List<EditorRequest> editorRequests = [];
     private string[] tokenTypes = EditorModel.TokenTypes;
@@ -57,11 +60,14 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             ProjectWorkspace.IsProjectDiscoveryChange(changed.Path, projectDiscoveryDirectories) ||
                             projectDirectories.Any(dir => changed.Path.StartsWith(dir + Path.DirectorySeparatorChar, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) ||
                             root != null && Workspace.Paths.Equals(changed.Path, Path.Combine(root, Workspace.ConfigurationName)))
-                        { Schedule(invalidateProjects: true); }
+                        { await Schedule(invalidateProjects: true); }
                         break;
                     case Finished result when result.Generation == generation && !shutdown:
                         latest = result.Result;
+                        latestDocuments = result.Documents;
+                        latestProjectRevision = result.ProjectRevision;
                         analyzedGeneration = result.Generation;
+                        if (!result.Result.IsPartial) fullyAnalyzedGeneration = result.Generation;
                         watchedPaths.Clear();
                         watchedPaths.UnionWith(result.Result.WatchedPaths);
                         projectDirectories.Clear();
@@ -69,19 +75,13 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         projectDiscoveryDirectories.Clear();
                         projectDiscoveryDirectories.UnionWith(result.Result.ProjectDiscoveryDirectories ?? []);
                         UpdateWatchers();
-                        foreach (string path in published.Union(result.Result.Diagnostics.Keys, Workspace.Paths).ToArray())
+                        foreach (var query in editorRequests.Where(query => !RequiresFullAnalysis(query.Method) || fullyAnalyzedGeneration == generation)
+                            .OrderBy(query => QueryPriority(query.Method)).ToArray())
                         {
-                            documents.TryGetValue(path, out var document);
-                            await Send(new { jsonrpc = "2.0", method = "textDocument/publishDiagnostics", @params = new
-                            {
-                                uri = Workspace.FileUri(path), version = document?.Version,
-                                diagnostics = result.Result.Diagnostics.GetValueOrDefault(path) ?? []
-                            } });
+                            editorRequests.Remove(query);
+                            await AnswerEditor(query);
                         }
-                        published.Clear();
-                        published.UnionWith(result.Result.Diagnostics.Keys);
-                        foreach (var query in editorRequests.ToArray()) await AnswerEditor(query);
-                        editorRequests.Clear();
+                        if (!result.Result.IsPartial) await PublishDiagnostics(result.Result);
                         break;
                 }
             }
@@ -178,7 +178,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                     case "workspace/didChangeConfiguration":
                         if (parameters.TryGetProperty("settings", out var settings)) hoverOptions = hoverOptions.Update(settings);
                         break;
-                    case "initialized": Schedule(); break;
+                    case "initialized": await Schedule(); break;
                     case "shutdown":
                         shutdown = true;
                         pending?.Cancel();
@@ -192,7 +192,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         documents[path] = new(path, document.GetProperty("text").GetString()!, document.GetProperty("version").GetInt32());
                         // Loose-file sessions can still opt into a workspace in that file's directory.
                         root ??= Path.GetDirectoryName(path);
-                        Schedule();
+                        await Schedule();
                         break;
                     }
                     case "textDocument/didChange":
@@ -203,7 +203,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         if (!documents.TryGetValue(path, out var previous) || version <= previous.Version) break;
                         string text = Workspace.ApplyChanges(previous.Text, parameters.GetProperty("contentChanges"));
                         documents[path] = new(path, text, version);
-                        Schedule();
+                        await Schedule();
                         break;
                     }
                     case "textDocument/didSave":
@@ -211,15 +211,15 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         string path = Workspace.FilePath(parameters.GetProperty("textDocument").GetProperty("uri").GetString()!);
                         if (documents.TryGetValue(path, out var previous) && parameters.TryGetProperty("text", out var text))
                             documents[path] = previous with { Text = text.GetString()! };
-                        Schedule();
+                        await Schedule();
                         break;
                     }
                     case "textDocument/didClose":
                         documents.Remove(Workspace.FilePath(parameters.GetProperty("textDocument").GetProperty("uri").GetString()!));
-                        Schedule();
+                        await Schedule();
                         break;
                     case "workspace/didChangeWatchedFiles":
-                        Schedule(invalidateProjects: true); break;
+                        await Schedule(invalidateProjects: true); break;
                     case "$/cancelRequest":
                         if (parameters.TryGetProperty("id", out var canceled))
                         {
@@ -243,8 +243,13 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         if (hasId)
                         {
                             var query = new EditorRequest(id.Clone(), method, parameters.Clone(), generation);
-                            if (analyzedGeneration == generation) await AnswerEditor(query);
-                            else editorRequests.Add(query);
+                            if (method == "textDocument/completion" && analyzedGeneration != generation && TryReuseMemberCompletion(query, out var reused)) await Reply(query.Id, reused);
+                            else if (analyzedGeneration == generation && (!RequiresFullAnalysis(method) || fullyAnalyzedGeneration == generation)) await AnswerEditor(query);
+                            else
+                            {
+                                editorRequests.Add(query);
+                                interactiveRequested?.TrySetResult(true);
+                            }
                         }
                         break;
                     default: if (hasId) await Error(id, -32601, "Method not supported: " + method); break;
@@ -313,7 +318,17 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         }).ToArray() };
     }
 
-    private void Schedule(bool invalidateProjects = false)
+    private static int QueryPriority(string method) => method switch
+    {
+        "textDocument/completion" or "textDocument/signatureHelp" => 0,
+        "textDocument/hover" or "textDocument/definition" => 1,
+        _ => 2
+    };
+
+    private static bool RequiresFullAnalysis(string method)
+        => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename";
+
+    private async Task Schedule(bool invalidateProjects = false)
     {
         if (invalidateProjects) projectRevision++;
         long requestedProjectRevision = projectRevision;
@@ -322,21 +337,33 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         pending = new();
         CancellationToken cancellation = pending.Token;
         long revision = ++generation;
+        var requested = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        interactiveRequested = requested;
+        foreach (var query in editorRequests) await Error(query.Id, -32801, "Document changed");
+        editorRequests.Clear();
         string? workspaceRoot = root;
         var snapshot = new Dictionary<string, OpenDocument>(documents, Workspace.Paths);
         _ = Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(150, cancellation);
+                await Task.WhenAny(Task.Delay(150, cancellation), requested.Task);
                 await analysisGate.WaitAsync(cancellation);
                 try
                 {
                     cancellation.ThrowIfCancellationRequested();
                     if (requestedProjectRevision != evaluatedProjectRevision)
                     { projects.Invalidate(); evaluatedProjectRevision = requestedProjectRevision; }
+                    if (snapshot.Count > 0)
+                    {
+                        var focused = Workspace.Analyze(workspaceRoot, snapshot, projects, cancellation,
+                            new HashSet<string>(snapshot.Keys, Workspace.Paths));
+                        if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, focused, snapshot, requestedProjectRevision));
+                        if (!focused.IsPartial) return;
+                        await Task.Delay(500, cancellation);
+                    }
                     var result = Workspace.Analyze(workspaceRoot, snapshot, projects, cancellation);
-                    if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, result));
+                    if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, result, snapshot, requestedProjectRevision));
                 }
                 finally { analysisGate.Release(); }
             }

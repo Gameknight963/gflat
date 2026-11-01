@@ -35,4 +35,23 @@ one, whose contents appear empty to a C-string consumer.
 Equality and ordering compare scalar numbers. `Utf8Scalars` and `Utf16Scalars`
 yield `uint`, which can be converted with `new Rune(scalar)`.
 
+## Whitespace
+
+`Rune::IsWhiteSpace(value)` tests the Unicode
+[White_Space property](https://www.unicode.org/Public/18.0.0/ucd/PropList.txt).
+It includes ASCII whitespace, U+0085, and the Unicode space, line, and paragraph
+separators. U+FEFF, U+180E, and U+200B return false.
+
+```csharp
+using Standard::Text;
+
+int main()
+{
+    Rune space = new(0xa0u);
+    Rune zeroWidthSpace = new(0x200bu);
+    if (!Rune::IsWhiteSpace(space) || Rune::IsWhiteSpace(zeroWidthSpace)) return 1;
+    return 0;
+}
+```
+
 Source: `core/Text/Rune.gf`

@@ -20,6 +20,17 @@ public struct Rune : IEquatable<Rune>, IComparable<Rune>, IHashable, IFormattabl
     public nuint Utf8Length { immutable get nothrow => Utf8::EncodedLength(value); }
     public nuint Utf16Length { immutable get nothrow => Utf16::EncodedLength(value); }
 
+    // Unicode White_Space: https://www.unicode.org/Public/18.0.0/ucd/PropList.txt
+    public static bool IsWhiteSpace(Rune value) nothrow
+    {
+        uint scalar = value.value;
+        return (scalar >= 0x9u && scalar <= 0xdu) || scalar == 0x20u
+            || scalar == 0x85u || scalar == 0xa0u || scalar == 0x1680u
+            || (scalar >= 0x2000u && scalar <= 0x200au)
+            || scalar == 0x2028u || scalar == 0x2029u || scalar == 0x202fu
+            || scalar == 0x205fu || scalar == 0x3000u;
+    }
+
     public immutable bool Equals(immutable(Rune)* other) nothrow => value == other.value;
     public immutable int CompareTo(immutable(Rune)* other) nothrow
     {

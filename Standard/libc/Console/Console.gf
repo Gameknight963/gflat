@@ -2,7 +2,7 @@ namespace Console;
 
 // Writes bytes before the first zero through stdout's current text mode.
 // A failure can leave partial output.
-void Write(immutable(char*) message)
+void Write(readonly(char)* message)
 {
     nuint length = 0;
     while (message[length] != '\0') length++;
@@ -11,7 +11,7 @@ void Write(immutable(char*) message)
 
 // Writes counted bytes, including zeros, through stdout's current text mode.
 // A failure can leave partial output.
-void Write(immutable(char*) data, nuint length)
+void Write(readonly(char)* data, nuint length)
 {
     if (length == 0) return;
     void* stream = __gflat_stdio_stdout();
@@ -22,10 +22,10 @@ void Write(immutable(char*) data, nuint length)
 // Writes a platform newline through stdout's current text mode.
 void WriteLine() { Write("\n", 1); }
 // Writes bytes before the first zero, followed by a platform newline.
-void WriteLine(immutable(char*) message) { Write(message); WriteLine(); }
+void WriteLine(readonly(char)* message) { Write(message); WriteLine(); }
 // Writes counted bytes followed by a platform newline.
 // A failure can leave partial output.
-void WriteLine(immutable(char*) data, nuint length) { Write(data, length); WriteLine(); }
+void WriteLine(readonly(char)* data, nuint length) { Write(data, length); WriteLine(); }
 
 // Flushes stdout and throws IOException if the host stream reports a failure.
 void Flush()

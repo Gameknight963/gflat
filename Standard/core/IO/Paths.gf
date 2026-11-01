@@ -9,7 +9,7 @@ public static class Paths
     public static bool IsSeparator(char value, PathStyle style) nothrow
         => value == '/' || (style == PathStyle::Windows && value == '\\');
 
-    public static bool EndsInDirectorySeparator(immutable(char*) path, PathStyle style) nothrow
+    public static bool EndsInDirectorySeparator(readonly(char)* path, PathStyle style) nothrow
     {
         nuint length = Paths::Length(path);
         return length != 0 && Paths::IsSeparator(path[length - 1], style);
@@ -19,7 +19,7 @@ public static class Paths
         => !path.IsEmpty && Paths::IsSeparator(path.Data![path.Length - 1], style);
 
     // Remove one separator only, preserving roots under the existing lexical rules.
-    public static String TrimEndingDirectorySeparator(immutable(char*) path, PathStyle style)
+    public static String TrimEndingDirectorySeparator(readonly(char)* path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         if (length != 0 && Paths::IsSeparator(path[length - 1], style)
@@ -37,11 +37,11 @@ public static class Paths
     }
 
     // A rooted Windows path can still depend on the current drive or its directory.
-    public static bool IsRooted(immutable(char*) path, PathStyle style) nothrow
+    public static bool IsRooted(readonly(char)* path, PathStyle style) nothrow
         => Paths::IsRootedCore(path, Paths::PrefixLength(path, 2), style);
 
     // Classifies the root spelling only; this does not validate a UNC share or name.
-    public static bool IsFullyQualified(immutable(char*) path, PathStyle style) nothrow
+    public static bool IsFullyQualified(readonly(char)* path, PathStyle style) nothrow
         => Paths::IsFullyQualifiedCore(path, Paths::PrefixLength(path, 3), style);
 
     public static bool IsRooted(Span<readonly(char)> path, PathStyle style) nothrow
@@ -56,14 +56,14 @@ public static class Paths
         return Paths::IsFullyQualifiedCore(path.Data!, path.Length, style);
     }
 
-    public static String GetFileName(immutable(char*) path, PathStyle style)
+    public static String GetFileName(readonly(char)* path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint start = Paths::FileNameStart(path, length, style);
         return String::From(path + start, length - start);
     }
 
-    public static String GetDirectoryName(immutable(char*) path, PathStyle style)
+    public static String GetDirectoryName(readonly(char)* path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint root = Paths::RootLength(path, length, style);
@@ -75,7 +75,7 @@ public static class Paths
         return String::From(path, end);
     }
 
-    public static String GetExtension(immutable(char*) path, PathStyle style)
+    public static String GetExtension(readonly(char)* path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint start = Paths::FileNameStart(path, length, style);
@@ -84,7 +84,7 @@ public static class Paths
         return String::From(path + dot, length - dot);
     }
 
-    public static String GetFileNameWithoutExtension(immutable(char*) path, PathStyle style)
+    public static String GetFileNameWithoutExtension(readonly(char)* path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint start = Paths::FileNameStart(path, length, style);
@@ -92,7 +92,7 @@ public static class Paths
         return String::From(path + start, dot - start);
     }
 
-    public static String GetRoot(immutable(char*) path, PathStyle style)
+    public static String GetRoot(readonly(char)* path, PathStyle style)
     {
         return String::From(path, Paths::RootLength(path, Paths::Length(path), style));
     }
@@ -142,7 +142,7 @@ public static class Paths
 
     // Replaces the final filename extension; empty extension removes it.
     // Preserves directory/root bytes and paths with no filename.
-    public static String ChangeExtension(immutable(char*) path, immutable(char*) extension, PathStyle style)
+    public static String ChangeExtension(readonly(char)* path, readonly(char)* extension, PathStyle style)
     {
         nuint length = Paths::Length(path);
         if (Paths::FileNameStart(path, length, style) == length) return String::From(path, length);
@@ -161,7 +161,7 @@ public static class Paths
     // Concatenates components, even if right is rooted. Removes one duplicated
     // separator at the join boundary; otherwise preserves the original spelling.
     // Does not resolve dot segments, validate names, or change existing separators.
-    public static String Join(immutable(char*) left, immutable(char*) right, PathStyle style)
+    public static String Join(readonly(char)* left, readonly(char)* right, PathStyle style)
     {
         return Paths::JoinCore(left, Paths::Length(left), right, Paths::Length(right), style);
     }
@@ -284,8 +284,8 @@ public static class Paths
         else result.AppendLiteral("/", 1);
     }
 
-    private static String ChangeExtensionCore(immutable(char*) path, nuint length,
-        immutable(char*) extension, nuint extensionLength, PathStyle style)
+    private static String ChangeExtensionCore(readonly(char)* path, nuint length,
+        readonly(char)* extension, nuint extensionLength, PathStyle style)
     {
         nuint start = Paths::FileNameStart(path, length, style);
         if (start == length) return String::From(path, length);
@@ -306,14 +306,14 @@ public static class Paths
     }
 
     // Inspect only the root prefix of a C string, preserving constant-time checks.
-    private static nuint PrefixLength(immutable(char*) path, nuint limit) nothrow
+    private static nuint PrefixLength(readonly(char)* path, nuint limit) nothrow
     {
         nuint length = 0;
         while (length < limit && path[length] != '\0') length++;
         return length;
     }
 
-    private static bool IsRootedCore(immutable(char*) path, nuint count, PathStyle style) nothrow
+    private static bool IsRootedCore(readonly(char)* path, nuint count, PathStyle style) nothrow
     {
         if (count == 0) return false;
         if (Paths::IsSeparator(path[0], style)) return true;
@@ -322,7 +322,7 @@ public static class Paths
         return letter && path[1] == ':';
     }
 
-    private static bool IsFullyQualifiedCore(immutable(char*) path, nuint count, PathStyle style) nothrow
+    private static bool IsFullyQualifiedCore(readonly(char)* path, nuint count, PathStyle style) nothrow
     {
         if (count == 0) return false;
         if (style == PathStyle::Unix) return path[0] == '/';
@@ -333,8 +333,8 @@ public static class Paths
         return letter && path[1] == ':' && Paths::IsSeparator(path[2], style);
     }
 
-    private static String JoinCore(immutable(char*) left, nuint leftLength,
-        immutable(char*) right, nuint rightLength, PathStyle style)
+    private static String JoinCore(readonly(char)* left, nuint leftLength,
+        readonly(char)* right, nuint rightLength, PathStyle style)
     {
         if (leftLength == 0) return String::From(right, rightLength);
         String result = String::From(left, leftLength);
@@ -352,14 +352,14 @@ public static class Paths
         return move result;
     }
 
-    private static nuint Length(immutable(char*) text) nothrow
+    private static nuint Length(readonly(char)* text) nothrow
     {
         nuint length = 0;
         while (text[length] != '\0') length++;
         return length;
     }
 
-    private static nuint FileNameStart(immutable(char*) path, nuint length, PathStyle style)
+    private static nuint FileNameStart(readonly(char)* path, nuint length, PathStyle style)
     {
         nuint root = Paths::RootLength(path, length, style);
         nuint start = length;
@@ -367,7 +367,7 @@ public static class Paths
         return start;
     }
 
-    private static nuint ExtensionStart(immutable(char*) path, nuint start, nuint end)
+    private static nuint ExtensionStart(readonly(char)* path, nuint start, nuint end)
     {
         nuint index = end;
         while (index > start)
@@ -378,7 +378,7 @@ public static class Paths
         return end;
     }
 
-    private static nuint RootLength(immutable(char*) path, nuint length, PathStyle style)
+    private static nuint RootLength(readonly(char)* path, nuint length, PathStyle style)
     {
         if (length == 0) return 0;
         if (style == PathStyle::Unix)

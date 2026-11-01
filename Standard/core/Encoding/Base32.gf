@@ -21,7 +21,7 @@ public static class Base32
     }
 
     // Failure leaves output untouched and written=0. Metadata is disjoint.
-    public static bool TryEncode(immutable(char*) data, nuint count,
+    public static bool TryEncode(readonly(char)* data, nuint count,
         char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
@@ -50,7 +50,7 @@ public static class Base32
     }
 
     // Validate the entire alphabet, padding shape, and unused low bits.
-    public static bool TryGetDecodedLength(immutable(char*) text, nuint count,
+    public static bool TryGetDecodedLength(readonly(char)* text, nuint count,
         ref nuint length) nothrow
     {
         length = 0;
@@ -80,7 +80,7 @@ public static class Base32
 
     // Disjoint or exact same-start buffers. Validate everything before writing;
     // the shrinking accumulator consumes each source digit before any overlap.
-    public static bool TryDecode(immutable(char*) text, nuint count,
+    public static bool TryDecode(readonly(char)* text, nuint count,
         char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;

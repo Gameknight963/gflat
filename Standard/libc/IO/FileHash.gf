@@ -28,7 +28,7 @@ public static class FileHash
     }
 
     // Own the file for this call and observe close failure before returning.
-    public static byte[32] SHA256(immutable(char*) path)
+    public static byte[32] SHA256(readonly(char)* path)
     {
         FileStream input = FileStream::OpenRead(path);
         byte[32] digest = FileHash::SHA256(&input);
@@ -61,7 +61,7 @@ public static class FileHash
     }
 
     // Hashes a binary file and closes it before returning the 64-byte digest.
-    public static byte[64] SHA512(immutable(char*) path)
+    public static byte[64] SHA512(readonly(char)* path)
     {
         FileStream input = FileStream::OpenRead(path);
         byte[64] digest = FileHash::SHA512(&input);

@@ -2,5 +2,5 @@ namespace Standard;
 
 public class BadAllocException : Exception
 {
-	public BadAllocException(immutable(char*) message = "Allocation failed") : base(message, 1) { }
+	public BadAllocException(readonly(char)* message = "Allocation failed") : base(message, 1) { }
 }

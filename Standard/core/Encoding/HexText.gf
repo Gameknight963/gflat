@@ -5,7 +5,7 @@ namespace Standard::Encoding;
 // Owning String conveniences, separate from the allocation-free buffer codec.
 public static class HexText
 {
-    public static String Encode(immutable(char*) data, nuint count, bool uppercase = true)
+    public static String Encode(readonly(char)* data, nuint count, bool uppercase = true)
     {
         nuint length = 0;
         if (!Hex::TryGetEncodedLength(count, ref length)) throw new Exception("Hex length overflow");
@@ -21,7 +21,7 @@ public static class HexText
         return move result;
     }
 
-    public static String Decode(immutable(char*) text, nuint count)
+    public static String Decode(readonly(char)* text, nuint count)
     {
         nuint length = 0;
         if (!Hex::TryGetDecodedLength(text, count, ref length)) throw new Exception("Invalid hexadecimal text");

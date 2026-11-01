@@ -42,6 +42,7 @@ projects](../docs/PROJECTS.md#running-in-visual-studio).
 ## Structured text and binary files
 
 - [csv-column](csv-column/README.md): extract one CSV column
+- [csv-select](csv-select/README.md): select and reorder CSV columns by header name
 - [csv-sum](csv-sum/README.md): sum an integer CSV column
 - [csv-to-json](csv-to-json/README.md): convert CSV records into JSON string arrays
 - [json-check](json-check/README.md): validate JSON and report token count and nesting

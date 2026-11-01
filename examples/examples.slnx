@@ -12,6 +12,7 @@
   <Project Path="closest/closest.gfproj" />
   <Project Path="components/components.gfproj" />
   <Project Path="csv-column/csv-column.gfproj" />
+  <Project Path="csv-select/csv-select.gfproj" />
   <Project Path="csv-sum/csv-sum.gfproj" />
   <Project Path="csv-to-json/csv-to-json.gfproj" />
   <Project Path="distinct-lines/distinct-lines.gfproj" />

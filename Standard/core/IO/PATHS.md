@@ -87,6 +87,39 @@ follow the same byte rules.
 Lexical joining preserves dot segments. Validate directory confinement before
 using an untrusted result for filesystem access.
 
+## Resolving a full path
+
+`GetFullPath(path, basePath, style)` returns an owning String. The base must have
+an absolute Unix root, a Windows drive root such as `C:\`, or a complete UNC
+server/share root.
+
+```csharp
+using Standard::IO;
+using Standard::Text;
+
+int main()
+{
+    String path = Paths::GetFullPath("../images/./icon.png", "/project/assets", PathStyle::Unix);
+    if (!path.Equals("/project/images/icon.png")) return 1;
+    return 0;
+}
+```
+
+- Relative input resolves against the base directory. Empty input returns the normalized base
+- Absolute input uses its own root. The base still requires a supported absolute root
+- Windows input beginning with one separator, such as `\images`, uses the base's drive or UNC share root
+- Repeated separators collapse. `.` is removed and `..` removes a component, stopping at the root
+- Output uses `/` for Unix and `\` for Windows. An explicit trailing separator is retained
+- Component bytes and their casing are preserved. Counted-span overloads also preserve embedded zeros
+
+Drive-relative Windows forms such as `C:images`, device paths such as `\\?\C:\`,
+incomplete UNC roots, unsupported styles, and nonabsolute bases throw `Exception`.
+Allocation failures throw `BadAllocException`. Inputs remain unchanged, and failed
+normalization releases its partial result.
+
+The existing `Join`, `IsRooted`, and `IsFullyQualified` operations retain their
+lexical rules. Full-path resolution uses the stricter root requirements above.
+
 ## Source selection
 
 Selective builds include IO/PathStyle.gf, IO/Paths.gf, String, and Span with its

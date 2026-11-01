@@ -3,7 +3,7 @@ using Standard::Memory;
 
 namespace Standard::IO;
 
-// Lexical paths, independent of the host OS. No filesystem access or normalization.
+// Lexical paths using an explicit style on every host.
 public static class Paths
 {
     public static bool IsSeparator(char value, PathStyle style) nothrow
@@ -173,6 +173,115 @@ public static class Paths
         if (!left.IsEmpty) leftData = left.Data!;
         if (!right.IsEmpty) rightData = right.Data!;
         return Paths::JoinCore(leftData, left.Length, rightData, right.Length, style);
+    }
+
+    // Resolves dot segments and repeated separators against a fully qualified base.
+    // Windows drive-relative and device paths are rejected.
+    public static String GetFullPath(readonly(char)* path, readonly(char)* basePath, PathStyle style)
+        => Paths::GetFullPathCore(path, Paths::Length(path), basePath, Paths::Length(basePath), style);
+
+    public static String GetFullPath(Span<readonly(char)> path, Span<readonly(char)> basePath, PathStyle style)
+    {
+        readonly(char)* input = "";
+        readonly(char)* baseData = "";
+        if (!path.IsEmpty) input = path.Data!;
+        if (!basePath.IsEmpty) baseData = basePath.Data!;
+        return Paths::GetFullPathCore(input, path.Length, baseData, basePath.Length, style);
+    }
+
+    private static String GetFullPathCore(readonly(char)* path, nuint length,
+        readonly(char)* basePath, nuint baseLength, PathStyle style)
+    {
+        if (style != PathStyle::Unix && style != PathStyle::Windows)
+            throw new Exception("Invalid path style");
+        nuint baseRoot = Paths::FullPathRootLength(basePath, baseLength, style);
+        if (baseRoot == 0) throw new Exception("Base path must be fully qualified");
+        nuint root = Paths::FullPathRootLength(path, length, style);
+        if (root != 0) return Paths::NormalizeFullPath(path, length, root, style);
+        if (style == PathStyle::Windows && Paths::IsRootedCore(path, length, style)
+            && !Paths::IsSeparator(path[0], style))
+            throw new Exception("Drive-relative paths are not supported");
+
+        String result = Paths::NormalizeFullPath(basePath, baseLength, baseRoot, style);
+        if (length == 0) return move result;
+        root = Paths::FullPathRootLength(result.Data, result.Length, style);
+        if (style == PathStyle::Windows && Paths::IsSeparator(path[0], style)) result.Resize(root);
+        while (result.Length > root && Paths::IsSeparator(result.Data[result.Length - 1], style))
+            result.Resize(result.Length - 1);
+        Paths::AppendFullPathComponents(&result, path, 0, length, root, style);
+        return move result;
+    }
+
+    private static nuint FullPathRootLength(readonly(char)* path, nuint length, PathStyle style)
+    {
+        if (length == 0) return 0;
+        if (style == PathStyle::Unix)
+        {
+            if (path[0] == '/') return 1;
+            return 0;
+        }
+        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
+        if (letter && length >= 3 && path[1] == ':' && Paths::IsSeparator(path[2], style)) return 3;
+        if (length < 2 || !Paths::IsSeparator(path[0], style) || !Paths::IsSeparator(path[1], style)) return 0;
+        if (length >= 4 && (path[2] == '?' || path[2] == '.') && Paths::IsSeparator(path[3], style))
+            throw new Exception("Device paths are not supported by lexical normalization");
+        nuint index = 2;
+        nuint server = index;
+        while (index < length && !Paths::IsSeparator(path[index], style)) index++;
+        if (index == server || index == length) throw new Exception("UNC paths require a server and share");
+        index++;
+        nuint share = index;
+        while (index < length && !Paths::IsSeparator(path[index], style)) index++;
+        if (index == share) throw new Exception("UNC paths require a server and share");
+        return index;
+    }
+
+    private static String NormalizeFullPath(readonly(char)* path, nuint length, nuint root, PathStyle style)
+    {
+        String result = String::From(path, root);
+        if (style == PathStyle::Windows)
+            for (nuint index = 0; index < root; index++)
+                if (result.Data[index] == '/') result[index] = '\\';
+        Paths::AppendFullPathComponents(&result, path, root, length, root, style);
+        return move result;
+    }
+
+    private static void AppendFullPathComponents(String* result, readonly(char)* path,
+        nuint start, nuint length, nuint root, PathStyle style)
+    {
+        nuint index = start;
+        while (index < length)
+        {
+            while (index < length && Paths::IsSeparator(path[index], style)) index++;
+            nuint component = index;
+            while (index < length && !Paths::IsSeparator(path[index], style)) index++;
+            nuint count = index - component;
+            if (count == 0) break;
+            if (count == 1 && path[component] == '.') continue;
+            if (count == 2 && path[component] == '.' && path[component + 1] == '.')
+            {
+                nuint end = result.Length;
+                while (end > root && Paths::IsSeparator(result.Data[end - 1], style)) end--;
+                while (end > root && !Paths::IsSeparator(result.Data[end - 1], style)) end--;
+                if (end > root) end--;
+                result.Resize(end);
+            }
+            else
+            {
+                if (!Paths::IsSeparator(result.Data[result.Length - 1], style))
+                    Paths::AppendFullPathSeparator(result, style);
+                result.AppendLiteral(path + component, count);
+            }
+        }
+        if (length != 0 && Paths::IsSeparator(path[length - 1], style)
+            && !Paths::IsSeparator(result.Data[result.Length - 1], style))
+            Paths::AppendFullPathSeparator(result, style);
+    }
+
+    private static void AppendFullPathSeparator(String* result, PathStyle style)
+    {
+        if (style == PathStyle::Windows) result.AppendLiteral("\\", 1);
+        else result.AppendLiteral("/", 1);
     }
 
     private static String ChangeExtensionCore(immutable(char*) path, nuint length,

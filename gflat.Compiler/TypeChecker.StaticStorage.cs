@@ -108,6 +108,8 @@ public partial class TypeChecker
             throw new TypeCheckException($"Cannot access protected field '{field.Name}'", expression.Span);
         staticStorageReads[expression] = field;
         var fieldType = ResolveAlias(field.Type);
+        fieldType = ReflectionOwnerFieldType(expression is NamespaceAccessExpression qualifiedFieldAccess &&
+            StaticOwnerType(qualifiedFieldAccess.Left) is { } ownerTypeView ? ResolveAlias(ownerTypeView) : null, field.Name, fieldType);
         RecordType(expression, field.IsConst ? TypeQualifiers.ReadOnly(fieldType) : fieldType);
         if (evaluateConstant && field.IsConst && EvaluateDefaultConstant(field, out var constant)) _constValues[expression] = constant!;
         return true;

@@ -22,15 +22,15 @@ public sealed class QueryAndOwnerHoverTests
     [Fact]
     public void FieldOwnerOmitsNamespaceWithoutChangingReturnTypeQualification()
     {
-        var hover = Hover("void F() { typeof(int).Element|Type; }");
+        var hover = Hover("namespace Models { public struct Node { public readonly(Node*?) Next; } } void F(Models::Node* node) { node.Ne|xt; }");
         string text = Text(hover);
-        Assert.Contains("TypeInfo.ElementType", text);
-        Assert.DoesNotContain("Standard::TypeInfo.ElementType", text);
+        Assert.Contains("Node.Next", text);
+        Assert.DoesNotContain("Models::Node.Next", text);
         Assert.DoesNotContain("readonly readonly", text);
         var runs = Runs(hover);
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Standard" && r.GetProperty("ClassificationTypeName").GetString() == "namespace name");
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "TypeInfo" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
-        Assert.DoesNotContain(runs, r => r.GetProperty("Text").GetString()!.Contains("Standard::TypeInfo"));
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Models" && r.GetProperty("ClassificationTypeName").GetString() == "namespace name");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Node" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
+        Assert.DoesNotContain(runs, r => r.GetProperty("Text").GetString()!.Contains("Models::Node"));
     }
 
     [Fact]
@@ -38,24 +38,24 @@ public sealed class QueryAndOwnerHoverTests
         => Assert.Contains("immutable readonly(int)*", Text(Hover("struct S { public immutable readonly(int)* R|ead() => (readonly(int)*)0; }")));
 
     [Theory]
-    [InlineData("void F() { Standard|::TypeInfo info; }")]
-    [InlineData("void F() { Standard:|:TypeInfo info; }")]
+    [InlineData("namespace Models { public struct Node {} } void F() { Models|::Node info; }")]
+    [InlineData("namespace Models { public struct Node {} } void F() { Models:|:Node info; }")]
     public void EitherColonShowsTheQualifiedType(string source)
-        => Assert.Contains("struct Standard::TypeInfo", Text(Hover(source)));
+        => Assert.Contains("struct Models::Node", Text(Hover(source)));
 
     [Theory]
-    [InlineData("void F() { name|of(Standard::TypeInfo); }", "(readonly(char)*)\"TypeInfo\"")]
+    [InlineData("namespace Models { public struct Node {} } void F() { name|of(Models::Node); }", "(readonly(char)*)\"Node\"")]
     [InlineData("void F() { align|of(int); }", "(int)4")]
     [InlineData("void F() { size|of(long); }", "(int)8")]
     public void ScalarQueryKeywordsShowCheckedValues(string source, string expected)
         => Assert.Contains(expected, Text(Hover(source)));
 
     [Fact]
-    public void TypeofHasCompactDescriptorAndRespectsLayoutPreference()
+    public void ReflectHasCompactTypePreviewAndRespectsLayoutPreference()
     {
-        const string source = "void F() { type|of(int**); }";
+        const string source = "void F() { ref|lect(int**); }";
         string text = Text(Hover(source));
-        Assert.Contains("typeof(int**)", text);
+        Assert.Contains("reflect(int**)", text);
         Assert.Contains("**Name:** int**", text);
         Assert.Contains("**Kind:** Pointer", text);
         Assert.DoesNotContain("Size:", text);

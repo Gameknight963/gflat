@@ -10,14 +10,14 @@ public class EditorTests
     {
         var (model, path, offset, _) = Analyze("inline int Read() => 42; int main() => Re|ad();");
         Assert.Contains("inline int Read", Json(model.Hover(path, offset)).ToString());
-        var (types, tp, to, _) = Analyze("int main() { return (int)typeof(int).|; }");
+        var (types, tp, to, _) = Analyze("int main() { return (int)reflect(int).|; }");
         var labels = Labels(types.Completion(tp, to));
         Assert.Contains("Size", labels);
         Assert.Contains("Alignment", labels);
         Assert.Contains("Name", labels);
-        var (hover, hp, ho, _) = Analyze("int main() { return (int)typeof(int).Si|ze; }");
+        var (hover, hp, ho, _) = Analyze("int main() { return (int)reflect(int).Si|ze; }");
         Assert.NotNull(hover.Hover(hp, ho));
-        Assert.NotNull(hover.Definition(hp, ho));
+        Assert.Null(hover.Definition(hp, ho));
     }
 
     [Fact]

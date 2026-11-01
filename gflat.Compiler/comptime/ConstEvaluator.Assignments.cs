@@ -8,6 +8,7 @@ public partial class ConstEvaluator
 
     private AssignmentStorage CaptureAssignmentStorage(AstNode target)
     {
+        if (target is SpliceExpression { Resolved: { } spliced }) return CaptureAssignmentStorage(spliced);
         if (_context.GetPropertyRead(target) != null || _context.GetPropertyWrite(target) != null)
             throw new ConstEvalException("Property access is not yet supported in constant evaluation", target.Line);
         if (target is IdentifierExpression identifier)
@@ -40,7 +41,7 @@ public partial class ConstEvaluator
         {
             Func<ConstValue> receiver;
             if (_context.ResolveAlias(_context.GetType(member.Object)) is NamedTypeExpression &&
-                member.Object is IdentifierExpression or MemberAccessExpression)
+                member.Object is IdentifierExpression or MemberAccessExpression or SpliceExpression)
             {
                 // A field of inline storage remains at the same address when the
                 // containing value is overwritten by the right-hand operand.

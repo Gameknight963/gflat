@@ -135,6 +135,7 @@ public partial class TypeChecker
 
     private MethodDeclaration SelectOverload(MethodDeclaration method, CallExpression call)
     {
+        if (TrySelectReflectedOverload(method, call, out var reflected)) return reflected;
         if (SelectDeclaredMemberOverload(method, call) is { } declaredMember) return declaredMember;
         overloadFamilies.TryGetValue(method, out var family);
         foreach (var candidate in (family ?? [method]).ToArray()) BindMethodSignature(candidate);

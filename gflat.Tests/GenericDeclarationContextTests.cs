@@ -114,8 +114,8 @@ public sealed class GenericDeclarationContextTests
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(immutable(char*) text, ...);
-            int First() { enum Color { Red = 1 } Color color = Color::Red; printf("%s ", typeof(Color).Name); return (int)color; }
-            int main() { enum Color { Red = 41 } Color color = Color::Red; printf("%s", typeof(Color).Name); return First() + (int)color; }
+            int First() { enum Color { Red = 1 } Color color = Color::Red; printf("%s ", reflect(Color).Name); return (int)color; }
+            int main() { enum Color { Red = 41 } Color color = Color::Red; printf("%s", reflect(Color).Name); return First() + (int)color; }
             """);
         Assert.Equal(42, result.ExitCode);
         Assert.Equal("ColorColor ", result.StandardOutput);

@@ -226,7 +226,7 @@ namespace gflat.semantics
 
         public void CheckMethod(MethodDeclaration method)
         {
-            if (method.IsGeneric || method.Body == null || method.IsAbstract)
+            if (method.IsGeneric || method.Body == null || method.IsAbstract || _typeChecker.IsDeferredReflectionBody(method))
             {
                 return;
             }
@@ -760,6 +760,23 @@ namespace gflat.semantics
         {
             if (expr == null)
             {
+                return;
+            }
+
+            if (expr is TypeofExpression or ReflectExpression) return;
+            if (_typeChecker.GetReflectionOperation(expr) is { } reflectedOperation)
+            {
+                CheckExpression(reflectedOperation);
+                return;
+            }
+            if (expr is SpliceExpression { Resolved: { } spliced })
+            {
+                CheckExpression(spliced);
+                return;
+            }
+            if (expr is CallExpression reflectedCall && _typeChecker.GetReflectedCall(reflectedCall) is { } expandedCall)
+            {
+                CheckExpression(expandedCall);
                 return;
             }
 

@@ -85,6 +85,7 @@ public partial class TypeChecker
     private bool TryBindFunctionValue(AstNode expression)
     {
         var name = expression is UnaryExpression { Operator: TokenKind.Ampersand } address ? address.Operand : expression;
+        if (name is SpliceExpression splice && TryBindReflectedFunctionValue(expression, splice, RequireReflection(splice.Reflection))) return true;
         AstNode? target = null;
         if (name is IdentifierExpression id)
         {
@@ -141,6 +142,7 @@ public partial class TypeChecker
             _ => null
         };
         var selected = matches[0].Definition;
+        ValidateReflectedFunctionSelection(expression, selected);
         if (name != null) ResolveStaticMethod(name, selectedValue: selected);
         ValidateNamespaceFunctionAccess(selected, expression.Span);
         var genericArguments = selected.IsGeneric ? matches[0].TypeArguments : null;

@@ -107,6 +107,7 @@ public partial class TypeChecker
 
     private void RecordImplicitException()
     {
+        if (InUnevaluatedOperand) return;
         if (_currentFunction is not MethodDeclaration caller || caller.IsNoThrow) return;
         if (_tryStack.SelectMany(t => t.CatchClauses).Any(c => c.ExceptionType == null ||
             ResolveAlias(c.ExceptionType) is PointerTypeExpression { Inner: NamedTypeExpression { Name: "Exception" } } or ReferenceTypeExpression { Inner: NamedTypeExpression { Name: "Exception" } })) return;

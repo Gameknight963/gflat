@@ -1,4 +1,4 @@
-namespace Standard;
+﻿namespace Standard;
 
 public enum TypeKind
 {
@@ -15,31 +15,54 @@ public enum TypeKind
     FunctionSignature = 10
 }
 
-// A compiler-produced snapshot. Names point to static UTF-8 text.
-// This describes the queried type, not an object's dynamic runtime type.
+// Runtime type data returned through Describe<T>()'s immutable static view.
 public struct TypeInfo
 {
-    public immutable(char*) Name;
-    public immutable(TypeKind) Kind;
-    // No value layout exists for void, a function signature, or an interface itself. Their size and
-    // alignment are zero; an interface pointer has its own meaningful layout.
-    public readonly(bool) HasLayout;
-    public readonly(nuint) Size;
-    public readonly(nuint) Alignment;
-    public readonly(bool) IsPointer;
-    public readonly(bool) IsManaged;
-    public readonly(bool) IsNullable;
-    public readonly(bool) IsReadOnly;
-    public readonly(bool) IsImmutable;
-    public readonly(bool) HasDestructor;
-    // Pointer/managed/array/reference element; null for other kinds.
-    // Descriptors point to immutable static storage, never GC allocations.
-    public immutable(TypeInfo*?) ElementType;
-    public readonly(bool) HasFixedLength;
-    public readonly(nuint) Length;
-    // Function signature only. Other kinds use null/null/0. ParameterTypes
-    // points to a contiguous immutable descriptor array; zero parameters use null.
-    public immutable(TypeInfo*?) ReturnType;
-    public immutable(TypeInfo*?) ParameterTypes;
-    public readonly(nuint) ParameterCount;
+    public readonly(char)* Name;
+    public TypeKind Kind;
+    public bool HasLayout;
+    public nuint Size;
+    public nuint Alignment;
+    public bool IsPointer;
+    public bool IsManaged;
+    public bool IsNullable;
+    public bool IsReadOnly;
+    public bool IsImmutable;
+    public bool HasDestructor;
+    public immutable(TypeInfo)*? ElementType;
+    public bool HasFixedLength;
+    public nuint Length;
+    public immutable(TypeInfo)*? ReturnType;
+    // Each array entry points to the shared descriptor for one parameter type.
+    public readonly(immutable(TypeInfo)*)*? ParameterTypes;
+    public nuint ParameterCount;
+    public immutable(FieldInfo)*? Fields;
+    public nuint FieldCount;
+    public immutable(TypeInfo)*? BaseType;
+    public immutable(TypeInfo)*? CollectorType;
+
+    public const TypeInfo() nothrow
+    {
+        Name = "";
+        Kind = TypeKind::Primitive;
+        HasLayout = false;
+        Size = 0;
+        Alignment = 0;
+        IsPointer = false;
+        IsManaged = false;
+        IsNullable = false;
+        IsReadOnly = false;
+        IsImmutable = false;
+        HasDestructor = false;
+        ElementType = null;
+        HasFixedLength = false;
+        Length = 0;
+        ReturnType = null;
+        ParameterTypes = null;
+        ParameterCount = 0;
+        Fields = null;
+        FieldCount = 0;
+        BaseType = null;
+        CollectorType = null;
+    }
 }

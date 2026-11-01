@@ -52,7 +52,7 @@ public sealed class ArrayShapeValidationTests
     [Fact]
     public void IncompleteArrayTypesRemainAvailableForDescriptionsAndOpaquePointers()
         => Compiler.Check("""
-            int main() { typeof(int[]); int[]*? storage = null; return 0; }
+            int main() { reflect(int[]); int[]*? storage = null; return 0; }
             """);
 
     [Fact]

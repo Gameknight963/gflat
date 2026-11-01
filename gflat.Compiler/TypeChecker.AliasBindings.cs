@@ -12,6 +12,7 @@ public partial class TypeChecker
     private readonly Dictionary<AliasDeclaration, List<TypeExpression>> boundAliasConstraints = new();
     private readonly HashSet<TypeExpression> selectedAliasTargets = new();
     private readonly HashSet<(AstNode Definition, string Arguments)> validatingAliasSpecializations = new();
+    private readonly HashSet<(AstNode Definition, string Arguments)> completedAliasTypeProofs = new();
     private AstNode? currentSpecializationDefinition;
     private AstNode? currentSpecializationBody;
     private sealed record GenericCallDependency(MethodDeclaration Definition, List<TypeExpression> TypeArguments);
@@ -55,7 +56,7 @@ public partial class TypeChecker
     }
 
     // A previously emitted specialization may have been reached first through the
-    // concrete provider. Check the contract view on every use before reusing it.
+    // concrete provider. Validate each contract view before reusing it.
     private void ValidateAliasSpecialization(AstNode definition, List<GenericParameter> parameters, List<TypeExpression> arguments)
     {
         if (!arguments.Any(ContainsAliasContract) || parameters.Count != arguments.Count) return;
@@ -67,6 +68,7 @@ public partial class TypeChecker
             return;
         }
         var key = (definition, string.Join(";", arguments.Select(AliasContractArgumentKey)));
+        if (completedAliasTypeProofs.Contains(key)) return;
         if (!validatingAliasSpecializations.Add(key)) return;
         using var source = SourceContext.Enter(definition.Span);
         using var locals = IsolateDeclarationContext();
@@ -76,6 +78,7 @@ public partial class TypeChecker
         var map = parameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
         try
         {
+            if (TryValidateReflectionAliasProof(definition, parameters, arguments, proof)) return;
             string name = definition switch {
                 MethodDeclaration method => method.Name,
                 ClassDeclaration cls => cls.Name,
@@ -85,6 +88,11 @@ public partial class TypeChecker
             };
             var clone = new AstCloner(map, name, renameTypeOwner: definition is not MethodDeclaration).CloneNode(definition);
             Walk(clone);
+            // Early structural checks can run before the specialization exists.
+            // Only a completed canonical body supplies stable call selections.
+            if (definition is ClassDeclaration or StructDeclaration && proof != null &&
+                !unfinishedAliasProofBodies.Contains(proof) && !_diagnostics.HasErrors)
+                completedAliasTypeProofs.Add(key);
         }
         finally { _currentNamespace = previous; validatingAliasSpecializations.Remove(key); }
 

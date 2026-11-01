@@ -632,6 +632,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
+        if (node is SpliceExpression { Resolved: { } spliced }) { EmitAddress(spliced); return; }
         if (TryEmitConstantAddress(node)) return;
         if (TryEmitStaticAddress(node)) return;
         if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { if (_typeChecker.IsReferenceRead(node)) getter.Accept(this); else EmitAddress(getter); return; }
@@ -1302,7 +1303,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassMethod(string className, MethodDeclaration node)
     {
-        if (node.IsGeneric) return;
+        if (node.IsGeneric || _typeChecker.IsCompileTimeOnly(node)) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1373,7 +1374,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitClassFieldInitializers(string className, string thisPtr)
     {
         if (_currentClass == null) return;
-        foreach (FieldDeclaration field in _currentClass.FieldDeclarations.Where(f => !f.IsStatic))
+        foreach (FieldDeclaration field in _currentClass.FieldDeclarations.Where(f => !f.IsStatic && !f.IsConst))
         {
             if (field.Initializer == null) continue;
             int fieldIdx = _currentClass.FieldIndex(field.Name);
@@ -1837,7 +1838,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
-        if (node.IsGeneric) return;
+        if (node.IsGeneric || _typeChecker.IsCompileTimeOnly(node)) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1918,7 +1919,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitFieldInitializers(string structName, string thisPtr)
     {
         if (_currentStruct == null) return;
-        foreach (FieldDeclaration field in _currentStruct.FieldDeclarations.Where(f => !f.IsStatic))
+        foreach (FieldDeclaration field in _currentStruct.FieldDeclarations.Where(f => !f.IsStatic && !f.IsConst))
         {
             if (field.Initializer == null) continue;
             int fieldIdx = _currentStruct.FieldIndex(field.Name);
@@ -2136,6 +2137,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(MethodDeclaration node)
     {
+        if (_typeChecker.IsCompileTimeOnly(node)) return;
         if (node.IsGeneric) return;
         if (!node.IsStatic && _typeChecker.TryGetMethodOwner(node, out string receiverOwner, out bool receiverIsClass))
         {
@@ -2616,7 +2618,11 @@ public partial class LlvmEmitter : IVisitor
             _deferScopes[scope].Add(RegisterOwner(resolvedVarType, ptr, node.Initializer != null));
     }
 
-    public void Visit(ExpressionStatement node) => EmitExpressionWithCleanup(() => EmitDiscardedExpression(node.Expression));
+    public void Visit(ExpressionStatement node)
+    {
+        if (TypeChecker.IsReflectionType(_typeChecker.GetType(node.Expression))) return;
+        EmitExpressionWithCleanup(() => EmitDiscardedExpression(node.Expression));
+    }
 
     private void EmitDiscardedExpression(AstNode expression)
     {
@@ -2637,6 +2643,9 @@ public partial class LlvmEmitter : IVisitor
     }
     public void Visit(BinaryExpression node)
     {
+        if (TypeChecker.IsReflectionType(_typeChecker.GetType(node.Left)) &&
+            _typeChecker.TryGetConstValue(node, out var reflectionComparison) && reflectionComparison != null &&
+            TryEmitConstValue(reflectionComparison, _typeChecker.GetType(node))) return;
         if (node.Operator is TokenKind.AmpersandAmpersand or TokenKind.PipePipe)
         {
             node.Left.Accept(this);
@@ -2961,6 +2970,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(UnaryExpression node)
     {
+        if (EmitReflectionOperation(node)) return;
         if (node.Operator == TokenKind.Ref) { EmitAddress(node.Operand); return; }
         if (node.Operator == TokenKind.Bang && !node.IsPrefix)
         {
@@ -3229,6 +3239,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitCallCore(CallExpression node)
     {
+        if (_typeChecker.GetReflectedCall(node) is { } reflectedCall) { EmitCallCore(reflectedCall); return; }
         if (TryEmitReinterpretCall(node)) return;
         if (TryEmitLlvmCall(node)) return;
         if (_typeChecker.GetExtensionCall(node) is { } extensionCall)
@@ -3773,6 +3784,12 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitMember(MemberAccessExpression node)
     {
+        if (TypeChecker.ContainsReflectionValue(_typeChecker.GetType(node.Object)))
+        {
+            if (_typeChecker.TryGetConstValue(node, out var metadata) && metadata != null &&
+                TryEmitConstValue(metadata, _typeChecker.GetType(node))) return;
+            throw new InvalidOperationException("A reflection metadata query must produce a runtime-usable constant before emission");
+        }
         if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetEnumMember(node, out long enumVal, out _))
         {
@@ -3826,7 +3843,11 @@ public partial class LlvmEmitter : IVisitor
         PushManaged(node, val);
     }
 
-    public void Visit(AssignmentExpression node) => EmitExpressionWithCleanup(() => EmitAssignment(node));
+    public void Visit(AssignmentExpression node)
+    {
+        if (EmitReflectionOperation(node)) return;
+        EmitExpressionWithCleanup(() => EmitAssignment(node));
+    }
 
     private void EmitAssignment(AssignmentExpression node)
     {

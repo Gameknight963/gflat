@@ -9,10 +9,10 @@ public sealed partial class EditorModel
     private object? QueryHover(string path, int offset, VisualStudioHover? presentation, bool showLayout)
     {
         int index = TokenAt(path, offset);
-        if (index < 0 || tokens[path][index].Kind is not (TokenKind.Typeof or TokenKind.Nameof or TokenKind.Alignof or TokenKind.Sizeof)) return null;
+        if (index < 0 || tokens[path][index].Kind is not (TokenKind.Typeof or TokenKind.Reflect or TokenKind.Nameof or TokenKind.Alignof or TokenKind.Sizeof)) return null;
         var token = tokens[path][index];
         var query = nodes[path].Where(n => n.Span.Start == token.Start &&
-                n.Node is TypeofExpression or NameofExpression or AlignofExpression or SizeofExpression)
+                n.Node is TypeofExpression or ReflectExpression or NameofExpression or AlignofExpression or SizeofExpression)
             .MinBy(n => n.Span.Length);
         if (query == null) return null;
         var parts = new List<DisplayPart>();
@@ -41,16 +41,25 @@ public sealed partial class EditorModel
                 string kind = symbol?.Classification ?? (char.IsLetter(sourceToken.Token.Text.FirstOrDefault()) ? "keyword" : "punctuation");
                 parts.Add(new(kind, sourceToken.Token.Text, Target: SymbolLocation(symbol)));
             }
-            if (value is ConstValue.Struct descriptor && descriptor.Fields.TryGetValue("Name", out var name) && name is ConstValue.String typeName)
+            if (value is ConstValue.Reflection reflection)
             {
-                details.Add(new("Name", typeName.Value));
-                if (descriptor.Fields.GetValueOrDefault("Kind") is ConstValue.Integer kind &&
-                    snapshot.Checker!.GetEnum("Standard$TypeKind")?.Members.FirstOrDefault(p => p.Value == kind.Value).Key is { } kindName)
-                    details.Add(new("Kind", kindName));
-                if (showLayout && descriptor.Fields.GetValueOrDefault("HasLayout") is ConstValue.Boolean { Value: true })
-                    foreach (string label in new[] { "Size", "Alignment" })
-                        if (descriptor.Fields.GetValueOrDefault(label) is ConstValue.UInteger bytes)
-                            details.Add(new(label, bytes.Value.ToString(CultureInfo.InvariantCulture) + " bytes"));
+                if (reflection.Name.Length != 0) details.Add(new("Name", reflection.Name));
+                details.Add(new("Kind", reflection.Kind == "Type" && reflection.Type != null ? ReflectedTypeKind(reflection.Type) : reflection.Kind));
+                if (reflection is { Kind: "Value", Value: { } captured })
+                    details.Add(new("Value", ReflectionValuePreview(captured)));
+                if (reflection.Kind == "OverloadGroup" && reflection.Overloads != null)
+                    details.Add(new("Overloads", reflection.Overloads.Count.ToString(CultureInfo.InvariantCulture)));
+                if (reflection.Kind == "Type" && reflection.Type is { } reflectedType)
+                {
+                    if (showLayout) details.AddRange(TypeLayoutDetails(reflectedType));
+                }
+                else if (ReflectedSymbol(reflection) is { } reflectedSymbol)
+                {
+                    var signature = Signature(reflectedSymbol, navigable: true, hoverPath: path, hoverOffset: offset);
+                    details.Add(new("Declaration", string.Concat(signature.Select(p => p.Text)), signature));
+                }
+                else if (reflection.Type is { } valueType)
+                    details.Add(new("Type", DisplayType(valueType), TypeDisplayParts(valueType, path, offset)));
             }
             else details.Add(new("", "Depends on the generic type arguments or is unavailable until this expression is checked."));
         }
@@ -58,5 +67,21 @@ public sealed partial class EditorModel
         string markdown = "```gflat\n" + preview + "\n```" + (details.Count == 0 ? "" : "\n\n" + string.Join("  \n", details.Select(d => d.Markdown)));
         return new HoverResult(new("markdown", markdown), Workspace.ToRange(query.Span),
             presentation?.Render(parts.ToArray(), details.ToArray(), "constant.public"));
+    }
+
+    private string ReflectionValuePreview(ConstValue value, int depth = 0)
+    {
+        if (depth == 8) return "…";
+        return value switch {
+            ConstValue.Reflection { Kind: "Type", Type: { } type } => "reflect(" + DisplayType(type) + ")",
+            ConstValue.Reflection { Kind: "Value", Value: { } inner } => "reflect(" + ReflectionValuePreview(inner, depth + 1) + ")",
+            ConstValue.Reflection declaration => "reflect(" + declaration.Name + ")",
+            ConstValue.String text => System.Text.Json.JsonSerializer.Serialize(text.Value),
+            ConstValue.Boolean flag => flag.Value ? "true" : "false",
+            ConstValue.Integer number => number.Value.ToString(CultureInfo.InvariantCulture),
+            ConstValue.UInteger number => number.Value.ToString(CultureInfo.InvariantCulture),
+            ConstValue.Array array => $"{array.Elements.Count} items",
+            _ => value.ToString() ?? ""
+        };
     }
 }

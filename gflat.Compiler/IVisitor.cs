@@ -64,6 +64,12 @@ namespace gflat
         void Visit(SizeofExpression node);
         void Visit(AlignofExpression node);
         void Visit(TypeofExpression node);
+        void Visit(ReflectExpression node);
+        void Visit(SpliceExpression node);
+        void Visit(SpliceTypeExpression node);
+        void Visit(ConstantExpression node);
+        void Visit(StaticIfStatement node) => Visit((BlockStatement)node);
+        void Visit(StaticForeachStatement node) => Visit((BlockStatement)node);
         void Visit(NameofExpression node);
         void Visit(PrefixedStringLiteralExpression node);
         void Visit(ThrowStatement node);

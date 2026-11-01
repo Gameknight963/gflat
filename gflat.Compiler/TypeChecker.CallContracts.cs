@@ -22,6 +22,8 @@ public partial class TypeChecker
 
     private void ValidateFunctionAddress(AstNode function, int line)
     {
+        if (function is MethodDeclaration method && IsCompileTimeOnly(method))
+            throw new TypeCheckException("A compile-time-only function has no runtime address", line);
         if (function is ExternDeclaration external) ValidateExternAccess(external, SourceContext.Current ?? SourceContext.ForLine(line));
         var parameters = function switch
         {

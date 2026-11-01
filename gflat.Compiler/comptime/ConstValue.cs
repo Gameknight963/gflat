@@ -218,6 +218,13 @@ namespace gflat.comptime
 
         public static bool TryEqual(ConstValue left, ConstValue right, out bool result)
         {
+            if (left is Reflection aReflection && right is Reflection bReflection)
+            {
+                result = aReflection.Identity == bReflection.Identity &&
+                    (aReflection.Kind != "Value" || aReflection.Value != null && bReflection.Value != null &&
+                     TryEqual(aReflection.Value, bReflection.Value, out bool equalValue) && equalValue);
+                return true;
+            }
             if (left is StaticAddress aStatic && right is StaticAddress bStatic)
             {
                 result = aStatic == bStatic;

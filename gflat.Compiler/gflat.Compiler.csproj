@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="../Standard/core/Attribute.gf;../Standard/core/Exception.gf;../Standard/core/BadAllocException.gf;../Standard/core/ITextWriter.gf;../Standard/core/IFormattable.gf;../Standard/core/TypeInfo.gf;../Standard/core/IGarbageCollector.gf"
+    <None Include="../Standard/core/Attribute.gf;../Standard/core/Exception.gf;../Standard/core/BadAllocException.gf;../Standard/core/ITextWriter.gf;../Standard/core/IFormattable.gf;../Standard/core/IGarbageCollector.gf"
           Link="Standard/core/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../Standard/libc/Memory/allocation.gf" Link="Standard/libc/Memory/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

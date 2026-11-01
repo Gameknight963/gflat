@@ -72,5 +72,5 @@ See [source selection](../../docs/PROJECTS.md#standard-library-selection).
 
 ## Static type metadata
 
-`typeof(T)` describes a static type's name, layout, and recursive type structure.
-See [type metadata](../../docs/CORE_LIBRARY.md#static-type-metadata).
+`reflect(T)` inspects types at compile time. `Describe<T>()` provides runtime descriptors.
+See [type inspection](../../docs/CORE_LIBRARY.md#type-inspection).

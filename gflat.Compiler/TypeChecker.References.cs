@@ -26,6 +26,7 @@ public partial class TypeChecker
 
     private bool IsReferenceStorage(AstNode expression)
     {
+        if (expression is SpliceExpression { Resolved: { } resolved }) return IsReferenceStorage(resolved);
         if (IsReferenceRead(expression)) return true;
         return expression switch
         {

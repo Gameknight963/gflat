@@ -1,7 +1,7 @@
 namespace gflat.ast;
 
-public sealed class TypeofExpression(TypeExpression targetType, int line) : AstNode(line)
+public sealed class TypeofExpression(AstNode operand, int line) : AstNode(line)
 {
-    public TypeExpression TargetType { get; } = targetType;
+    public AstNode Operand { get; } = operand;
     public override void Accept(IVisitor visitor) => visitor.Visit(this);
 }

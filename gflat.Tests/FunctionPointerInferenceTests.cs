@@ -75,7 +75,7 @@ public sealed class FunctionPointerInferenceTests
         var result = CompilerTestHelper.Run("""
             immutable(char*?) Text(int value) => "hello";
             int Inspect<T>(T(int)* callback) {
-                if (!typeof(T).IsNullable || !typeof(T).IsReadOnly) return 1;
+                if (!reflect(T).IsNullable || !reflect(T).IsReadOnly) return 1;
                 T text = callback(1);
                 if (text == null) return 2;
                 if (text[0] != 'h') return 3;

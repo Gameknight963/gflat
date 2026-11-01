@@ -576,14 +576,17 @@ namespace gflat
             localConstants.Pop();
         }
 
-        private void DeclareVariable(string name, TypeExpression type, int line)
+        private void DeclareVariable(string name, TypeExpression type, int line, AstNode? declaration = null)
         {
             if (_scopes.Peek().ContainsKey(name))
             {
                 ReportError(DiagnosticRules.GF3002_VariableAlreadyDeclared, line, 0, name);
                 return;
             }
+            type = RefineReflectionThisType(name, type);
             _scopes.Peek()[name] = type;
+            if (declaration != null) RememberReflectedVariable(name, type, declaration);
+            if (declaration is Parameter parameter) BindReflectionStageParameter(parameter);
         }
 
         private TypeExpression LookupVariable(string name, int line)
@@ -610,7 +613,7 @@ namespace gflat
                 depth--;
             }
 
-            if (FindStaticStorage(name) is { } staticField) return ResolveAlias(staticField.Type);
+            if (FindStaticStorage(name) is { } staticField) return ReflectionOwnerFieldType(null, name, ResolveAlias(staticField.Type));
 
             if (_currentStruct != null && !IsStaticFunctionContext)
             {
@@ -629,7 +632,7 @@ namespace gflat
                             throw new TypeCheckException($"Capturing 'this' in a lambda is not currently supported", line);
                         }
                     }
-                    return _currentStruct.Fields[idx].Type;
+                    return ReflectionOwnerFieldType(null, name, _currentStruct.Fields[idx].Type);
                 }
             }
 
@@ -650,7 +653,7 @@ namespace gflat
                             throw new TypeCheckException($"Capturing 'this' in a lambda is not currently supported", line);
                         }
                     }
-                    return _currentClass.Fields[idx].Type;
+                    return ReflectionOwnerFieldType(null, name, _currentClass.Fields[idx].Type);
                 }
             }
 
@@ -683,14 +686,14 @@ namespace gflat
                     return true;
             }
 
-            if (FindStaticStorage(name) is { } staticField) { type = ResolveAlias(staticField.Type); return true; }
+            if (FindStaticStorage(name) is { } staticField) { type = ReflectionOwnerFieldType(null, name, ResolveAlias(staticField.Type)); return true; }
 
             if (_currentStruct != null && !IsStaticFunctionContext)
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
                 {
-                    type = _currentStruct.Fields[idx].Type;
+                    type = ReflectionOwnerFieldType(null, name, _currentStruct.Fields[idx].Type);
                     return true;
                 }
             }
@@ -700,7 +703,7 @@ namespace gflat
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
                 {
-                    type = _currentClass.Fields[idx].Type;
+                    type = ReflectionOwnerFieldType(null, name, _currentClass.Fields[idx].Type);
                     return true;
                 }
             }
@@ -1111,6 +1114,7 @@ namespace gflat
 
         private TypeExpression ResolveAliasCore(TypeExpression type, Action<TypeExpression> publish)
         {
+            if (type is SpliceTypeExpression splice) return ResolveSpliceType(splice);
             if (type is NamedTypeExpression { IsResolvedNominal: true }) return type;
             if (type is ReferenceTypeExpression reference)
             {
@@ -1372,6 +1376,8 @@ namespace gflat
             }
             if (resolved is ManagedTypeExpression managed)
             {
+                if (ContainsReflectionValue(ResolveAlias(managed.Inner)))
+                    throw new TypeCheckException("reflection values have no runtime address", line);
                 ValidateInterfaceReference(managed.Inner, line);
                 if (_globalScope.Aliases.ContainsKey("GC") || managed.Collector is not NamedTypeExpression { Name: "GC" })
                     GetCollectorBinding(managed);
@@ -1394,6 +1400,8 @@ namespace gflat
             }
             else if (resolved is PointerTypeExpression ptr)
             {
+                if (ContainsReflectionValue(ResolveAlias(ptr.Inner)))
+                    throw new TypeCheckException("reflection values have no runtime address", line);
                 ValidateInterfaceReference(ptr.Inner, line);
                 if (ResolveAlias(ptr.Inner) is not NamedTypeExpression inner || !IsInterface(inner))
                     ValidateTypeUsage(ptr.Inner, line);
@@ -1401,6 +1409,9 @@ namespace gflat
             else if (resolved is FunctionPointerTypeExpression function)
             {
                 if (function.IsSignature) throw new TypeCheckException("A function signature has no value storage; use a function pointer", line);
+                if (ContainsReflectionValue(ResolveAlias(function.ReturnType)) ||
+                    function.ParameterTypes.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter))))
+                    throw new TypeCheckException("A function pointer cannot use reflection parameters or return types", line);
                 if (function.IsManaged)
                     throw new TypeCheckException("Managed function pointers are not supported", line);
                 ValidateReturnType(function.ReturnType, line);
@@ -1413,11 +1424,12 @@ namespace gflat
         public static bool IsPrimitive(string name) =>
             name is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or
                     "long" or "ulong" or "nint" or "nuint" or "float" or "double" or
-                    "bool" or "char" or "extralong" or "void";
+                    "bool" or "char" or "extralong" or "void" or "reflection";
 
         public int GetTypeAlignment(TypeExpression type)
         {
             type = ResolveAlias(type);
+            if (IsReflectionType(type)) throw new TypeCheckException("reflection has no runtime storage layout", type.Line);
             if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
             {
                 return TargetInfo.Default.PointerBytes;
@@ -1537,6 +1549,7 @@ namespace gflat
         public int GetTypeSize(TypeExpression type)
         {
             type = ResolveAlias(type);
+            if (IsReflectionType(type)) throw new TypeCheckException("reflection has no runtime storage layout", type.Line);
             if (type is PointerTypeExpression ptr)
             {
                 TypeExpression inner = ResolveAlias(ptr.Inner);
@@ -2547,6 +2560,7 @@ namespace gflat
                         {
                             _currentClass.Fields[fIdx] = (field.Name, field.Type, field.Accessibility, _currentClass.Name);
                         }
+                        ValidateReflectionFieldStorage(field);
                         ValidateValueType(field.Type, field.Line);
                         TypeExpression fieldType = field.Type;
                         if (field.IsConst && fieldType is PointerTypeExpression cPtr && !cPtr.IsReadOnly)
@@ -2615,6 +2629,8 @@ namespace gflat
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
+                            ValidateReflectionMethodSignature(method);
+                            if (DeferReflectionConstBody(method)) continue;
                             ValidateReturnType(method.ReturnType, method.Line);
                             if (!method.IsAbstract)
                             {
@@ -2626,7 +2642,7 @@ namespace gflat
                                 foreach (Parameter p in method.Parameters)
                                 {
                                     ValidateParameterType(p.Type, p.Line);
-                                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line, p);
                                     NullableParameter(p);
                                 }
 
@@ -2745,6 +2761,7 @@ namespace gflat
                         {
                             _currentStruct.Fields[fIdx] = (field.Name, field.Type);
                         }
+                        ValidateReflectionFieldStorage(field);
                         ValidateValueType(field.Type, field.Line);
                         TypeExpression fieldType = field.Type;
                         if (field.IsConst && fieldType is PointerTypeExpression sPtr && !sPtr.IsReadOnly)
@@ -2813,6 +2830,8 @@ namespace gflat
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
+                            ValidateReflectionMethodSignature(method);
+                            if (DeferReflectionConstBody(method)) continue;
                             ValidateReturnType(method.ReturnType, method.Line);
                             PushScope();
                             NamedTypeExpression structType = NamedTypeExpression.Resolved(node.Name, method.Line);
@@ -2822,7 +2841,7 @@ namespace gflat
                             foreach (Parameter p in method.Parameters)
                             {
                                 ValidateParameterType(p.Type, p.Line);
-                                DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                                DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line, p);
                                 NullableParameter(p);
                             }
 
@@ -2864,6 +2883,9 @@ namespace gflat
         {
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (ContainsReflectionValue(ResolveAlias(node.ReturnType)) ||
+                node.Parameters.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter.Type))))
+                throw new TypeCheckException("An operator cannot use reflection parameters or return types", node.Span);
             ValidateParameterDefaults(node, node.Parameters);
             if (_currentStruct == null)
             {
@@ -2915,7 +2937,7 @@ namespace gflat
                 PushScope();
                 foreach (Parameter p in node.Parameters)
                 {
-                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line, p);
                     NullableParameter(p);
                 }
                 node.Body.Accept(this);
@@ -2939,6 +2961,10 @@ namespace gflat
                 if (member is PropertyDeclaration) continue;
                 if (member is MethodDeclaration method)
                 {
+                    ValidateReflectionMethodSignature(method);
+                    if (!method.IsStatic && (ContainsReflectionValue(ResolveAlias(method.ReturnType)) ||
+                        method.Parameters.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter.Type)))))
+                        throw new TypeCheckException("An instance interface cannot use reflection parameters or return types", method.Span);
                     if (method.IsStatic && (method.IsVirtual || method.IsOverride || method.IsGeneric))
                         throw new TypeCheckException("Static interface contracts cannot be virtual, override, or generic", method.Span);
                     ValidatePropertyAccessor(method);
@@ -2963,6 +2989,7 @@ namespace gflat
         public void Visit(FieldDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            ValidateReflectionFieldStorage(node);
             ValidateValueType(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
             if (node.IsConst && RequiresCopy(fieldType))
@@ -3032,10 +3059,13 @@ namespace gflat
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
+            if (node.IsConst) checkedConstMethodBodies.Add(node);
             BindMethodSignature(node);
+            ValidateReflectionMethodSignature(node);
             ValidateExplicitConversionDeclaration(node);
             ValidateEntryPoint(node);
             ValidateParameterDefaults(node, node.Parameters);
+            if (DeferReflectionConstBody(node)) return;
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
 
 
@@ -3056,7 +3086,7 @@ namespace gflat
                 {
                     ValidateParameterType(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
-                    DeclareVariable(p.Name, ParameterValueType(pType), p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(pType), p.Line, p);
                     NullableParameter(p);
                 }
                 node.Body?.Accept(this);
@@ -3073,6 +3103,8 @@ namespace gflat
             using var exceptionScope = IsolateExceptionHandlers();
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Parameters.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter.Type))))
+                throw new TypeCheckException("Constructor parameters cannot contain reflection values", node.Span);
             if (_currentStruct == null && _currentClass == null)
             {
                 throw new TypeCheckException("Constructor must be declared inside a struct or class", node.Line);
@@ -3107,7 +3139,7 @@ namespace gflat
                 {
                     p.Type = ResolveAlias(p.Type);
                     ValidateParameterType(p.Type, p.Line);
-                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line, p);
                     NullableParameter(p);
                 }
 
@@ -3469,7 +3501,7 @@ namespace gflat
 
                 node.IsArrayIteration = true;
                 PushScope();
-                DeclareVariable(node.VariableName, node.ElementType, node.Line);
+                DeclareVariable(node.VariableName, node.ElementType, node.Line, node);
                 _loopDepth++;
                 try
                 {
@@ -3554,6 +3586,8 @@ namespace gflat
                 node.Type = inferred;
             }
             TypeExpression varType = ResolveAlias(node.Type);
+            if (ContainsReflectionValue(varType) && !node.IsConst && _currentFunction is not MethodDeclaration { IsConst: true })
+                throw new TypeCheckException("A reflection variable must be const outside a const function", node.Span);
             if (node.IsConst && RequiresCopy(varType))
                 throw new TypeCheckException("Constants cannot contain values with nontrivial copying or destruction", node.Line);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(varType))
@@ -3607,7 +3641,7 @@ namespace gflat
             }
 
             RecordType(node, varType);
-            DeclareVariable(node.Name, varType, node.Line);
+            DeclareVariable(node.Name, varType, node.Line, node);
             if (node.IsConst) localConstants.Peek()[node.Name] = (_constValues[node], node);
             NullableAssignment(new IdentifierExpression(node.Name, node.Line), node.Initializer);
             if (node.Initializer != null && CopiesValue(node.Initializer, varType)) InvalidateNullableEscapes();
@@ -3627,6 +3661,15 @@ namespace gflat
             NullableBinaryOperands(node);
             TypeExpression left = GetType(node.Left);
             TypeExpression right = GetType(node.Right);
+
+            if (IsReflectionType(left) || IsReflectionType(right))
+            {
+                if (!IsReflectionType(left) || !IsReflectionType(right) || node.Operator is not (TokenKind.EqualsEquals or TokenKind.NotEquals))
+                    throw new TypeCheckException("Reflections support equality and inequality with other reflections", node.Span);
+                RecordType(node, new NamedTypeExpression("bool", null, node.Line));
+                if (_constEvaluator.TryEvaluate(node, out var comparison, out _)) _constValues[node] = comparison!;
+                return;
+            }
 
             if (IsError(left) || IsError(right))
             {
@@ -3878,6 +3921,10 @@ namespace gflat
 
         public void Visit(UnaryExpression node)
         {
+            if (node.Operator == TokenKind.Ampersand && node.Operand is SpliceExpression functionSplice &&
+                TryBindReflectedFunctionValue(node, functionSplice, RequireReflection(functionSplice.Reflection))) return;
+            if (node.Operand is SpliceExpression splice &&
+                CheckSplicedOperation(node, splice, operand => new UnaryExpression(operand, node.Operator, node.IsPrefix, node.Line))) return;
             using var nullableResult = NullableUnaryResult(node);
             if (node.Operator == TokenKind.Ref)
             {
@@ -3910,10 +3957,10 @@ namespace gflat
                 if ((node.Operand is IdentifierExpression id && !TryLookupVariable(id.Name, out _) ||
                     node.Operand is NamespaceAccessExpression) && TryBindFunctionValue(node)) return;
 
-                if (TryBindConstantStorageAddress(node)) return;
-
                 CheckNullableStorage(node.Operand, escape: true);
                 TypeExpression operandType = GetType(node.Operand);
+                if (ContainsReflectionValue(ResolveAlias(operandType)))
+                    throw new TypeCheckException("A reflection has no runtime address", node.Span);
                 if (IsPropertyValueStorage(node.Operand))
                     throw new TypeCheckException("Cannot take the address of a value returned by a property", node.Line);
                 if (IsManagedStorage(node.Operand))
@@ -4346,6 +4393,8 @@ namespace gflat
 
         public void Visit(AssignmentExpression node)
         {
+            if (node.Target is SpliceExpression splice &&
+                CheckSplicedOperation(node, splice, target => new AssignmentExpression(target, node.Value, node.Operator, node.Line))) return;
             using var nullableWrite = NullableAssignmentResult(node);
             using var sourceContext = SourceContext.Enter(node.Span);
             if (CheckPropertyWrite(node, node.Target, node.Value, GetBinaryOperatorForCompound(node.Operator), false)) return;
@@ -4447,6 +4496,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             if (TryCheckReinterpretCall(node)) return;
             using var nullableCall = NullableCall();
+            if (TryCheckReflectedMethodCall(node)) return;
             if (TryCheckLlvmCall(node)) return;
             if (TryCheckPrimitiveInterfaceCall(node)) return;
             if (TryCheckExtensionCall(node)) return;
@@ -4646,7 +4696,7 @@ namespace gflat
                         _virtualMethodCalls[node] = (classInfo, slotIndex, method);
                     }
 
-                    funcName = $"{classInfo.Name}.{memberAccess.Member}";
+                    funcName = $"{DisplayName(classInfo.Name)}.{memberAccess.Member}";
                     _resolvedCalls[node] = method;
                 }
                 else if (_structs.TryGetValue(named.Name, out StructInfo? sInfo))
@@ -4672,7 +4722,7 @@ namespace gflat
                     ValidateStructMemberAccess(sInfo, method.Name, method.Accessibility, true, node.Callee.Span);
                     CheckReceiverCapability(method, isReceiverReadOnly, isReceiverImmutable, node.Line);
 
-                    funcName = $"{named.Name}.{memberAccess.Member}";
+                    funcName = $"{DisplayName(named.Name)}.{memberAccess.Member}";
                     _resolvedCalls[node] = method;
                 }
                 else
@@ -4826,8 +4876,10 @@ namespace gflat
                 }
                 BindPrimitiveCallResult(node, method, arguments);
                 RecordAliasGenericDependency(node, method, arguments);
+                ValidateReflectionOwnerMethodCall(node, method, arguments);
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
+            else ValidateReflectionOwnerMethodCall(node, method, []);
             ValidateNamespaceFunctionAccess(method, node.Callee.Span);
             _resolvedCalls[node] = method;
             AddDefaultArguments(node.Arguments, declaredMemberParameters.GetValueOrDefault(node) ?? method.Parameters, node);
@@ -4870,6 +4922,7 @@ namespace gflat
 
             if (method.IsConst)
             {
+                EnsureConstMethodBody(method);
                 if (_constEvaluator.TryEvaluate(node, out ConstValue? constResult, out string? _))
                 {
                     _constValues[node] = constResult!;
@@ -4879,6 +4932,13 @@ namespace gflat
             TypeExpression resultType = BindCallableOwnerType(method, node.Callee, PrimitiveCallResult(node, method));
             RecordType(node, resultType);
             if (memberMethodCallee) RecordType(node.Callee, resultType);
+            if (!InUnevaluatedOperand && _currentFunction is not MethodDeclaration { IsConst: true } &&
+                IsCompileTimeOnly(method) &&
+                !_constValues.ContainsKey(node))
+            {
+                _constEvaluator.TryEvaluate(node, out _, out var failure);
+                throw new TypeCheckException("This call requires compile-time evaluation" + (failure == null ? "" : ": " + failure), node.Span);
+            }
         }
 
         private void CheckIndirectCall(CallExpression node, FunctionPointerTypeExpression fnPtr)
@@ -5072,6 +5132,8 @@ namespace gflat
 
             if (!checkedPrimitiveReceivers.Remove(node.Object)) node.Object.Accept(this);
             TypeExpression objType = GetType(node.Object);
+            if (IsReflectionType(objType)) return !CheckReflectionMember(node);
+            if (CheckReflectionSequenceMember(node, objType)) return false;
             if (IsNullable(ResolveAlias(objType)))
                 throw new TypeCheckException("Cast a nullable pointer to non-null before accessing members", node.Line);
 
@@ -5115,7 +5177,8 @@ namespace gflat
                     {
                         throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
-                    RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(field.DeclaringClass, field.Name, field.Type)));
+                    RecordType(node, PrimitiveFieldType(node, ReflectionOwnerFieldType(GetType(node.Object), node.Member,
+                        ResolveFieldLayoutType(field.DeclaringClass, field.Name, field.Type))));
                     ValidateAssignmentResultAddress(node.Object);
                     return false;
                 }
@@ -5146,7 +5209,8 @@ namespace gflat
             {
                 if (info.FieldDeclarationsByName.TryGetValue(node.Member, out var field))
                     ValidateStructMemberAccess(info, field.Name, field.Accessibility, false, node.Span);
-                RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(info.Name, node.Member, info.Fields[idx].Type)));
+                RecordType(node, PrimitiveFieldType(node, ReflectionOwnerFieldType(GetType(node.Object), node.Member,
+                    ResolveFieldLayoutType(info.Name, node.Member, info.Fields[idx].Type))));
                 ValidateAssignmentResultAddress(node.Object);
                 return false;
             }
@@ -5172,6 +5236,7 @@ namespace gflat
 
         private void CheckAllocationFailure(NewExpression node)
         {
+            if (InUnevaluatedOperand) return;
             if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
             RequireMemoryFunction("Allocate", node);
             RequireMemoryFunction("Free", node);
@@ -5678,6 +5743,9 @@ namespace gflat
             if (node.Accessibility == TokenKind.Protected)
                 throw new TypeCheckException("Namespace extern declarations cannot be protected", node.Span);
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (ContainsReflectionValue(ResolveAlias(node.ReturnType)) ||
+                node.Parameters.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter.Type))))
+                throw new TypeCheckException("Extern signatures cannot contain reflection values", node.Span);
             ValidateReturnType(node.ReturnType, node.Line);
             if (ContainsManagedReference(node.ReturnType) ||
                 node.Parameters.Any(p => ContainsManagedReference(p.Type)))
@@ -5724,6 +5792,7 @@ namespace gflat
             if (_localAliases.Count > 0)
             {
                 _localAliases.Peek()[node.Name] = node.TargetType;
+                RememberReflectedAlias(node);
                 ValidateLocalAliasContract(node);
             }
             else if (_currentNamespace != null)
@@ -6127,7 +6196,7 @@ namespace gflat
                         throw new TypeCheckException("Lambda parameters must borrow owning values through pointers", p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
                     paramTypes.Add(pType);
-                    DeclareVariable(p.Name, ParameterValueType(pType), p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(pType), p.Line, p);
                     NullableParameter(p);
                 }
 
@@ -6386,7 +6455,7 @@ namespace gflat
             {
                 if (node.VariableName != null && node.ExceptionType != null)
                 {
-                    DeclareVariable(node.VariableName, ParameterValueType(node.ExceptionType), node.Line);
+                    DeclareVariable(node.VariableName, ParameterValueType(node.ExceptionType), node.Line, node);
                 }
                 _catchDepth++;
                 try { node.Body.Accept(this); }

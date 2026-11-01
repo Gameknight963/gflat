@@ -76,8 +76,8 @@ public sealed class ExtensionTypeShapeTests
     public void InferredTypeArgumentsRetainTheirLayoutMeaning(string type, int expected)
         => Assert.Equal(expected, CompilerTestHelper.Run($$"""
             struct Handler<F>{public int value;}
-            int HasValueLayout<F>(Handler<F> self){if(typeof(F).HasLayout)return 1;return 42;}
-            extension<F> Handler<F> { public int HasValueLayout() {if(typeof(F).HasLayout)return 1;return 42;} }
+            int HasValueLayout<F>(Handler<F> self){if(reflect(F).HasLayout)return 1;return 42;}
+            extension<F> Handler<F> { public int HasValueLayout() {if(reflect(F).HasLayout)return 1;return 42;} }
             int main(){Handler<{{type}}> handler=new Handler<{{type}}>();return handler.HasValueLayout();}
             """).ExitCode);
 }

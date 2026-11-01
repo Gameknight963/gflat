@@ -1255,11 +1255,16 @@ namespace gflat
         {
             int line = Current.Line;
             TypeExpression type;
-            if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable)
+            if (Check(TokenKind.OpenBracket) && Peek(1).Kind == TokenKind.Colon)
+                type = new SpliceTypeExpression(ParseSpliceOperand(), line);
+            else if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable)
             {
                 bool immutable = Consume().Kind == TokenKind.Immutable;
                 if (!Check(TokenKind.OpenParen))
-                    throw new TypeCheckException("Use readonly(T) or immutable(T) to qualify a type", line);
+                {
+                    var qualifiedType = ParseTypeExpression(allowSignature);
+                    return immutable ? TypeQualifiers.Immutable(qualifiedType) : TypeQualifiers.ReadOnly(qualifiedType);
+                }
                 Consume();
                 TypeExpression qualified = ParseTypeExpression();
                 type = immutable ? TypeQualifiers.Immutable(qualified) : TypeQualifiers.ReadOnly(qualified);
@@ -1309,32 +1314,32 @@ namespace gflat
                     throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
                 }
 
-                while (Match(TokenKind.DoubleColon))
+            }
+
+            while (Match(TokenKind.DoubleColon))
+            {
+                int memberLine = Current.Line;
+                Token memberToken = Expect(TokenKind.Identifier);
+                string member = memberToken.Text;
+                List<TypeExpression> memberTypeArgs = new();
+                if (Check(TokenKind.Less))
                 {
-                    int memberLine = Current.Line;
-                    Token memberToken = Expect(TokenKind.Identifier);
-                    string member = memberToken.Text;
-                    List<TypeExpression> memberTypeArgs = new();
-                    if (Check(TokenKind.Less))
+                    Consume();
+                    while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.OpenBrace)))
                     {
-                        Consume();
-                        while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.OpenBrace)))
-                        {
-                            memberTypeArgs.Add(ParseTypeExpression());
-                            if (_recoverErrors && Check(TokenKind.OpenBrace)) break;
-                            if (!Check(TokenKind.Greater))
-                                Expect(TokenKind.Comma);
-                        }
-                        Expect(TokenKind.Greater);
+                        memberTypeArgs.Add(ParseTypeExpression());
+                        if (_recoverErrors && Check(TokenKind.OpenBrace)) break;
+                        if (!Check(TokenKind.Greater))
+                            Expect(TokenKind.Comma);
                     }
-                    type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine) { NameSpan = memberToken.Span };
-
-                    if (Check(TokenKind.Dot))
-                    {
-                        throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
-                    }
+                    Expect(TokenKind.Greater);
                 }
+                type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine) { NameSpan = memberToken.Span };
 
+                if (Check(TokenKind.Dot))
+                {
+                    throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+                }
             }
 
             // postfix modifiers
@@ -1450,6 +1455,18 @@ namespace gflat
 
             switch (Current.Kind)
             {
+                case TokenKind.Static when Peek(1).Kind == TokenKind.If:
+                {
+                    Consume();
+                    var conditional = ParseIfStatement();
+                    return new StaticIfStatement(conditional.Condition, conditional.Then, conditional.Else, line);
+                }
+                case TokenKind.Static when Peek(1).Kind == TokenKind.Foreach:
+                {
+                    Consume();
+                    var loop = ParseForeachStatement();
+                    return new StaticForeachStatement(loop.ElementType, loop.VariableName, loop.Collection, loop.Body, line);
+                }
                 case TokenKind.Return:
                     return ParseReturnStatement();
                 case TokenKind.If:
@@ -1494,7 +1511,8 @@ namespace gflat
         }
 
         private bool IsTypeStart() => IsBuiltInTypeKeyword(Current.Kind) ||
-            Current.Kind is TokenKind.Identifier or TokenKind.Global or TokenKind.Readonly or TokenKind.Immutable;
+            Current.Kind is TokenKind.Identifier or TokenKind.Global or TokenKind.Readonly or TokenKind.Immutable ||
+            Check(TokenKind.OpenBracket) && Peek(1).Kind == TokenKind.Colon;
 
         private AstNode ParseVariableOrExpressionStatement()
         {
@@ -1904,6 +1922,11 @@ namespace gflat
                 // handle member access
                 if (op.Kind is TokenKind.Dot or TokenKind.Arrow)
                 {
+                    if (Check(TokenKind.OpenBracket) && Peek(1).Kind == TokenKind.Colon)
+                    {
+                        left = new SpliceExpression(ParseSpliceOperand(), left, op.Line);
+                        continue;
+                    }
                     if (Match(TokenKind.Tilde))
                     {
                         if (op.Kind == TokenKind.Arrow)
@@ -2009,6 +2032,11 @@ namespace gflat
                 return new MoveExpression(operand, moveLine, destination);
             }
             int line = Current.Line;
+            if (Check(TokenKind.OpenBracket) && Peek(1).Kind == TokenKind.Colon)
+            {
+                AstNode reflection = ParseSpliceOperand();
+                return Check(TokenKind.DoubleColon) ? new SpliceTypeExpression(reflection, line) : new SpliceExpression(reflection, null, line);
+            }
             if (Match(TokenKind.OpenBracket))
             {
                 List<AstNode> elements = new();
@@ -2138,9 +2166,32 @@ namespace gflat
             if (Match(TokenKind.Typeof))
             {
                 Expect(TokenKind.OpenParen);
-                TypeExpression type = ParseTypeExpression();
+                AstNode operand = ParseExpression();
                 Expect(TokenKind.CloseParen);
-                return new TypeofExpression(type, line);
+                return new TypeofExpression(operand, line);
+            }
+            if (Match(TokenKind.Reflect))
+            {
+                Expect(TokenKind.OpenParen);
+                int saved = _pos;
+                var savedTokens = _tokens;
+                int mark = _diagnostics.Count;
+                AstNode? target = null;
+                try
+                {
+                    var type = ParseTypeExpression();
+                    if (_diagnostics.Count == mark && Check(TokenKind.CloseParen)) target = type;
+                }
+                catch (TypeCheckException) { }
+                if (target == null)
+                {
+                    _diagnostics.ClearSince(mark);
+                    _pos = saved;
+                    _tokens = savedTokens;
+                    target = ParseExpression();
+                }
+                Expect(TokenKind.CloseParen);
+                return new ReflectExpression(target, line);
             }
             if (Check(TokenKind.Sizeof) || Check(TokenKind.Alignof))
             {
@@ -2266,14 +2317,14 @@ namespace gflat
             kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Double or TokenKind.Bool or
             TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
-            TokenKind.ExtraLong or TokenKind.Void or TokenKind.Managed;
+            TokenKind.ExtraLong or TokenKind.Void or TokenKind.Managed or TokenKind.Reflection;
 
         private static bool IsCastOperandStarter(TokenKind kind) =>
             kind is TokenKind.Identifier or
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or TokenKind.Reflect or TokenKind.OpenBracket or
             TokenKind.InterpolatedStringStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Tilde or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
@@ -2283,7 +2334,7 @@ namespace gflat
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or TokenKind.Reflect or TokenKind.OpenBracket or
             TokenKind.InterpolatedStringStart or
             TokenKind.Bang or TokenKind.Tilde or TokenKind.PlusPlus or TokenKind.MinusMinus;
 

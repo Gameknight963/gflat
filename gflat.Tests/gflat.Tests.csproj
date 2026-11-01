@@ -68,6 +68,7 @@
     <None Include="../examples/closest/main.gf" Link="Examples/closest.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\word-count\main.gf" Link="Examples\word-count.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\providers\*.gf" Link="Examples\providers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../examples/reflection/*.gf" Link="Examples/reflection/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

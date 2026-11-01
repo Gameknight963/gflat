@@ -101,7 +101,7 @@
     },
     {
       "name": "storage.type.gflat",
-      "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|class|struct|interface|enum)\\b"
+      "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|reflection|class|struct|interface|enum)\\b"
     },
     {
       "name": "storage.modifier.gflat",
@@ -113,7 +113,7 @@
     },
     {
       "name": "keyword.other.gflat",
-      "match": "\\b(namespace|using|new|delete|alias|global|operator|sizeof|alignof|typeof|nameof|managed)\\b"
+      "match": "\\b(namespace|using|new|delete|alias|global|operator|sizeof|alignof|typeof|reflect|nameof|managed)\\b"
     },
     {
       "name": "constant.numeric.gflat",
@@ -183,7 +183,7 @@
       }
     },
     {
-      "match": "(?:(?<=\\bsizeof)|(?<=\\balignof)|(?<=\\btypeof))\\s*\\(((?:sizeof\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\)",
+      "match": "(?:(?<=\\bsizeof)|(?<=\\balignof)|(?<=\\breflect))\\s*\\(((?:sizeof\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\)",
       "captures": {
         "1": {
           "patterns": [

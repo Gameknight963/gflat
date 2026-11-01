@@ -25,6 +25,7 @@ projects](../docs/PROJECTS.md#running-in-visual-studio).
 - [values](values/main.gf): move owning strings into and out of a vector
 - [queries](queries/main.gf): filter, map, enumerate, and materialize a borrowed vector query
 - [providers](providers/README.md): select static interface providers at compile time
+- [reflection](reflection/README.md): format public fields through compile-time reflection
 - [managed](managed/README.md): keep managed references in native vector storage
 
 ## Files and lines

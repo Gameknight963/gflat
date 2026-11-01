@@ -120,6 +120,7 @@ public sealed partial class EditorModel
         IndexBoundCallables();
         IndexBoundProperties();
         IndexBoundFields();
+        IndexSpliceReferences();
         IndexDocumentation();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
@@ -364,7 +365,7 @@ public sealed partial class EditorModel
             return SymbolsNamed(name).Where(s => s.Scope == null && s.Syntax.Parent?.Node is not ExtensionDeclaration &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }
-        var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression or LiteralExpression or PrefixedStringLiteralExpression or InterpolatedStringExpression && n.Span.Start + n.Span.Length == left.End + 1)
+        var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression or ReflectExpression or SpliceExpression or LiteralExpression or PrefixedStringLiteralExpression or InterpolatedStringExpression && n.Span.Start + n.Span.Length == left.End + 1)
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         TypeExpression? type = expression == null ? null : ExpressionType(expression.Node, path, offset);
         if (type == null)
@@ -433,6 +434,8 @@ public sealed partial class EditorModel
         if (node is IdentifierExpression identifier) return Visible(path, offset, identifier.Name).FirstOrDefault(s => s.Name == identifier.Name)?.Type;
         if (node is NewExpression creation) return creation.Type;
         if (node is CastExpression cast) return cast.TargetType;
+        if (node is TypeofExpression or ReflectExpression) return TypeChecker.ReflectionType(node.Line);
+        if (node is SpliceExpression { Resolved: not null } splice) return ExpressionType(splice.Resolved, path, offset);
         if (node is UnaryExpression { Operator: TokenKind.Bang, IsPrefix: false } suppression)
             return ExpressionType(suppression.Operand, path, offset);
         if (node is UnaryExpression { Operator: TokenKind.Star } dereference)
@@ -671,6 +674,8 @@ public sealed partial class EditorModel
             placement.PlacementKeywordSpan.Length > 0 && placement.PlacementKeywordSpan.Start == token.Start)) return null;
         var declaration = declarationsBySpan.GetValueOrDefault((path, token.Start, token.Span.Length));
         if (declaration != null) return declaration;
+        if (reflectedDeclarationReferences.TryGetValue(token, out var reflectedDeclaration)) return reflectedDeclaration;
+        if (spliceReferences.TryGetValue(token, out var spliced)) return spliced;
         if (boundPropertyReferences.TryGetValue(token, out var boundProperty)) return boundProperty;
         if (boundFieldReferences.TryGetValue(token, out var boundField)) return boundField;
         if (boundCallableReferences.TryGetValue(token, out var boundCallable)) return boundCallable;
@@ -726,6 +731,7 @@ public sealed partial class EditorModel
         if (index > 0 && ts[index - 1].Kind == TokenKind.Identifier && ts[index - 1].End + 1 >= offset) { index--; start = ts[index].Start; }
         int end = index < ts.Length && ts[index].Kind == TokenKind.Identifier && ts[index].Start <= offset ? ts[index].End + 1 : offset;
         var range = Workspace.ToRange(sources[path].Span(start, end - start));
+        if (ReflectionCompletion(path, offset, index, range) is { } reflectionCompletion) return reflectionCompletion;
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
         var completionContext = CompletionContext(path, index);
         var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration && completionContext.Allows(s))
@@ -733,8 +739,8 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var", "alias", "constrained"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension", "alias", "constrained"];
-            foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly", "immutable", "managed" }).Distinct())
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "reflect", "nameof", "var", "alias", "constrained"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension", "alias", "constrained"];
+            foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "reflection", "readonly", "immutable", "managed" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)
                 items.Add(new { label = "base", kind = 14, textEdit = new { range, newText = "base" } });
@@ -759,6 +765,7 @@ public sealed partial class EditorModel
         options ??= new();
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
         if (query != null) return query;
+        if (ReflectionMemberHover(path, offset, presentation) is { } reflectionMember) return reflectionMember;
         var inferred = InferredTypeHover(path, offset, presentation, options.ShowTypeLayout);
         if (inferred != null) return inferred;
         var compound = CompoundTypeHover(path, offset, presentation, options.ShowTypeLayout);
@@ -793,12 +800,12 @@ public sealed partial class EditorModel
                 }
             }
         }
-        if (symbol == null && index >= 0 && TypeChecker.IsPrimitive(tokens[path][index].Text) && (tokens[path][index].Kind != TokenKind.Identifier || nodes[path].Any(n => n.Node is NamedTypeExpression && Contains(n, offset))))
+        if (symbol == null && index >= 0 && (TypeChecker.IsPrimitive(tokens[path][index].Text) || tokens[path][index].Kind == TokenKind.Reflection) && (tokens[path][index].Kind != TokenKind.Identifier || nodes[path].Any(n => n.Node is NamedTypeExpression && Contains(n, offset))))
         {
             string name = tokens[path][index].Text;
             var type = new NamedTypeExpression(name, null, 0);
             HoverDetail[] layout = [];
-            if (options.ShowTypeLayout && snapshot.Checker is { } checker)
+            if (name != "reflection" && options.ShowTypeLayout && snapshot.Checker is { } checker)
             {
                 try { layout = [new("Size", $"{checker.GetTypeSize(type)} bytes"), new("Alignment", $"{checker.GetTypeAlignment(type)} bytes")]; }
                 catch (CompileExceptions.TypeCheckException) { /* Some reserved type names have no concrete layout. */ }
@@ -887,14 +894,15 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
-            if (symbol == null && !control && !modifier) continue;
+            if (symbol == null && !control && !modifier && !reflectionMember) continue;
             var span = ts[i].Span;
             int line = span.Line - 1, column = span.Column - 1;
             if (range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
-            int kind = modifier ? Array.IndexOf(TokenTypes, "modifier") : control ? Array.IndexOf(TokenTypes, "keyword") : Array.IndexOf(TokenTypes, symbol!.Classification);
+            int kind = modifier ? Array.IndexOf(TokenTypes, "modifier") : control ? Array.IndexOf(TokenTypes, "keyword") : reflectionMember ? Array.IndexOf(TokenTypes, "property") : Array.IndexOf(TokenTypes, symbol!.Classification);
             if (kind < 0) continue;
             int modifiers = symbol?.NameSpan.Source?.Path == path && symbol.NameSpan.Start == span.Start ? 1 : 0;
             if (symbol?.Static == true) modifiers |= 2;

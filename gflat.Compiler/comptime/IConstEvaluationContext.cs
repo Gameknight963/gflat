@@ -31,7 +31,10 @@ namespace gflat.comptime
         bool TryLookupVariable(string name, out TypeExpression? varType);
         int GetTypeSize(TypeExpression type);
         int GetTypeAlignment(TypeExpression type);
-        ConstValue DescribeType(TypeExpression type, int line);
+        ConstValue.Reflection ReflectType(TypeExpression type, int line);
+        ConstValue.Reflection ReflectExpressionType(AstNode operand, int line);
+        bool TryGetReflectionTarget(ReflectExpression node, out ConstValue.Reflection? target);
+        ConstValue ReflectionMember(ConstValue.Reflection target, string member, int line);
         string ExtractName(AstNode target);
     }
 }

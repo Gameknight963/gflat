@@ -128,6 +128,8 @@ namespace gflat
         Sizeof,
         Alignof,
         Typeof,
+        Reflect,
+        Reflection,
         Nameof,
         Throw,
         NoThrow,

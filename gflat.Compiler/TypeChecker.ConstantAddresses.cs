@@ -1,5 +1,6 @@
 using gflat.ast;
 using gflat.comptime;
+using gflat.CompileExceptions;
 
 namespace gflat;
 
@@ -38,6 +39,8 @@ public partial class TypeChecker
             return false;
 
         TypeExpression storageType = GetType(expression.Operand);
+        if (ContainsReflectionValue(ResolveAlias(storageType)))
+            throw new TypeCheckException("reflection values have no runtime address", expression.Span);
         ValidateValueType(storageType, expression.Line);
         RecordType(expression, new PointerTypeExpression(storageType, false, expression.Line, isReadOnly: true));
         _constValues[expression] = new ConstValue.StaticAddress(field);

@@ -37,7 +37,7 @@ namespace.
 | `Standard::Hashing` | Checksums and digest implementations |
 | `Standard::Threading` | Atomic integer operations |
 
-`TypeInfo` and `TypeKind` are in Standard. Console, Exception, Memory, and the
+`Describe<T>()`, `TypeInfo`, `FieldInfo`, and `TypeKind` are in Standard. Console, Exception, Memory, and the
 selected GC alias are global.
 
 Use `using Standard::Text;` for `String`, its `s`/`s$` literals, and borrowed text views.
@@ -63,7 +63,7 @@ invalidate storage. See the [ownership guide](../docs/CORE_LIBRARY.md#vectors).
   and Windows TCP
 
 File and console APIs accept caller-owned buffers and owning `String` values.
-Call `File.Close()` explicitly to report final flush and close errors.
+Call `FileStream.Close()` explicitly to report final flush and close errors.
 
 ## Runnable examples
 

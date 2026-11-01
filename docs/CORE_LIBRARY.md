@@ -208,26 +208,19 @@ Project builds use their evaluated source graph and include Standard by default.
 See [source selection](PROJECTS.md#standard-library-selection) for `NoStdLib` and
 [freestanding builds](FREESTANDING_CORE.md) for custom startup and native linking.
 
-## Static type metadata
+## Type inspection
 
-`typeof(T)` returns a `Standard::TypeInfo` descriptor with static lifetime. It works
-in generic code and constant expressions.
+`reflect(T)` inspects a type at compile time. `typeof(expression)` inspects an
+expression's type without evaluating the expression. Reflection provides field
+lists and type information for generic code generation. See the
+[language rules](LANGUAGE_SPEC.md#static-type-metadata) and the
+[field formatter example](../examples/reflection/README.md).
 
-| Members | Information |
-| --- | --- |
-| `Name`, `Kind` | Source type name and type shape |
-| `HasLayout`, `Size`, `Alignment` | Value layout. Void and interface elements have zero size and alignment |
-| `ElementType` | Pointee or element descriptor for pointers, managed references, arrays, and reference parameters |
-| `HasFixedLength`, `Length` | Fixed-array extent |
-| `ReturnType`, `ParameterTypes`, `ParameterCount` | Function signature. Parameters form a contiguous descriptor array |
-| `IsReadOnly`, `IsImmutable`, `IsNullable` | Qualification of the current type layer |
+`Describe<T>()` returns an immutable runtime descriptor with static lifetime.
+Follow `ElementType` for pointer layers, `Fields` for declared instance fields,
+and `ParameterTypes` for function parameters. For example,
+`Describe<int**>().ElementType!.ElementType!.Size` is four.
 
-Follow `ElementType` recursively. For example,
-`typeof(int**).ElementType!.ElementType!.Size` is four.
-Function parameters can be followed the same way:
-`typeof(int(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size` is four.
-
-Absent elements use null. Zero function parameters use a null parameter array.
-`readonly(int)*` describes a mutable pointer to a readonly integer, whereas
-`readonly(int*)` protects the pointer itself. `immutable(int*)` protects both.
-See [type metadata](LANGUAGE_SPEC.md#static-type-metadata) for the language rules.
+The descriptors are ordinary Standard types. Include `core/TypeInfo.gf`,
+`core/FieldInfo.gf`, and `core/type_descriptions.gf` when selecting sources
+manually. See [runtime type descriptions](TYPE_DESCRIPTIONS.md).

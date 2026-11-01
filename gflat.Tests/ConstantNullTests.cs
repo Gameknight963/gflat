@@ -18,12 +18,12 @@ public sealed class ConstantNullTests
     [InlineData("null != (readonly(char)*?)\"hi\"")]
     [InlineData("!((readonly(char)*?)\"hi\" == null)")]
     [InlineData("!(null == (readonly(char)*?)\"hi\")")]
-    [InlineData("typeof(int*).ElementType != null")]
-    [InlineData("null != typeof(int*).ElementType")]
-    [InlineData("!(typeof(int*).ElementType == null)")]
-    [InlineData("!(null == typeof(int*).ElementType)")]
+    [InlineData("Standard::Describe<int*>().ElementType != null")]
+    [InlineData("null != Standard::Describe<int*>().ElementType")]
+    [InlineData("!(Standard::Describe<int*>().ElementType == null)")]
+    [InlineData("!(null == Standard::Describe<int*>().ElementType)")]
     public void KnownStaticAddressesCompareAsNonNull(string expression)
-        => Assert.Equal(0, CompilerTestHelper.Run("const bool Value = " + expression + "; int main() { if (Value) return 0; return 1; }").ExitCode);
+        => Assert.Equal(0, CompilerTestHelper.Run(TypeDescriptionTestSources.Include("const bool Value = " + expression + "; int main() { if (Value) return 0; return 1; }")).ExitCode);
 
     [Theory]
     [InlineData("const int* Value = null;")]

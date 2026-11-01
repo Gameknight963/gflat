@@ -48,6 +48,7 @@ public sealed class ZeroLengthArrayTests
                     Resource[0] second = first;
                     second = first;
                     foreach (Resource item in Produce()) { return 10; }
+                    static if (reflect(Resource[0]).HasDestructor) { missingCleanup(); }
                 }
                 if (destroyed != 0 || visited != 1) return 11;
                 return 0;
@@ -70,6 +71,8 @@ public sealed class ZeroLengthArrayTests
             }
             const int Iterations = Count();
             int main() nothrow {
+                static foreach (int item in Empty) { missingElement(); }
+                static foreach (reflection field in reflect(int).Fields) { missingField(); }
                 int[0] copied = Build();
                 readonly(int)* decayed = Empty;
                 if (sizeof(copied) != 0 || Iterations != 0) return 20;

@@ -19,6 +19,7 @@ public partial class TypeChecker
         CallExpression call, string name,
         IReadOnlyDictionary<MethodDeclaration, IReadOnlyDictionary<string, TypeExpression>>? seeds = null)
     {
+        definitions = ReflectedCallDefinitions(call, definitions);
         var methods = definitions.Distinct().ToArray();
         foreach (var argument in call.Arguments)
             if (!_types.ContainsKey(argument)) argument.Accept(this);

@@ -303,6 +303,8 @@ public class Lexer
             "sizeof" => TokenKind.Sizeof,
             "alignof" => TokenKind.Alignof,
             "typeof" => TokenKind.Typeof,
+            "reflect" => TokenKind.Reflect,
+            "reflection" => TokenKind.Reflection,
             "nameof" => TokenKind.Nameof,
             "throw" => TokenKind.Throw,
             "nothrow" => TokenKind.NoThrow,

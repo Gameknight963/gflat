@@ -6,6 +6,7 @@ namespace gflat.ast
 {
     public class AstCloner
     {
+        public Action<TypeExpression, TypeExpression>? TypeCloned { get; init; }
         private readonly Dictionary<string, TypeExpression> _typeMap;
         private readonly string? _oldName;
         private readonly string? _newName;
@@ -39,7 +40,7 @@ namespace gflat.ast
             // A reduced map is not the original owner's generic parameter list.
             // Resolve explicit applied owners normally instead of closing them.
             return new AstCloner(substitutions, _oldName, _newName,
-                _canCloseAppliedSelf && substitutions.Count == _typeMap.Count, _renameTypeOwner);
+                _canCloseAppliedSelf && substitutions.Count == _typeMap.Count, _renameTypeOwner) { TypeCloned = TypeCloned };
         }
 
         private List<GenericParameter>? CloneGenericParameters(string name, List<GenericParameter> parameters, bool isTypeDeclaration)
@@ -149,10 +150,12 @@ namespace gflat.ast
         {
             using var context = SourceContext.Enter(type.Span);
             var result = CloneTypeLocated(type);
+            var sourceView = result;
             result = result.WithQualifiersFrom(type);
             if (type.InterfaceConstraints.Count > 0) result = result.WithInterfaceConstraints(type.InterfaceConstraints);
             if (type.GenericUse != null) result = result.WithGenericUse((NamedTypeExpression)CloneType(type.GenericUse));
             if (type.GenericParameterView != null) result = result.WithGenericParameterView(type.GenericParameterView);
+            TypeCloned?.Invoke(sourceView, result);
             result.Span = type.Span;
             return result;
         }
@@ -162,6 +165,8 @@ namespace gflat.ast
 
         private TypeExpression CloneTypeLocated(TypeExpression type)
         {
+            if (type is SpliceTypeExpression splice)
+                return new SpliceTypeExpression(CloneNode(splice.Reflection), splice.Line);
             if (type is NestedTypeExpression nested)
             {
                 TypeExpression parent = CloneType(nested.Parent);
@@ -306,6 +311,10 @@ namespace gflat.ast
             {
                 return CloneMethod(m);
             }
+            if (node is StaticIfStatement staticIf)
+                return new StaticIfStatement(CloneNode(staticIf.Condition), (BlockStatement)CloneNode(staticIf.ThenBody), staticIf.ElseBody == null ? null : CloneNode(staticIf.ElseBody), staticIf.Line);
+            if (node is StaticForeachStatement staticLoop)
+                return new StaticForeachStatement(CloneType(staticLoop.ElementType), staticLoop.VariableName, CloneNode(staticLoop.Collection), (BlockStatement)CloneNode(staticLoop.Body), staticLoop.Line);
             if (node is BlockStatement block)
             {
                 return new BlockStatement(block.Statements.Select(CloneNode).ToList(), block.Line);
@@ -430,7 +439,13 @@ namespace gflat.ast
             if (node is AlignofExpression alignment)
                 return new AlignofExpression(CloneType(alignment.TargetType), alignment.Line);
             if (node is TypeofExpression reflection)
-                return new TypeofExpression(CloneType(reflection.TargetType), reflection.Line);
+                return new TypeofExpression(CloneNode(reflection.Operand), reflection.Line);
+            if (node is ReflectExpression reflect)
+                return new ReflectExpression(CloneNode(reflect.Target), reflect.Line);
+            if (node is SpliceExpression splice)
+                return new SpliceExpression(CloneNode(splice.Reflection), splice.Receiver == null ? null : CloneNode(splice.Receiver), splice.Line);
+            if (node is ConstantExpression constant)
+                return new ConstantExpression(constant.Value, CloneType(constant.Type), constant.Line);
 
             if (node is SizeofExpression sz)
             {

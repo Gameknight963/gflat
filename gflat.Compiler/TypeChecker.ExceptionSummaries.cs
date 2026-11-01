@@ -70,6 +70,7 @@ public partial class TypeChecker
 
     private void RecordExceptionCall(CallExpression call)
     {
+        if (InUnevaluatedOperand) return;
         if (_currentFunction is not MethodDeclaration caller) return;
         var catches = new List<string>();
         foreach (var clause in _tryStack.SelectMany(t => t.CatchClauses))

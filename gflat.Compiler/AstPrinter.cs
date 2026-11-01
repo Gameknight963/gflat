@@ -431,7 +431,11 @@ namespace gflat
             Print("AlignofExpression");
             Indented(() => node.TargetType.Accept(this));
         }
-        public void Visit(TypeofExpression node) { Print("TypeofExpression"); node.TargetType.Accept(this); }
+        public void Visit(TypeofExpression node) { Print("TypeofExpression"); node.Operand.Accept(this); }
+        public void Visit(ReflectExpression node) { Print("ReflectExpression"); node.Target.Accept(this); }
+        public void Visit(SpliceExpression node) { Print("SpliceExpression"); node.Reflection.Accept(this); }
+        public void Visit(SpliceTypeExpression node) { Print("SpliceTypeExpression"); node.Reflection.Accept(this); }
+        public void Visit(ConstantExpression node) { Print($"ConstantExpression {node.Value}"); }
 
         public void Visit(NameofExpression node)
         {

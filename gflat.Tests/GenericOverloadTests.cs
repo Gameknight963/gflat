@@ -199,7 +199,7 @@ public sealed class GenericOverloadTests
     public void SpecializationTypeKeysRetainArrayExtentsAndRawPointerNullability(int optimization)
         => Run("""
             int Width<T>(T value)=>sizeof(T);
-            int Nullable<T>(T value){if(typeof(T).IsNullable)return 20;return 22;}
+            int Nullable<T>(T value){if(reflect(T).IsNullable)return 20;return 22;}
             int main(){
                 int[2] first=[1,2];int[3] second=[1,2,3];
                 if(Width(first)!=8||Width(second)!=12||Width(first)!=8)return 1;

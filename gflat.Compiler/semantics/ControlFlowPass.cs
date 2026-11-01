@@ -85,7 +85,7 @@ namespace gflat.semantics
 
         public void CheckMethod(MethodDeclaration method)
         {
-            if (method.IsGeneric || method.Body == null || method.IsAbstract)
+            if (method.IsGeneric || method.Body == null || method.IsAbstract || _typeChecker.IsDeferredReflectionBody(method))
             {
                 return;
             }

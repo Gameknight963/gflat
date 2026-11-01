@@ -5,6 +5,19 @@ namespace gflat.Tests;
 
 public class DisplayNameTests
 {
+    [Theory]
+    [InlineData("class")]
+    [InlineData("struct")]
+    public void MemberArgumentErrorsUseSourceOwnerNames(string kind)
+    {
+        string source = "namespace Example { " + kind + " Box { public void Write(char value) {} } } " +
+            "int main(){ Example::Box item=new(); item.Write(300); return 0; }";
+        var diagnostics = Compiler.Analyze([new SourceFile("member-argument.gf", source)], new() { NoStdLib = true });
+        var error = Assert.Single(diagnostics, item => item.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("Example::Box.Write", error.Message);
+        Assert.DoesNotContain("$", error.Message);
+    }
+
     [Fact]
     public void ReadonlyFormattingKeepsExplicitGenericArgumentQualifications()
     {

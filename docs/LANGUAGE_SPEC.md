@@ -1539,7 +1539,7 @@ Unless `NoStdLib` is selected, compilation includes these runtime sources from
 the bundled `Standard` directory:
 
 - `core/Attribute.gf` and `core/Exception.gf`
-- `core/BadAllocException.gf`, `core/TypeInfo.gf`, and `core/IGarbageCollector.gf`
+- `core/BadAllocException.gf` and `core/IGarbageCollector.gf`
 - `core/ITextWriter.gf` and `core/IFormattable.gf`
 - `libc/Memory/allocation.gf` and `libc/Exceptions/unhandled.gf`
 
@@ -1575,7 +1575,7 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 ## Future work
 
 Possible additions include more target ABIs, verified output parameters, partial
-moves, managed finalizers, moving collectors, member reflection, and C++
+moves, managed finalizers, moving collectors, general macros, private-access grants, and C++
 interoperability. The compiler currently shares a control-flow graph across its
 analyses. A richer checked representation could replace parts of AST-based lowering.
 
@@ -1641,85 +1641,161 @@ inline int Add(int left, int right) => left + right;
 int main() { return Add(20, 22); }
 ```
 
-## Static type metadata
+## Compile-time reflection
 
-`typeof(T)` produces a compile-time `Standard::TypeInfo` for a static type.
-It resolves aliases and generic specializations.
+`reflect(T)` returns a compile-time `reflection` value describing a type.
+`typeof(expression)` returns the reflection of an expression's type. Its operand
+is checked without executing calls, transferring ownership, or changing definite
+assignment state.
 
-| Fields | Meaning |
+Reflection values are used in constant expressions, `static if`, `static foreach`,
+and splices. They cannot be stored in runtime fields or passed as runtime values.
+Use [runtime type descriptions](TYPE_DESCRIPTIONS.md) to retain type information
+in ordinary objects.
+
+`reflect(name)` identifies a declaration, including an alias, parameter, or local
+variable. `reflect(expression)` captures a computed constant value. A reflection
+can itself be captured, preserving each level:
+
+```csharp
+const reflection ChooseInteger(bool wide)
+{
+    if (wide) return reflect(long);
+    return reflect(int);
+}
+
+alias Number = [:ChooseInteger(true):];
+
+int main()
+{
+    [:ChooseInteger(false):] value = [:reflect(20 + 22):];
+    const reflection nested = reflect(reflect(int));
+    static if (typeof(nested) != reflect(reflection)) { invalidType(); }
+    Number wide = value;
+    return (int)wide - 42;
+}
+```
+
+`typeof` accepts expressions. Use `reflect(int)` to inspect the `int` type.
+`reflect(Number)` retains the alias declaration, while `reflect(Number).Target`
+describes its underlying type.
+
+### Type queries
+
+| Members | Information |
 | --- | --- |
-| `Name` | Type name after alias resolution |
-| `Kind` | A `TypeKind` value, such as Struct, Pointer, or FunctionSignature |
-| `HasLayout`, `Size`, `Alignment` | Whether the type has value layout, and its size and alignment in bytes |
-| `IsPointer`, `IsManaged`, `IsNullable` | Reference shape at this layer |
-| `IsReadOnly`, `IsImmutable` | Access qualification at this layer |
-| `HasDestructor` | Whether values of this type require destruction |
-| `ElementType` | Metadata for the element of a pointer, managed reference, array, or reference |
-| `HasFixedLength`, `Length` | Fixed-array status and element count |
-| `ReturnType`, `ParameterTypes`, `ParameterCount` | Function-signature metadata |
+| `Name`, `QualifiedName`, `Kind` | Source names and the reflected entity's category |
+| `IsStruct`, `IsClass`, `IsEnum`, `IsInterface`, `IsPrimitive` | Type category |
+| `HasLayout`, `Size`, `Alignment` | Value layout and byte counts |
+| `IsPointer`, `IsManaged`, `IsNullable`, `IsArray`, `IsReference` | Type shape |
+| `IsReadOnly`, `IsImmutable` | Qualification of the current layer |
+| `HasDestructor` | Whether values of the type require destruction |
+| `HasElementType`, `ElementType` | Pointer, managed reference, buffer, or reference element |
+| `HasFixedLength`, `Length` | Fixed-buffer extent |
+| `IsFunctionPointer`, `IsFunctionSignature`, `ReturnType`, `ParameterTypes`, `ParameterCount` | Function signature |
+| `Fields`, `StaticFields`, `Methods`, `Bases` | Declaration lists |
+| `CollectorType` | A managed reference's collector |
 
-Sizes, alignments, lengths, and counts use `nuint`. Names and nested descriptors
-use immutable static storage with program lifetime.
+Use shape predicates before querying a member specific to that shape. For
+example, `ElementType` is available when `HasElementType` is true.
 
-### Recursive types
+Follow `ElementType` recursively to inspect pointer layers. Qualification belongs
+to each layer: `readonly(int)*` protects the integer, while `readonly(int*)`
+protects the pointer. `immutable(int*)` protects both. Primitive and enum leaves
+canonicalize immutable to readonly, so their `IsImmutable` flag is false.
 
-Follow `ElementType` to inspect nested layers. For `int**`, following it twice
-reaches `int`. Other type kinds have a null `ElementType`.
-
-Qualification belongs to each layer:
-
-- `readonly(int)*` has a mutable pointer and a readonly integer element
-- `immutable(int*)` protects both the pointer and its element
-- Primitive and enum leaves canonicalize immutable to readonly, so their
-  `IsImmutable` flag is false
-
-Traits describe the queried type. For example,
-`typeof(Resource*).HasDestructor` is false even when `Resource` has a destructor.
-Raw and function pointers set `IsPointer`. Managed references set `IsManaged`.
-
-### Arrays and layout
-
-`HasFixedLength` is true for fixed arrays, and `Length` gives their element count.
-Other types use zero for `Length`.
-
-Void, function signatures, and interface elements have no value layout.
-Their `Size` and `Alignment` are zero. Pointer metadata describes its own layout.
-Use `typeof(I*).ElementType` to inspect an interface element. Direct `typeof(I)`
-is rejected.
-
-### Function signatures
-
-Function metadata includes a return descriptor, including for `void`.
-`ParameterTypes` points to a contiguous descriptor array of `ParameterCount`
-elements. A zero count uses a null array pointer. Return and parameter descriptors
-can be followed recursively during constant evaluation.
-
-Other type kinds use null return and parameter pointers and a zero parameter count.
-Function types carry return and parameter types. Parameter names, defaults, and
-method modifiers belong to declarations.
-
-Member enumeration and `typeof(expression)` are not supported.
+Void, interfaces, static classes, and function signatures have no value layout.
+Their size and alignment queries return zero. Raw and function pointers describe
+their own layout. `reflect(Resource*).HasDestructor` is false even when Resource
+has a destructor.
 
 ```csharp
 struct Packet { public int sequence; }
-const nuint Size<T>() => typeof(T).Size;
+const nuint Size<T>() => reflect(T).Size;
 const nuint PacketSize = Size<Packet>();
-int main() {
-    Standard::TypeInfo info = typeof(Packet);
-    if (info.Size != PacketSize) return 1;
+
+int main()
+{
+    Packet packet = new();
+    static if (typeof(packet) != reflect(Packet)) { invalidType(); }
+    static if (PacketSize != 4) { invalidSize(); }
     return 0;
 }
 ```
 
+Function signature queries return a reflected return type and a compile-time list
+of parameter types. Parameter names, defaults, and method modifiers belong to
+method declarations.
+
 ```csharp
-const nuint ArgumentSize = typeof(void(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size;
-int main() {
-    Standard::TypeInfo signature = typeof(void(ref readonly(int), int**)*);
-    if (signature.ParameterCount != (nuint)2) return 1;
-    if (signature.ReturnType!.HasLayout || ArgumentSize != (nuint)4) return 2;
+const nuint ArgumentSize = reflect(void(int**)*).ParameterTypes[0].ElementType.ElementType.Size;
+
+int main()
+{
+    const reflection signature = reflect(void(ref readonly(int), int**)*);
+    static if (signature.ParameterCount != 2) { invalidParameters(); }
+    static if (signature.ReturnType.HasLayout || ArgumentSize != 4) { invalidLayout(); }
     return 0;
 }
 ```
+
+### Fields and splicing
+
+`reflect(T).Fields` lists declared instance fields, including private fields.
+Static fields and constants appear in `StaticFields`. Each field exposes `Name`,
+`Type`, `DeclaringType`, `Offset`, `IsPublic`, `IsPrivate`, and `IsStatic`.
+Inspection does not grant private access.
+
+`[:type:]` substitutes a reflected type. `value.[:field:]` accesses a reflected
+field with the same access, mutability, and initialization checks as a named
+field access. The result can be assigned, borrowed, or addressed.
+
+`static foreach` expands its body for each element in a compile-time list.
+Use `static if` to select operations for each field's type or accessibility.
+See the [field formatter example](../examples/reflection/README.md).
+
+A local declaration splice requires the original variable to remain visible in
+the current scope. A hidden or out-of-scope local produces a diagnostic.
+
+### Helpers with constant inputs
+
+Use `const` parameters when a helper expands a body using an argument's value.
+Each call checks a fresh expansion with its own inputs:
+
+```csharp
+struct Packet { public int sequence; public byte tag; }
+
+const nuint FieldCount(const reflection type)
+{
+    nuint count = 0;
+    static foreach (reflection field in type.Fields) { count++; }
+    return count;
+}
+
+int main()
+{
+    const nuint count = FieldCount(reflect(Packet));
+    static if (count != 2) { invalidCount(); }
+    return 0;
+}
+```
+
+A parameter-dependent splice, `static if`, or `static foreach` makes the helper
+compile-time-only. Calls must be evaluable at compile time. Expansion inputs
+must come from constant bindings. Ordinary control flow in a const function
+can update mutable parameters.
+
+### Methods
+
+`reflect(Owner::Method)` identifies a method or its overload group. `Overloads`
+lists the individual declarations. Methods expose `ReturnType`, `Parameters`,
+`ParameterTypes`, and `ParameterCount`. Parameters expose their declared `Type`,
+`Position`, `IsRef`, `IsConst`, and `HasDefaultValue`.
+
+Call a reflected method with `[:method:](arguments)` or
+`receiver.[:method:](arguments)`. Overload selection uses the captured declarations
+and the supplied arguments. Instance calls retain virtual dispatch.
+
 
 ## Inline LLVM
 

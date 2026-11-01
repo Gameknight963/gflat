@@ -16,6 +16,7 @@ public partial class TypeChecker
         }
         string signature = OverloadKey(operation.Parameters);
         var duplicate = _currentStruct!.Operators.FirstOrDefault(other => !ReferenceEquals(other, operation) &&
+            !(ReferenceEquals(currentSpecializationDefinition, other) && ReferenceEquals(currentSpecializationBody, operation)) &&
             other.OperatorKind == operation.OperatorKind && OverloadKey(other.Parameters) == signature);
         if (duplicate != null)
             DuplicateDeclaration(duplicate, operation, "Operator overloads cannot differ only by aliases, readonly, return type, or declaration modifiers");

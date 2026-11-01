@@ -30,6 +30,7 @@ public partial class ConstEvaluator
             ConstValue.ClassInstance aggregate => aggregate.Fields.Values.Any(field => ContainsUninitializedStorage(field, visited)),
             ConstValue.Pointer pointer => ContainsUninitializedStorage(pointer.Target, visited),
             ConstValue.ArrayPointer pointer => ContainsUninitializedStorage(pointer.Target, visited),
+            ConstValue.Reflection { Value: not null } reflection => ContainsUninitializedStorage(reflection.Value, visited),
             _ => false
         };
     }

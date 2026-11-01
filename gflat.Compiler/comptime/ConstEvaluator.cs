@@ -427,6 +427,11 @@ namespace gflat.comptime
 
         public void Visit(UnaryExpression node)
         {
+            if (_context is TypeChecker reflectedChecker && reflectedChecker.GetReflectionOperation(node) is { } reflectedOperation)
+            {
+                reflectedOperation.Accept(this);
+                return;
+            }
             if (node.Operator == TokenKind.Bang && !node.IsPrefix)
             {
                 node.Operand.Accept(this);
@@ -557,6 +562,12 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             node.Object.Accept(this);
             ConstValue obj = _currentValue!;
+
+            if (obj is ConstValue.Reflection reflection)
+            {
+                _currentValue = _context.ReflectionMember(reflection, node.Member, node.Line);
+                return;
+            }
 
             if (obj is ConstValue.BorrowedReference borrowed) obj = borrowed.Read();
             if (obj is ConstValue.StaticAddress staticAddress)
@@ -914,6 +925,11 @@ namespace gflat.comptime
         public void Visit(CallExpression node)
         {
             if (TryEvaluateReinterpretCall(node)) return;
+            if (_context is TypeChecker reflectedChecker && reflectedChecker.GetReflectedCall(node) is { } reflectedCall)
+            {
+                reflectedCall.Accept(this);
+                return;
+            }
             if (_context is TypeChecker extensionChecker && extensionChecker.GetExtensionCall(node) is { } extensionCall)
             {
                 extensionCall.Accept(this);
@@ -964,7 +980,7 @@ namespace gflat.comptime
             if (_context is TypeChecker checker)
             {
                 var selected = checker.GetResolvedCall(node);
-                if (selected is MethodDeclaration selectedMethod) method = selectedMethod;
+                if (selected is MethodDeclaration selectedMethod) method = checker.ReflectionComptimeCallTarget(node, selectedMethod);
                 else if (selected is ExternDeclaration external)
                 {
                     string declarationNamespace = checker.DeclarationNamespace(external) ?? "";
@@ -992,6 +1008,8 @@ namespace gflat.comptime
                 evaluatedArgs.Add(EvaluateValueForTarget(arg, method.Parameters[evaluatedArgs.Count].Type));
             }
 
+            if (_context is TypeChecker stagingChecker)
+                method = stagingChecker.PrepareReflectionConstInvocation(node, method, evaluatedArgs);
             _callDepth++;
             var callerScopes = _scopes.Reverse().ToArray();
             bool prevReturned = _hasReturned;
@@ -1023,6 +1041,11 @@ namespace gflat.comptime
 
         public void Visit(AssignmentExpression node)
         {
+            if (_context is TypeChecker reflectedChecker && reflectedChecker.GetReflectionOperation(node) is { } reflectedOperation)
+            {
+                reflectedOperation.Accept(this);
+                return;
+            }
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
@@ -1299,7 +1322,7 @@ namespace gflat.comptime
 
         public void Visit(SizeofExpression node) => VisitLayout(node, node.TargetType, false);
         public void Visit(AlignofExpression node) => VisitLayout(node, node.TargetType, true);
-        public void Visit(TypeofExpression node) { CheckSteps(node.Line); _currentValue = _context.DescribeType(node.TargetType, node.Line); }
+        public void Visit(TypeofExpression node) { CheckSteps(node.Line); _currentValue = _context.ReflectExpressionType(node.Operand, node.Line); }
 
         private void VisitLayout(AstNode node, TypeExpression target, bool alignment)
         {

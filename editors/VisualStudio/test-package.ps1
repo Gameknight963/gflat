@@ -139,6 +139,7 @@ try {
     & (Join-Path $repoRoot 'build/test-bundled-msbuild.ps1') -ToolchainDirectory (Join-Path $extracted 'Sdk') -CompilerDirectory (Join-Path $extracted 'Compiler')
     & (Join-Path $PSScriptRoot 'test-project-templates.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
+    & (Join-Path $PSScriptRoot 'test-console-probe.ps1')
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.c'))) { throw 'VSIX is missing the native stdio bridge source' }
     if ((Get-FileHash -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.c')).Hash -ne
@@ -175,18 +176,8 @@ int main() nothrow {
     $redirectionOutput = Join-Path $extracted 'console-redirection.out'
     $redirectionError = Join-Path $extracted 'console-redirection.err'
     [IO.File]::WriteAllBytes($redirectionInput, [byte[]]@(81))
-    $redirectionProcess = Start-Process -FilePath $redirectionExecutable -PassThru -NoNewWindow `
-        -RedirectStandardInput $redirectionInput -RedirectStandardOutput $redirectionOutput -RedirectStandardError $redirectionError
-    try {
-        $null = $redirectionProcess.Handle
-        if (-not $redirectionProcess.WaitForExit(30000)) {
-            $redirectionProcess.Kill()
-            $redirectionProcess.WaitForExit()
-            throw 'Packaged Console adapter consumer timed out'
-        }
-        if ($redirectionProcess.ExitCode -ne 0) { throw "Packaged Console adapter consumer failed: $($redirectionProcess.ExitCode)" }
-    }
-    finally { $redirectionProcess.Dispose() }
+    & (Join-Path $PSScriptRoot 'run-console-probe.ps1') -Executable $redirectionExecutable `
+        -InputPath $redirectionInput -OutputPath $redirectionOutput -ErrorPath $redirectionError
     if ((Get-Item -LiteralPath $redirectionOutput).Length -ne 0 -or (Get-Item -LiteralPath $redirectionError).Length -ne 0) {
         throw 'Console redirection queries unexpectedly produced output'
     }

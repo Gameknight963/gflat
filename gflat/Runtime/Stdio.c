@@ -74,3 +74,18 @@ int __gflat_stdio_set_length(void* stream, int64_t length) {
     return ftruncate(fileno((FILE*)stream), native_length);
 #endif
 }
+
+int __gflat_stdio_path_kind(const char* path) {
+#ifdef _WIN32
+    struct _stat64 details;
+    if (_stat64(path, &details) != 0) return -1;
+    if ((details.st_mode & _S_IFMT) == _S_IFREG) return 1;
+    if ((details.st_mode & _S_IFMT) == _S_IFDIR) return 2;
+#else
+    struct stat details;
+    if (stat(path, &details) != 0) return -1;
+    if (S_ISREG(details.st_mode)) return 1;
+    if (S_ISDIR(details.st_mode)) return 2;
+#endif
+    return 0;
+}

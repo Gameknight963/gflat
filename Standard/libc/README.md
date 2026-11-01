@@ -48,6 +48,7 @@ int main()
 to report final flush and close errors.
 Use `Position` and `Seek(offset, origin)` for byte positioning.
 `Length` includes buffered writes. `SetLength(length)` truncates or zero-extends the file.
+`File::Exists(path)` and `Directory::Exists(path)` check a path's kind.
 
 See [file APIs](../../docs/HOST_RUNTIME.md#files),
 [file lines](../../docs/FILE_LINE_SEQUENCE.md), and [file hashing](../../docs/FILE_HASH.md).

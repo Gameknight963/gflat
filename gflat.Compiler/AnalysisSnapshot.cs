@@ -19,8 +19,9 @@ public sealed class AnalysisSnapshot
     public IReadOnlyDictionary<AstNode, TypeExpression> DeclaredTypes { get; }
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> Children = new();
 
-    public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null)
+    public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         Options = options ?? new();
         var diagnostics = new DiagnosticBag();
         var nodes = new List<Syntax>();
@@ -29,13 +30,14 @@ public sealed class AnalysisSnapshot
         Imports = new Dictionary<SourceId, string[]>();
         try
         {
-            var compilation = new Compilation(sources, diagnostics, recoverErrors: true, options: options);
+            var compilation = new Compilation(sources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken);
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
             Capture(compilation.Unit, null);
             var aliases = nodes.Select(n => n.Node).OfType<AliasDeclaration>().Select(a => a.Name).ToHashSet();
             var cloner = new AstCloner(new());
             foreach (var entry in nodes)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 TypeExpression? type = entry.Node switch {
                     MethodDeclaration m => m.ReturnType, ExternDeclaration e => e.ReturnType,
                     Parameter p => p.Type, FieldDeclaration f => f.Type,
@@ -53,19 +55,23 @@ public sealed class AnalysisSnapshot
                 FunctionPointerTypeExpression f => ContainsAlias(f.ReturnType) || f.ParameterTypes.Any(ContainsAlias),
                 _ => false
             };
-            Checker = new TypeChecker(diagnostics, recoverErrors: true);
+            cancellationToken.ThrowIfCancellationRequested();
+            Checker = new TypeChecker(diagnostics, recoverErrors: true, cancellationToken: cancellationToken);
             compilation.Unit.Accept(Checker);
+            cancellationToken.ThrowIfCancellationRequested();
         }
         catch (TypeCheckException error)
         {
             if (!diagnostics.HasErrors)
                 diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description);
         }
+        cancellationToken.ThrowIfCancellationRequested();
         Nodes = nodes;
         Diagnostics = diagnostics.Items.ToArray();
 
         void Capture(AstNode node, Syntax? parent)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var entry = new Syntax(node, node.Span, parent);
             nodes.Add(entry);
             // AST child properties are nodes or lists of nodes. Cache the schema, not

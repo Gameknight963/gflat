@@ -231,8 +231,9 @@ public partial class TypeChecker
 
     private void AnalyzeSafely(Action action)
     {
+        _cancellationToken.ThrowIfCancellationRequested();
         int scopes = _scopes.Count;
-        try { action(); }
+        try { action(); _cancellationToken.ThrowIfCancellationRequested(); }
         catch (TypeCheckException error) when (_recoverErrors)
         {
             nullableFacts.Clear();

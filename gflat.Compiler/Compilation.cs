@@ -11,23 +11,43 @@ public sealed class Compilation
     public IReadOnlyList<CompilationUnit> SyntaxTrees { get; }
     public CompilationUnit Unit { get; }
 
-    public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false, CompilationOptions? options = null)
+    public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false, CompilationOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
-        Sources = sources.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
+        var captured = new List<SourceFile>();
+        foreach (var source in sources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            captured.Add(source);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        Sources = captured.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
         if (Sources.Count == 0) throw new ArgumentException("Specify at least one source file.");
         if (Sources.Select(s => s.Id).Distinct().Count() != Sources.Count)
             throw new ArgumentException("A source path may only occur once in a compilation.");
-        SyntaxTrees = Sources.Select(s => Parser.Parse(Lexer.Tokenize(s, recoverErrors ? diagnostics : null), diagnostics, recoverErrors)).ToArray();
+        SyntaxTrees = Sources.Select(source =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var tokens = Lexer.Tokenize(source, recoverErrors ? diagnostics : null);
+            cancellationToken.ThrowIfCancellationRequested();
+            var tree = Parser.Parse(tokens, diagnostics, recoverErrors);
+            cancellationToken.ThrowIfCancellationRequested();
+            return tree;
+        }).ToArray();
         Unit = new CompilationUnit(new(), SyntaxTrees.SelectMany(t => t.Namespaces).ToList(), SyntaxTrees.SelectMany(t => t.Members).ToList(), 0);
         foreach (var tree in SyntaxTrees)
             Unit.FileUsings[tree.Span.SourceId!.Value] = tree.Usings.Select(u => u.Name).ToArray();
-        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, Sources); }
+        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, Sources, cancellationToken); }
         catch (TypeCheckException error) when (recoverErrors)
         { diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description); }
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
-    public static void AddStandardLibrary(CompilationUnit unit, DiagnosticBag diagnostics, IEnumerable<SourceFile>? inputs = null)
+    public static void AddStandardLibrary(CompilationUnit unit, DiagnosticBag diagnostics, IEnumerable<SourceFile>? inputs = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var files = inputs?.ToArray() ?? unit.Members.Select(m => m.Span.Source)
             .Concat(unit.Namespaces.Select(n => n.Span.Source)).OfType<SourceFile>().DistinctBy(s => s.Id).ToArray();
         var reserved = unit.Members.OfType<ClassDeclaration>().FirstOrDefault(c => c.Name == "Attribute" &&
@@ -54,11 +74,15 @@ public sealed class Compilation
         bool hasException = unit.Members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
         foreach (string relative in StandardLibrary.AutomaticFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (files.Any(f => StandardLibrary.IsSource(f.Path, relative))) continue;
             if (relative == "core/Exception.gf" && hasException) continue;
             if (relative == "core/BadAllocException.gf" && !includeBadAlloc) continue;
             var source = StandardLibrary.Load(relative);
-            var tree = Parser.Parse(Lexer.Tokenize(source), diagnostics);
+            var tokens = Lexer.Tokenize(source);
+            cancellationToken.ThrowIfCancellationRequested();
+            var tree = Parser.Parse(tokens, diagnostics);
+            cancellationToken.ThrowIfCancellationRequested();
             unit.FileUsings[source.Id] = tree.Usings.Select(u => u.Name).ToArray();
             unit.Namespaces.InsertRange(0, tree.Namespaces);
             foreach (var member in tree.Members)

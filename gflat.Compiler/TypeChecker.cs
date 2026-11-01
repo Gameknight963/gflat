@@ -23,8 +23,11 @@ namespace gflat
         private int _loopDepth = 0;
 
         private readonly bool _recoverErrors;
-        public TypeChecker(DiagnosticBag? diagnostics = null, bool recoverErrors = false)
+        private readonly CancellationToken _cancellationToken;
+        public TypeChecker(DiagnosticBag? diagnostics = null, bool recoverErrors = false, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            _cancellationToken = cancellationToken;
             _recoverErrors = recoverErrors;
             _diagnostics = diagnostics ?? new DiagnosticBag();
             _constEvaluator = new ConstEvaluator(this);
@@ -2089,16 +2092,20 @@ namespace gflat
 
         public void Visit(CompilationUnit node)
         {
+            _cancellationToken.ThrowIfCancellationRequested();
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
             ExpandExtensionBlocks(node);
             BindQualifiedDeclarations(node);
+            _cancellationToken.ThrowIfCancellationRequested();
             SelectAliasBindings(node);
             ExpandProperties(node);
+            _cancellationToken.ThrowIfCancellationRequested();
 
             CheckDeclarationConflicts(node);
             QualifyTypeDeclarations(node);
             ExpandPrimitiveImplementations(node);
+            _cancellationToken.ThrowIfCancellationRequested();
 
             // Pass 1: Symbol collection
             SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration,
@@ -3050,6 +3057,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
+            _cancellationToken.ThrowIfCancellationRequested();
             using var exceptionScope = IsolateExceptionHandlers();
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);

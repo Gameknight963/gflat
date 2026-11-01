@@ -844,6 +844,8 @@ namespace gflat
 
             if (type is NamedTypeExpression named)
             {
+                if (_interfaces.TryGetValue(named.Name, out InterfaceInfo? sourceInterface))
+                    return !sourceInterface.IsStaticContract && named.Name == ifaceName;
                 if (IsPrimitive(named.Name)) return PrimitiveImplementation(named.Name, ifaceName) != null;
                 if (_structs.TryGetValue(named.Name, out StructInfo? strInfo))
                 {

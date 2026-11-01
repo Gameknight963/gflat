@@ -20,7 +20,7 @@ public sealed class SourceLibraryProviderBindingTests : IDisposable
         File.WriteAllText(Path.Combine(directory, "provider.gf"), """
             namespace Api {
                 public interface IProvider { static int Read(); }
-                public expect alias Provider : IProvider;
+                public expect constrained alias Provider : IProvider;
                 BODY
             }
             """.Replace("BODY", used ? "public int Read()=>Provider::Read();" : ""));

@@ -23,7 +23,7 @@ public sealed class ProviderBindingEditorTests
                 public static int Read() => 42;
                 public static int Extra() => 0;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             {{(replace ? "replace alias Selected = Answer;" : "")}}
             alias Another = Selected;
             {{close}}
@@ -43,13 +43,13 @@ public sealed class ProviderBindingEditorTests
     [Fact]
     public void MissingImplementationRetainsExpectedAliasHoverAndContractCompletion()
     {
-        const string text = "interface IProvider { static int Read(); } expect alias Selected : IProvider; int main() => Selected::Read();";
+        const string text = "interface IProvider { static int Read(); } expect constrained alias Selected : IProvider; int main() => Selected::Read();";
         var source = new SourceFile(Path.GetFullPath("missing-provider.gf"), text);
         var snapshot = new AnalysisSnapshot([source]);
         Assert.NotEmpty(snapshot.Diagnostics);
         var model = new EditorModel(snapshot, [source]);
         int use = text.LastIndexOf("Selected", StringComparison.Ordinal);
-        Assert.Contains("expect alias Selected", Json(model.Hover(source.Path, use)).GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("expect constrained alias Selected", Json(model.Hover(source.Path, use)).GetProperty("contents").GetProperty("value").GetString());
         var items = Json(model.Completion(source.Path, text.LastIndexOf("Read", StringComparison.Ordinal))).GetProperty("items").EnumerateArray();
         Assert.Contains(items, i => i.GetProperty("label").GetString() == "Read");
     }

@@ -15,7 +15,9 @@ public class EditorGrammarTests
     [InlineData("throw new Standard::IOException();", "throw", "keyword - control")]
     [InlineData("if (ready) return;", "if", "keyword - control")]
     [InlineData("managed<int, Collector> item;", "managed", "keyword")]
-    [InlineData("public expect alias GC : ICollector;", "expect", "keyword")]
+    [InlineData("public expect constrained alias GC : ICollector;", "expect", "keyword")]
+    [InlineData("public weak constrained alias GC : ICollector = Collector;", "constrained", "keyword")]
+    [InlineData("constrained public weak alias GC : ICollector = Collector;", "constrained", "keyword")]
     [InlineData("implementation int {", "implementation", "keyword")]
     [InlineData("extension int {", "extension", "keyword")]
     [InlineData("extension implementation int {", "extension", "keyword")]
@@ -37,6 +39,8 @@ public class EditorGrammarTests
     [InlineData("int extension = 1;", "extension")]
     [InlineData("int explicit = 1;", "explicit")]
     [InlineData("int implementation = 1;", "implementation")]
+    [InlineData("int constrained = 1;", "constrained")]
+    [InlineData("return constrained;", "constrained")]
     [InlineData("return extension + explicit + implementation;", "extension")]
     public void ContextualKeywordsLeaveOrdinaryLocalsUnclassifiedAsKeywords(string line, string word)
     {

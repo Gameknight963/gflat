@@ -11,7 +11,7 @@ public sealed class GenericOverloadContractTests
             public static int Read()=>42;
             public static int Extra()=>7;
         }
-        weak alias Selected:IProvider=Answer;
+        weak constrained alias Selected:IProvider=Answer;
         struct Handler<P>{}
         int Pick<P:IProvider>(Handler<P> value,long tag)=>P::Read();
         int Pick<P:IExtra>(Handler<P> value,int tag)=>P::Extra();
@@ -219,7 +219,7 @@ public sealed class GenericOverloadContractTests
                 public static int Read(long value)=>42;
                 public static int Read(int value)=>7;
             }
-            weak alias Selected:IProvider=Answer;
+            weak constrained alias Selected:IProvider=Answer;
             int Forward<P:IProvider>()=>P::Read(0);
             int main(){
                 {{(concreteFirst?concrete+alias:alias+concrete)}}

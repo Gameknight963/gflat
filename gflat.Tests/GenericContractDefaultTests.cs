@@ -25,7 +25,7 @@ public sealed class GenericContractDefaultTests
                 }
             }
             const int Number = 3;
-            weak alias Selected : Contracts::IProvider = Implementation::Provider;
+            weak constrained alias Selected : Contracts::IProvider = Implementation::Provider;
             int Forward<T : Contracts::IProvider>() => T::Read();
             int main() {
                 if ({{concreteCall}} != 2) return 1;
@@ -98,7 +98,7 @@ public sealed class GenericContractDefaultTests
         string source = isStatic ? """
             interface I { static int Read(int value); }
             static class Reader : I { public static int Read(int value = 2) => value; }
-            weak alias Selected : I = Reader;
+            weak constrained alias Selected : I = Reader;
             int main() => Selected::Read();
             """ : """
             interface I { int Read(int value); }

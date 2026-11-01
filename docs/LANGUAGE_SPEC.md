@@ -726,7 +726,7 @@ stored in each other's managed object graphs.
 #### Provider selection
 
 `Standard/libc/GC.gf`, included by projects referencing Standard, declares the default
-`public weak alias GC : Standard::IGarbageCollector = Standard::TracingCollector;`.
+`public weak constrained alias GC : Standard::IGarbageCollector = Standard::TracingCollector;`.
 The implementation lives in `Standard/libc/TracingCollector.gf`. Direct source builds
 using this default alias must include that file too.
 Applications select another provider with `replace alias GC = MyCollector;`.
@@ -1772,15 +1772,34 @@ interface ILogger { static void Write(immutable(char*) text); }
 static class ApplicationLogger : ILogger {
     public static void Write(immutable(char*) text) { }
 }
-public expect alias Logger : ILogger;
+public expect constrained alias Logger : ILogger;
 replace alias Logger = ApplicationLogger;
 ```
 
 Aliases may declare an optional default with `weak alias Name = Type`.
 An `expect alias` has no initializer. Missing implementations, multiple defaults,
 multiple replacements, and replacement of an ordinary alias are errors. Alias
-constraints follow `:`. They validate the selected implementation and limit
-static member access through the alias to the declared contract.
+constraints follow `:` and validate the selected implementation. An alias with
+constraints still exposes the selected type's members and interfaces.
+
+Use `constrained alias` to expose only the declared constraints:
+
+```csharp
+interface IReader { static int Read(); }
+static class Reader : IReader {
+    public static int Read() => 42;
+    public static int Extra() => 7;
+}
+alias Checked : IReader = Reader;
+constrained alias Restricted : IReader = Reader;
+int ReadExtra() => Checked::Extra();
+int ReadContract() => Restricted::Read();
+```
+
+`Restricted::Extra()` is an error. A `constrained alias` without constraints is
+transparent. These rules also apply to local aliases. The modifier is contextual,
+so `constrained` can still name a variable, function, or type elsewhere.
+
 Overload selection through a constrained alias considers only signatures exposed
 by that contract. Extra overloads on the selected implementation cannot hijack a
 call. The alias retains its implementation's nominal type identity, including
@@ -1788,3 +1807,5 @@ when used as a generic argument.
 Provider aliases are namespace declarations. Nested provider aliases inside types
 are not supported yet. Ordinary local aliases retain a constrained provider's
 contract, and generic forwarding does not expose implementation-only members.
+Replacements inherit the original alias's validation constraints and view.
+They cannot redeclare constraints or add the `constrained` modifier.

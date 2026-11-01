@@ -189,6 +189,7 @@ public sealed partial class EditorModel
         if (symbol.Syntax.Node is AliasDeclaration alias)
         {
             if (alias.ImplementationKind != FunctionImplementationKind.Ordinary) Keyword(alias.ImplementationKind.ToString().ToLowerInvariant());
+            if (alias.IsConstrained) Keyword("constrained");
             Keyword("alias"); Name();
             if (alias.Constraints.Count > 0)
             {

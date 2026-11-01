@@ -155,7 +155,7 @@ public sealed class GenericExtensionReceiverEditorTests
     [Fact]
     public void NamespacedCheckedAliasReceiverPreservesItsExposedCapabilities()
     {
-        const string text="namespace Library{interface IProvider{static int Read();}interface IExtra{static int Extra();}static class Answer:IProvider,IExtra{public static int Read()=>42;public static int Extra()=>7;}weak alias Selected:IProvider=Answer;struct Handler<P>{}extension<P:IProvider> Handler<P>{public int Visible()=>P::Read();}extension<P:IExtra> Handler<P>{public int Hidden()=>P::Extra();}int Cached(Handler<Answer> target)=>target.Hidden();int Inspect(Handler<Selected> target)=>target.Visible();}";
+        const string text="namespace Library{interface IProvider{static int Read();}interface IExtra{static int Extra();}static class Answer:IProvider,IExtra{public static int Read()=>42;public static int Extra()=>7;}weak constrained alias Selected:IProvider=Answer;struct Handler<P>{}extension<P:IProvider> Handler<P>{public int Visible()=>P::Read();}extension<P:IExtra> Handler<P>{public int Hidden()=>P::Extra();}int Cached(Handler<Answer> target)=>target.Hidden();int Inspect(Handler<Selected> target)=>target.Visible();}";
         var source=new SourceFile(Path.GetFullPath("namespaced-alias-capabilities.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,diagnostic=>diagnostic.Severity==DiagnosticSeverity.Error);

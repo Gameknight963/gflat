@@ -1,1 +1,1 @@
-public weak alias GC : Standard::IGarbageCollector = Standard::TracingCollector;
+public weak constrained alias GC : Standard::IGarbageCollector = Standard::TracingCollector;

@@ -394,7 +394,7 @@ C locale. See [floating-point parsing](FLOATING_PARSING.md).
 The global constrained `GC` alias selects the managed-reference provider:
 
 ```csharp
-public weak alias GC : Standard::IGarbageCollector = Standard::TracingCollector;
+public weak constrained alias GC : Standard::IGarbageCollector = Standard::TracingCollector;
 ```
 
 Replace it with `replace alias GC = MyCollector;`. `T^` abbreviates

@@ -20,7 +20,7 @@ public sealed class DeclaredExtensionPrecedenceTests
                 public immutable int Identify()=>7;
             }
             struct Plain:IValue { public immutable int Read()=>43; }
-            weak alias Selected:IValue=Hidden;
+            weak constrained alias Selected:IValue=Hidden;
             int Identify<T:IValue>(ref immutable(T) value)=>value.Read();
             extension<T:IValue> T { public immutable int Identify() =>(*this).Read(); }
             int Forward<T:IValue>(ref immutable(T) value)=>value.Identify();
@@ -57,7 +57,7 @@ public sealed class DeclaredExtensionPrecedenceTests
             int Identify<T:Base>(ref immutable(T) value)=>value.Read();
             extension<T:Base> T { public immutable int Identify() =>(*this).Read(); }
             int Forward<T:Base>(ref immutable(T) value)=>value.Identify();
-            weak alias Selected:Base=Derived;
+            weak constrained alias Selected:Base=Derived;
             int main(){
                 Derived concrete=new();
                 if(concrete.Identify()!=7)return 1;

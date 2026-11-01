@@ -11,7 +11,7 @@ public sealed class ImportedOverloadConstraintTests
             public static int Read(long value) => 42;
             public static int Read(int value) => 7;
         }
-        weak alias Selected : IProvider = Answer;
+        weak constrained alias Selected : IProvider = Answer;
         struct Handler<P> { }
         """;
 

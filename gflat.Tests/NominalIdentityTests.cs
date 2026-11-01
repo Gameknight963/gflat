@@ -90,7 +90,7 @@ public sealed class NominalIdentityTests
                 public static int Read()=>42;
                 public static int Extra()=>1;
             }
-            weak alias Selected:IProvider=Answer;
+            weak constrained alias Selected:IProvider=Answer;
             int Invoke<P>()=>P::Extra();
             int main()=>Invoke<{{selected}}>();
             """;

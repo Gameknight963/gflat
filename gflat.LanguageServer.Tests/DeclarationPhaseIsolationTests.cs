@@ -21,7 +21,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations
                 interface IProvider {static int Read();}
                 static class Provider:IProvider {public static int Read()=>42;}
-                weak alias Selected:IProvider=Provider;
+                weak constrained alias Selected:IProvider=Provider;
                 int Run()=>Selected::Read();
             }
             """];
@@ -29,7 +29,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations {
                 interface IProvider {static int ();}
                 static class Provider:IProvider {public static int Read()=>42;}
-                weak alias Selected:IProvider=Provider;
+                weak constrained alias Selected:IProvider=Provider;
                 int Run()=>Selected::Read();
             }
             """];
@@ -37,7 +37,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations {
                 interface IProvider {static int Read);}
                 static class Provider:IProvider {public static int Read()=>42;}
-                weak alias Selected:IProvider=Provider;
+                weak constrained alias Selected:IProvider=Provider;
                 int Run()=>Selected::Read();
             }
             """];
@@ -45,7 +45,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations {
                 interface IProvider {static int Read();}
                 static class :IProvider {public static int Read()=>42;}
-                weak alias Selected:IProvider=Provider;
+                weak constrained alias Selected:IProvider=Provider;
                 int Run()=>Selected::Read();
             }
             """];
@@ -53,7 +53,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations {
                 interface IProvider {static int Read();}
                 static class Provider: {public static int Read()=>42;}
-                weak alias Selected:IProvider=Provider;
+                weak constrained alias Selected:IProvider=Provider;
                 int Run()=>Selected::Read();
             }
             """];
@@ -61,7 +61,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations {
                 interface IProvider {static int Read();}
                 static class Provider:IProvider {public static int Read()=>42;
-                weak alias Selected:IProvider=Provider;
+                weak constrained alias Selected:IProvider=Provider;
                 int Run()=>Selected::Read();
             }
             """];
@@ -69,7 +69,7 @@ public sealed class DeclarationPhaseIsolationTests
             namespace Mutations {
                 interface IProvider {static int Read();}
                 static class Provider:IProvider {public static int Read()=>42;}
-                weak alias Selected:IProvider=;
+                weak constrained alias Selected:IProvider=;
                 int Run()=>Selected::Read();
             }
             """];

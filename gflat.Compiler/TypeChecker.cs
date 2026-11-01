@@ -5718,7 +5718,10 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_localAliases.Count > 0)
+            {
                 _localAliases.Peek()[node.Name] = node.TargetType;
+                ValidateLocalAliasContract(node);
+            }
             else if (_currentNamespace != null)
                 _currentNamespace.Aliases[node.Name] = node.TargetType;
             else

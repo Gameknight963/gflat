@@ -56,7 +56,7 @@ public sealed class GenericTypeBindingReentryTests
 
     private const string ContractDeclarations = """
         interface IFactory { static Owner Make(); }
-        alias Selected : IFactory = Box<int>;
+        constrained alias Selected : IFactory = Box<int>;
         struct Owner { public Selected value; }
         struct Box<T> : IFactory {
             public T value;

@@ -275,6 +275,7 @@ namespace gflat
             int modifierStart = _pos;
             Token? fieldModifier = null;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
+            bool isConstrainedAlias = false;
             AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
 
             while (true)
@@ -311,6 +312,12 @@ namespace gflat
                     if (isStatic) throw new TypeCheckException("Duplicate static modifier", line);
                     isStatic = true;
                 }
+                else if (IsConstrainedAliasModifier())
+                {
+                    if (isConstrainedAlias) throw new TypeCheckException("Duplicate constrained modifier", Current.Span);
+                    isConstrainedAlias = true;
+                    Consume();
+                }
                 else if (Check(TokenKind.Weak) || Check(TokenKind.Replace) || Check(TokenKind.Expect))
                 {
                     if (implementation != FunctionImplementationKind.Ordinary)
@@ -341,7 +348,7 @@ namespace gflat
             }
 
             if (Check(TokenKind.Alias))
-                return Finish(ParseAliasDeclaration(accessibility, line, implementation));
+                return Finish(ParseAliasDeclaration(accessibility, line, implementation, isConstrainedAlias));
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
             if (Check(TokenKind.Class))
@@ -742,6 +749,7 @@ namespace gflat
             bool isOverride = false;
             bool isAbstract = false;
             bool isInline = false;
+            bool isConstrainedAlias = false;
             Token? fieldModifier = null;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
             AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
@@ -763,6 +771,12 @@ namespace gflat
                 else if (Check(TokenKind.Override)) { fieldModifier ??= Current; isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { fieldModifier ??= Current; isAbstract = true; Consume(); }
                 else if (Match(TokenKind.Inline)) { if (isInline) throw new TypeCheckException("Duplicate inline modifier", line); isInline = true; }
+                else if (IsConstrainedAliasModifier())
+                {
+                    if (isConstrainedAlias) throw new TypeCheckException("Duplicate constrained modifier", Current.Span);
+                    isConstrainedAlias = true;
+                    Consume();
+                }
                 else if (Check(TokenKind.Weak) || Check(TokenKind.Replace) || Check(TokenKind.Expect))
                 {
                     if (implementation != FunctionImplementationKind.Ordinary)
@@ -817,7 +831,7 @@ namespace gflat
             }
 
             if (Check(TokenKind.Alias))
-                return Finish(ParseAliasDeclaration(accessibility, line, implementation));
+                return Finish(ParseAliasDeclaration(accessibility, line, implementation, isConstrainedAlias));
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
 
@@ -1428,6 +1442,12 @@ namespace gflat
         {
             int line = Current.Line;
 
+            if (IsConstrainedAliasModifier())
+            {
+                Consume();
+                return ParseAliasDeclaration(TokenKind.Private, line, isConstrained: true);
+            }
+
             switch (Current.Kind)
             {
                 case TokenKind.Return:
@@ -1549,9 +1569,19 @@ namespace gflat
             }
         }
 
-        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line, FunctionImplementationKind kind = FunctionImplementationKind.Ordinary) => Located(() => ParseAliasDeclarationCoreLocated(accessibility, line, kind));
+        private bool IsConstrainedAliasModifier()
+        {
+            if (!Check(TokenKind.Identifier) || Current.Text != "constrained") return false;
+            int offset = 1;
+            while (Peek(offset).Kind is TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal or
+                TokenKind.Weak or TokenKind.Expect or TokenKind.Replace ||
+                Peek(offset).Kind == TokenKind.Identifier && Peek(offset).Text == "constrained") offset++;
+            return Peek(offset).Kind == TokenKind.Alias;
+        }
 
-        private AliasDeclaration ParseAliasDeclarationCoreLocated(TokenKind accessibility, int line, FunctionImplementationKind kind)
+        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line, FunctionImplementationKind kind = FunctionImplementationKind.Ordinary, bool isConstrained = false) => Located(() => ParseAliasDeclarationCoreLocated(accessibility, line, kind, isConstrained));
+
+        private AliasDeclaration ParseAliasDeclarationCoreLocated(TokenKind accessibility, int line, FunctionImplementationKind kind, bool isConstrained)
         {
             Expect(TokenKind.Alias);
             string name = Expect(TokenKind.Identifier).Text;
@@ -1568,7 +1598,7 @@ namespace gflat
             if (kind != FunctionImplementationKind.Expect && target == null)
                 throw new TypeCheckException("An alias requires a target; use expect for an implementation supplied elsewhere", line);
             Expect(TokenKind.Semicolon);
-            var declaration = new AliasDeclaration(name, target!, accessibility, line) { ImplementationKind = kind };
+            var declaration = new AliasDeclaration(name, target!, accessibility, line) { ImplementationKind = kind, IsConstrained = isConstrained };
             declaration.Constraints.AddRange(constraints);
             return declaration;
         }

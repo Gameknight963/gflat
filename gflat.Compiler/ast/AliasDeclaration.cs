@@ -7,6 +7,7 @@ namespace gflat.ast
         public string Name { get; internal set; }
         public TypeExpression TargetType { get; internal set; }
         public FunctionImplementationKind ImplementationKind { get; set; }
+        public bool IsConstrained { get; set; }
         public List<TypeExpression> Constraints { get; } = new();
         public TokenKind Accessibility { get; }
 

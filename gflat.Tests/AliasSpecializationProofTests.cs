@@ -10,7 +10,7 @@ public sealed class AliasSpecializationProofTests
             public static int Read(long value) => 42;
             public static int Read(int value) => 7;
         }
-        weak alias Selected : IProvider = Answer;
+        weak constrained alias Selected : IProvider = Answer;
         """;
 
     [Theory]
@@ -44,7 +44,7 @@ public sealed class AliasSpecializationProofTests
                 public static int Read() => 42;
                 public static int Extra() => 7;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             struct Handler<P> { }
             struct A { public int Convert<P>(Handler<P> value) => P::Extra(); }
             struct B { public int Convert<P>(Handler<P> value) => 0; }
@@ -88,7 +88,7 @@ public sealed class AliasSpecializationProofTests
                 public static int Read() => 42;
                 public static int Extra() => 7;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             int Hidden<P>() => P::Extra();
             int Forward<P>() {
                 alias Local = P;
@@ -114,7 +114,7 @@ public sealed class AliasSpecializationProofTests
                 public static int Read(long value) => 42;
                 private static int Read(int value) => 7;
             }
-            weak alias Selected : Contract = Contract;
+            weak constrained alias Selected : Contract = Contract;
             int main() => Selected::Read(0);
             """, optimization);
         Assert.Equal(42, result.ExitCode);

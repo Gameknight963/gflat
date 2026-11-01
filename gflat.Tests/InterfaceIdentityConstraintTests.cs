@@ -79,7 +79,7 @@ public sealed class InterfaceIdentityConstraintTests
                 public int Read() => 42;
                 public int Secret() => 7;
             }
-            weak alias Selected : IVisible = Value;
+            weak constrained alias Selected : IVisible = Value;
             struct Box<T : IHidden> {}
             int main() { Box<Selected> value = new(); return 0; }
             """, options: new() { NoStdLib = true }));

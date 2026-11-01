@@ -21,7 +21,7 @@ public sealed class ProviderBindingTests
                 public static int Read() => 42;
                 public static int Extra() => 0;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             """ + use));
         Assert.Contains("not exposed", error.Message);
     }
@@ -36,7 +36,7 @@ public sealed class ProviderBindingTests
                 public static int Read() => 42;
                 public static int Extra() => 0;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             int Invoke<P : IExtra>() => 1;
             int main() => Invoke<Selected>();
             """));
@@ -49,13 +49,13 @@ public sealed class ProviderBindingTests
         Assert.Equal(42, CompilerTestHelper.Run("""
             class Base { public static int Read() => 42; }
             class Answer : Base { public static int Extra() => 0; }
-            alias Selected : Base = Answer;
+            constrained alias Selected : Base = Answer;
             int main() => Selected::Read();
             """).ExitCode);
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
             class Base { public static int Read() => 42; }
             class Answer : Base { public static int Extra() => 0; }
-            alias Selected : Base = Answer;
+            constrained alias Selected : Base = Answer;
             int main() => Selected::Extra();
             """));
         Assert.Contains("not exposed", error.Message);
@@ -70,7 +70,7 @@ public sealed class ProviderBindingTests
                 public static int Read() => 42;
                 public static int Read(int ignored) => 0;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             int main() => Selected::Read(1);
             """));
         Assert.Contains("No matching overload for 'Read'", error.Message);
@@ -85,7 +85,7 @@ public sealed class ProviderBindingTests
                 public static int Read() => 42;
                 public struct Hidden { public int value; }
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             int main() { Selected::Hidden value = new Selected::Hidden(); return 0; }
             """));
         Assert.Contains("not exposed", error.Message);
@@ -95,7 +95,7 @@ public sealed class ProviderBindingTests
     public void QualifiedReplacementTargetResolvesInItsSourceNamespace()
     {
         Assert.Equal(42, CompilerTestHelper.Run([
-            new SourceFile("binding.gf", "namespace Api { public interface IProvider { static int Read(); } public expect alias Selected : IProvider; }"),
+            new SourceFile("binding.gf", "namespace Api { public interface IProvider { static int Read(); } public expect constrained alias Selected : IProvider; }"),
             new SourceFile("replacement.gf", "namespace App { static class Provider : Api::IProvider { public static int Read() => 42; } replace alias Api::Selected = Provider; }"),
             new SourceFile("main.gf", "int main() => Api::Selected::Read();")
         ]).ExitCode);
@@ -120,7 +120,7 @@ public sealed class ProviderBindingTests
 
     [Theory]
     [InlineData("alias A = B; alias B = A;", "Cyclic")]
-    [InlineData("interface I { static int F(); } static class X {} weak alias A : I = X;", "does not satisfy")]
+    [InlineData("interface I { static int F(); } static class X {} weak constrained alias A : I = X;", "does not satisfy")]
     [InlineData("weak alias A = int; replace alias A = bool; replace alias A = char;", "at most one")]
     [InlineData("static class X { public expect alias A; }", "must be declared in a namespace")]
     public void InvalidUnusedAliasBindingsAreChecked(string source, string expected)
@@ -155,7 +155,7 @@ public sealed class ProviderBindingTests
         Assert.Equal(42, CompilerTestHelper.Run("""
             interface IProvider { static int Read(); }
             static class Answer : IProvider { public static int Read() => 42; }
-            public expect alias Selected : IProvider;
+            public expect constrained alias Selected : IProvider;
             replace alias Selected = Answer;
             int main() => Selected::Read();
             """).ExitCode);
@@ -163,7 +163,7 @@ public sealed class ProviderBindingTests
             interface IProvider { static int Read(); }
             static class Original : IProvider { public static int Read() => 1; }
             static class Answer : IProvider { public static int Read() => 42; }
-            weak alias Selected : IProvider = Original;
+            weak constrained alias Selected : IProvider = Original;
             replace alias Selected = Answer;
             int main() => Selected::Read();
             """).ExitCode);
@@ -203,7 +203,7 @@ public sealed class ProviderBindingTests
                 public static int Read() => 42;
                 public static int Extra() => 0;
             }
-            weak alias Selected : IProvider = Answer;
+            weak constrained alias Selected : IProvider = Answer;
             int main() => Selected::Extra();
             """));
         Assert.Contains("not exposed", error.Message);

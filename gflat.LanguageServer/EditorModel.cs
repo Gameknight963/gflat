@@ -626,9 +626,13 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var" or "implementation" or "extension" or "explicit")) return false;
+        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var" or "implementation" or "extension" or "explicit" or "constrained")) return false;
         foreach (var syntax in nodes[path])
         {
+            if (token.Text == "constrained" && syntax.Node is AliasDeclaration { IsConstrained: true } &&
+                token.Start >= syntax.Span.Start &&
+                tokens[path].FirstOrDefault(t => t.Kind == TokenKind.Alias && t.Start >= syntax.Span.Start)?.Start is { } aliasStart &&
+                token.End < aliasStart) return true;
             if (token.Text == "implementation" && syntax.Node is PrimitiveImplementationDeclaration && token.Start == syntax.Span.Start) return true;
             if (token.Text == "extension" && syntax.Node is ExtensionDeclaration && token.Start == syntax.Span.Start) return true;
             // The opt-in prefix is consumed before the implementation node's
@@ -729,7 +733,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var", "alias", "constrained"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension", "alias", "constrained"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly", "immutable", "managed" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)

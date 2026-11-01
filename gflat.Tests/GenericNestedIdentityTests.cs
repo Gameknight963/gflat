@@ -72,7 +72,7 @@ public sealed class GenericNestedIdentityTests
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
             interface IFactory { static int Read(); }
-            alias Selected : IFactory = Family<int>;
+            constrained alias Selected : IFactory = Family<int>;
             struct Owner { public Selected::Item value; }
             struct Family<T> : IFactory {
                 public struct Item { public T number; }

@@ -17,7 +17,7 @@ public sealed class ExtensionAliasConstraintEditorTests
                 public static int Read()=>42;
                 public static int Extra()=>7;
             }
-            weak alias Selected:IProvider=Answer;
+            weak constrained alias Selected:IProvider=Answer;
             struct Handler<P>{}
             extension<P:IProvider> Handler<P>{public int Visible()=>P::Read();}
             extension<P:IExtra> Handler<P>{public int Hidden()=>P::Extra();}

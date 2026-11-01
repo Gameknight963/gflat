@@ -12,7 +12,7 @@ public sealed class ExtensionAliasConstraintTests
             public static int Read()=>42;
             public static int Extra()=>7;
         }
-        weak alias Selected:IProvider=Answer;
+        weak constrained alias Selected:IProvider=Answer;
         struct Handler<P>{}
         int Visible<P:IProvider>(Handler<P> value)=>P::Read();
         extension<P:IProvider> Handler<P> { public int Visible() =>P::Read(); }
@@ -70,7 +70,7 @@ public sealed class ExtensionAliasConstraintTests
             interface IExtra {static int Extra();}
             class Base:IProvider {public static int Read()=>42;}
             class Derived:Base,IExtra {public static int Extra()=>7;}
-            weak alias Selected:Base=Derived;
+            weak constrained alias Selected:Base=Derived;
             struct Handler<P>{}
             int BaseMethod<P:Base>(Handler<P> value)=>0;
             extension<P:Base> Handler<P> { public int BaseMethod() =>0; }

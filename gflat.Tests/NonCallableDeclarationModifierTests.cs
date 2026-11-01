@@ -51,8 +51,8 @@ public sealed class NonCallableDeclarationModifierTests
             public abstract interface IInstance{}
             public static interface IProvider{int Read();}
             public static class Provider:IProvider{public static int Read()=>42;}
-            public weak alias Selected:IProvider=Provider;
-            public expect alias Required:IProvider;
+            public weak constrained alias Selected:IProvider=Provider;
+            public expect constrained alias Required:IProvider;
             replace alias Required=Provider;
             public alias View=readonly(int)*;
             int main(){int value=42;View pointer=&value;return Selected::Read()+Required::Read()-*pointer;}

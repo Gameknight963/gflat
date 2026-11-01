@@ -142,7 +142,7 @@ public sealed class SourceGenericStaticMethodGroupTests
         const string library = """
             interface IProvider{static int Read();}
             static class Provider:IProvider{public static int Read()=>1;public static int Extra()=>2;}
-            weak alias Restricted:IProvider=Provider;
+            weak constrained alias Restricted:IProvider=Provider;
             alias Plain=Provider;
             """;
         const string text = "void Template<U>(){Plain::Read();Restricted::Read();}int main()=>0;";
@@ -163,7 +163,7 @@ public sealed class SourceGenericStaticMethodGroupTests
     [InlineData(true)]
     public void UncheckedGenericAliasApplicationsDoNotExposeProviderImplementation(bool namespaced)
     {
-        string library = "interface IProvider{static int Read();}static class Provider:IProvider{public static int Read()=>1;public static int Extra()=>2;}weak alias Restricted:IProvider=Provider;";
+        string library = "interface IProvider{static int Read();}static class Provider:IProvider{public static int Read()=>1;public static int Extra()=>2;}weak constrained alias Restricted:IProvider=Provider;";
         if (namespaced) library = "namespace Lib{" + library + "}";
         string qualifier = namespaced ? "Lib::Restricted<U>" : "Restricted<U>";
         // The parser accepts the type application in this deferred source body.

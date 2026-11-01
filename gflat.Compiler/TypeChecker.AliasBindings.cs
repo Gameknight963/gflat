@@ -6,6 +6,7 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<string, AliasDeclaration> constrainedAliases = new();
+    private readonly HashSet<AliasDeclaration> aliasesWithConstraints = new();
     private readonly Dictionary<TypeExpression, string> aliasTargetNamespaces = new();
     private readonly Dictionary<TypeExpression, AliasDeclaration> aliasContracts = new();
     private readonly Dictionary<AliasDeclaration, List<TypeExpression>> boundAliasConstraints = new();
@@ -98,7 +99,11 @@ public partial class TypeChecker
             }
             if (node is AliasDeclaration alias)
             {
-                if (_localAliases.Count > 0) _localAliases.Peek()[alias.Name] = alias.TargetType;
+                if (_localAliases.Count > 0)
+                {
+                    _localAliases.Peek()[alias.Name] = alias.TargetType;
+                    ValidateLocalAliasContract(alias);
+                }
                 return;
             }
             if (node is NamespaceAccessExpression access) ValidateAliasMember(access);
@@ -218,7 +223,7 @@ public partial class TypeChecker
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
         try
         {
-            return declaration.Constraints.Any(c => TypesMatch(ResolveAlias(c), constraint) ||
+            return (boundAliasConstraints.GetValueOrDefault(declaration) ?? declaration.Constraints).Any(c => TypesMatch(ResolveAlias(c), constraint) ||
                 constraint is NamedTypeExpression named &&
                 (GetClassByIdentity(named.Name) != null && TypeDerivesFromClass(ResolveAlias(c), named.Name) ||
                  GetInterface(named.Name) != null && TypeImplementsInterface(ResolveAlias(c), named.Name)));
@@ -287,6 +292,8 @@ public partial class TypeChecker
                     throw new TypeCheckException($"Alias '{group.Key.Name}' is not weak or expect", replacement.Alias.Span);
                 if (replacement.Alias.Constraints.Count != 0)
                     throw new TypeCheckException("A replacement inherits its alias contract and cannot redeclare constraints", replacement.Alias.Span);
+                if (replacement.Alias.IsConstrained)
+                    throw new TypeCheckException("A replacement inherits its alias view and cannot declare constrained", replacement.Alias.Span);
                 original.Alias.TargetType = replacement.Alias.TargetType;
                 declarationNamespaces[replacement.Alias] = group.Key.Scope;
                 replacement.Members.Remove(replacement.Alias);
@@ -296,8 +303,12 @@ public partial class TypeChecker
             selectedAliasTargets.Add(original.Alias.TargetType);
             if (original.Alias.Constraints.Count != 0)
             {
-                constrainedAliases[Join(group.Key.Scope, group.Key.Name)] = original.Alias;
-                aliasContracts[original.Alias.TargetType] = original.Alias;
+                aliasesWithConstraints.Add(original.Alias);
+                if (original.Alias.IsConstrained)
+                {
+                    constrainedAliases[Join(group.Key.Scope, group.Key.Name)] = original.Alias;
+                    aliasContracts[original.Alias.TargetType] = original.Alias;
+                }
             }
         }
         void Collect(List<AstNode> members, string scope)
@@ -313,7 +324,7 @@ public partial class TypeChecker
 
     private void ValidateAliasContracts()
     {
-        foreach (var alias in constrainedAliases.Values)
+        foreach (var alias in aliasesWithConstraints)
         {
             AnalyzeSafely(() =>
             {
@@ -330,12 +341,24 @@ public partial class TypeChecker
             AnalyzeSafely(() => ResolveAliasBindingTarget(target));
     }
 
+    private void ValidateLocalAliasContract(AliasDeclaration alias)
+    {
+        if (alias.Constraints.Count == 0) return;
+        var constraints = alias.Constraints.Select(ResolveAlias).ToList();
+        boundAliasConstraints[alias] = constraints;
+        if (alias.IsConstrained) aliasContracts[alias.TargetType] = alias;
+        var implementation = ResolveAlias(alias.TargetType);
+        foreach (var constraint in constraints)
+            if (!TypeSatisfiesConstraint(implementation, constraint))
+                throw new TypeCheckException($"Implementation of alias '{alias.Name}' does not satisfy '{TypeName(constraint)}'", alias.Span);
+    }
+
     private void ValidateAliasMember(NamespaceAccessExpression access, MethodDeclaration? selectedMethod = null)
     {
         var seen = new HashSet<TypeExpression>();
         AliasDeclaration? declaration = FindContract(access.Left);
         if (declaration == null) return;
-        foreach (var constraint in declaration.Constraints)
+        foreach (var constraint in boundAliasConstraints.GetValueOrDefault(declaration) ?? declaration.Constraints)
         {
             using var context = SourceContext.Enter(declaration.Span);
             using var locals = IsolateDeclarationContext();

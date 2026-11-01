@@ -241,6 +241,19 @@ These queries inspect metadata without opening file contents. An unreadable
 regular file can still return true from `File::Exists`. Path encoding follows
 the host's narrow-character API, as it does for opening files.
 
+### Creating directories
+
+`Directory::CreateDirectory(path)` creates one directory whose parent already
+exists. An existing directory succeeds. Missing parents, existing files, invalid
+paths, and host creation failures throw `IOException`.
+
+Paths use the host's narrow encoding and separator rules. Relative paths and dot
+components and symbolic links follow native filesystem lookup.
+
+Windows uses [`_mkdir`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/mkdir-wmkdir).
+POSIX uses [`mkdir`](https://man7.org/linux/man-pages/man3/mkdir.3p.html) with mode
+0777, modified by the process umask and directory ACLs.
+
 #### Temporary files
 
 Closing a temporary stream removes its backing file. Normal process exit also
@@ -458,8 +471,9 @@ For incremental reading, use [FileLines or FileStream.Lines()](#reading-lines).
 
 `FileStream.gf` provides stream IO with `SeekOrigin.gf`, the byte-reader contract,
 and IO exception sources.
-`Directory.gf` provides `Directory::Exists` independently of the owning text and
-collection types.
+`Directory.gf` provides path queries and single-directory creation with
+`IOException.gf` and the normal core exception support. The C directory adapter
+can also be linked from a minimal program without these library types.
 The static `File` facade adds whole-file String and Vector operations, so selecting
 `File.gf` also requires those types, `FileLines.gf`, and their dependencies. Low-level code can call
 `FileStream::OpenRead`, `OpenWrite`, `CreateNew`, `OpenAppend`, and `OpenTemporary` directly.

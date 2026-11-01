@@ -8,9 +8,19 @@ public static class Directory
         if (path[0] == '\0') return false;
         return directory_path_detail::__gflat_stdio_path_kind(path) == 2;
     }
+
+    // Creates one directory whose parent exists. An existing directory succeeds.
+    public static void CreateDirectory(readonly(char)* path)
+    {
+        if (path[0] == '\0') throw new IOException("Directory path is empty");
+        if (Directory::Exists(path)) return;
+        if (directory_path_detail::__gflat_stdio_make_directory(path) != 0 && !Directory::Exists(path))
+            throw new IOException("Directory creation failed");
+    }
 }
 
 namespace directory_path_detail
 {
     private extern int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
+    private extern int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
 }

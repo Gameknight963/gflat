@@ -135,18 +135,20 @@ public sealed class FileExistenceTests(ITestOutputHelper output)
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void DirectoryQueriesWorkWithOnlyTheirOwnSourceAndTheCBridge(int optimization)
+    public void DirectoryQueriesWorkWithAnExplicitDirectorySourceClosure(int optimization)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Standard/libc/IO/Directory.gf");
-        string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)), new SourceFile("directory-only.gf", """
+        string[] sources = ["core/IO/IOException.gf", "libc/IO/Directory.gf"];
+        var files = sources.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))));
+        string ir = Compiler.Emit(files.Append(new SourceFile("directory-only.gf", """
             using Standard::IO;
 
             int main() nothrow {
                 if (!Directory::Exists(".") || Directory::Exists("")) return 1;
+                Directory::CreateDirectory(".");
                 return 0;
             }
-            """)], options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
-        Assert.Equal((false, true), NativeToolchain.RequiredNativeRuntimes(ir));
+            """)), options: new() { InternalizeFunctions = true });
+        Assert.Equal((true, true), NativeToolchain.RequiredNativeRuntimes(ir));
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #ifdef _WIN32
+#include <direct.h>
 #include <io.h>
 #else
 #include <sys/types.h>
@@ -88,4 +89,12 @@ int __gflat_stdio_path_kind(const char* path) {
     if (S_ISDIR(details.st_mode)) return 2;
 #endif
     return 0;
+}
+
+int __gflat_stdio_make_directory(const char* path) {
+#ifdef _WIN32
+    return _mkdir(path);
+#else
+    return mkdir(path, 0777);
+#endif
 }

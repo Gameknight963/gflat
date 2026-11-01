@@ -55,6 +55,9 @@ See [file APIs](../../docs/HOST_RUNTIME.md#files),
 `File::ReadAllText(path)` returns a String. `File::ReadAllBytes(path)` returns a
 Vector<byte>. Both accept an optional maximum byte count.
 
+`File::ReadAllLines(path)` returns a Vector<String>. `WriteAllLines` and
+`AppendAllLines` borrow the supplied strings and follow each one with LF.
+
 ```csharp
 using Standard::IO;
 using Standard::Text;

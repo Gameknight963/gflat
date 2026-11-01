@@ -12,18 +12,18 @@ public struct FileStream : ITextWriter, IByteReader
 
     public FileStream() { handle = null; }
 
-    private FileStream(immutable(char*) path, immutable(char*) mode)
+    private FileStream(readonly(char)* path, readonly(char)* mode)
     {
         handle = file_detail::fopen(path, mode);
         if (handle == null) throw new IOException("File open failed");
     }
 
     // Opens an existing file for binary reading. Opening failure throws IOException.
-    public static FileStream OpenRead(immutable(char*) path) => new FileStream(path, "rb");
+    public static FileStream OpenRead(readonly(char)* path) => new FileStream(path, "rb");
     // Creates or truncates a binary output file. Opening failure throws IOException.
-    public static FileStream OpenWrite(immutable(char*) path) => new FileStream(path, "wb");
+    public static FileStream OpenWrite(readonly(char)* path) => new FileStream(path, "wb");
     // Opens a binary append stream, creating a missing file. Opening failure throws IOException.
-    public static FileStream OpenAppend(immutable(char*) path) => new FileStream(path, "ab");
+    public static FileStream OpenAppend(readonly(char)* path) => new FileStream(path, "ab");
 
     // Creates a temporary binary read/write stream whose file is removed on close.
     // Switching read/write direction follows libc positioning rules.
@@ -165,7 +165,7 @@ public struct FileStream : ITextWriter, IByteReader
     }
 
     // Writes bytes before the first zero.
-    public void Write(immutable(char*) text)
+    public void Write(readonly(char)* text)
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
@@ -183,8 +183,8 @@ public struct FileStream : ITextWriter, IByteReader
 
     // Writes one LF byte on every platform.
     public void WriteLine() { this.Write("\n", 1); }
-    public void WriteLine(immutable(char*) text) { this.Write(text); this.WriteLine(); }
-    public void WriteLine(immutable(char*) data, nuint count) { this.Write(data, count); this.WriteLine(); }
+    public void WriteLine(readonly(char)* text) { this.Write(text); this.WriteLine(); }
+    public void WriteLine(readonly(char)* data, nuint count) { this.Write(data, count); this.WriteLine(); }
 
     // Closes the stream and reports IOException on close failure.
     // The FileStream stays closed even on failure. Repeated Close is allowed.
@@ -204,10 +204,10 @@ public struct FileStream : ITextWriter, IByteReader
 
 namespace file_detail
 {
-    private extern FileHandle fopen(immutable(char*) path, immutable(char*) mode);
+    private extern FileHandle fopen(readonly(char)* path, readonly(char)* mode);
     private extern int fclose(FileHandle stream);
     private extern nuint fread(char* data, nuint size, nuint count, FileHandle stream);
-    private extern nuint fwrite(immutable(char*) data, nuint size, nuint count, FileHandle stream);
+    private extern nuint fwrite(readonly(char)* data, nuint size, nuint count, FileHandle stream);
     private extern int fflush(FileHandle stream);
     private extern int ferror(FileHandle stream);
     private extern int feof(readonly(void)* stream);

@@ -316,11 +316,42 @@ buffering add storage overhead. On read, limit, or allocation failure, partial
 results are destroyed and the file closes. An existing assignment target remains
 unchanged. Allocation failure throws `BadAllocException`.
 
+### Whole-file lines
+
+`File::ReadAllLines(path)` returns an owning `Vector<String>`. LF and CRLF end a
+line. The returned strings exclude those endings and retain bare CR, embedded
+zeros, and other bytes. An empty file returns an empty vector. A final line
+ending completes its line without adding an extra empty string.
+
+```csharp
+using Standard::Collections;
+using Standard::IO;
+using Standard::Text;
+
+int main()
+{
+    Vector<String> lines = File::ReadAllLines("input.txt");
+    File::WriteAllLines("output.txt", ref lines);
+    return 0;
+}
+```
+
+`WriteAllLines` replaces the destination. `AppendAllLines` appends at its existing
+end. Both write each String's counted contents followed by LF, including the last
+String. Appending does not insert a separator before the first supplied line.
+
+The write overloads borrow `ref immutable(Vector<String>)`,
+`Span<immutable(String)>`, or `immutable(String)*` with a count. Empty input still
+opens the file, so writes create or truncate and appends create a missing file.
+Writes can leave partial output on failure. Closing errors propagate.
+
+For incremental reading, use [FileLines or FileStream.Lines()](#reading-lines).
+
 ### Selecting file sources
 
 `FileStream.gf` provides stream IO with the byte-reader and IO exception sources.
 The static `File` facade adds whole-file String and Vector operations, so selecting
-`File.gf` also requires those types and their dependencies. Low-level code can call
+`File.gf` also requires those types, `FileLines.gf`, and their dependencies. Low-level code can call
 `FileStream::OpenRead`, `OpenWrite`, `OpenAppend`, and `OpenTemporary` directly.
 
 ### File digests

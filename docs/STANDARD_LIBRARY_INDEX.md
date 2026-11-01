@@ -129,7 +129,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `JsonPointer::TryResolve` | [Borrowed JSON Pointer lookup](JSON_POINTER.md) |
 | `JsonWriter`, `JsonWriteException` | [JSON writer](JSON_WRITER.md) |
 | `CsvReader`, `CsvReaderText`, `CsvParseException` | [CSV reader](CSV_READER.md) |
-| `CsvWriter` | [CSV writer](CSV_WRITER.md) |
+| `CsvWriter`, borrowed String-row `WriteRecord` | [CSV writer](CSV_WRITER.md) |
 | `PercentEncoding`, optional String conveniences | [Component percent encoding](BINARY_CODECS.md#component-percent-encoding) |
 
 ### Paths, bits, and binary data

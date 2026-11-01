@@ -14,6 +14,8 @@ public struct CsvWriter
         failed = false;
     }
 
+    public bool IsAtRecordBoundary { immutable get nothrow => !hasField && !failed; }
+
     private immutable void CheckUsable()
     {
         if (failed) throw new Exception("CSV writer cannot continue after output failure");

@@ -25,8 +25,10 @@ public static class Workspace
     }
     public static string FileUri(string path) => new Uri(Path.GetFullPath(path)).AbsoluteUri;
 
-    public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents, ProjectWorkspace? projects = null)
+    public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents, ProjectWorkspace? projects = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var output = new Dictionary<string, List<EditorDiagnostic>>(Paths);
         var models = new Dictionary<string, EditorModel>(Paths);
         var configured = new HashSet<string>(Paths);
@@ -37,6 +39,7 @@ public static class Workspace
         projects ??= new();
         foreach (var document in documents.Values.Where(d => d.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             WatchDiscovery(document.Path);
             try
             {
@@ -115,6 +118,7 @@ public static class Workspace
             bool unreadable = false;
             foreach (string path in paths)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 output.TryAdd(path, new());
                 try { snapshots.Add(new(path, documents.TryGetValue(path, out var open) ? open.Text : File.ReadAllText(path))); }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
@@ -128,10 +132,9 @@ public static class Workspace
                 if (options?.NoStdLib != true && !snapshots.Any(s => Paths.Equals(s.Path, open.Path))) snapshots.Add(new(open.Path, open.Text));
             try
             {
-                var analysis = new AnalysisSnapshot(snapshots, options);
+                var (analysis, model) = projects.Analyses.Get(snapshots, options, cancellationToken);
                 foreach (var source in analysis.Nodes.Select(n => n.Span.Source).OfType<SourceFile>().DistinctBy(s => s.Id))
                     if (StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(source.Path, relative))) watched.Add(source.Path);
-                var model = new EditorModel(analysis, snapshots);
                 foreach (var source in snapshots) models[source.Path] = model;
                 foreach (var diagnostic in analysis.Diagnostics)
                 {
@@ -142,6 +145,7 @@ public static class Workspace
                     output[path].Add(Convert(diagnostic));
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception error)
             {
                 output[snapshots[0].Path].Add(Problem("GFLS0002", "Compiler analysis failed: " + error.Message));

@@ -36,23 +36,30 @@ public sealed partial class EditorModel
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceTypeDeclarations = [];
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceCallableDeclarations = [];
     private readonly Dictionary<AstNode, Symbol> declarations = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<Token, Symbol?> references = new(ReferenceEqualityComparer.Instance);
+    private readonly ConcurrentDictionary<Token, Symbol?> references = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Syntax, int> scopeEnds = new(ReferenceEqualityComparer.Instance);
     private readonly record struct ScopeEnvironment(string Namespace, string? Owner, bool HasNamespace, bool IsStatic);
     private readonly Dictionary<Syntax, ScopeEnvironment> scopeEnvironments = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, SyntaxRangeIndex> contexts = new(Workspace.Paths);
+    private readonly Dictionary<(string Path, int End), Syntax[]> callsByCalleeEnd = [];
+    private readonly HashSet<Token> typePositionTokens = new(ReferenceEqualityComparer.Instance);
 
-    public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files)
+    public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         this.snapshot = snapshot;
         IndexScopeEnvironments();
         var allFiles = files.Concat(snapshot.Nodes.Select(n => n.Span.Source).OfType<SourceFile>())
             .DistinctBy(s => s.Path, Workspace.Paths).ToArray();
         sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
+        var nodesBySource = snapshot.Nodes.Where(n => n.Span.Source != null)
+            .GroupBy(n => n.Span.Source!.Id).ToDictionary(group => group.Key, group => group.ToArray());
         foreach (var file in allFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try { tokens[file.Path] = Lexer.Tokenize(file, new DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
             catch (TypeCheckException) { tokens[file.Path] = []; }
-            nodes[file.Path] = snapshot.Nodes.Where(n => n.Span.Source?.Id == file.Id).ToArray();
+            nodes[file.Path] = nodesBySource.GetValueOrDefault(file.Id) ?? [];
             var braces = new Stack<int>();
             foreach (var token in tokens[file.Path])
             {
@@ -65,9 +72,21 @@ public sealed partial class EditorModel
             foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration or PropertyDeclaration or LambdaExpression or OperatorDeclaration or ExtensionDeclaration))
                 if (braces.Any(start => start >= node.Span.Start && start < node.Span.Start + node.Span.Length))
                     scopeEnds[node] = file.Text.Length + 1;
+            contexts[file.Path] = new SyntaxRangeIndex(nodes[file.Path], scopeEnds);
+            foreach (var group in nodes[file.Path].Where(n => n.Node is CallExpression)
+                .GroupBy(n => { var call = (CallExpression)n.Node; return call.Callee.Span.Start + call.Callee.Span.Length; }))
+                callsByCalleeEnd[(file.Path, group.Key)] = group.OrderBy(n => n.Span.Length).ToArray();
+            foreach (var syntax in nodes[file.Path].Where(n => n.Node is NamedTypeExpression && n.Span.Length > 0))
+            {
+                var fileTokens = tokens[file.Path];
+                for (int index = TokenStartIndex(fileTokens, syntax.Span.Start);
+                    index < fileTokens.Length && fileTokens[index].End < syntax.Span.Start + syntax.Span.Length; index++)
+                    typePositionTokens.Add(fileTokens[index]);
+            }
         }
         foreach (var entry in snapshot.Nodes)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var (name, kind, classification, type) = Describe(entry.Node);
             if (name == null) continue;
             var parents = Parents(entry).ToArray();
@@ -116,17 +135,15 @@ public sealed partial class EditorModel
             if (symbol.NameSpan.Source?.Path is { } path)
                 declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
         IndexSourceTypeNames();
+        cancellationToken.ThrowIfCancellationRequested();
         IndexTypeArgumentSeparators();
         IndexBoundCallables();
+        cancellationToken.ThrowIfCancellationRequested();
         IndexBoundProperties();
         IndexBoundFields();
+        cancellationToken.ThrowIfCancellationRequested();
         IndexSpliceReferences();
         IndexDocumentation();
-        // Resolve once on the analysis worker. Hover and semantic-token requests
-        // must not repeatedly walk the tree on the server's message loop.
-        foreach (var (path, ts) in tokens)
-            for (int i = 0; i < ts.Length; i++)
-                if (ts[i].Kind is TokenKind.Identifier or TokenKind.New) references[ts[i]] = ResolveCore(path, i);
     }
 
     private string ParameterText(Parameter p) => $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +
@@ -238,18 +255,22 @@ public sealed partial class EditorModel
     {
         var span = node.Span;
         if (span.Source == null || !tokens.TryGetValue(span.Source.Path, out var fileTokens)) return span with { Length = 0 };
-        var candidates = fileTokens.Where(t => t.Start >= span.Start && t.End < span.Start + span.Length && t.Text == name).ToArray();
+        Token? first = null;
         // In `String String`, the first occurrence belongs to the type.
-        if (type != null && type.Span.Source == span.Source)
+        for (int index = TokenStartIndex(fileTokens, span.Start);
+            index < fileTokens.Length && fileTokens[index].End < span.Start + span.Length; index++)
         {
-            var afterType = candidates.FirstOrDefault(t => t.Start >= type.Span.Start + type.Span.Length);
-            if (afterType != null) return afterType.Span;
+            var candidate = fileTokens[index];
+            if (candidate.Text != name) continue;
+            first ??= candidate;
+            if (type == null || type.Span.Source != span.Source || candidate.Start >= type.Span.Start + type.Span.Length)
+                return candidate.Span;
         }
-        return candidates.FirstOrDefault()?.Span ?? span with { Length = 0 };
+        return first?.Span ?? span with { Length = 0 };
     }
 
     private bool Contains(Syntax node, int offset) => offset >= node.Span.Start && offset < scopeEnds.GetValueOrDefault(node, node.Span.Start + node.Span.Length);
-    private Syntax? Context(string path, int offset) => nodes.GetValueOrDefault(path)?.Where(n => Contains(n, offset)).MinBy(n => scopeEnds.GetValueOrDefault(n, n.Span.Start + n.Span.Length) - n.Span.Start);
+    private Syntax? Context(string path, int offset) => contexts.GetValueOrDefault(path)?.Find(offset);
     private ScopeEnvironment ScopeAt(string path, int offset)
     {
         var context = Context(path, offset);
@@ -625,7 +646,21 @@ public sealed partial class EditorModel
         return Visible(path, offset, name);
     }
     private Symbol? Resolve(string path, int index)
-        => references.GetValueOrDefault(tokens[path][index]);
+    {
+        var token = tokens[path][index];
+        if (token.Kind is not (TokenKind.Identifier or TokenKind.New)) return null;
+        if (references.TryGetValue(token, out var resolved)) return resolved;
+        resolved = ResolveCore(token.Span.Source?.Path ?? path, index);
+        references.TryAdd(token, resolved);
+        return resolved;
+    }
+
+    private void EnsureReferences()
+    {
+        foreach (var (path, fileTokens) in tokens)
+            for (int index = 0; index < fileTokens.Length; index++)
+                if (fileTokens[index].Kind is TokenKind.Identifier or TokenKind.New) Resolve(path, index);
+    }
 
     private bool IsValueModelKeyword(string path, Token token)
     {
@@ -679,7 +714,8 @@ public sealed partial class EditorModel
         if (boundPropertyReferences.TryGetValue(token, out var boundProperty)) return boundProperty;
         if (boundFieldReferences.TryGetValue(token, out var boundField)) return boundField;
         if (boundCallableReferences.TryGetValue(token, out var boundCallable)) return boundCallable;
-        var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
+        var call = callsByCalleeEnd.GetValueOrDefault((path, token.End + 1))?
+            .FirstOrDefault(n => ((CallExpression)n.Node).Callee.Span.Start <= token.Start);
         if (call?.Node is CallExpression expression && ExtensionCallSymbol(expression) is { } extension) return extension;
         if (call?.Node is CallExpression resolvedCall && snapshot.Checker?.GetResolvedCall(resolvedCall) is AstNode target && declarations.TryGetValue(target, out var method)) return method;
         // A qualifier in a named type is a namespace/type, not the final type
@@ -712,7 +748,7 @@ public sealed partial class EditorModel
         var candidates = Candidates(path, token.Start, index, token.Text);
         if (BoundTypeName(token, candidates) is { } boundType) return boundType;
         // A local named `String` must not recolor a `String` type annotation.
-        bool typePosition = sourceTypeNames.ContainsKey(token.Span) || nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length);
+        bool typePosition = sourceTypeNames.ContainsKey(token.Span) || typePositionTokens.Contains(token);
         if (typePosition)
             candidates = candidates.Where(s => s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
         else if (candidates.FirstOrDefault(s => !s.IsTypeParameter && s.Name == token.Text) is { } value)
@@ -835,7 +871,7 @@ public sealed partial class EditorModel
         }
         if (symbol.Parameters != null)
         {
-            int count = (boundCallableFamilies.GetValueOrDefault(tokens[path][index]) is { } family
+            int count = (CallableFamily(tokens[path][index]) is { } family
                 ? family.Length
                 : Candidates(path, offset, index).Where(s => s.Parameters != null && s.Qualified == symbol.Qualified)
                     .Append(symbol).DistinctBy(Detail).Count()) - 1;
@@ -866,7 +902,7 @@ public sealed partial class EditorModel
         if (call.Index < 0) return null;
         int nameIndex = constructorArgumentLists.TryGetValue(ts[call.Index], out var creationToken)
             ? Array.IndexOf(ts, creationToken) : CallableNameBeforeParenthesis(ts, call.Index);
-        var candidates = boundCallableFamilies.GetValueOrDefault(ts[nameIndex]) ?? (ts[nameIndex].Kind == TokenKind.Base
+        var candidates = CallableFamily(ts[nameIndex]) ?? (ts[nameIndex].Kind == TokenKind.Base
             ? BaseConstructors(path, offset).ToArray()
             : Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray());
         if (candidates.Length == 0) return null;

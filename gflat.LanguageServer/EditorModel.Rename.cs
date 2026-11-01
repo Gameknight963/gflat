@@ -35,6 +35,7 @@ public sealed partial class EditorModel
         if (bag.HasErrors || nameTokens.Count != 2 || nameTokens[0].Kind != TokenKind.Identifier ||
             nameTokens[0].Start != 0 || nameTokens[0].Span.Length != newName.Length)
             throw new InvalidOperationException("The new name must be one identifier and cannot be a keyword.");
+        EnsureReferences();
         var spans = references.Where(pair => pair.Value?.NameSpan == symbol.NameSpan).Select(pair => pair.Key.Span)
             .Append(symbol.NameSpan).Distinct().OrderBy(span => span.Start).ToArray();
         var offsets = spans.GroupBy(span => span.Source!.Path, Workspace.Paths).ToDictionary(group => group.Key, group => {

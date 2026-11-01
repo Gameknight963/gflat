@@ -7,6 +7,7 @@ public sealed class ProjectWorkspace
 {
     private readonly Dictionary<string, ProjectGraph> previous = new(Workspace.Paths);
     private readonly Dictionary<string, (ProjectGraph? Graph, ProjectException? Error, string[] Paths)> cache = new(Workspace.Paths);
+    internal WorkspaceAnalysisCache Analyses { get; } = new();
 
     public void Invalidate() => cache.Clear();
 

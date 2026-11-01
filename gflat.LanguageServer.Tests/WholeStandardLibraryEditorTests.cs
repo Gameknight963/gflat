@@ -28,10 +28,9 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         GC.KeepAlive(model);
         output.WriteLine($"Editor index allocated {allocated:N0} bytes.");
-        // The previous index allocated almost 900 MB through repeated symbol
-        // sorting and qualified-name construction. Leave ample room for runtime
-        // differences and library growth without using a wall-clock assertion.
-        Assert.InRange(allocated, 0L, 512L * 1024 * 1024);
+        // Indexing declarations leaves per-file name resolution and unused
+        // overload families until queried. Keep room for runtime and library growth.
+        Assert.InRange(allocated, 0L, 192L * 1024 * 1024);
     }
 
     [Theory]

@@ -9,10 +9,16 @@ public sealed partial class EditorModel
     public DocumentHighlight[] DocumentHighlights(string path, int offset)
     {
         if (!sources.TryGetValue(path, out var source)) return [];
-        string uri = Workspace.FileUri(source.Path);
-        return References(path, offset, includeDeclaration: true)
-            .Where(location => location.Uri == uri)
-            .Select(location => new DocumentHighlight(location.Range)).ToArray();
+        int index = TokenAt(source.Path, offset);
+        var symbol = index < 0 ? null : Resolve(source.Path, index);
+        if (symbol?.NameSpan.Source is not { } declaration || declaration.Path.StartsWith('<')) return [];
+        var spans = new HashSet<SourceSpan>();
+        var fileTokens = tokens[source.Path];
+        for (int occurrence = 0; occurrence < fileTokens.Length; occurrence++)
+            if (Resolve(source.Path, occurrence)?.NameSpan == symbol.NameSpan) spans.Add(fileTokens[occurrence].Span);
+        if (Workspace.Paths.Equals(declaration.Path, source.Path)) spans.Add(symbol.NameSpan);
+        return spans.OrderBy(span => span.Start)
+            .Select(span => new DocumentHighlight(Workspace.ToRange(span))).ToArray();
     }
 
     public Location[] References(string path, int offset, bool includeDeclaration)
@@ -21,12 +27,16 @@ public sealed partial class EditorModel
         var symbol = index < 0 ? null : Resolve(path, index);
         if (symbol?.NameSpan.Source is not { } source || source.Path.StartsWith('<')) return [];
 
-        // Reuse the same resolved occurrences as highlighting and navigation.
-        // Index lazily: snapshots that never receive this query incur no cost.
-        referenceIndex ??= references.Where(pair => pair.Value?.NameSpan.Source is { } definition &&
+        // References include unopened files, even when only one document has
+        // requested highlighting or navigation so far.
+        if (referenceIndex == null)
+        {
+            EnsureReferences();
+            referenceIndex = references.Where(pair => pair.Value?.NameSpan.Source is { } definition &&
                 !definition.Path.StartsWith('<') && pair.Key.Span.Source is { } occurrence && !occurrence.Path.StartsWith('<'))
-            .GroupBy(pair => pair.Value!.NameSpan)
-            .ToDictionary(group => group.Key, group => group.Select(pair => pair.Key.Span).Distinct().ToArray());
+                .GroupBy(pair => pair.Value!.NameSpan)
+                .ToDictionary(group => group.Key, group => group.Select(pair => pair.Key.Span).Distinct().ToArray());
+        }
         var spans = referenceIndex.GetValueOrDefault(symbol.NameSpan) ?? [];
         if (includeDeclaration) spans = [.. spans, symbol.NameSpan];
         return spans.Distinct().Where(span => includeDeclaration || span != symbol.NameSpan)

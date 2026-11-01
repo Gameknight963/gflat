@@ -335,7 +335,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                     cancellation.ThrowIfCancellationRequested();
                     if (requestedProjectRevision != evaluatedProjectRevision)
                     { projects.Invalidate(); evaluatedProjectRevision = requestedProjectRevision; }
-                    var result = Workspace.Analyze(workspaceRoot, snapshot, projects);
+                    var result = Workspace.Analyze(workspaceRoot, snapshot, projects, cancellation);
                     if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, result));
                 }
                 finally { analysisGate.Release(); }

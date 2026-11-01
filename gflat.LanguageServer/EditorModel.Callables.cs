@@ -6,7 +6,11 @@ public sealed partial class EditorModel
 {
     private readonly Dictionary<Token, Symbol> boundCallableReferences = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Symbol[]> boundCallableFamilies = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<Token, Lazy<Symbol[]>> deferredCallableFamilies = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Token> constructorArgumentLists = new(ReferenceEqualityComparer.Instance);
+
+    private Symbol[]? CallableFamily(Token token)
+        => boundCallableFamilies.GetValueOrDefault(token) ?? deferredCallableFamilies.GetValueOrDefault(token)?.Value;
 
     private static int CallableNameBeforeParenthesis(Token[] tokens, int parenthesis)
     {
@@ -99,11 +103,14 @@ public sealed partial class EditorModel
                 selected = BindCallable(source, target, interfaceOwner, genericArguments);
             else if (!bound.TryGetValue(target, out selected!)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
             boundCallableReferences[token] = selected;
-            boundCallableFamilies[token] = selected.BoundExtension && call?.Callee is MemberAccessExpression member
+            var imported = call == null ? null : checker.GetImportedCallCandidates(call);
+            // Overload families are used by hover and signature help. Highlighting
+            // and navigation need only the selected binding above.
+            deferredCallableFamilies[token] = new(() => selected.BoundExtension && call?.Callee is MemberAccessExpression member
                 ? BoundExtensionCallableFamily(source, selected, member, path, token.Start)
-                : call != null && checker.GetImportedCallCandidates(call) is { Count: > 0 } imported
+                : imported is { Count: > 0 }
                     ? BoundImportedCallableFamily(imported, selected, path, token.Start)
-                : BoundCallableFamily(source, selected, target, path, token.Start);
+                : BoundCallableFamily(source, selected, target, path, token.Start));
         }
     }
 

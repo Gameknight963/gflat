@@ -37,8 +37,13 @@ try {
     }
     # The complete optional source library lives in the project SDK. Compiler and
     # server Standard folders contain only the built-in runtime contract subset.
-    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
-        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/Standard/$source"))) { throw "VSIX is missing Sdk/Standard/$source" }
+    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'core/IO/MemoryStream.gf', 'core/IO/byte_reader_read_at_least.gf', 'core/Compression/ZipArchive.gf', 'core/Compression/ZipArchiveEntry.gf', 'core/Compression/ZipArchiveWriter.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
+        $packagedSource = Join-Path $extracted "Sdk/Standard/$source"
+        if (-not (Test-Path -LiteralPath $packagedSource)) { throw "VSIX is missing Sdk/Standard/$source" }
+        $repositorySource = Join-Path $repoRoot "Standard/$source"
+        if ((Get-FileHash -LiteralPath $packagedSource).Hash -ne (Get-FileHash -LiteralPath $repositorySource).Hash) {
+            throw "Packaged SDK has stale Standard/$source"
+        }
     }
     foreach ($source in @('Standard/core/Version.gf', 'Standard/core/Time/DateTimeOffset.gf', 'Standard/core/Numerics/Rational.gf', 'Standard/core/Queries/enumerable_extrema_by.gf', 'Standard/core/Queries/enumerable_count_by.gf', 'Standard/core/Queries/enumerable_to_hash_map.gf', 'Standard/core/Queries/enumerable_to_lookup.gf', 'Standard/core/Queries/enumerable_order.gf', 'Standard/core/Queries/OrderSource.gf', 'Standard/core/Collections/default_ordering.gf', 'Standard/core/Collections/default_equality.gf', 'Standard/core/Memory/alignment.gf', 'Standard/core/Time/IMonotonicClock.gf', 'Standard/core/Time/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
@@ -136,6 +141,10 @@ try {
     & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.c'))) { throw 'VSIX is missing the native stdio bridge source' }
+    if ((Get-FileHash -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.c')).Hash -ne
+        (Get-FileHash -LiteralPath (Join-Path $repoRoot 'gflat/Runtime/Stdio.c')).Hash) {
+        throw 'Packaged compiler has stale native stdio bridge source'
+    }
     if (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp')) { throw 'VSIX contains the obsolete C++ stdio bridge source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Standard/core/IGarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
     $noThrowSource = Join-Path $extracted 'nothrow-no-stdlib.gf'

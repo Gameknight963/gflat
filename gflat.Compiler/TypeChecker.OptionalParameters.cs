@@ -30,8 +30,12 @@ public partial class TypeChecker
     }
 
     private bool EvaluateDefaultConstant(FieldDeclaration field, out ConstValue? value)
+        => EvaluateDefaultConstant(field, out value, out _);
+
+    private bool EvaluateDefaultConstant(FieldDeclaration field, out ConstValue? value, out string? failureReason)
     {
         value = null;
+        failureReason = null;
         if (field is not { IsConst: true, Initializer: not null }) return false;
         if (_constValues.TryGetValue(field, out value)) return true;
         if (!checkingDefaultConstants.Add(field)) throw new TypeCheckException("Circular constant initializer", field.Span);
@@ -48,7 +52,7 @@ public partial class TypeChecker
             using var exceptionScope = IsolateExceptionHandlers();
             using var declarationContext = IsolateDeclarationContext();
             CheckTypedDeclarationInitializer(field.Initializer, ResolveAlias(field.Type));
-            if (!new ConstEvaluator(this).TryEvaluate(field.Initializer, field.Type, out value, out _)) return false;
+            if (!new ConstEvaluator(this).TryEvaluate(field.Initializer, field.Type, out value, out failureReason)) return false;
             _constValues[field] = value!;
             return true;
         }

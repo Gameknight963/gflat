@@ -107,7 +107,7 @@ public partial class ConstEvaluator
                 !ConstValue.TryIntegerValue(_currentValue!, out var position) || position < 0 || position >= elements.Elements.Count)
                 throw new ConstEvalException("Array assignment index is outside constant storage", target.Line);
             int offset = (int)position;
-            return new(() => elements.Elements[offset], value => elements.Elements[offset] =
+            return new(() => ReadInitializedElement(elements, offset, target.Line), value => elements.Elements[offset] =
                 OverwriteValueStorage(elements.Elements[offset], value, _context.GetType(target)));
         }
         throw new ConstEvalException("Invalid assignment target at compile time", target.Line);

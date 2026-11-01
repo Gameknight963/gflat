@@ -431,7 +431,7 @@ namespace gflat
         {
             type = ResolveAlias(type);
             if (type is ArrayTypeExpression array)
-                return HasDestructorInternal(array.ElementType, visited);
+                return array.Size != 0 && HasDestructorInternal(array.ElementType, visited);
             if (type is NamedTypeExpression named)
             {
                 if (!visited.Add(named.Name))
@@ -3455,7 +3455,7 @@ namespace gflat
 
             if (rawColType is ArrayTypeExpression arr)
             {
-                if (!CanCopy(node.ElementType))
+                if (arr.Size != 0 && !CanCopy(node.ElementType))
                     throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' requires a copyable element type; borrow elements through an indexer instead", node.Line);
                 if (!arr.Size.HasValue)
                 {
@@ -3902,12 +3902,15 @@ namespace gflat
             }
             if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
                 CheckPropertyWrite(node, node.Operand, node.Operand, null, !node.IsPrefix, node.Operator)) return;
+            if (node.Operator == TokenKind.Ampersand && TryBindConstantStorageAddress(node)) return;
             if (node.Operator == TokenKind.Ampersand && FindProperty(node.Operand) is { Getter.IsRefReturn: false })
                 throw new TypeCheckException("Cannot take the address of a property", node.Line);
             if (node.Operator == TokenKind.Ampersand)
             {
                 if ((node.Operand is IdentifierExpression id && !TryLookupVariable(id.Name, out _) ||
                     node.Operand is NamespaceAccessExpression) && TryBindFunctionValue(node)) return;
+
+                if (TryBindConstantStorageAddress(node)) return;
 
                 CheckNullableStorage(node.Operand, escape: true);
                 TypeExpression operandType = GetType(node.Operand);
@@ -5511,8 +5514,9 @@ namespace gflat
         private void CheckArrayLiteral(ArrayLiteralExpression node, ArrayTypeExpression? target)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            if (node.Elements.Count == 0)
-                throw new TypeCheckException("Array literals must contain at least one element", node.Line);
+            if (node.Elements.Count == 0 && target == null)
+                throw new TypeCheckException("An empty array literal requires a target element type", node.Line);
+            if (node.Elements.Count == 0 && target != null) ValidateValueType(target.ElementType, node.Line);
             TypeExpression? elementType = null;
             foreach (var element in node.Elements)
             {

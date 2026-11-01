@@ -66,6 +66,8 @@ namespace gflat.comptime
                 else _currentValue = EvaluateValueForTarget(node, target);
                 if (_currentValue != null && ContainsTransientAddress(_currentValue))
                     throw new ConstEvalException("A borrowed compile-time address cannot escape into runtime storage", node.Line);
+                if (_currentValue != null && ContainsUninitializedStorage(_currentValue))
+                    throw new ConstEvalException("Uninitialized array storage cannot escape constant evaluation", node.Line);
                 result = _currentValue;
                 return result != null;
             }
@@ -199,7 +201,7 @@ namespace gflat.comptime
                 return integerType.Bits > 64 ? new ConstValue.WideInteger(integer) :
                     integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
             expression.Accept(this);
-            return CopyTransferredValue(Normalize(_currentValue!, target, expression.Line), target);
+            return CopyTransferredValue(DecayConstantArray(expression, Normalize(_currentValue!, target, expression.Line), target), target);
         }
 
         private void EvaluateBinary(BinaryExpression node)
@@ -462,6 +464,7 @@ namespace gflat.comptime
                 return;
             }
 
+            if (TryEvaluateStaticAddress(node)) return;
             if (TryBorrowScalar(node)) return;
             node.Operand.Accept(this);
             ConstValue operand = _currentValue!;
@@ -484,6 +487,11 @@ namespace gflat.comptime
                     throw new ConstEvalException($"Cannot take address of non-struct/class '{operand}' at compile time", node.Line);
 
                 case TokenKind.Star:
+                    if (operand is ConstValue.StaticAddress staticAddress)
+                    {
+                        _currentValue = ReadStaticAddress(staticAddress, node.Line, _context.GetType(node));
+                        return;
+                    }
                     if (operand is ConstValue.BorrowedReference borrowed)
                     {
                         _currentValue = borrowed.Read();
@@ -492,7 +500,7 @@ namespace gflat.comptime
                     if (operand is ConstValue.ArrayPointer arrayPointer)
                     {
                         if (arrayPointer.Target.Elements.Count == 0) throw new ConstEvalException("Cannot dereference an empty constant array", node.Line);
-                        _currentValue = arrayPointer.Target.Elements[0];
+                        _currentValue = ReadInitializedElement(arrayPointer.Target, 0, node.Line);
                         return;
                     }
                     if (operand is ConstValue.String text)
@@ -551,6 +559,11 @@ namespace gflat.comptime
             ConstValue obj = _currentValue!;
 
             if (obj is ConstValue.BorrowedReference borrowed) obj = borrowed.Read();
+            if (obj is ConstValue.StaticAddress staticAddress)
+            {
+                TypeExpression? view = _context.ResolveAlias(_context.GetType(node.Object)) is PointerTypeExpression pointerView ? pointerView.Inner : null;
+                obj = ReadStaticAddress(staticAddress, node.Line, view);
+            }
 
             if (obj is ConstValue.Pointer ptrVal)
             {
@@ -559,7 +572,7 @@ namespace gflat.comptime
             if (obj is ConstValue.ArrayPointer arrayPointer)
             {
                 if (arrayPointer.Target.Elements.Count == 0) throw new ConstEvalException("Cannot dereference an empty constant array", node.Line);
-                obj = arrayPointer.Target.Elements[0];
+                obj = ReadInitializedElement(arrayPointer.Target, 0, node.Line);
             }
 
             if (obj is ConstValue.String)
@@ -569,7 +582,7 @@ namespace gflat.comptime
 
             if (obj is ConstValue.Array arrVal)
             {
-                if (node.Member == "length")
+                if (node.Member is "length" or "Length")
                 {
                     _currentValue = new ConstValue.Integer(arrVal.Elements.Count);
                     return;
@@ -622,6 +635,12 @@ namespace gflat.comptime
             node.Index.Accept(this);
             ConstValue index = _currentValue!;
 
+            if (target is ConstValue.StaticAddress staticAddress)
+            {
+                _currentValue = IndexStaticAddress(staticAddress, index, _context.GetType(node), node.Line);
+                return;
+            }
+
             if (target is ConstValue.String text)
             {
                 RequireCStringByteView(node.Target);
@@ -646,7 +665,7 @@ namespace gflat.comptime
                 {
                     throw new ConstEvalException($"Array index {idx} out of bounds (length {arr.Elements.Count})", node.Line);
                 }
-                _currentValue = arr.Elements[(int)idx];
+                _currentValue = ReadInitializedElement(arr, (int)idx, node.Line);
                 return;
             }
 
@@ -663,7 +682,7 @@ namespace gflat.comptime
             if (val is ConstValue.Boolean && resolved is NamedTypeExpression { Name: "bool" } ||
                 val is ConstValue.Integer { Value: 0 } && resolved is
                     (PointerTypeExpression { IsNullable: true } or FunctionPointerTypeExpression { IsNullable: true } or ManagedTypeExpression { IsNullable: true }) ||
-                val is (ConstValue.Pointer or ConstValue.ArrayPointer or ConstValue.BorrowedReference) && resolved is PointerTypeExpression &&
+                val is (ConstValue.Pointer or ConstValue.ArrayPointer or ConstValue.StaticAddress or ConstValue.BorrowedReference) && resolved is PointerTypeExpression &&
                     TypeChecker.TypesMatchPublic(_context.ResolveAlias(_context.GetType(node.Operand)), resolved))
             {
                 _currentValue = val;
@@ -728,6 +747,7 @@ namespace gflat.comptime
                 ConstValue.Struct instance = new ConstValue.Struct(structInfo.Name, fields);
                 if (matchingCtor != null)
                 {
+                    if (_context is TypeChecker checker) checker.EnsureCompileTimeConstructorBody(matchingCtor, structInfo.Name);
                     var callerScopes = _scopes.Reverse().ToArray();
                     bool returned = _hasReturned;
                     ConstValue? returnValue = _returnValue;
@@ -809,6 +829,7 @@ namespace gflat.comptime
         private void ExecuteClassConstructor(TypeChecker.ClassInfo info, ConstructorDeclaration? ctor,
             List<ConstValue> args, ConstValue.ClassInstance instance, int line)
         {
+            if (ctor != null && _context is TypeChecker checker) checker.EnsureCompileTimeConstructorBody(ctor, info.Name);
             CheckSteps(line);
             if (_callDepth >= MaxCallDepth)
                 throw new ConstEvalException($"Compile-time recursion exceeded maximum call depth of {MaxCallDepth}", line);
@@ -1047,7 +1068,8 @@ namespace gflat.comptime
             }
             else
             {
-                _scopes.Peek()[node.Name] = new ConstValue.Integer(0);
+                _scopes.Peek()[node.Name] = _context.ResolveAlias(_context.GetType(node)) is ArrayTypeExpression scratch
+                    ? CreateScratchArray(scratch, node.Line) : new ConstValue.Integer(0);
             }
         }
 
@@ -1172,7 +1194,7 @@ namespace gflat.comptime
                 CheckSteps(node.Line);
                 if (_context.RequiresCopy(node.ElementType))
                     throw new ConstEvalException("Nontrivial copying is not supported during constant evaluation", node.Line);
-                _scopes.Peek()[node.VariableName] = CopyTransferredValue(arr.Elements[i], node.ElementType);
+                _scopes.Peek()[node.VariableName] = CopyTransferredValue(ReadInitializedElement(arr, i, node.Line), node.ElementType);
                 node.Body.Accept(this);
 
                 if (_hasReturned) break;
@@ -1247,7 +1269,7 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             if (_context.TryGetEnumMember(node, out long value, out TypeExpression? underlying))
                 _currentValue = Normalize(new ConstValue.Integer(value), underlying!, node.Line);
-            else throw new ConstEvalException("Namespace expression is not a compile-time constant", node.Line);
+            else throw new ConstEvalException($"Namespace expression '{_context.ExtractName(node)}' at line {node.Line} is not a compile-time constant", node.Line);
         }
         public void Visit(UsingDirective node) { }
         public void Visit(StructDeclaration node) { }

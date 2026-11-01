@@ -66,7 +66,7 @@ public partial class TypeChecker
                     throw new TypeCheckException("Managed object graphs cannot contain references owned by a different collector", reference.Span);
                 Walk(edge.Inner);
             }
-            else if (type is ArrayTypeExpression array) Walk(array.ElementType);
+            else if (type is ArrayTypeExpression { Size: not 0 } array) Walk(array.ElementType);
             else if (type is NamedTypeExpression named && visited.Add(named.Name))
             {
                 var fields = GetStructByIdentity(named.Name)?.Fields.Select(f => f.Type) ?? GetClassByIdentity(named.Name)?.Fields.Select(f => f.Type);
@@ -81,7 +81,7 @@ public partial class TypeChecker
         if (type is ManagedTypeExpression) return true;
         if (type is PointerTypeExpression pointer) return ContainsManagedReference(pointer.Inner, visited);
         if (type is ReferenceTypeExpression reference) return ContainsManagedReference(reference.Inner, visited);
-        if (type is ArrayTypeExpression array) return ContainsManagedReference(array.ElementType, visited);
+        if (type is ArrayTypeExpression array) return array.Size != 0 && ContainsManagedReference(array.ElementType, visited);
         if (type is FunctionPointerTypeExpression function)
             return function.IsManaged || ContainsManagedReference(function.ReturnType, visited) ||
                 function.ParameterTypes.Any(t => ContainsManagedReference(t, visited));

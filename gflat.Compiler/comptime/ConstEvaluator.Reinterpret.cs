@@ -16,7 +16,7 @@ public partial class ConstEvaluator
         {
             // Symbolic constant addresses cannot be converted to host-process integers.
             if (info.Source is PointerTypeExpression && info.Result is PointerTypeExpression &&
-                value is ConstValue.Pointer or ConstValue.ArrayPointer or ConstValue.String)
+                value is ConstValue.Pointer or ConstValue.ArrayPointer or ConstValue.StaticAddress or ConstValue.String)
             {
                 _currentValue = value;
                 return true;

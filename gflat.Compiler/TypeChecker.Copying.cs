@@ -19,7 +19,7 @@ public partial class TypeChecker
     public bool RequiresCopy(TypeExpression type)
     {
         type = ResolveAlias(type);
-        if (type is ArrayTypeExpression a) return RequiresCopy(a.ElementType);
+        if (type is ArrayTypeExpression a) return a.Size != 0 && RequiresCopy(a.ElementType);
         if (CopyConstructor(type) != null || HasDestructor(type)) return true;
         if (type is not NamedTypeExpression n) return false;
         var cls = GetClassByIdentity(n.Name);
@@ -31,7 +31,7 @@ public partial class TypeChecker
     public bool CanCopy(TypeExpression type)
     {
         type = ResolveAlias(type);
-        if (type is ArrayTypeExpression a) return a.Size != null && CanCopy(a.ElementType);
+        if (type is ArrayTypeExpression a) return a.Size == 0 || a.Size != null && CanCopy(a.ElementType);
         if (CopyConstructor(type) != null) return true;
         if (type is not NamedTypeExpression n) return true;
         var str = GetStructByIdentity(n.Name);
@@ -45,7 +45,7 @@ public partial class TypeChecker
     private bool CanAccessCopy(TypeExpression type, string? accessor)
     {
         type = ResolveAlias(type);
-        if (type is ArrayTypeExpression array) return CanAccessCopy(array.ElementType, accessor);
+        if (type is ArrayTypeExpression array) return array.Size == 0 || CanAccessCopy(array.ElementType, accessor);
         if (type is not NamedTypeExpression named) return true;
         if (CopyConstructor(type) is ConstructorDeclaration copy)
             return copy.Accessibility switch {
@@ -62,7 +62,7 @@ public partial class TypeChecker
     private bool CopyCanThrow(TypeExpression type)
     {
         type = ResolveAlias(type);
-        if (type is ArrayTypeExpression array) return CopyCanThrow(array.ElementType);
+        if (type is ArrayTypeExpression array) return array.Size != 0 && CopyCanThrow(array.ElementType);
         if (CopyConstructor(type) is ConstructorDeclaration copy) return !copy.IsNoThrow;
         if (type is not NamedTypeExpression named) return false;
         var cls = GetClassByIdentity(named.Name);

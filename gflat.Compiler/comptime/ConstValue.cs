@@ -69,9 +69,9 @@ namespace gflat.comptime
             public override string ToString() => $"[{string.Join(", ", Elements)}]";
         }
 
-        // Address of the first element of nonempty immutable static storage.
+        // Start address of immutable static array storage, including empty arrays.
         // ElementType describes the emitted array, independently of the view
-        // through which its address is used. Empty arrays have no such address.
+        // through which its address is used. Empty arrays cannot be dereferenced.
         public sealed record ArrayPointer(TypeExpression ElementType, Array Target) : ConstValue;
 
         public static bool TryAdd(ConstValue left, ConstValue right, out ConstValue? result)
@@ -218,6 +218,11 @@ namespace gflat.comptime
 
         public static bool TryEqual(ConstValue left, ConstValue right, out bool result)
         {
+            if (left is StaticAddress aStatic && right is StaticAddress bStatic)
+            {
+                result = aStatic == bStatic;
+                return true;
+            }
             if (TryWideOperands(left, right, out var wideLeft, out var wideRight))
             {
                 result = wideLeft == wideRight;
@@ -228,8 +233,8 @@ namespace gflat.comptime
                 result = Equals(a, b);
                 return true;
             }
-            if ((left is ArrayPointer or Pointer or String or BorrowedReference && right is Integer { Value: 0 }) ||
-                (left is Integer { Value: 0 } && right is ArrayPointer or Pointer or String or BorrowedReference))
+            if ((left is ArrayPointer or Pointer or StaticAddress or String or BorrowedReference && right is Integer { Value: 0 }) ||
+                (left is Integer { Value: 0 } && right is ArrayPointer or Pointer or StaticAddress or String or BorrowedReference))
             {
                 result = false;
                 return true;

@@ -16,7 +16,7 @@ public partial class LlvmEmitter
     {
         type = _typeChecker.ResolveAlias(type);
         if (type is ManagedTypeExpression) return true;
-        if (type is ArrayTypeExpression array) return HasManagedReferences(array.ElementType, visited);
+        if (type is ArrayTypeExpression array) return array.Size != 0 && HasManagedReferences(array.ElementType, visited);
         // A raw pointer or ref parameter borrows storage, rather than containing its fields.
         if (type is not NamedTypeExpression named || TypeChecker.IsPrimitive(named.Name)) return false;
         visited ??= new();

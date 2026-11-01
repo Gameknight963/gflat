@@ -76,7 +76,7 @@ public partial class TypeChecker
         return ResolveGlobalField(name);
     }
 
-    private bool TryBindStaticStorage(AstNode expression)
+    private bool TryBindStaticStorage(AstNode expression, bool evaluateConstant = true)
     {
         FieldDeclaration? field = null;
         string? owner = null;
@@ -109,7 +109,7 @@ public partial class TypeChecker
         staticStorageReads[expression] = field;
         var fieldType = ResolveAlias(field.Type);
         RecordType(expression, field.IsConst ? TypeQualifiers.ReadOnly(fieldType) : fieldType);
-        if (field.IsConst && EvaluateDefaultConstant(field, out var constant)) _constValues[expression] = constant!;
+        if (evaluateConstant && field.IsConst && EvaluateDefaultConstant(field, out var constant)) _constValues[expression] = constant!;
         return true;
     }
 

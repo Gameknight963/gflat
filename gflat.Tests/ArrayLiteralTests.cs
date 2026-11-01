@@ -33,7 +33,7 @@ public class ArrayLiteralTests
         => Assert.Equal(123, CompilerTestHelper.Run("int next(int* n) { *n += 1; return *n; } int main() { int n = 0; int[] a = [next(&n), next(&n), next(&n)]; return a[0]*100 + a[1]*10 + a[2]; }").ExitCode);
 
     [Theory]
-    [InlineData("int[] a = [];", "at least one")]
+    [InlineData("var a = [];", "target element type")]
     [InlineData("int[] a = [1, true];", "Cannot initialize array element of type 'int' with 'bool'")]
     [InlineData("int[3] a = [1, 2];", "Cannot assign")]
     [InlineData("int[2][2] a = [[1], [2, 3]];", "'int[2]' with 'int[1]'")]

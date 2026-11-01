@@ -597,6 +597,12 @@ than reentering the same allocator. An exhausted reserve can still terminate.
 Arrays have inline storage. Initialize elements before reading them. Array-to-pointer
 decay produces a pointer into that storage, whose lifetime the caller must respect.
 
+Fixed buffers can have length zero. `T[0]` has size zero and the alignment of `T`.
+An empty literal needs an element type from its declaration, such as `int[0] values = []`
+or `int[] values = []`. Iteration visits zero elements, and copying or cleanup performs
+no element operations. A zero-length buffer still requires a complete element type
+and cannot contain an inline recursive value layout. It has no readable elements.
+
 Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Array values require fixed sizes in every dimension, including parameters, return types, and fields. Spell buffer parameters of unknown length as pointers. Array value conversions preserve dimensions and element representation. Cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
 
 ### Nullable pointer operations

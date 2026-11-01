@@ -125,8 +125,8 @@ public partial class TypeChecker
             throw new TypeCheckException($"Array size must be a compile-time constant: {error}", array.Line);
         if (!ConstValue.TryIntegerValue(value!, out var bound))
             throw new TypeCheckException($"Array size expression must evaluate to integer, got {value}", array.Line);
-        if (bound <= 0 || bound > int.MaxValue)
-            throw new TypeCheckException("Array size must be between 1 and 2147483647", array.Line);
+        if (bound < 0 || bound > int.MaxValue)
+            throw new TypeCheckException("Array size must be between 0 and 2147483647", array.Line);
         return (int)bound;
     }
 }

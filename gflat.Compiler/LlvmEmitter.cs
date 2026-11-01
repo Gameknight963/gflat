@@ -59,6 +59,8 @@ public partial class LlvmEmitter : IVisitor
                     }
                     return $"i8* {CStringAddress(s)}";
                 }
+            case ConstValue.StaticAddress staticAddress:
+                return $"{typeStr} {StaticConstantAddress(staticAddress, typeStr)}";
             case ConstValue.Pointer ptrVal:
                 {
                     string targetGlobal = GetOrCreateConstGlobal(ptrVal.Target, ptrVal.GlobalName);
@@ -171,7 +173,7 @@ public partial class LlvmEmitter : IVisitor
         return "0x" + BitConverter.DoubleToInt64Bits(value).ToString("X16");
     }
 
-    private bool TryEmitConstValue(ConstValue constVal, TypeExpression type)
+    private bool TryEmitConstValue(ConstValue constVal, TypeExpression type, bool arrayValue = false)
     {
         if (constVal is ConstValue.Integer { Value: 0 } &&
             _typeChecker.ResolveAlias(type) is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
@@ -182,6 +184,11 @@ public partial class LlvmEmitter : IVisitor
         switch (constVal)
         {
             case ConstValue.Array array when _typeChecker.ResolveAlias(type) is ArrayTypeExpression arrayType:
+                if (arrayValue)
+                {
+                    EmitConstantArrayAggregate(array, type);
+                    return true;
+                }
                 string global = NewGlobal();
                 string llvmType = EmitType(arrayType);
                 EmitGlobal($"{global} = private constant {EmitConstInitializer(array, arrayType)}");
@@ -212,6 +219,9 @@ public partial class LlvmEmitter : IVisitor
                     Push(CStringAddress(s));
                     return true;
                 }
+            case ConstValue.StaticAddress staticAddress:
+                Push(StaticConstantAddress(staticAddress, EmitType(type)));
+                return true;
             case ConstValue.Pointer ptrVal:
                 {
                     string globalName = GetOrCreateConstGlobal(ptrVal.Target, ptrVal.GlobalName);
@@ -246,7 +256,7 @@ public partial class LlvmEmitter : IVisitor
                             (string Name, TypeExpression Type) fld = sInfo.Fields[fIdx];
                             if (structVal.Fields.TryGetValue(fld.Name, out ConstValue? fldVal))
                             {
-                                if (TryEmitConstValue(fldVal, fld.Type))
+                                if (TryEmitConstValue(fldVal, fld.Type, arrayValue: true))
                                 {
                                     string v = Pop();
                                     string fPtr = NewTemp();
@@ -471,6 +481,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitDestroy(TypeExpression type, string address)
     {
         type = _typeChecker.ResolveAlias(type);
+        if (type is ArrayTypeExpression { Size: 0 }) return;
         if (type is ArrayTypeExpression { Size: not null } array && NeedsCleanup(array.ElementType))
         {
             string llvmType = EmitType(array);
@@ -705,7 +716,8 @@ public partial class LlvmEmitter : IVisitor
                  node is NamespaceAccessExpression enumMember && _typeChecker.TryGetEnumMember(enumMember, out _, out _))
         {
             TypeExpression type = _typeChecker.GetType(node);
-            if (node is AssignmentExpression) EmitValueForTarget(node, type);
+            if (node is AssignmentExpression || _typeChecker.ResolveAlias(type) is ArrayTypeExpression)
+                EmitValueForTarget(node, type);
             else node.Accept(this);
             string value = Pop();
             string llvmType = EmitType(type);
@@ -2477,6 +2489,7 @@ public partial class LlvmEmitter : IVisitor
         TypeExpression colType = _typeChecker.GetType(node.Collection);
         ArrayTypeExpression arr = (ArrayTypeExpression)_typeChecker.ResolveAlias(colType);
         int count = arr.Size!.Value;
+        if (TryEmitEmptyArrayIteration(node, arr)) return;
 
         string condLabel = NewLabel("foreach_cond");
         string bodyLabel = NewLabel("foreach_body");
@@ -4266,6 +4279,7 @@ public partial class LlvmEmitter : IVisitor
             EmitArrayReadGuard(expression);
         if (TryContextualIntegerLiteral(expression, target, out string integerLiteral)) Push(integerLiteral);
         else if (_typeChecker.CopiesValue(expression, target)) EmitCopyValue(expression, target);
+        else if (TryEmitConstantArrayValue(expression, target)) { }
         else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression targetArray && expression is ArrayLiteralExpression literalArray &&
             EmitType(targetArray) != EmitType(_typeChecker.GetType(expression)))
             EmitExpressionWithCleanup(() => EmitArrayLiteral(literalArray, targetArray));

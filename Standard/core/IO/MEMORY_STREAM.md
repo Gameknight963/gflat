@@ -33,11 +33,11 @@ the requested byte capacity.
 - `WriteByte(value)` writes one char byte
 - `Flush()` completes immediately because writes update the owned buffer directly
 
-A zero-count read or write leaves state unchanged. Read destinations must be
-separate from the stream and its backing storage, following `IByteReader`'s
-contract. A write source can borrow the stream's current contents, including an
-overlapping destination. Self-source writes remain valid when growth relocates
-the buffer.
+Buffer arguments:
+
+- `Read.data`: writable storage separate from the stream and its backing buffer
+- `Write.data`: may borrow the stream's current contents, including overlapping regions and writes that grow the buffer
+- `count`: bytes to transfer. Zero leaves state unchanged
 
 `Seek(offset, origin)` uses `SeekOrigin::Begin`, `Current`, or `End`, and returns
 the new position. Seeking beyond Length allocates nothing. A later write fills
@@ -49,9 +49,8 @@ the gap with zeros. Negative positions and overflowing seeks throw `IOException`
 unchanged, including positions beyond the new end. Length must fit both a
 nonnegative `long` and the native allocation size.
 
-`Reserve(capacity)` ensures at least the requested capacity while retaining
-Length, Position, and contents. `Clear()` resets Length and Position to zero
-and retains capacity.
+`Reserve(capacity)` grows capacity to at least the requested byte count.
+`Clear()` removes the contents and resets Position, keeping the allocation.
 
 Allocation failures throw `BadAllocException`. Failed writes, resizes, and
 reservations preserve the existing contents, Length, and Position. Invalid
@@ -71,4 +70,4 @@ invalidates removed ranges.
 
 Selective builds include `IO/MemoryStream.gf`, `IO/SeekOrigin.gf`, `IO/IOException.gf`,
 `IO/IByteReader.gf`, `Collections/Vector.gf`, `Collections/vector_resize.gf`, and
-the Vector/Span collection and query contracts. Ordinary Standard projects include them.
+the Vector/Span collection and query contracts.

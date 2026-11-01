@@ -64,6 +64,7 @@
     <Compile Include="GflatExceptionReport.cs" />
     <VsdConfigXmlFiles Include="gflat.vsdconfigxml" />
     <Content Include="$(OutputPath)gflat.VisualStudio.vsdconfig"><Link>gflat.VisualStudio.vsdconfig</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="gflat.natvis"><IncludeInVSIX>true</IncludeInVSIX><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
     <Compile Include="../../gflat.Projects/ProjectSdk.cs"><Link>ProjectSdk.cs</Link></Compile>
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.txt"><Link>Licenses/MSBuild.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>

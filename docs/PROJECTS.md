@@ -412,6 +412,16 @@ Start with optimization level 0 for predictable stepping and variable inspection
 Watch initially uses the native debugger's expression evaluator, so gflat-specific
 expressions and property evaluation are not fully supported.
 
+#### Standard values in Locals and Watch
+
+The VSIX includes native visualizers for:
+
+- String: a UTF-8 preview, length, capacity, and counted bytes
+- Vector and Span: their current elements and count or length
+- MemoryStream: length, cursor position, capacity, and stored bytes
+
+Expand **[Raw View]** to inspect the underlying fields.
+
 #### Exception debugging in Visual Studio
 
 Debug builds report gflat exception type names, messages, and codes through the

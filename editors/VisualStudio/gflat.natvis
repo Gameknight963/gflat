@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Standard::Text::String" Inheritable="false">
+    <DisplayString Condition="length == 0">""</DisplayString>
+    <DisplayString Condition="data != 0">{data,[length]s8}</DisplayString>
+    <DisplayString>Length = {length}</DisplayString>
+    <StringView Condition="data != 0">data,[length]s8</StringView>
+    <Expand>
+      <Item Name="[Length]">length</Item>
+      <Item Name="[Capacity]">capacity</Item>
+      <ArrayItems Condition="length != 0 &amp;&amp; data != 0">
+        <Size>length</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Standard::Collections::Vector&lt;*&gt;" Inheritable="false">
+    <DisplayString>Count = {count}, Capacity = {capacity}</DisplayString>
+    <Expand>
+      <Item Name="[Count]">count</Item>
+      <Item Name="[Capacity]">capacity</Item>
+      <ArrayItems Condition="count != 0 &amp;&amp; data != 0">
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Standard::Memory::Span&lt;*&gt;" Inheritable="false">
+    <DisplayString>Length = {length}</DisplayString>
+    <Expand>
+      <Item Name="[Length]">length</Item>
+      <ArrayItems Condition="length != 0 &amp;&amp; data != 0">
+        <Size>length</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Standard::IO::MemoryStream" Inheritable="false">
+    <DisplayString>Length = {buffer.count}, Position = {position}, Capacity = {buffer.capacity}</DisplayString>
+    <Expand>
+      <Item Name="[Length]">buffer.count</Item>
+      <Item Name="[Position]">position</Item>
+      <Item Name="[Capacity]">buffer.capacity</Item>
+      <ArrayItems Condition="buffer.count != 0 &amp;&amp; buffer.data != 0">
+        <Size>buffer.count</Size>
+        <ValuePointer>buffer.data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+</AutoVisualizer>

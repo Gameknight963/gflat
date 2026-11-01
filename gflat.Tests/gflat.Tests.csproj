@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <None Include="../editors/VisualStudio/gflat.natvis" Link="Debugging/gflat.natvis" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../editors/VisualStudio/GflatExceptionReport.cs" Link="Editor/GflatExceptionReport.cs" />
   </ItemGroup>
 

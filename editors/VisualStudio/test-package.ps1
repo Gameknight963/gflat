@@ -31,13 +31,13 @@ try {
         foreach ($file in @('Sdk.props', 'Sdk.targets')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Sdks/Gflat.Sdk/Sdk/$file"))) { throw "VSIX is missing $tool's private SDK entry $file" }
         }
-        foreach ($source in @('core/TypeInfo.gf', 'core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/allocation.gf')) {
+        foreach ($source in @('core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/allocation.gf')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Standard/$source"))) { throw "VSIX is missing $tool/Standard/$source" }
         }
     }
     # The complete optional source library lives in the project SDK. Compiler and
-    # server Std folders contain only the built-in runtime contract subset.
-    foreach ($source in @('core/Text/String.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
+    # server Standard folders contain only the built-in runtime contract subset.
+    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/Standard/$source"))) { throw "VSIX is missing Sdk/Standard/$source" }
     }
     foreach ($source in @('Standard/core/Version.gf', 'Standard/core/Time/DateTimeOffset.gf', 'Standard/core/Numerics/Rational.gf', 'Standard/core/Queries/enumerable_extrema_by.gf', 'Standard/core/Queries/enumerable_count_by.gf', 'Standard/core/Queries/enumerable_to_hash_map.gf', 'Standard/core/Queries/enumerable_to_lookup.gf', 'Standard/core/Queries/enumerable_order.gf', 'Standard/core/Queries/OrderSource.gf', 'Standard/core/Collections/default_ordering.gf', 'Standard/core/Collections/default_equality.gf', 'Standard/core/Memory/alignment.gf', 'Standard/core/Time/IMonotonicClock.gf', 'Standard/core/Time/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {

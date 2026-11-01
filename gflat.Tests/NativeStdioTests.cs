@@ -5,7 +5,7 @@ public sealed class NativeStdioTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public async Task DirectoryBridgeCreatesOneComponentWithTheCOnlyHostProfile(int optimization)
+    public async Task DirectoryBridgeCreatesAndRemovesOneComponentWithTheCOnlyHostProfile(int optimization)
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat-native-directory-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -15,17 +15,21 @@ public sealed class NativeStdioTests
             string literal = "\"" + child.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
             string ir = Compiler.Emit($$"""
                 extern int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
+                extern int __gflat_stdio_remove_directory(readonly(char)* path) nothrow;
                 extern int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
                 int main() nothrow {
                     if (__gflat_stdio_make_directory({{literal}}) != 0) return 2;
                     if (__gflat_stdio_path_kind({{literal}}) != 2) return 3;
                     if (__gflat_stdio_make_directory({{literal}}) == 0) return 4;
+                    if (__gflat_stdio_remove_directory({{literal}}) != 0) return 5;
+                    if (__gflat_stdio_path_kind({{literal}}) == 2) return 6;
+                    if (__gflat_stdio_remove_directory({{literal}}) == 0) return 7;
                     return 0;
                 }
                 """, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
             Assert.Equal((false, true), NativeToolchain.RequiredNativeRuntimes(ir));
             _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
-            Assert.True(Directory.Exists(child));
+            Assert.False(Directory.Exists(child));
         }
         finally { await TestDirectoryCleanup.DeleteAsync(directory); }
     }

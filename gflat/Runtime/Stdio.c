@@ -98,3 +98,11 @@ int __gflat_stdio_make_directory(const char* path) {
     return mkdir(path, 0777);
 #endif
 }
+
+int __gflat_stdio_remove_directory(const char* path) {
+#ifdef _WIN32
+    return _rmdir(path);
+#else
+    return rmdir(path);
+#endif
+}

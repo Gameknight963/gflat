@@ -247,14 +247,24 @@ the host's narrow-character API, as it does for opening files.
 exists. An existing directory succeeds. Missing parents, existing files, invalid
 paths, and host creation failures throw `IOException`.
 
-Paths use the host's narrow encoding and separator rules. Relative paths and dot
-components and symbolic links follow native filesystem lookup.
+Paths use the host's narrow encoding and separator rules. Relative paths, dot
+components, and symbolic links follow native filesystem lookup.
 
 Windows uses [`_mkdir`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/mkdir-wmkdir).
 POSIX uses [`mkdir`](https://man7.org/linux/man-pages/man3/mkdir.3p.html) with mode
 0777, modified by the process umask and directory ACLs.
 
-#### Temporary files
+### Removing empty directories
+
+`Directory::Remove(path)` removes one empty directory. Missing paths, nonempty
+directories, regular files, and host removal failures throw `IOException`.
+
+The native operation is [`_rmdir`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/rmdir-wrmdir)
+on Windows and [`rmdir`](https://man7.org/linux/man-pages/man3/rmdir.3p.html) on POSIX.
+POSIX rejects a final symbolic link. Windows may remove the link itself, leaving
+its target intact.
+
+### Temporary files
 
 Closing a temporary stream removes its backing file. Normal process exit also
 runs libc cleanup. Abrupt termination follows the host's cleanup behavior.

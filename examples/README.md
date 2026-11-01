@@ -60,6 +60,7 @@ projects](../docs/PROJECTS.md#running-in-visual-studio).
 - [png-verify](png-verify/README.md): check RGB8/RGBA8 PNG image data and chunk integrity
 - [binary-info](binary-info/README.md): inspect PE32+/ELF64LE declared dependency metadata
 - [zip-list](zip-list/README.md): list ZIP32 central-directory sizes, methods, and escaped names
+- [zip-pack](zip-pack/README.md): create a stored ZIP32 archive from named input files
 - [zip-verify](zip-verify/README.md): check ZIP32 entry sizes and CRCs
 
 ## Numbers, algorithms, and commands

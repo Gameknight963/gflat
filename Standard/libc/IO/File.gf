@@ -16,6 +16,7 @@ public static class File
 
     public static FileStream OpenRead(readonly(char)* path) => FileStream::OpenRead(path);
     public static FileStream OpenWrite(readonly(char)* path) => FileStream::OpenWrite(path);
+    public static FileStream CreateNew(readonly(char)* path) => FileStream::CreateNew(path);
     public static FileStream OpenAppend(readonly(char)* path) => FileStream::OpenAppend(path);
     public static FileStream OpenTemporary() => FileStream::OpenTemporary();
 

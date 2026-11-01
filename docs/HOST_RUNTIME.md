@@ -192,7 +192,7 @@ are macros in C. See [source selection](PROJECTS.md#standard-library-selection).
 ## Files
 
 `Standard::IO::FileStream` is a move-only binary stream. Default construction is closed.
-`File::OpenRead`, `OpenWrite`, `OpenAppend`, and `OpenTemporary` create streams.
+`File::OpenRead`, `OpenWrite`, `CreateNew`, `OpenAppend`, and `OpenTemporary` create streams.
 Scope destruction closes it. Call `Close()` explicitly to report final flush
 and close errors:
 
@@ -215,12 +215,20 @@ int main()
 | --- | --- |
 | `OpenRead(path)` | Reads an existing binary file |
 | `OpenWrite(path)` | Creates or truncates a binary file |
+| `CreateNew(path)` | Creates a new binary file, failing if the path already exists |
 | `OpenAppend(path)` | Appends, creating a file when needed |
 | `OpenTemporary()` | Owns a libc `tmpfile` binary read/write stream |
 
 Paths use libc's native narrow-character encoding. On Windows, that follows the
 configured CRT code page. `FileHandle` is the opaque libc `FILE*` alias used
 internally. Its lifetime belongs to FileStream and libc.
+
+Use `CreateNew` when existing contents must be preserved. It opens with C11's
+`wbx` exclusive creation mode, so checking and creating happen in one operation.
+Existing files, directories, symbolic links, and creation errors throw
+`IOException`. `FileStream::CreateNew` provides the same operation directly.
+The mode is supported by the [Microsoft CRT](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fopen-wfopen)
+and [GNU libc](https://sourceware.org/glibc/manual/latest/html_node/Opening-Streams.html).
 
 ### Checking paths
 
@@ -443,7 +451,7 @@ and IO exception sources.
 collection types.
 The static `File` facade adds whole-file String and Vector operations, so selecting
 `File.gf` also requires those types, `FileLines.gf`, and their dependencies. Low-level code can call
-`FileStream::OpenRead`, `OpenWrite`, `OpenAppend`, and `OpenTemporary` directly.
+`FileStream::OpenRead`, `OpenWrite`, `CreateNew`, `OpenAppend`, and `OpenTemporary` directly.
 
 ### File digests
 

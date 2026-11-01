@@ -22,6 +22,8 @@ public struct FileStream : ITextWriter, IByteReader
     public static FileStream OpenRead(readonly(char)* path) => new FileStream(path, "rb");
     // Creates or truncates a binary output file. Opening failure throws IOException.
     public static FileStream OpenWrite(readonly(char)* path) => new FileStream(path, "wb");
+    // Creates a new binary output file. Existing paths and creation failures throw IOException.
+    public static FileStream CreateNew(readonly(char)* path) => new FileStream(path, "wbx");
     // Opens a binary append stream, creating a missing file. Opening failure throws IOException.
     public static FileStream OpenAppend(readonly(char)* path) => new FileStream(path, "ab");
 

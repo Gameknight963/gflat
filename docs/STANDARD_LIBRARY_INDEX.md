@@ -168,6 +168,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Area | APIs |
 | --- | --- |
 | Console | `Console::Write`, `WriteLine`, `Read`, `ReadByte`, `PeekByte`, `ReadExactly`, `ReadLine`, `TryReadLine` into buffers, String, or a borrowed writer. `Out`, `Error`, flush operations |
+| Console redirection | [`IsInputRedirected`, `IsOutputRedirected`, `IsErrorRedirected`](HOST_RUNTIME.md#stream-redirection) |
 | Formatted console output | [Primitive values and borrowed `IFormattable` values](CONSOLE_FORMATTING.md) |
 | Managed console output | [Managed objects and temporary references](CONSOLE_MANAGED_FORMATTING.md) |
 | Files | `File`, `Directory`, `FileStream`, `SeekOrigin`, `FileLines`, `FileLineSequence`, `FileBinary`, [`FileHash`](FILE_HASH.md), [`FileVarInt`](FILE_VARINT.md) |

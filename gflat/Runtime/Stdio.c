@@ -10,6 +10,7 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <io.h>
+#include <windows.h>
 #else
 #include <sys/types.h>
 #include <unistd.h>
@@ -19,6 +20,29 @@
 void* __gflat_stdio_stdin(void) { return stdin; }
 void* __gflat_stdio_stdout(void) { return stdout; }
 void* __gflat_stdio_stderr(void) { return stderr; }
+
+int __gflat_stdio_is_redirected(int selector) {
+    FILE* stream;
+    switch (selector) {
+        case 0: stream = stdin; break;
+        case 1: stream = stdout; break;
+        case 2: stream = stderr; break;
+        default: return 1;
+    }
+    if (stream == NULL) return 1;
+#ifdef _WIN32
+    int descriptor = _fileno(stream);
+    if (descriptor < 0) return 1;
+    intptr_t handle = _get_osfhandle(descriptor);
+    if (handle == 0 || handle == -1 || handle == -2) return 1;
+    DWORD mode;
+    return GetConsoleMode((HANDLE)handle, &mode) == 0;
+#else
+    int descriptor = fileno(stream);
+    if (descriptor < 0) return 1;
+    return isatty(descriptor) != 1;
+#endif
+}
 
 int __gflat_stdio_seek(void* stream, int64_t offset, int origin) {
     int native_origin;

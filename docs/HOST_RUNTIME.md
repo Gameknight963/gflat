@@ -27,6 +27,24 @@ Console operations follow the host stream's text mode. On Windows this normally
 translates line endings and treats Ctrl+Z as EOF, including redirected input.
 The active console code page controls the display of non-ASCII bytes.
 
+### Stream redirection
+
+| Property | Stream |
+| --- | --- |
+| `Console::IsInputRedirected` | stdin |
+| `Console::IsOutputRedirected` | stdout |
+| `Console::IsErrorRedirected` | stderr |
+
+These getter-only, `nothrow` properties report whether the current CRT stream
+points somewhere other than a terminal. Files, pipes, and null devices return
+true. A stream without an associated terminal also returns true.
+
+Each query inspects the current stream, including after native `freopen`
+redirection. The result describes its connection. Check read, write, and flush
+results to detect IO failures.
+
+Source: `libc/Console/redirection.gf`
+
 ### Standard writers
 
 `Console::Out` and `Console::Error` expose process-lifetime `ITextWriter*` values:

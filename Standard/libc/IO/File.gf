@@ -14,6 +14,15 @@ public static class File
         return file_path_detail::__gflat_stdio_path_kind(path) == 1;
     }
 
+    // Queries a regular file's byte length without opening or flushing streams.
+    public static long GetLength(readonly(char)* path)
+    {
+        if (path[0] == '\0') throw new IOException("File path is empty");
+        long length = file_path_detail::__gflat_stdio_file_length(path);
+        if (length < 0) throw new IOException("File length query failed");
+        return length;
+    }
+
     public static FileStream OpenRead(readonly(char)* path) => FileStream::OpenRead(path);
     public static FileStream OpenWrite(readonly(char)* path) => FileStream::OpenWrite(path);
     public static FileStream CreateNew(readonly(char)* path) => FileStream::CreateNew(path);
@@ -219,6 +228,7 @@ public static class File
 namespace file_path_detail
 {
     private extern int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
+    private extern long __gflat_stdio_file_length(readonly(char)* path) nothrow;
     private extern int remove(readonly(char)* path);
     private extern int rename(readonly(char)* source, readonly(char)* destination);
 }

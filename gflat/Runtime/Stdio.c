@@ -91,6 +91,22 @@ int __gflat_stdio_path_kind(const char* path) {
     return 0;
 }
 
+int64_t __gflat_stdio_file_length(const char* path) {
+#ifdef _WIN32
+    struct _stat64 details;
+    if (_stat64(path, &details) != 0) return -1;
+    if ((details.st_mode & _S_IFMT) != _S_IFREG) { errno = EINVAL; return -1; }
+    return details.st_size;
+#else
+    struct stat details;
+    if (stat(path, &details) != 0) return -1;
+    if (!S_ISREG(details.st_mode)) { errno = EINVAL; return -1; }
+    int64_t length = (int64_t)details.st_size;
+    if ((off_t)length != details.st_size) { errno = EOVERFLOW; return -1; }
+    return length;
+#endif
+}
+
 int __gflat_stdio_make_directory(const char* path) {
 #ifdef _WIN32
     return _mkdir(path);

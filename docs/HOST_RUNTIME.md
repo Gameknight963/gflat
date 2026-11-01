@@ -232,6 +232,11 @@ and [GNU libc](https://sourceware.org/glibc/manual/latest/html_node/Opening-Stre
 
 ### Checking paths
 
+`File::GetLength(path)` queries a regular file's byte length as a signed 64-bit
+value. It follows symbolic links. Missing paths, directories, and metadata query
+failures throw `IOException`. Buffered output remains in its stream until flushed.
+Use `FileStream.Length` to include that stream's pending writes.
+
 `File::Exists(path)` reports whether a path refers to a regular file.
 `Directory::Exists(path)` reports whether it refers to a directory. Both follow
 symbolic links to their targets and return false for empty paths, missing paths,

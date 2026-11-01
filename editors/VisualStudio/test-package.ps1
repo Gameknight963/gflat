@@ -37,7 +37,7 @@ try {
     }
     # The complete optional source library lives in the project SDK. Compiler and
     # server Standard folders contain only the built-in runtime contract subset.
-    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'core/IO/MemoryStream.gf', 'core/IO/byte_reader_read_at_least.gf', 'core/Compression/ZipArchive.gf', 'core/Compression/ZipArchiveEntry.gf', 'core/Compression/ZipArchiveWriter.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
+    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'core/IO/MemoryStream.gf', 'core/IO/byte_reader_read_at_least.gf', 'core/Compression/ZipArchive.gf', 'core/Compression/ZipArchiveEntry.gf', 'core/Compression/ZipArchiveWriter.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/text_writer_join.gf', 'core/Csv/CsvWriter.gf', 'core/Csv/csv_reader_records.gf', 'core/Csv/csv_writer_records.gf', 'libc/Console/redirection.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
         $packagedSource = Join-Path $extracted "Sdk/Standard/$source"
         if (-not (Test-Path -LiteralPath $packagedSource)) { throw "VSIX is missing Sdk/Standard/$source" }
         $repositorySource = Join-Path $repoRoot "Standard/$source"
@@ -158,6 +158,37 @@ int main() { Counter value=new(Pure()); return value.Value; }
     if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed the runtime-free nothrow check' }
     if ((Get-Content -Raw -LiteralPath $noThrowIr) -match '@__gflat_eh_|\bpersonality\b|\binvoke\b') {
         throw 'Known nothrow calls unexpectedly require exception support'
+    }
+    $redirectionSource = Join-Path $extracted 'console-redirection.gf'
+    $redirectionExecutable = Join-Path $extracted 'console-redirection.exe'
+    @'
+extern int getchar() nothrow;
+int main() nothrow {
+    if (!Console::IsInputRedirected || !Console::IsOutputRedirected || !Console::IsErrorRedirected) return 1;
+    if (getchar() != 81) return 2;
+    return 0;
+}
+'@ | Set-Content -LiteralPath $redirectionSource
+    & $compiler $redirectionSource (Join-Path $extracted 'Sdk/Standard/libc/Console/redirection.gf') --no-stdlib --no-builtins -o $redirectionExecutable
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler could not build the Console C-only adapter consumer' }
+    $redirectionInput = Join-Path $extracted 'console-redirection.in'
+    $redirectionOutput = Join-Path $extracted 'console-redirection.out'
+    $redirectionError = Join-Path $extracted 'console-redirection.err'
+    [IO.File]::WriteAllBytes($redirectionInput, [byte[]]@(81))
+    $redirectionProcess = Start-Process -FilePath $redirectionExecutable -PassThru -NoNewWindow `
+        -RedirectStandardInput $redirectionInput -RedirectStandardOutput $redirectionOutput -RedirectStandardError $redirectionError
+    try {
+        $null = $redirectionProcess.Handle
+        if (-not $redirectionProcess.WaitForExit(30000)) {
+            $redirectionProcess.Kill()
+            $redirectionProcess.WaitForExit()
+            throw 'Packaged Console adapter consumer timed out'
+        }
+        if ($redirectionProcess.ExitCode -ne 0) { throw "Packaged Console adapter consumer failed: $($redirectionProcess.ExitCode)" }
+    }
+    finally { $redirectionProcess.Dispose() }
+    if ((Get-Item -LiteralPath $redirectionOutput).Length -ne 0 -or (Get-Item -LiteralPath $redirectionError).Length -ne 0) {
+        throw 'Console redirection queries unexpectedly produced output'
     }
     $rawDeflate = Join-Path $extracted 'raw-deflate.gf'
     $declarationQualifiers = Join-Path $extracted 'declaration-qualifiers.gf'

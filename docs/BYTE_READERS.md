@@ -22,6 +22,7 @@ Import `Standard::IO` for these extensions:
 | --- | --- |
 | `ReadByte()` | Returns 0–255, or -1 at EOF |
 | `ReadExactly(data, count)` | Fills the requested region or throws `EndOfStreamException` |
+| `ReadAtLeast(data, capacity, minimumBytes, throwOnEndOfStream = true)` | Returns the actual byte count once the minimum is available |
 | `SkipExactly(count)` | Discards the requested bytes or throws `EndOfStreamException` |
 | `CopyTo(output, scratch, capacity)` | Copies until EOF and returns the number of bytes sent |
 | `CopyTo(output)` | Uses 4096 stack bytes as scratch |
@@ -34,6 +35,35 @@ decoder, call its `Complete()` afterward.
 Use [ReadToEnd](READ_TO_END.md) to collect remaining bytes into a String,
 [BufferedReader](BUFFERED_READER.md) for small reads, or
 [LimitedReader](../Standard/core/IO/LIMITED_READER.md) for a bounded payload.
+
+## Read a minimum prefix
+
+`ReadAtLeast` fills a caller buffer until at least `minimumBytes` are available.
+Each read can fill the remaining capacity, so the returned count may exceed the
+minimum. It returns as soon as that minimum is satisfied.
+
+```csharp
+using Standard::Binary;
+using Standard::IO;
+
+int main()
+{
+    byte[6] bytes = [1, 2, 3, 4, 5, 6];
+    BinaryBufferReader source = new(bytes, 6);
+    char[16] buffer;
+    nuint count = ReadAtLeast(&source, buffer, 16, 4);
+    if (count != 6) return 1;
+    return 0;
+}
+```
+
+- Early EOF throws EndOfStreamException. Pass false as the final argument to
+  receive the short count instead
+- A minimum larger than capacity throws IOException before reading or writing
+- A zero minimum makes one zero-byte read for source-state validation
+- Source errors propagate. Failure can leave consumed input and a written prefix
+
+Keep output separate from reader state and retained source input, as with Read.
 
 ## Enumerate bytes without owning the source
 

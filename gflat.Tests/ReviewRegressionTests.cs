@@ -29,7 +29,6 @@ public class ReviewRegressionTests
     }
 
     [Theory]
-    [InlineData("0")]
     [InlineData("-1")]
     [InlineData("4294967297L")]
     public void InvalidArraySizeIsDiagnostic(string length) =>

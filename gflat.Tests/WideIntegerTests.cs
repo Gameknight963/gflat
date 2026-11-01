@@ -13,12 +13,16 @@ public sealed class WideIntegerTests
             "const extralong Count = " + bound + "; int main() { int[Count] data = [20, 22]; return data[0] + data[1]; }").ExitCode);
 
     [Theory]
-    [InlineData("(extralong)0")]
     [InlineData("(extralong)-1")]
     [InlineData("(extralong)1 << 96")]
     public void WideArrayBoundsAreRangeCheckedBeforeNarrowing(string bound)
         => Assert.Contains("Array size must be between", Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(
             "const extralong Count = " + bound + "; int main() { int[Count] data; return 0; }")).Message);
+
+    [Fact]
+    public void ZeroWideArrayBoundsProduceEmptyBuffers()
+        => Assert.Equal(0, CompilerTestHelper.Run(
+            "const extralong Count = 0; int main() { int[Count] data = []; return sizeof(data); }").ExitCode);
 
     [Fact]
     public void WideConstantArithmeticDoesNotWrapAtSixtyFourBits()

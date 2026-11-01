@@ -73,7 +73,7 @@ public sealed class ArrayDeclarationLiteralContextTests
             "nuint value=-1;","nuint[1] values=[-1];",
             "nint value=18446744073709551615ul;","nint[1] values=[18446744073709551615ul];",
             "byte[3] values=[1,2];","nuint[2][2] values=[[0,1]];","ushort[2][2] values=[[1],[2,3]];",
-            "byte[2] row=[1,2];byte[3][2] values=[row,[3,4,5]];","byte[] values=[];",
+            "byte[2] row=[1,2];byte[3][2] values=[row,[3,4,5]];","byte[1] values=[];",
             "int typed=1;nuint[2] values=[0,typed];",
             "int[2] source=[1,2];nuint[2] destination=source;",
             "int value=1;readonly(int)* pointer=&value;int*[2] values=[pointer,&value];",

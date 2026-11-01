@@ -381,6 +381,17 @@ the object closed. Destruction attempts closing without reporting errors.
 `File::Remove(path)` and `File::Rename(source, destination)` throw `IOException`
 on failure. Rename and destination replacement follow the host C runtime's rules.
 
+### Copying files
+
+`File::Copy(source, destination)` copies byte contents into a new binary file.
+An existing destination throws `IOException` and keeps its contents, including
+when both paths refer to the same file. The source is opened before creating the
+destination. A missing source therefore leaves the destination absent.
+
+Copying uses a 4096-byte stack buffer and closes both streams before returning.
+Read, write, and close failures propagate as `IOException`. Once creation has
+succeeded, a failure can leave a partial destination file.
+
 ### Owning binary and text conveniences
 
 | API | Owned result or input |

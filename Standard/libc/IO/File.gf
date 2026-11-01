@@ -30,6 +30,22 @@ public static class File
         if (file_path_detail::rename(source, destination) != 0) throw new IOException("File rename failed");
     }
 
+    // Copies bytes into a new file. Output errors can leave a partial destination.
+    public static void Copy(readonly(char)* source, readonly(char)* destination)
+    {
+        FileStream input = FileStream::OpenRead(source);
+        FileStream output = FileStream::CreateNew(destination);
+        char[4096] buffer;
+        while (true)
+        {
+            nuint count = input.Read(buffer, 4096);
+            if (count == 0) break;
+            output.Write(buffer, count);
+        }
+        output.Close();
+        input.Close();
+    }
+
     // Reads the file bytes into an owning String, preserving embedded zeros and line endings.
     public static String ReadAllText(readonly(char)* path)
         => File::ReadAllText(path, (nuint)0 - (nuint)1);

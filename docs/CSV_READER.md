@@ -114,6 +114,43 @@ int main()
 An empty field clears the String. No current field throws, and growth failure
 preserves its old contents. Keep output separate from the reader's input.
 
+## Reading owning records
+
+The optional `csv_reader_records.gf` module adds `TryReadRecord(ref row)` and
+`TryReadRecord(reader, ref row)`. Each successful call fills a `Vector<String>`
+with decoded fields, reusing its vector capacity and existing String storage.
+
+```csharp
+using Standard::Collections;
+using Standard::Csv;
+using Standard::Text;
+
+int main()
+{
+    readonly(char)* input = "name,value\n\"a,b\",12\n";
+    CsvReader reader = new(input, CString::Length(input));
+    Vector<String> row = new();
+    if (!reader.TryReadRecord(ref row) || row.Count != 2) return 1;
+    if (!row[0].Equals("name") || !row[1].Equals("value")) return 2;
+    if (!reader.TryReadRecord(ref row) || !row[0].Equals("a,b")) return 3;
+    if (reader.TryReadRecord(ref row) || row.Count != 0) return 4;
+    return 0;
+}
+```
+
+EOF clears the row and returns false. A blank line yields one empty String, and
+a trailing comma yields a final empty field. Owned field values survive reader
+reset or changes to the original input.
+
+After a parsing or allocation error, the row contains only fields fully decoded
+during that call. The reader has advanced. Its existing failure and `Reset`
+rules still apply. Input bytes must be separate from all output String storage.
+
+Call at a record boundary. If a manual `Read()` has left the reader between
+fields, the helper throws before changing the row or advancing. `Reset()` returns
+to the start of the input. Select `CsvReaderText.gf`, `string_span.gf`, `Vector`,
+`String`, and their dependencies along with the record helper.
+
 ## Lifetimes, aliases, and errors
 
 Keep input alive and unchanged for the reader and saved RawField spans. Reader

@@ -3,9 +3,50 @@ using Standard::Collections;
 
 namespace Standard::Text;
 
-// Owning counted conversions, separate from the allocation-free codecs.
+// Owning results of Unicode text operations.
 public static class UnicodeText
 {
+    public static String Trim(readonly(char)* input, nuint bytes)
+        => UnicodeText::TrimCore(input, bytes, true, true);
+    public static String TrimStart(readonly(char)* input, nuint bytes)
+        => UnicodeText::TrimCore(input, bytes, true, false);
+    public static String TrimEnd(readonly(char)* input, nuint bytes)
+        => UnicodeText::TrimCore(input, bytes, false, true);
+
+    public static String Trim(readonly(char)* input) => UnicodeText::Trim(input, CString::Length(input));
+    public static String TrimStart(readonly(char)* input) => UnicodeText::TrimStart(input, CString::Length(input));
+    public static String TrimEnd(readonly(char)* input) => UnicodeText::TrimEnd(input, CString::Length(input));
+
+    private static String TrimCore(readonly(char)* input, nuint bytes, bool trimStart, bool trimEnd)
+    {
+        if (!Utf8::IsValid(input, bytes)) throw new Exception("Invalid UTF-8 text");
+        nuint start = 0;
+        nuint end = bytes;
+        if (trimStart)
+        {
+            while (start < end)
+            {
+                uint scalar = 0u;
+                nuint consumed = 0;
+                Utf8::TryDecode(input + start, end - start, &scalar, &consumed);
+                if (!Rune::IsWhiteSpace(new Rune(scalar))) break;
+                start += consumed;
+            }
+        }
+        if (trimEnd)
+        {
+            while (end > start)
+            {
+                uint scalar = 0u;
+                nuint consumed = 0;
+                Utf8::TryDecodeLast(input + start, end - start, &scalar, &consumed);
+                if (!Rune::IsWhiteSpace(new Rune(scalar))) break;
+                end -= consumed;
+            }
+        }
+        return String::From(input + start, end - start);
+    }
+
     public static String FromUtf16(readonly(ushort)* input, nuint units)
     {
         nuint required = 0;

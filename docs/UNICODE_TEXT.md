@@ -1,6 +1,7 @@
-# Owning Unicode conversions
+# Owning Unicode text operations
 
-`Standard::Text::UnicodeText` converts between UTF-8 Strings and UTF-16 vectors:
+`Standard::Text::UnicodeText` provides owning UTF-8/UTF-16 conversions and
+Unicode whitespace trimming.
 
 ```csharp
 using Standard::Text;
@@ -34,5 +35,30 @@ Invalid encoding or size overflow throws `Exception`. Allocation failure throws
 UTF-16 inputs are host `ushort` values. Serialized LE/BE bytes need an explicit
 byte-order decoder. For caller-buffer conversions, use
 [UnicodeTranscoding](UNICODE_TRANSCODING.md).
+
+## Trimming Unicode whitespace
+
+`UnicodeText::Trim`, `TrimStart`, and `TrimEnd` return independent Strings after
+removing Unicode whitespace from the selected ends. Each accepts either counted
+UTF-8 bytes or a C string. The counted form preserves embedded NUL. U+FEFF (BOM)
+is retained.
+
+```csharp
+using Standard::Text;
+
+int main()
+{
+    // UTF-8 bytes for U+2003, x, U+00A0.
+    char[6] source = [(char)0xe2, (char)0x80, (char)0x83, 'x', (char)0xc2, (char)0xa0];
+    String result = UnicodeText::Trim(source, 6);
+    if (!result.Equals("x")) return 1;
+    return 0;
+}
+```
+
+The complete UTF-8 input is validated before allocating a result, including its
+untrimmed middle. Invalid encoding throws `Exception`. Classification uses
+[`Rune::IsWhiteSpace`](RUNE.md). The in-place `String.Trim` methods keep their
+byte-oriented behavior.
 
 Source: `core/Text/UnicodeText.gf`

@@ -86,6 +86,10 @@ The default `OutputType` is `Executable`. A source library uses `SourceLibrary`:
 
 ```xml
 <Project DefaultTargets="Build">
+  <PropertyGroup>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">../path/to/gflat</GflatSdkRoot>
+  </PropertyGroup>
   <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
   <PropertyGroup>
     <OutputType>SourceLibrary</OutputType>
@@ -129,6 +133,10 @@ The build rules include `**/*.gf`, excluding `bin`, `obj`, `.git`, `.vs`, and
 
 ```xml
 <Project DefaultTargets="Build">
+  <PropertyGroup>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">../path/to/gflat</GflatSdkRoot>
+  </PropertyGroup>
   <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
   <ItemGroup>
     <Compile Remove="scratch/**/*.gf" />

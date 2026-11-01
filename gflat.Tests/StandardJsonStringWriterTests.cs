@@ -125,7 +125,7 @@ public sealed class StandardJsonStringWriterTests
     {
         var names=new List<string>{"core/Text/utf8.gf","core/Json/JsonString.gf","core/Json/json_string_writer.gf"};
         if(file)names.AddRange(["core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/Text/BufferTooSmallException.gf","core/Text/BufferWriter.gf",
-            "core/IStringConvertable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf","core/Text/String.gf", "core/Text/ByteSearch.gf","core/IO/IByteReader.gf", "libc/IO/FileStream.gf"]);
+            "core/IStringConvertable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf","core/Text/String.gf", "core/Text/ByteSearch.gf","core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf"]);
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);

@@ -28,7 +28,7 @@ public sealed class FileFacadeTests
         try
         {
             string[] names = ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
-                "core/IO/IByteReader.gf", "libc/IO/FileStream.gf"];
+                "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf"];
             var sources = FileApiTestSources.WithConveniences(names).Select(ReadSource)
                 .Append(new SourceFile("file-factories.gf", """
                     using Standard::IO;
@@ -74,7 +74,7 @@ public sealed class FileFacadeTests
 
     private static IEnumerable<SourceFile> StreamSources()
         => new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
-            "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" }.Select(ReadSource);
+            "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf" }.Select(ReadSource);
 
     private static SourceFile ReadSource(string name)
         => new(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name)));

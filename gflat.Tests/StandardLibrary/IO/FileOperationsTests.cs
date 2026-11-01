@@ -6,7 +6,7 @@ public sealed class FileOperationsTests
 
     private static void Run(string directory, string program, bool text = false)
     {
-        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" };
+        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf" };
         if (text) names.AddRange(FileApiTestSources.ConvenienceDependencies);
         var files = names.Distinct(StringComparer.Ordinal)
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))

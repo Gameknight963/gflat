@@ -213,7 +213,7 @@ public sealed class FileAllLinesTests
     private static string Compile(string directory, string code, int optimization)
     {
         string[] streamSources = ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
-            "core/IO/IByteReader.gf", "libc/IO/FileStream.gf"];
+            "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf"];
         var sources = FileApiTestSources.WithConveniences(streamSources)
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("file-all-lines.gf", code));

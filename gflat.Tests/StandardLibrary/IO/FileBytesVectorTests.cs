@@ -124,7 +124,7 @@ public sealed class FileBytesVectorTests
     {
         // Select the File facade and its owning byte/text dependencies.
         string[] names=["core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/Collections/IEnumerable.gf",
-            "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","core/IO/IByteReader.gf", "libc/IO/FileStream.gf"];
+            "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf"];
         var sources=FileApiTestSources.WithConveniences(names).Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("file-bytes-vector-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");

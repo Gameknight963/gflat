@@ -14,7 +14,7 @@ public sealed class FileFailureTests
 
     private static void Run(string directory, string program, bool strings = false)
     {
-        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf", "libc/IO/FileLines.gf" };
+        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf", "libc/IO/FileLines.gf" };
         if (strings) names.AddRange(FileApiTestSources.ConvenienceDependencies);
         var files = names.Distinct(StringComparer.Ordinal).Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));

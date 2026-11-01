@@ -35,6 +35,33 @@ public struct FileStream : ITextWriter, IByteReader
         return move result;
     }
     public bool IsOpen { immutable get => handle != null; }
+
+    // Byte offset from the beginning. Setting Position seeks from the beginning.
+    public long Position
+    {
+        immutable get
+        {
+            if (handle == null) throw new IOException("File is closed");
+            long position = file_detail::__gflat_stdio_tell(handle!);
+            if (position < 0) throw new IOException("File position query failed");
+            return position;
+        }
+        set { this.Seek(value, SeekOrigin::Begin); }
+    }
+
+    // Returns the new byte position. Successful seeking clears EOF and lookahead.
+    public long Seek(long offset, SeekOrigin origin)
+    {
+        if (handle == null) throw new IOException("File is closed");
+        if (origin != SeekOrigin::Begin && origin != SeekOrigin::Current && origin != SeekOrigin::End)
+            throw new IOException("Invalid seek origin");
+        if (origin == SeekOrigin::Begin && offset < 0)
+            throw new IOException("File position must be nonnegative");
+        if (file_detail::__gflat_stdio_seek(handle!, offset, (int)origin) != 0)
+            throw new IOException("File seek failed");
+        return this.Position;
+    }
+
     // Reports EOF observed by an earlier read. Throws IOException when closed.
     public bool EndOfFile
     {
@@ -204,6 +231,8 @@ public struct FileStream : ITextWriter, IByteReader
 
 namespace file_detail
 {
+    private extern int __gflat_stdio_seek(FileHandle stream, long offset, int origin);
+    private extern long __gflat_stdio_tell(readonly(void)* stream);
     private extern FileHandle fopen(readonly(char)* path, readonly(char)* mode);
     private extern int fclose(FileHandle stream);
     private extern nuint fread(char* data, nuint size, nuint count, FileHandle stream);

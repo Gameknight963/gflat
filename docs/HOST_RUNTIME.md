@@ -227,10 +227,9 @@ internally. Its lifetime belongs to FileStream and libc.
 Closing a temporary stream removes its backing file. Normal process exit also
 runs libc cleanup. Abrupt termination follows the host's cleanup behavior.
 
-Temporary streams follow libc's input/output direction rules. Flush before
-switching from output to input. A switch from input to output requires positioning
-unless the read reached EOF. FileStream currently exposes the EOF transition but has
-no seek operation. Flushing leaves the cursor at its existing position.
+Temporary streams follow libc's input/output direction rules. Flush or seek before
+switching from output to input. Seek before switching from input to output unless
+the read reached EOF. Flushing leaves the cursor at its existing position.
 
 ### Reading and cursor state
 
@@ -251,6 +250,49 @@ buffer to discard sequential input.
 
 `EndOfFile` becomes true after a read encounters EOF. Consuming exactly the
 remaining bytes can leave it false until another read is attempted.
+
+### Positioning
+
+`Position` reads or sets the byte offset from the beginning of the stream as a
+signed 64-bit `long`. `Seek(offset, origin)` returns the new position:
+
+| Origin | Offset relative to |
+| --- | --- |
+| `SeekOrigin::Begin` | The beginning of the file |
+| `SeekOrigin::Current` | The current stream position |
+| `SeekOrigin::End` | The end of the file |
+
+Relative offsets can be negative. Seeking past EOF changes the cursor without
+extending the file until data is written. Append streams continue writing at
+EOF even after seeking elsewhere.
+
+Successful seeking clears the observed EOF state and discards `PeekByte`'s
+lookahead. It also allows the next operation on a temporary read/write stream
+to use either direction:
+
+```csharp
+using Standard::IO;
+
+int main()
+{
+    FileStream file = FileStream::OpenTemporary();
+    file.Write("abc");
+    file.Position = 0l;
+    if (file.ReadByte() != 97) return 1;
+    if (file.Seek(-1l, SeekOrigin::End) != 2l) return 2;
+    if (file.ReadByte() != 99) return 3;
+    return 0;
+}
+```
+
+Closed streams, invalid origins, negative absolute positions, and host positioning
+failures throw `IOException`. A host seek can flush pending output and fail after
+partial progress. Seeking preserves the stream's sticky error indicator. Use
+`ClearError()` after addressing a recoverable IO error.
+
+The C bridge maps the fixed-width ABI to Windows
+[`_fseeki64`/`_ftelli64`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fseek-fseeki64?view=msvc-170)
+or POSIX [`fseeko`/`ftello`](https://man7.org/linux/man-pages/man3/fseeko.3.html).
 
 ### Copying streams
 
@@ -349,7 +391,8 @@ For incremental reading, use [FileLines or FileStream.Lines()](#reading-lines).
 
 ### Selecting file sources
 
-`FileStream.gf` provides stream IO with the byte-reader and IO exception sources.
+`FileStream.gf` provides stream IO with `SeekOrigin.gf`, the byte-reader contract,
+and IO exception sources.
 The static `File` facade adds whole-file String and Vector operations, so selecting
 `File.gf` also requires those types, `FileLines.gf`, and their dependencies. Low-level code can call
 `FileStream::OpenRead`, `OpenWrite`, `OpenAppend`, and `OpenTemporary` directly.

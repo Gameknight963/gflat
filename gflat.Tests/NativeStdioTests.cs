@@ -3,6 +3,30 @@ namespace gflat.Tests;
 public sealed class NativeStdioTests
 {
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void PositionBridgeUsesFixedWidthOffsetsWithTheCOnlyHostProfile(int optimization)
+    {
+        string ir = Compiler.Emit("""
+            extern void*? tmpfile() nothrow;
+            extern int fclose(void* stream) nothrow;
+            extern int __gflat_stdio_seek(void* stream, long offset, int origin) nothrow;
+            extern long __gflat_stdio_tell(void* stream) nothrow;
+            int main() nothrow {
+                void*? stream = tmpfile();
+                if (stream == null) return 1;
+                if (__gflat_stdio_seek(stream!, 4294967313l, 0) != 0) return 2;
+                if (__gflat_stdio_tell(stream!) != 4294967313l) return 3;
+                if (__gflat_stdio_seek(stream!, -1l, 1) != 0 || __gflat_stdio_tell(stream!) != 4294967312l) return 4;
+                if (__gflat_stdio_seek(stream!, 0l, 2) != 0 || __gflat_stdio_tell(stream!) != 0l) return 5;
+                return fclose(stream!);
+            }
+            """, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
+        Assert.Equal((false, true), NativeToolchain.RequiredNativeRuntimes(ir));
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
+    [Theory]
     [InlineData(0, false)]
     [InlineData(2, false)]
     [InlineData(0, true)]

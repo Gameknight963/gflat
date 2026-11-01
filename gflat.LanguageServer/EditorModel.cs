@@ -91,8 +91,12 @@ public sealed partial class EditorModel
             var (name, kind, classification, type) = Describe(entry.Node);
             if (name == null) continue;
             var parents = Parents(entry).ToArray();
-            if (entry.Node is ConstructorDeclaration)
-                name = parents.Where(parent => IsType(parent.Node)).Select(parent => SourceName(parent.Node)).FirstOrDefault() ?? name;
+            if (entry.Node is ConstructorDeclaration or MethodDeclaration { StaticConstructorName: not null })
+            {
+                var containingType = parents.FirstOrDefault(parent => IsType(parent.Node));
+                name = containingType == null ? name : SourceName(containingType.Node);
+                classification = containingType?.Node is StructDeclaration ? "struct" : "class";
+            }
             if (name.Contains('$')) continue;
             string ns = entry.Parent?.Node is ExtensionDeclaration ? Namespace(parents)
                 : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
@@ -323,7 +327,7 @@ public sealed partial class EditorModel
             ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.IsTypeParameter || s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
             : s.Owner != null ? inherited.Contains(s) && (!isStatic || s.Static || IsType(s.Syntax.Node))
             : s.Namespace.Length == 0 || ns == s.Namespace || ns.StartsWith(s.Namespace + "::", StringComparison.Ordinal) || imports.Contains(s.Namespace))
-            .Where(s => s.Syntax.Node switch
+            .Where(s => s.IsTypeParameter || s.Syntax.Node switch
             {
                 // Owning-type members were checked in inheritedOrder above.
                 MethodDeclaration when s.Syntax.Parent?.Node is ExtensionDeclaration => false,
@@ -933,7 +937,7 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             var symbol = control || modifier ? null : Resolve(path, i);

@@ -331,6 +331,29 @@ public class EditorGrammarTests
             Assert.Equal(new[] { "string", "comment" }, pair.GetProperty("notIn").EnumerateArray().Select(v => v.GetString()));
     }
 
+    [Fact]
+    public void NestedConstructionDoesNotTreatArgumentsAsPartOfTheType()
+    {
+        const string line = "=> new Enumerable<T, SliceSource<T, S, E>, SliceSource<T, S, E>::Enumerator>(new SliceSource<T, S, E>((*this).SourceView(), count, 0));";
+        var result = Grammar().TokenizeLine(line);
+        AssertScope(result, line.LastIndexOf("new ", StringComparison.Ordinal), "keyword.other");
+        AssertScope(result, line.IndexOf("SourceView", StringComparison.Ordinal), "entity.name.function");
+        AssertScope(result, line.IndexOf("this", StringComparison.Ordinal), "constant.language");
+    }
+
+    [Theory]
+    [InlineData("if (task.Done) mark = 'x';", "Done")]
+    [InlineData("if (ready) flag = false;", "ready")]
+    [InlineData("while (ready) work();", "ready")]
+    [InlineData("if (tasks.Count == 0) return;", "Count")]
+    [InlineData("if (task.Done) Console::WriteLine();", "Done")]
+    public void MemberReadsInConditionsAreNotGuessedAsTypeDeclarations(string line, string member)
+    {
+        int position = line.IndexOf(member, StringComparison.Ordinal);
+        var token = Assert.Single(Grammar().TokenizeLine(line).Tokens, token => token.StartIndex <= position && token.EndIndex > position);
+        Assert.DoesNotContain(token.Scopes, scope => scope.StartsWith("entity.name.type.", StringComparison.Ordinal));
+    }
+
     private static void AssertScope(ITokenizeLineResult result, int position, string scope)
     {
         var token = Assert.Single(result.Tokens, t => t.StartIndex <= position && t.EndIndex > position);

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Reflection;
 using gflat.ast;
 using gflat.CompileExceptions;
@@ -12,17 +13,22 @@ public sealed class AnalysisSnapshot
 {
     public sealed record Syntax(AstNode Node, SourceSpan Span, Syntax? Parent);
     public CompilationOptions Options { get; }
+    public IReadOnlyDictionary<SourceId, IReadOnlyList<Token>> SourceTokens { get; private set; } = new Dictionary<SourceId, IReadOnlyList<Token>>();
     public IReadOnlyList<Syntax> Nodes { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public TypeChecker? Checker { get; }
+    public IReadOnlySet<SourceId>? BodySources { get; }
     public IReadOnlyDictionary<SourceId, string[]> Imports { get; }
     public IReadOnlyDictionary<AstNode, TypeExpression> DeclaredTypes { get; }
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> Children = new();
 
-    public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null, CancellationToken cancellationToken = default)
+    public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null, CancellationToken cancellationToken = default,
+        IReadOnlySet<SourceId>? bodySources = null, SourceTokenCache? tokenCache = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Options = options ?? new();
+        bodySources = bodySources?.ToFrozenSet();
+        BodySources = bodySources;
         var diagnostics = new DiagnosticBag();
         var nodes = new List<Syntax>();
         var declaredTypes = new Dictionary<AstNode, TypeExpression>(ReferenceEqualityComparer.Instance);
@@ -30,7 +36,8 @@ public sealed class AnalysisSnapshot
         Imports = new Dictionary<SourceId, string[]>();
         try
         {
-            var compilation = new Compilation(sources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken);
+            var compilation = new Compilation(sources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken, tokenCache: tokenCache, captureTokens: true);
+            SourceTokens = compilation.SourceTokens;
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
             Capture(compilation.Unit, null);
             var aliases = nodes.Select(n => n.Node).OfType<AliasDeclaration>().Select(a => a.Name).ToHashSet();
@@ -56,7 +63,7 @@ public sealed class AnalysisSnapshot
                 _ => false
             };
             cancellationToken.ThrowIfCancellationRequested();
-            Checker = new TypeChecker(diagnostics, recoverErrors: true, cancellationToken: cancellationToken);
+            Checker = new TypeChecker(diagnostics, recoverErrors: true, cancellationToken: cancellationToken, bodySources: bodySources);
             compilation.Unit.Accept(Checker);
             cancellationToken.ThrowIfCancellationRequested();
         }
@@ -80,7 +87,13 @@ public sealed class AnalysisSnapshot
                 .Where(p => p.GetIndexParameters().Length == 0 &&
                     (typeof(AstNode).IsAssignableFrom(p.PropertyType) || typeof(IEnumerable<AstNode>).IsAssignableFrom(p.PropertyType))).ToArray()))
             {
-                if (property.GetValue(node) is AstNode child) Capture(child, entry);
+                if (property.GetValue(node) is AstNode child)
+                {
+                    if (bodySources != null && property.Name == "Body" &&
+                        node is MethodDeclaration or ConstructorDeclaration or DestructorDeclaration or OperatorDeclaration &&
+                        (node.Span.SourceId is not { } sourceId || !bodySources.Contains(sourceId))) continue;
+                    Capture(child, entry);
+                }
                 else if (property.GetValue(node) is IEnumerable<AstNode> children)
                     foreach (var item in children) Capture(item, entry);
             }

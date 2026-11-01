@@ -226,6 +226,7 @@ namespace gflat.semantics
 
         public void CheckMethod(MethodDeclaration method)
         {
+            if (!_typeChecker.WasBodyChecked(method)) return;
             if (method.IsGeneric || method.Body == null || method.IsAbstract || _typeChecker.IsDeferredReflectionBody(method))
             {
                 return;
@@ -250,6 +251,7 @@ namespace gflat.semantics
 
         public void CheckOperator(OperatorDeclaration op)
         {
+            if (!_typeChecker.WasBodyChecked(op)) return;
             if (op.Body == null)
             {
                 return;
@@ -269,6 +271,7 @@ namespace gflat.semantics
 
         public void CheckConstructor(ConstructorDeclaration ctor)
         {
+            if (!_typeChecker.WasBodyChecked(ctor)) return;
             if (ctor.Body == null)
             {
                 return;
@@ -311,6 +314,7 @@ namespace gflat.semantics
 
         public void CheckDestructor(DestructorDeclaration dtor)
         {
+            if (!_typeChecker.WasBodyChecked(dtor)) return;
             if (dtor.Body == null)
             {
                 return;

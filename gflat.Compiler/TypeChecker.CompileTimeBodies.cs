@@ -10,6 +10,7 @@ public partial class TypeChecker
     {
         if (!checkedCompileTimeConstructors.Add(constructor)) return;
         using var context = EnterSignatureContext(constructor, owner, IsClassByIdentity(owner));
+        using var bodyDemand = DemandEditorBody();
         var previous = _currentConstructor;
         try { constructor.Accept(this); }
         finally { _currentConstructor = previous; }

@@ -434,7 +434,9 @@ public partial class TypeChecker
 
     public MethodDeclaration PrepareReflectionConstInvocation(CallExpression call, MethodDeclaration method, IReadOnlyList<ConstValue> arguments)
     {
+        using var bodyDemand = IsPartialBodyAnalysis ? DemandEditorBody() : null;
         method = ReflectionComptimeCallTarget(call, method);
+        if (IsPartialBodyAnalysis && !WasBodyChecked(method)) EnsureConstMethodBody(method);
         if (!RequiresReflectionStaging(method)) return method;
         if (++reflectionStageDepth > 256)
         {

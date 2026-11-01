@@ -140,6 +140,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(tokens[0].Span);
             Parser parser = new Parser(diagnostics);
             parser._tokens = tokens;
+            parser._copyTokensOnSplit = true;
             parser._pos = 0;
             parser._recoverErrors = recoverErrors;
             return parser.ParseCompilationUnit();
@@ -2175,6 +2176,8 @@ namespace gflat
                 Expect(TokenKind.OpenParen);
                 int saved = _pos;
                 var savedTokens = _tokens;
+                bool savedCopyTokensOnSplit = _copyTokensOnSplit;
+                _copyTokensOnSplit = true;
                 int mark = _diagnostics.Count;
                 AstNode? target = null;
                 try
@@ -2183,11 +2186,15 @@ namespace gflat
                     if (_diagnostics.Count == mark && Check(TokenKind.CloseParen)) target = type;
                 }
                 catch (TypeCheckException) { }
+                // The type probe may have detached on >>. Rolling back must
+                // restore the ownership of the saved list as well as its cursor.
+                _copyTokensOnSplit = ReferenceEquals(_tokens, savedTokens) ? savedCopyTokensOnSplit : false;
                 if (target == null)
                 {
                     _diagnostics.ClearSince(mark);
                     _pos = saved;
                     _tokens = savedTokens;
+                    _copyTokensOnSplit = savedCopyTokensOnSplit;
                     target = ParseExpression();
                 }
                 Expect(TokenKind.CloseParen);

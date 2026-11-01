@@ -13,6 +13,7 @@ public partial class TypeChecker
     {
         if (!method.IsConst || checkedConstMethodBodies.Contains(method)) return;
         using var context = EnterMethodSignatureContext(method);
+        using var bodyDemand = DemandEditorBody();
         method.Accept(this);
     }
     public static NamedTypeExpression ReflectionType(int line) => NamedTypeExpression.Resolved("reflection", line);

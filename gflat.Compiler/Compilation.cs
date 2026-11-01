@@ -10,9 +10,11 @@ public sealed class Compilation
     public IReadOnlyList<SourceFile> Sources { get; }
     public IReadOnlyList<CompilationUnit> SyntaxTrees { get; }
     public CompilationUnit Unit { get; }
+    public IReadOnlyDictionary<SourceId, IReadOnlyList<Token>> SourceTokens => sourceTokens;
+    private readonly Dictionary<SourceId, IReadOnlyList<Token>> sourceTokens = new();
 
     public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false, CompilationOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, SourceTokenCache? tokenCache = null, bool captureTokens = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var captured = new List<SourceFile>();
@@ -29,7 +31,9 @@ public sealed class Compilation
         SyntaxTrees = Sources.Select(source =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var tokens = Lexer.Tokenize(source, recoverErrors ? diagnostics : null);
+            var tokens = tokenCache?.Tokenize(source, recoverErrors ? diagnostics : null)
+                ?? Lexer.Tokenize(source, recoverErrors ? diagnostics : null);
+            if (captureTokens) sourceTokens[source.Id] = tokens.AsReadOnly();
             cancellationToken.ThrowIfCancellationRequested();
             var tree = Parser.Parse(tokens, diagnostics, recoverErrors);
             cancellationToken.ThrowIfCancellationRequested();
@@ -38,14 +42,15 @@ public sealed class Compilation
         Unit = new CompilationUnit(new(), SyntaxTrees.SelectMany(t => t.Namespaces).ToList(), SyntaxTrees.SelectMany(t => t.Members).ToList(), 0);
         foreach (var tree in SyntaxTrees)
             Unit.FileUsings[tree.Span.SourceId!.Value] = tree.Usings.Select(u => u.Name).ToArray();
-        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, Sources, cancellationToken); }
+        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, Sources, cancellationToken, tokenCache, captureTokens ? sourceTokens : null); }
         catch (TypeCheckException error) when (recoverErrors)
         { diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description); }
         cancellationToken.ThrowIfCancellationRequested();
     }
 
     public static void AddStandardLibrary(CompilationUnit unit, DiagnosticBag diagnostics, IEnumerable<SourceFile>? inputs = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, SourceTokenCache? tokenCache = null,
+        IDictionary<SourceId, IReadOnlyList<Token>>? sourceTokens = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var files = inputs?.ToArray() ?? unit.Members.Select(m => m.Span.Source)
@@ -79,7 +84,8 @@ public sealed class Compilation
             if (relative == "core/Exception.gf" && hasException) continue;
             if (relative == "core/BadAllocException.gf" && !includeBadAlloc) continue;
             var source = StandardLibrary.Load(relative);
-            var tokens = Lexer.Tokenize(source);
+            var tokens = tokenCache?.Tokenize(source, null) ?? Lexer.Tokenize(source);
+            if (sourceTokens != null) sourceTokens[source.Id] = tokens.AsReadOnly();
             cancellationToken.ThrowIfCancellationRequested();
             var tree = Parser.Parse(tokens, diagnostics);
             cancellationToken.ThrowIfCancellationRequested();

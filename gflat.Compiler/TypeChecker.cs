@@ -24,10 +24,12 @@ namespace gflat
 
         private readonly bool _recoverErrors;
         private readonly CancellationToken _cancellationToken;
-        public TypeChecker(DiagnosticBag? diagnostics = null, bool recoverErrors = false, CancellationToken cancellationToken = default)
+        public TypeChecker(DiagnosticBag? diagnostics = null, bool recoverErrors = false, CancellationToken cancellationToken = default,
+            IReadOnlySet<SourceId>? bodySources = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             _cancellationToken = cancellationToken;
+            editorBodySources = bodySources == null ? null : new HashSet<SourceId>(bodySources);
             _recoverErrors = recoverErrors;
             _diagnostics = diagnostics ?? new DiagnosticBag();
             _constEvaluator = new ConstEvaluator(this);
@@ -2633,12 +2635,17 @@ namespace gflat
                         _currentFunction = method;
                         using var exceptionScope = IsolateExceptionHandlers();
                         using var nullableScope = IsolateNullableFlow();
-                        if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
                             ValidateReflectionMethodSignature(method);
                             if (DeferReflectionConstBody(method)) continue;
                             ValidateReturnType(method.ReturnType, method.Line);
+                            if (!BeginEditorBody(method))
+                            {
+                                foreach (Parameter p in method.Parameters) ValidateParameterType(p.Type, p.Line);
+                                continue;
+                            }
+                            if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                             if (!method.IsAbstract)
                             {
                                 PushScope();
@@ -2834,12 +2841,17 @@ namespace gflat
                         _currentFunction = method;
                         using var exceptionScope = IsolateExceptionHandlers();
                         using var nullableScope = IsolateNullableFlow();
-                        if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
                             ValidateReflectionMethodSignature(method);
                             if (DeferReflectionConstBody(method)) continue;
                             ValidateReturnType(method.ReturnType, method.Line);
+                            if (!BeginEditorBody(method))
+                            {
+                                foreach (Parameter p in method.Parameters) ValidateParameterType(p.Type, p.Line);
+                                continue;
+                            }
+                            if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                             PushScope();
                             NamedTypeExpression structType = NamedTypeExpression.Resolved(node.Name, method.Line);
                             PointerTypeExpression thisType = new PointerTypeExpression(method.IsImmutable ? TypeQualifiers.Immutable(structType) : structType, false, method.Line, isReadOnly: method.IsReadOnly);
@@ -2936,6 +2948,8 @@ namespace gflat
             }
 
             ValidateOperatorContract(node);
+
+            if (!BeginEditorBody(node)) return;
 
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
@@ -3067,22 +3081,24 @@ namespace gflat
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
-            if (node.IsConst) checkedConstMethodBodies.Add(node);
+            if (node.IsConst && ShouldCheckEditorBody(node)) checkedConstMethodBodies.Add(node);
             BindMethodSignature(node);
             ValidateReflectionMethodSignature(node);
             ValidateExplicitConversionDeclaration(node);
             ValidateEntryPoint(node);
             ValidateParameterDefaults(node, node.Parameters);
             if (DeferReflectionConstBody(node)) return;
-            if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
-
-
-
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
             try
             {
                 ValidateReturnType(node.ReturnType, node.Line);
+                if (!BeginEditorBody(node))
+                {
+                    foreach (Parameter p in node.Parameters) ValidateParameterType(p.Type, p.Line);
+                    return;
+                }
+                if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
                 PushScope();
                 if (!node.IsStatic && specializedMethodOwners.TryGetValue(node, out var receiver))
                 {
@@ -3133,6 +3149,12 @@ namespace gflat
                 if ((_currentStruct?.Constructors ?? _currentClass!.Constructors).Count(c => c.IsCopy) != 1)
                     throw new TypeCheckException("A type has exactly one copy constructor", node.Line);
             }
+            if (!ShouldCheckEditorBody(node))
+            {
+                foreach (Parameter p in node.Parameters) ValidateParameterType(p.Type, p.Line);
+                return;
+            }
+            BeginEditorBody(node);
             _currentConstructor = node;
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
@@ -3247,6 +3269,7 @@ namespace gflat
                 throw new TypeCheckException($"Destructor name '~{DisplayName(node.Name)}' does not match {kindStr} name '{DisplayName(ownerName)}'", node.Line);
             }
 
+            if (!BeginEditorBody(node)) return;
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
             try

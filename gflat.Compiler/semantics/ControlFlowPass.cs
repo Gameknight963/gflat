@@ -85,6 +85,7 @@ namespace gflat.semantics
 
         public void CheckMethod(MethodDeclaration method)
         {
+            if (!_typeChecker.WasBodyChecked(method)) return;
             if (method.IsGeneric || method.Body == null || method.IsAbstract || _typeChecker.IsDeferredReflectionBody(method))
             {
                 return;
@@ -107,6 +108,7 @@ namespace gflat.semantics
 
         public void CheckOperator(OperatorDeclaration op)
         {
+            if (!_typeChecker.WasBodyChecked(op)) return;
             if (op.Body == null)
             {
                 return;

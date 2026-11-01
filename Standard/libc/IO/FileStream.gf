@@ -49,6 +49,34 @@ public struct FileStream : ITextWriter, IByteReader
         set { this.Seek(value, SeekOrigin::Begin); }
     }
 
+    // Includes buffered output. The current byte position is preserved.
+    public long Length
+    {
+        readonly get
+        {
+            if (handle == null) throw new IOException("File is closed");
+            long position = this.Position;
+            if (file_detail::fflush(handle!) != 0) throw new IOException("File flush failed");
+            long length = file_detail::__gflat_stdio_length(handle!);
+            if (this.Position != position && file_detail::__gflat_stdio_seek(handle!, position, (int)SeekOrigin::Begin) != 0)
+                throw new IOException("File position restoration failed");
+            if (length < 0) throw new IOException("File length query failed");
+            return length;
+        }
+    }
+
+    // Shrinks or extends with zero bytes. Position remains unchanged, even past EOF.
+    public void SetLength(long length)
+    {
+        if (handle == null) throw new IOException("File is closed");
+        if (length < 0) throw new IOException("File length must be nonnegative");
+        long position = this.Position;
+        this.Flush();
+        int status = file_detail::__gflat_stdio_set_length(handle!, length);
+        this.Seek(position, SeekOrigin::Begin);
+        if (status != 0) throw new IOException("File resize failed");
+    }
+
     // Returns the new byte position. Successful seeking clears EOF and lookahead.
     public long Seek(long offset, SeekOrigin origin)
     {
@@ -233,6 +261,8 @@ namespace file_detail
 {
     private extern int __gflat_stdio_seek(FileHandle stream, long offset, int origin);
     private extern long __gflat_stdio_tell(readonly(void)* stream);
+    private extern long __gflat_stdio_length(FileHandle stream);
+    private extern int __gflat_stdio_set_length(FileHandle stream, long length);
     private extern FileHandle fopen(readonly(char)* path, readonly(char)* mode);
     private extern int fclose(FileHandle stream);
     private extern nuint fread(char* data, nuint size, nuint count, FileHandle stream);

@@ -5,6 +5,32 @@ public sealed class NativeStdioTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void LengthBridgeUsesTheCOnlyHostProfile(int optimization)
+    {
+        string ir = Compiler.Emit("""
+            extern void*? tmpfile() nothrow;
+            extern int fclose(void* stream) nothrow;
+            extern int fflush(void* stream) nothrow;
+            extern int fputs(readonly(char)* text, void* stream) nothrow;
+            extern long __gflat_stdio_length(void* stream) nothrow;
+            extern int __gflat_stdio_set_length(void* stream, long length) nothrow;
+            int main() nothrow {
+                void*? stream = tmpfile();
+                if (stream == null) return 1;
+                if (fputs("abc", stream!) < 0 || fflush(stream!) != 0) return 2;
+                if (__gflat_stdio_length(stream!) != 3l) return 3;
+                if (__gflat_stdio_set_length(stream!, 10l) != 0 || __gflat_stdio_length(stream!) != 10l) return 4;
+                if (__gflat_stdio_set_length(stream!, 2l) != 0 || __gflat_stdio_length(stream!) != 2l) return 5;
+                return fclose(stream!);
+            }
+            """, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
+        Assert.Equal((false, true), NativeToolchain.RequiredNativeRuntimes(ir));
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void PositionBridgeUsesFixedWidthOffsetsWithTheCOnlyHostProfile(int optimization)
     {
         string ir = Compiler.Emit("""

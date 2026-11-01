@@ -294,6 +294,41 @@ The C bridge maps the fixed-width ABI to Windows
 [`_fseeki64`/`_ftelli64`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fseek-fseeki64?view=msvc-170)
 or POSIX [`fseeko`/`ftello`](https://man7.org/linux/man-pages/man3/fseeko.3.html).
 
+### File length
+
+`Length` returns the byte count as a signed 64-bit `long`, including buffered
+output. It flushes the stream and preserves its current position, lookahead,
+and observed EOF state. Flush and length-query failures throw `IOException`.
+
+`SetLength(length)` truncates or extends a writable file. Extending adds zero
+bytes. The current position stays unchanged, even when it lies beyond the new
+end. Successful resizing clears EOF and lookahead so later reads observe the
+new contents.
+
+```csharp
+using Standard::IO;
+
+int main()
+{
+    FileStream file = FileStream::OpenTemporary();
+    file.Write("abc");
+    file.SetLength(8l);
+    if (file.Length != 8l || file.Position != 3l) return 1;
+    if (file.ReadByte() != 0) return 2;
+    file.SetLength(2l);
+    if (file.Length != 2l || file.Position != 4l) return 3;
+    return 0;
+}
+```
+
+Negative lengths, closed streams, read-only files, and host resizing failures
+throw `IOException`. Resizing flushes pending output first. A failed operation
+can leave written data or a changed length. Position restoration can also fail.
+
+The adapter reads descriptor metadata and uses Windows
+[`_chsize_s`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/chsize-s?view=msvc-170)
+or POSIX [`ftruncate`](https://man7.org/linux/man-pages/man2/ftruncate.2.html) for resizing.
+
 ### Copying streams
 
 `CopyTo(destination, buffer, capacity)` copies to a borrowed FileStream or `ITextWriter`

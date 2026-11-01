@@ -47,6 +47,7 @@ int main()
 `FileStream` owns a binary stream and closes it at scope exit. Call `Close()` explicitly
 to report final flush and close errors.
 Use `Position` and `Seek(offset, origin)` for byte positioning.
+`Length` includes buffered writes. `SetLength(length)` truncates or zero-extends the file.
 
 See [file APIs](../../docs/HOST_RUNTIME.md#files),
 [file lines](../../docs/FILE_LINE_SEQUENCE.md), and [file hashing](../../docs/FILE_HASH.md).

@@ -154,6 +154,43 @@ public sealed class FilePositionTests(ITestOutputHelper output)
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task SparseFileLengthsRemainSigned64BitAndPreservePositionsAcrossResize(int optimization)
+    {
+        string directory = CreateDirectory();
+        try
+        {
+            const long position = (1L << 32) + 17;
+            string path = Path.Combine(directory, "sparse-length.bin");
+            if (!PrepareSparseFile(path, position)) return;
+            string executable = Compile(directory, """
+                using Standard::IO;
+
+                int main(int argc, char** argv) {
+                    long position = 4294967313l;
+                    FileStream file = FileStream::OpenAppend(argv[1]);
+                    file.Position = 7l;
+                    if (file.Length != position + 1l || file.Position != 7l) return 50;
+                    file.SetLength(position);
+                    if (file.Length != position || file.Position != 7l) return 51;
+                    file.SetLength(position + 2l);
+                    if (file.Length != position + 2l || file.Position != 7l) return 52;
+                    file.Close();
+                    FileStream input = FileStream::OpenRead(argv[1]);
+                    input.Position = position;
+                    if (input.ReadByte() != 0 || input.ReadByte() != 0 || input.ReadByte() != -1) return 53;
+                    return 0;
+                }
+                """, optimization);
+            var result = NativeToolchain.Run(executable, [path], 30000);
+            Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+            Assert.Equal(position + 2, new FileInfo(path).Length);
+        }
+        finally { await TestDirectoryCleanup.DeleteAsync(directory); }
+    }
+
+    [Theory]
     [InlineData("declare i64 @__gflat_stdio_tell(i8*)")]
     [InlineData("declare i32 @__gflat_stdio_seek(i8*, i64, i32)")]
     public void PositionBridgeDeclarationsSelectTheExistingCBridge(string declaration)

@@ -6,8 +6,12 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
-#ifndef _WIN32
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <sys/types.h>
+#include <unistd.h>
 #endif
 
 // Standard streams and seek origins are C library macros.
@@ -40,5 +44,33 @@ int64_t __gflat_stdio_tell(void* stream) {
     int64_t result = (int64_t)position;
     if ((off_t)result != position) { errno = EOVERFLOW; return -1; }
     return result;
+#endif
+}
+
+int64_t __gflat_stdio_length(void* stream) {
+#ifdef _WIN32
+    int descriptor = _fileno((FILE*)stream);
+    struct _stat64 details;
+    if (descriptor < 0) { errno = EBADF; return -1; }
+    if (_fstat64(descriptor, &details) != 0) return -1;
+    return details.st_size;
+#else
+    struct stat details;
+    if (fstat(fileno((FILE*)stream), &details) != 0) return -1;
+    int64_t length = (int64_t)details.st_size;
+    if ((off_t)length != details.st_size) { errno = EOVERFLOW; return -1; }
+    return length;
+#endif
+}
+
+int __gflat_stdio_set_length(void* stream, int64_t length) {
+#ifdef _WIN32
+    int descriptor = _fileno((FILE*)stream);
+    if (descriptor < 0) { errno = EBADF; return -1; }
+    return _chsize_s(descriptor, length);
+#else
+    off_t native_length = (off_t)length;
+    if ((int64_t)native_length != length) { errno = EOVERFLOW; return -1; }
+    return ftruncate(fileno((FILE*)stream), native_length);
 #endif
 }

@@ -52,7 +52,7 @@ public sealed class StandardQueryIteratorLifetimeTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void TakeZeroCleansConstructedIteratorsWithoutAdvancingOrReading(int optimization)
+    public Task TakeZeroCleansConstructedIteratorsWithoutAdvancingOrReading(int optimization)
         => Run(Source + """
             int main() {
                 var query = new Enumerable<String, Source, Source::Iterator>(new Source()).Where(Keep).Select(Identity).Skip(0);
@@ -74,7 +74,7 @@ public sealed class StandardQueryIteratorLifetimeTests
     [InlineData(2, 1)]
     [InlineData(2, 2)]
     [InlineData(2, 3)]
-    public void IteratorFailuresReleasePartialConstructionAndEveryComposedOwner(int optimization, int failure)
+    public Task IteratorFailuresReleasePartialConstructionAndEveryComposedOwner(int optimization, int failure)
         => Run(Source + """
             int main() {
                 var query = new Enumerable<String, Source, Source::Iterator>(new Source()).Where(Keep).Select(Identity).Skip(0).Take(3);
@@ -100,7 +100,7 @@ public sealed class StandardQueryIteratorLifetimeTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void SimultaneousEnumeratorsHaveIndependentPositionsAndDestruction(int optimization)
+    public Task SimultaneousEnumeratorsHaveIndependentPositionsAndDestruction(int optimization)
         => Run(Source + """
             int main() {
                 var query = new Enumerable<String, Source, Source::Iterator>(new Source()).Where(Keep).Select(Identity).Take(3);
@@ -126,7 +126,7 @@ public sealed class StandardQueryIteratorLifetimeTests
             }
             """, optimization);
 
-    private static void Run(string program, int optimization)
+    private static async Task Run(string program, int optimization)
     {
         string[] files = ["Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf", "Queries/WhereSource.gf", "Queries/SelectSource.gf", "Queries/SliceSource.gf",
@@ -144,6 +144,6 @@ public sealed class StandardQueryIteratorLifetimeTests
             var result = NativeToolchain.Run(executable, []);
             Assert.True(result.ExitCode == 0, $"Native query iterator exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
         }
-        finally { Directory.Delete(directory, true); }
+        finally { await TestDirectoryCleanup.DeleteAsync(directory); }
     }
 }

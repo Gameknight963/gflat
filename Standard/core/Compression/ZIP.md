@@ -43,6 +43,18 @@ The constructors accept `Span<readonly(byte)>` or a readonly byte pointer and
 count. Invalid or unsupported metadata throws `IOException` during construction.
 Payload decompression and CRC validation happen when reading an entry.
 
+## Finding an entry
+
+`GetEntry(name)` returns the first exact, case-sensitive match in archive order.
+Names are compared as decoded UTF-8, so the same lookup works with UTF-8 and CP437
+archives. A missing entry throws `IOException`.
+
+`TryGetEntry(name, ref entry)` returns false when absent and leaves `entry`
+unchanged. Both methods accept a C string or `Span<readonly(char)>`. Use the span
+form for names containing embedded zero bytes. Lookup compares names without
+allocating decoded strings. The returned entry borrows the image independently
+of the archive index.
+
 ## Reading an entry
 
 | Member | Result |

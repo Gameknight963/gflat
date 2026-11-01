@@ -238,12 +238,80 @@ public sealed class ZipArchiveTests
             """, optimization);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NameLookupUsesDecodedNamesFirstDuplicatesAndBorrowedEntryValues(int optimization)
+    {
+        Fixture utf8 = Create([
+            new("same", [1], CompressionLevel.NoCompression),
+            new("same", [2], CompressionLevel.NoCompression),
+            new("Case", [3], CompressionLevel.NoCompression),
+            new("nulXtail", [4], CompressionLevel.NoCompression),
+            new("零.txt", [5], CompressionLevel.NoCompression)]);
+        byte[] image = utf8.Bytes.ToArray();
+        int at = Central(image);
+        for (int index = 0; index < 3; index++) at += 46 + U16(image, at + 28) + U16(image, at + 30) + U16(image, at + 32);
+        int local = checked((int)U32(image, at + 42));
+        image[at + 46 + 3] = 0;
+        image[local + 30 + 3] = 0;
+        Fixture legacy = Create([new("éÇα─.bin", [6], CompressionLevel.NoCompression)], names: Cp437());
+        Run(Imports + Array("Image", image) + Array("Legacy", legacy.Bytes) + """
+            extern void*? malloc(nuint bytes);
+            extern void free(void* data);
+            static class State { public static bool Failing; }
+            namespace Memory {
+                public replace void*? Allocate(nuint bytes) {
+                    if (State::Failing) return null;
+                    return malloc(bytes);
+                }
+                public replace void Free(void* data) nothrow { free(data); }
+            }
+            """ + $$"""
+            int main() {
+                ZipArchive archive = new(Image, {{image.Length}});
+                ZipArchive legacy = new(Legacy, {{legacy.Bytes.Length}});
+                ZipArchive copied = archive;
+                ZipArchiveEntry entry = archive.GetEntry("same");
+                State::Failing = true;
+                if (!archive.TryGetEntry("same", ref entry)) return 1;
+                byte value = 0;
+                if (entry.Read(&value, 1) != 1 || value != (byte)1) return 2;
+                Span<readonly(char)> previous = entry.NameBytes;
+                if (archive.TryGetEntry("missing", ref entry) || archive.TryGetEntry("case", ref entry)) return 3;
+                if (entry.NameBytes.Data != previous.Data || entry.NameBytes.Length != previous.Length) return 4;
+                char[8] counted = ['n', 'u', 'l', '\0', 't', 'a', 'i', 'l'];
+                Span<readonly(char)> name = new(counted, 8);
+                if (!archive.TryGetEntry(name, ref entry) || entry.Read(&value, 1) != 1 || value != (byte)4) return 5;
+                if (archive.TryGetEntry("nul", ref entry)) return 6;
+                entry = archive.GetEntry(name);
+                if (entry.Read(&value, 1) != 1 || value != (byte)4) return 7;
+                entry = archive.GetEntry("零.txt");
+                if (entry.Read(&value, 1) != 1 || value != (byte)5) return 8;
+                entry = legacy.GetEntry("éÇα─.bin");
+                if (entry.Read(&value, 1) != 1 || value != (byte)6) return 9;
+                if (!legacy.TryGetEntry("éÇα─.bin", ref entry) || legacy.TryGetEntry("éçα─.bin", ref entry)) return 10;
+                Span<readonly(char)> empty = new();
+                if (archive.TryGetEntry(empty, ref entry)) return 11;
+                State::Failing = false;
+                try { archive.GetEntry("missing"); return 12; } catch (IOException* error) {}
+                try { archive.GetEntry(empty); return 13; } catch (IOException* error) {}
+                {
+                    ZipArchive temporary = copied;
+                    entry = temporary.GetEntry("same");
+                }
+                if (entry.Read(&value, 1) != 1 || value != (byte)1) return 14;
+                return 0;
+            }
+            """, optimization);
+    }
+
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "core/Compression/ZipArchive.gf", "core/Compression/ZipArchiveEntry.gf", "core/Compression/Deflate.gf",
             "core/Hashing/CRC32.gf", "core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf",
             "core/Memory/bytes.gf", "core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/Memory/Span.gf",
             "core/Collections/Vector.gf", "core/Collections/vector_resize.gf", "core/Collections/IEnumerable.gf",
-            "core/Queries/Enumerable.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Text/utf8.gf",
+            "core/Queries/Enumerable.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Text/CString.gf", "core/Text/utf8.gf",
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/Hashing/primitive_hashing.gf", "core/primitive_format.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))

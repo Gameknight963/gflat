@@ -2,6 +2,7 @@ using Standard::Binary;
 using Standard::Collections;
 using Standard::IO;
 using Standard::Memory;
+using Standard::Text;
 
 namespace Standard::Compression;
 
@@ -31,6 +32,37 @@ public struct ZipArchive
 
     public nuint Count { immutable get nothrow => entries.Count; }
     public Span<readonly(ZipArchiveEntry)> Entries { readonly get => entries.AsReadOnly(); }
+
+    public readonly ZipArchiveEntry GetEntry(readonly(char)* name)
+        => this.GetEntry(new Span<readonly(char)>(name, CString::Length(name)));
+
+    public readonly ZipArchiveEntry GetEntry(Span<readonly(char)> name)
+    {
+        nuint index = this.FindEntry(name);
+        if (index == entries.Count) throw new IOException("ZIP entry was not found");
+        return entries[index];
+    }
+
+    public readonly bool TryGetEntry(readonly(char)* name, ref ZipArchiveEntry entry) nothrow
+        => this.TryGetEntry(new Span<readonly(char)>(name, CString::Length(name)), ref entry);
+
+    public readonly bool TryGetEntry(Span<readonly(char)> name, ref ZipArchiveEntry entry) nothrow
+    {
+        nuint index = this.FindEntry(name);
+        if (index == entries.Count) return false;
+        entry = entries[index];
+        return true;
+    }
+
+    private readonly nuint FindEntry(Span<readonly(char)> name) nothrow
+    {
+        for (nuint index = 0; index < entries.Count; index++)
+        {
+            ZipArchiveEntry entry = entries[index];
+            if (ZipNames::Matches(entry.NameBytes, entry.IsUtf8Name, name)) return index;
+        }
+        return entries.Count;
+    }
 
     private void Parse(BinaryBufferReader image)
     {

@@ -136,6 +136,29 @@ internal static class ZipNames
         }
     }
 
+    internal static bool Matches(Span<readonly(char)> name, bool utf8, Span<readonly(char)> expected) nothrow
+    {
+        if (utf8)
+        {
+            if (name.Length != expected.Length) return false;
+            for (nuint index = 0; index < name.Length; index++)
+                if (name.Data![index] != expected.Data![index]) return false;
+            return true;
+        }
+        nuint at = 0;
+        char[4] encoded;
+        for (nuint index = 0; index < name.Length; index++)
+        {
+            nuint written = 0;
+            Utf8::TryEncode(Scalar((byte)name.Data![index]), encoded, 4, &written);
+            if (written > expected.Length - at) return false;
+            for (nuint offset = 0; offset < written; offset++)
+                if (encoded[offset] != expected.Data![at + offset]) return false;
+            at += written;
+        }
+        return at == expected.Length;
+    }
+
     internal static String DecodeCp437(Span<readonly(char)> name)
     {
         nuint length = 0;

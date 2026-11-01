@@ -55,7 +55,7 @@ public sealed class PathEndingEditorTests
             if(name=="EndsInDirectorySeparator")Assert.Contains("nothrow",label);
             else Assert.DoesNotContain("nothrow",label);
 
-            string declaration="public static "+row.Return+" "+name+"("+(row.Span?"Span<readonly(char)> path":"immutable(char*) path");
+            string declaration="public static "+row.Return+" "+name+"("+(row.Span?"Span<readonly(char)> path":"readonly(char)* path");
             int start=library.Text.IndexOf(declaration,StringComparison.Ordinal);Assert.True(start>=0,declaration);
             int declaredName=start+("public static "+row.Return+" ").Length;
             var expected=model.Definition(library.Path,declaredName);Assert.NotNull(expected);

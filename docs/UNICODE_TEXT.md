@@ -1,7 +1,7 @@
 # Owning Unicode text operations
 
-`Standard::Text::UnicodeText` provides owning UTF-8/UTF-16 conversions and
-Unicode whitespace trimming.
+`Standard::Text::UnicodeText` provides owning UTF-8/UTF-16 conversions,
+Unicode whitespace predicates, and trimming.
 
 ```csharp
 using Standard::Text;
@@ -35,6 +35,32 @@ Invalid encoding or size overflow throws `Exception`. Allocation failure throws
 UTF-16 inputs are host `ushort` values. Serialized LE/BE bytes need an explicit
 byte-order decoder. For caller-buffer conversions, use
 [UnicodeTranscoding](UNICODE_TRANSCODING.md).
+
+## Whitespace checks
+
+| Predicate | Input |
+| --- | --- |
+| `IsWhiteSpace(input, bytes)` | Counted UTF-8. Empty input returns true |
+| `IsNullOrWhiteSpace(input)` | Nullable C string. Null or empty input returns true |
+
+Both return false at a non-whitespace scalar or malformed UTF-8 sequence.
+Classification uses [`Rune::IsWhiteSpace`](RUNE.md).
+
+The C-string form stops at the first NUL and ignores following bytes. A NUL
+inside counted input returns false.
+
+```csharp
+using Standard::Text;
+
+int main()
+{
+    char[3] text = [' ', '\0', (char)255];
+    if (!UnicodeText::IsNullOrWhiteSpace(text)) return 1;
+    if (UnicodeText::IsWhiteSpace(text, 3)) return 2;
+    if (!UnicodeText::IsNullOrWhiteSpace(null)) return 3;
+    return 0;
+}
+```
 
 ## Trimming Unicode whitespace
 

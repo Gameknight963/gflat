@@ -3,9 +3,29 @@ using Standard::Collections;
 
 namespace Standard::Text;
 
-// Owning results of Unicode text operations.
+// Unicode text validation, classification, and owning transformations.
 public static class UnicodeText
 {
+    public static bool IsWhiteSpace(readonly(char)* input, nuint bytes) nothrow
+    {
+        nuint position = 0;
+        while (position < bytes)
+        {
+            uint scalar = 0u;
+            nuint consumed = 0;
+            if (!Utf8::TryDecode(input + position, bytes - position, &scalar, &consumed)
+                || !Rune::IsWhiteSpace(new Rune(scalar))) return false;
+            position += consumed;
+        }
+        return true;
+    }
+
+    public static bool IsNullOrWhiteSpace(readonly(char)*? input) nothrow
+    {
+        if (input == null) return true;
+        return UnicodeText::IsWhiteSpace(input!, CString::Length(input!));
+    }
+
     public static String Trim(readonly(char)* input, nuint bytes)
         => UnicodeText::TrimCore(input, bytes, true, true);
     public static String TrimStart(readonly(char)* input, nuint bytes)

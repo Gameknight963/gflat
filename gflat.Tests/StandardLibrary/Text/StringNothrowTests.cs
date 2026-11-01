@@ -4,6 +4,18 @@ namespace gflat.Tests.Std.Text;
 
 public class StringNothrowTests
 {
+    private static bool IsStringMethodDefinition(string line, string member)
+        => Regex.IsMatch(line, @"@[^\s(]+\$String\$" + Regex.Escape(member)
+            + @"(?:\$[^\s(]*)?\(%Standard\$Text\$String\* %this(?:,|\))");
+
+    [Theory]
+    [InlineData("define void @gflat$Standard$Text$Standard$Text$String$Clear(%Standard$Text$String* %this) nounwind {", "Clear", true)]
+    [InlineData("define i1 @gflat$Standard$Text$String$StartsWith$overload$ABC(%Standard$Text$String* %this, i8* %arg.text) nounwind {", "StartsWith", true)]
+    [InlineData("define void @gflat$Standard$Collections$Vector$Stack$String$Clear(%Standard$Collections$Stack$String* %this) {", "Clear", false)]
+    [InlineData("define void @gflat$Standard$Text$String$ClearOther(%Standard$Text$String* %this) {", "Clear", false)]
+    public void MethodFilterChecksTheReceiverAndWholeMemberName(string definition, string member, bool expected)
+        => Assert.Equal(expected, IsStringMethodDefinition(definition, member));
+
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
@@ -65,7 +77,7 @@ public class StringNothrowTests
         string[] definitions = Regex.Matches(ir, @"(?m)^define [^\r\n]+").Select(match => match.Value).ToArray();
         foreach (string member in new[] { "ToCString", "GetHashCode", "CompareTo", "Equals", "Clear", "StartsWith", "EndsWith" })
         {
-            string[] methods = definitions.Where(line => line.Contains("$String$") && line.Contains("$" + member)).ToArray();
+            string[] methods = definitions.Where(line => IsStringMethodDefinition(line, member)).ToArray();
             Assert.NotEmpty(methods);
             Assert.All(methods, line => Assert.Contains("nounwind", line));
         }

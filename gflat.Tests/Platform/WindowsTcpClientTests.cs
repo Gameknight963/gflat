@@ -41,7 +41,8 @@ public sealed class WindowsTcpClientTests
                 ITextWriter* output=&client;output.Write(data,3);client.ShutdownSend();client.Close();return 0;
             }
             """),options:new(){NoStdLib=true,InternalizeFunctions=true});
-        foreach(string signature in new[]{"@WSAStartup(i16, i8*)","@WSACleanup()","@WSAGetLastError()",
+        string startup = OperatingSystem.IsLinux() ? "@WSAStartup(i16 zeroext, i8*)" : "@WSAStartup(i16, i8*)";
+        foreach(string signature in new[]{startup,"@WSACleanup()","@WSAGetLastError()",
             "@socket(i32, i32, i32)","@connect(i64, i8*, i32)","@recv(i64, i8*, i32, i32)",
             "@send(i64, i8*, i32, i32)","@shutdown(i64, i32)","@closesocket(i64)"})
             Assert.Contains(signature,ir);

@@ -1,6 +1,6 @@
 # Text writer helpers
 
-Import `Standard::Text` for line and repeated-byte operations on `ITextWriter`:
+Import `Standard::Text` for line, repeated-byte, and joined-string operations on `ITextWriter`:
 
 ```csharp
 using Standard::Text;
@@ -17,6 +17,8 @@ Console::Out.WriteLine();
 | `WriteLine(text)` | Bytes before the C string's first NUL, then LF |
 | `WriteLine(data, count)` | Counted bytes, then LF |
 | `WriteRepeated(value, count)` | One byte repeated `count` times |
+| `WriteJoin(values, separator)` | Strings with a C-string separator between entries |
+| `WriteJoin(values, separator, count)` | Strings with a counted separator between entries |
 
 Line bodies and LF are separate writes. A body failure skips LF, while an LF
 failure can leave the body already written. Concrete writers apply their own
@@ -43,6 +45,50 @@ Repeated output uses chunks of at most 64 bytes. A writer error can leave a
 prefix, so retrying the whole operation may duplicate it. To measure formatting,
 use [CountingWriter](COUNTING_WRITER.md). To add a prefix per line, use
 [LinePrefixWriter](LINE_PREFIX_WRITER.md).
+
+## Write joined Strings
+
+`WriteJoin` streams a span of Strings, inserting a separator between entries.
+Empty entries still count as entries. String bytes and counted separators retain
+embedded NULs. The C-string separator overload stops at its first NUL.
+
+```csharp
+using Standard::Collections;
+using Standard::Text;
+
+int main()
+{
+    Vector<String> values = new();
+    values.Add(s"red");
+    values.Add(s"");
+    values.Add(s"blue");
+    char[32] buffer;
+    BufferWriter destination = new(buffer, 32);
+    ITextWriter* writer = &destination;
+    writer.WriteJoin(values.AsImmutable(), ", ");
+    if (destination.Length != 11) return 1;
+    return 0;
+}
+```
+
+An empty span produces no writes. A single entry leaves the separator unread.
+Zero-length pieces are skipped, while separators between empty entries are
+retained.
+
+### Inputs
+
+| Parameter | Storage |
+| --- | --- |
+| `values` | Borrows the span and its String owners for the call |
+| `separator` | Borrows the separator bytes for the call |
+
+Keep these inputs stable and separate from storage the destination modifies.
+
+### Output and errors
+
+Each part and separator is a separate write. An error stops the join and can
+leave a prefix, including bytes accepted by the failing write. Successful calls
+allocate only when the destination does.
 
 ## Send one stream to two writers
 

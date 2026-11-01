@@ -20,7 +20,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `BufferedWriter` | [Buffer small writes before forwarding](TEXT_WRITERS.md#buffer-small-writes-before-forwarding) |
 | `LimitedWriter` | [Bound output through a borrowed writer](LIMITED_WRITER.md) |
 | `LinePrefixWriter` | [Prefix streamed lines](LINE_PREFIX_WRITER.md) |
-| `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Text writer helpers](TEXT_WRITERS.md) |
+| `ITextWriter*` `WriteLine`, `WriteRepeated`, and `WriteJoin` overloads | [Text writer helpers](TEXT_WRITERS.md) |
 | `String.ReplaceLineEndings()` | [Normalize line endings](LINE_ENDINGS.md) |
 | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `ReadAtLeast`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](BYTE_READERS.md) |
 | `ReadToEnd()` and `ReadToEnd(ref text)` | [Read the remaining input](READ_TO_END.md) |

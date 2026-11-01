@@ -1,7 +1,8 @@
 # Borrowed byte readers
 
 `Standard::IO::IByteReader` supplies raw bytes through `Read(char* data, nuint count)`.
-FileStream, BufferedReader, and the optional Windows TcpClient implement it.
+FileStream, [MemoryStream](../Standard/core/IO/MEMORY_STREAM.md), BufferedReader,
+and the optional Windows TcpClient implement it.
 
 | Read result | Meaning |
 | --- | --- |

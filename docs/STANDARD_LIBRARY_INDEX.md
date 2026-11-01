@@ -135,6 +135,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | APIs | Guide |
 | --- | --- |
 | `Paths`, `PathStyle` | [Lexical paths](../Standard/core/IO/PATHS.md) |
+| `MemoryStream` | [Owning byte streams](../Standard/core/IO/MEMORY_STREAM.md) |
 | `Math`, `PseudoRandom` | [Scalar math](MATH.md), [Deterministic pseudorandom values](PSEUDORANDOM.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |
 | `BitConverter` | [Floating-point representation](BIT_CONVERTER.md) |

@@ -77,7 +77,7 @@ public sealed class HexDecoderTests
                     }
                 }
                 int main(int argc,char** argv){
-                    File fixture=File::OpenRead(argv[1]);
+                    FileStream fixture=FileStream::OpenRead(argv[1]);
                     char[32770] text;char[16387] output;char[16385] expected;int[32770] chunks;
                     for(int sample=0;sample<{{cases}};sample++){
                         int size=FileBinary::ReadInt32LittleEndian(&fixture);
@@ -100,7 +100,7 @@ public sealed class HexDecoderTests
                         for(nuint i=0;i<(nuint)wanted;i++)if(output[i+1]!=expected[i])return 3;
                     }
                     fixture.Close();
-                    File source=File::OpenRead(argv[2]);File destination=File::OpenWrite(argv[3]);
+                    FileStream source=FileStream::OpenRead(argv[2]);FileStream destination=FileStream::OpenWrite(argv[3]);
                     HexDecoder decoder=new(&destination);char[257] buffer;
                     if(source.CopyTo(&decoder,buffer,257)!={{encoded.Length}})return 4;
                     decoder.Complete();decoder.Complete();

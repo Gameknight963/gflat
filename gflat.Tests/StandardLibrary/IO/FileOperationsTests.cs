@@ -6,9 +6,9 @@ public sealed class FileOperationsTests
 
     private static void Run(string directory, string program, bool text = false)
     {
-        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" };
-        if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf", "libc/IO/FileText.gf"]);
-        var files = names
+        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" };
+        if (text) names.AddRange(FileApiTestSources.ConvenienceDependencies);
+        var files = names.Distinct(StringComparer.Ordinal)
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
@@ -38,8 +38,8 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(source)}});
-                    File output = File::OpenWrite({{Literal(target)}});
+                    FileStream input = FileStream::OpenRead({{Literal(source)}});
+                    FileStream output = FileStream::OpenWrite({{Literal(target)}});
                     char[7] prefix;
                     input.ReadExactly(prefix, 7);
                     char[13] buffer;
@@ -64,8 +64,8 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(source)}});
-                    File output = File::OpenWrite({{Literal(target)}});
+                    FileStream input = FileStream::OpenRead({{Literal(source)}});
+                    FileStream output = FileStream::OpenWrite({{Literal(target)}});
                     if (input.CopyTo(&output) != (nuint)9001) return 1;
                     output.WriteLine(); output.WriteLine("a\0ignored"); output.WriteLine("b\0c", 3);
                     output.Close();
@@ -86,7 +86,7 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(source)}});
+                    FileStream input = FileStream::OpenRead({{Literal(source)}});
                     char[8] buffer;
                     input.ReadExactly(buffer, 0);
                     try { input.ReadExactly(buffer, 8); return 1; } catch (EndOfStreamException* error) { }
@@ -113,11 +113,11 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(source)}});
-                    File closed = new File(); char[1] buffer;
+                    FileStream input = FileStream::OpenRead({{Literal(source)}});
+                    FileStream closed = new FileStream(); char[1] buffer;
                     try { input.CopyTo(&closed); return 1; } catch (IOException* error) { }
                     try { input.CopyTo(&input); return 2; } catch (IOException* error) { }
-                    File output = File::OpenWrite({{Literal(renamed)}});
+                    FileStream output = FileStream::OpenWrite({{Literal(renamed)}});
                     try { input.CopyTo(&output, buffer, 0); return 3; } catch (IOException* error) { }
                     input.ReadExactly(buffer, 1); if (buffer[0] != 'a') return 4;
                     output.Close(); input.Close();
@@ -128,7 +128,7 @@ public sealed class FileOperationsTests
                     try { File::Rename({{Literal(source)}}, {{Literal(renamed)}}); return 6; } catch (IOException* error) { }
                     return 0;
                 }
-                """);
+                """, text: true);
             Assert.False(File.Exists(source));
             Assert.False(File.Exists(renamed));
         });
@@ -145,13 +145,13 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    String text = FileText::ReadAll({{Literal(source)}});
+                    String text = File::ReadAllText({{Literal(source)}});
                     if (text.Length != (nuint)12001 || text.Data[12001] != '\0') return 1;
-                    FileText::WriteAll({{Literal(target)}}, ref text);
-                    FileText::AppendAll({{Literal(target)}}, "\0tail", 5);
-                    FileText::AppendAll({{Literal(target)}}, "!");
+                    File::WriteAllText({{Literal(target)}}, ref text);
+                    File::AppendAllText({{Literal(target)}}, "\0tail", 5);
+                    File::AppendAllText({{Literal(target)}}, "!");
                     String suffix = s"?\0.";
-                    FileText::AppendAll({{Literal(target)}}, ref suffix);
+                    File::AppendAllText({{Literal(target)}}, ref suffix);
                     return 0;
                 }
                 """, text: true);
@@ -169,11 +169,11 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    FileText::WriteAll({{Literal(path)}}, "new\0ignored");
-                    String first = FileText::ReadAll({{Literal(path)}});
+                    File::WriteAllText({{Literal(path)}}, "new\0ignored");
+                    String first = File::ReadAllText({{Literal(path)}});
                     if (first.Length != (nuint)3) return 1;
-                    FileText::WriteAll({{Literal(path)}}, "ignored", 0);
-                    String empty = FileText::ReadAll({{Literal(path)}});
+                    File::WriteAllText({{Literal(path)}}, "ignored", 0);
+                    String empty = File::ReadAllText({{Literal(path)}});
                     if (empty.Length != (nuint)0 || empty.Data[0] != '\0') return 2;
                     return 0;
                 }
@@ -196,7 +196,7 @@ public sealed class FileOperationsTests
                     public replace void Free(void* storage) nothrow { }
                 }
                 int main() {
-                    try { String value = FileText::ReadAll({{Literal(path)}}); return 1; }
+                    try { String value = File::ReadAllText({{Literal(path)}}); return 1; }
                     catch (BadAllocException* error) { }
                     File::Remove({{Literal(path)}});
                     return 0;
@@ -215,9 +215,9 @@ public sealed class FileOperationsTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    { File output = File::OpenWrite({{Literal(path)}});
+                    { FileStream output = FileStream::OpenWrite({{Literal(path)}});
                       output.WriteByte('\0'); output.WriteByte((char)255); output.WriteByte('Z'); output.Close(); }
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     if (input.ReadByte() != 0 || input.ReadByte() != 255 || input.ReadByte() != 90) return 1;
                     if (input.ReadByte() != -1 || input.ReadByte() != -1) return 2;
                     input.Close();

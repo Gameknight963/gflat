@@ -248,7 +248,7 @@ public sealed class Base64DecoderTests
             byte[] encoded=Encoding.ASCII.GetBytes(Convert.ToBase64String(data));File.WriteAllBytes(input,encoded);
             Run(DenyAllocation+"""
                 int main(){
-                    File input=File::OpenRead("INPUT");File output=File::OpenWrite("OUTPUT");
+                    FileStream input=FileStream::OpenRead("INPUT");FileStream output=FileStream::OpenWrite("OUTPUT");
                     Base64Decoder decoder=new(&output);char[257] buffer;
                     if(input.CopyTo(&decoder,buffer,257)!=LENGTH)return 1;
                     decoder.Complete();input.Close();output.Close();

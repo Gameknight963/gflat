@@ -13,7 +13,7 @@ using Standard::Encoding;
 
 int main()
 {
-    File input = File::OpenRead("input.txt");
+    FileStream input = File::OpenRead("input.txt");
     CountingWriter count = new();
     Base64Decoder decoder = new(&count);
     char[4096] buffer;

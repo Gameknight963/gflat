@@ -29,7 +29,7 @@ public sealed class JsonWriterOracleTests
                         writer.WriteNumber(i); writer.WriteNumber(j); writer.WriteRawNumber("-0.000e+999",11);
                         writer.WriteEndArray(); writer.Complete(); Console::WriteLine(ref result); return 0;
                     }
-                    String input=FileText::ReadAll(argv[1]); JsonReader reader=new(input.Data,input.Length);
+                    String input=File::ReadAllText(argv[1]); JsonReader reader=new(input.Data,input.Length);
                     char[16384] decoded;
                     while(reader.Read()) {
                         JsonTokenKind kind=reader.Kind;

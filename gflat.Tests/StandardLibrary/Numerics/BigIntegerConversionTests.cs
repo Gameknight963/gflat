@@ -14,7 +14,7 @@ public sealed class BigIntegerConversionTests
         => await WithManifest((directory,manifest)=>Run(directory,Counters+ReadRow+"""
             int main(int argc,char** argv){
                 {
-                    File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                    FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                     for(int row=0;row<rows;row++){
                         String text=ReadText(&input);bool fitsLong=FileBinary::ReadInt32LittleEndian(&input)!=0;
                         long expectedLong=FileBinary::ReadInt64LittleEndian(&input);
@@ -51,7 +51,7 @@ public sealed class BigIntegerConversionTests
         => await WithManifest((directory,manifest)=>Run(directory,Counters+ReadRow+"""
             int main(int argc,char** argv){
                 {
-                    File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                    FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                     for(int row=0;row<rows;row++){
                         String text=ReadText(&input);bool fitsLong=FileBinary::ReadInt32LittleEndian(&input)!=0;
                         long expectedLong=FileBinary::ReadInt64LittleEndian(&input);
@@ -214,7 +214,7 @@ public sealed class BigIntegerConversionTests
         }
         """;
     private const string ReadRow="""
-        String ReadText(File* input){
+        String ReadText(FileStream* input){
             nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
             if(count!=0){Span<char> bytes=text.AsSpan();input.ReadExactly(bytes.Data!,count);}return move text;
         }

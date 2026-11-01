@@ -173,7 +173,7 @@ if (reader.TryPeekSlice(8, ref header))
 
 ## Shared counted-reader consumers
 
-BinaryBufferReader implements `IByteReader`, so File, TcpClient, and memory cursors
+BinaryBufferReader implements `IByteReader`, so FileStream, TcpClient, and memory cursors
 can use the same [stream helpers](BYTE_READERS.md). This advances the particular
 reader passed by pointer.
 

@@ -99,7 +99,7 @@ int main()
 }
 ```
 
-Call `Flush()` to send a partial block. It drains this buffer alone. For File or
+Call `Flush()` to send a partial block. It drains this buffer alone. For FileStream or
 Console, flush the adapter first and the concrete stream afterward. Flush nested
 buffers from the outermost inward. Scope exit discards pending bytes.
 

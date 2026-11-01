@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     bool writingOutput = false;
     try
     {
-        String input = FileText::ReadAll(argv[1]);
+        String input = File::ReadAllText(argv[1]);
         CsvReader reader = new(input.Data, input.Length);
         String field = new();
         // Validate every record and decoded text before sending any JSON to stdout.

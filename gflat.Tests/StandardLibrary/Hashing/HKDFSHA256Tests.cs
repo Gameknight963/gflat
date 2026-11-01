@@ -54,7 +54,7 @@ public sealed class HKDFSHA256Tests
             }
             Run(DenyAllocation+$$"""
                 int main(){
-                    File input=File::OpenRead({{Literal(path)}});
+                    FileStream input=FileStream::OpenRead({{Literal(path)}});
                     char[258] salt;char[258] material;char[258] info;byte[32] expectedPrk;byte[8160] expected;byte[8162] output;
                     for(int sample=0;sample<{{cases.Count}};sample++){
                         nuint saltCount=(nuint)FileBinary::ReadUInt32LittleEndian(&input);

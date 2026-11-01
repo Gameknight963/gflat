@@ -2,10 +2,10 @@ using Standard::Binary;
 
 namespace Standard::IO;
 
-// Optional canonical base-128 integers on borrowed File streams.
+// Optional canonical base-128 integers on borrowed FileStream streams.
 public static class FileVarInt
 {
-    public static uint ReadUInt32(File* input)
+    public static uint ReadUInt32(FileStream* input)
     {
         byte[5] bytes;
         nuint count = FileVarInt::ReadBytes(input, bytes, 5);
@@ -16,7 +16,7 @@ public static class FileVarInt
         return value;
     }
 
-    public static ulong ReadUInt64(File* input)
+    public static ulong ReadUInt64(FileStream* input)
     {
         byte[10] bytes;
         nuint count = FileVarInt::ReadBytes(input, bytes, 10);
@@ -27,7 +27,7 @@ public static class FileVarInt
         return value;
     }
 
-    private static nuint ReadBytes(File* input, byte* bytes, nuint maximum)
+    private static nuint ReadBytes(FileStream* input, byte* bytes, nuint maximum)
     {
         for (nuint index = 0; index < maximum; index++)
         {
@@ -39,10 +39,10 @@ public static class FileVarInt
         return maximum;
     }
 
-    public static void WriteUInt32(File* output, uint value)
+    public static void WriteUInt32(FileStream* output, uint value)
         => FileVarInt::WriteUInt64(output, (ulong)value);
 
-    public static void WriteUInt64(File* output, ulong value)
+    public static void WriteUInt64(FileStream* output, ulong value)
     {
         byte[10] bytes;
         nuint written = 0;

@@ -21,7 +21,7 @@ alive and at stable addresses.
 A refill can read ahead even when the consumer requested one byte. Continue all
 later consumption through the same adapter to retain that prefetched suffix.
 
-Refill latency depends on the source. File's `fread` can wait for the requested
+Refill latency depends on the source. FileStream's `fread` can wait for the requested
 bytes or EOF on a pipe, while TCP `recv` may return an available short prefix.
 Choose capacity with that behavior in mind.
 
@@ -62,13 +62,13 @@ int main(int argc, char** argv)
 {
     if (argc != 2) return 2;
     {
-        File output = File::OpenWrite(argv[1]);
+        FileStream output = File::OpenWrite(argv[1]);
         WriteVarUInt32(&output, 3u);
         output.Write("abc", 3);
         output.Close();
     }
     {
-        File source = File::OpenRead(argv[1]);
+        FileStream source = File::OpenRead(argv[1]);
         {
             char[4096] scratch;
             BufferedReader buffered = new(&source, scratch, 4096);

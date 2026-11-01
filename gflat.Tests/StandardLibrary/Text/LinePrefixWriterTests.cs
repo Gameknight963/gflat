@@ -67,7 +67,7 @@ public sealed class LinePrefixWriterTests
             }
             RunFiles(directory,DenyAllocation+"""
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);File output=File::OpenWrite(argv[2]);
+                    FileStream input=FileStream::OpenRead(argv[1]);FileStream output=FileStream::OpenWrite(argv[2]);
                     char[8] prefix;char[8192] chunk;
                     for(int sample=0;sample<CASES;sample++){
                         nuint size=(nuint)FileBinary::ReadUInt32LittleEndian(&input);
@@ -164,7 +164,7 @@ public sealed class LinePrefixWriterTests
             File.WriteAllBytes(input,data);
             RunFiles(directory,DenyAllocation+"""
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);File output=File::OpenWrite(argv[2]);
+                    FileStream input=FileStream::OpenRead(argv[1]);FileStream output=FileStream::OpenWrite(argv[2]);
                     LinePrefixWriter writer=new(&output,"> ",2);char[257] buffer;
                     if(input.CopyTo(&writer,buffer,257)!=SIZE||attempts!=0)return 1;
                     input.Close();output.Close();return 0;

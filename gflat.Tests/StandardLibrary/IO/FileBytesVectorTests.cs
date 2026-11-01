@@ -12,17 +12,17 @@ public sealed class FileBytesVectorTests
             string executable = Compile(directory, """
                 using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main(int argc,char** argv){
-                    Vector<byte> bytes=FileBytes::ReadAll(argv[1]);nuint count=bytes.Count;nuint capacity=bytes.Capacity;
-                    FileBytes::WriteAll(argv[2],ref bytes);FileBytes::AppendAll(argv[3],ref bytes);
+                    Vector<byte> bytes=File::ReadAllBytes(argv[1]);nuint count=bytes.Count;nuint capacity=bytes.Capacity;
+                    File::WriteAllBytes(argv[2],ref bytes);File::AppendAllBytes(argv[3],ref bytes);
                     if(bytes.Count!=count||bytes.Capacity!=capacity)return 1;
-                    File input=File::OpenRead(argv[1]);for(nuint i=0;i<count;i++)if(bytes[i]!=(byte)input.ReadByte())return 2;
+                    FileStream input=FileStream::OpenRead(argv[1]);for(nuint i=0;i<count;i++)if(bytes[i]!=(byte)input.ReadByte())return 2;
                     if(input.ReadByte()!=-1)return 3;input.Close();
                     Vector<byte> empty=new();
-                    FileBytes::WriteAll(argv[4],ref empty);FileBytes::AppendAll(argv[5],ref empty);
-                    FileBytes::AppendAll(argv[3],ref empty);
+                    File::WriteAllBytes(argv[4],ref empty);File::AppendAllBytes(argv[5],ref empty);
+                    File::AppendAllBytes(argv[3],ref empty);
                     if(empty.Count!=0||empty.Capacity!=0)return 4;
-                    File truncated=File::OpenRead(argv[4]);if(truncated.ReadByte()!=-1)return 5;truncated.Close();
-                    File created=File::OpenRead(argv[5]);if(created.ReadByte()!=-1)return 6;created.Close();
+                    FileStream truncated=FileStream::OpenRead(argv[4]);if(truncated.ReadByte()!=-1)return 5;truncated.Close();
+                    FileStream created=FileStream::OpenRead(argv[5]);if(created.ReadByte()!=-1)return 6;created.Close();
                     // Remove while alive proves both successful owned output files have closed.
                     File::Remove(argv[4]);File::Remove(argv[5]);return 0;
                 }
@@ -64,8 +64,8 @@ public sealed class FileBytesVectorTests
                         immutable(Vector<byte>) bytes=move source;nuint capacity=bytes.Capacity;
                         Span<immutable(byte)> view=bytes.AsImmutable();immutable(byte)* address=view.Data!;
                         Vector<byte> empty=new();int before=allocations;int freedBefore=frees;deny=true;
-                        FileBytes::WriteAll(argv[1],ref bytes);FileBytes::AppendAll(argv[1],ref bytes);
-                        FileBytes::AppendAll(argv[1],ref empty);FileBytes::WriteAll(argv[2],ref empty);
+                        File::WriteAllBytes(argv[1],ref bytes);File::AppendAllBytes(argv[1],ref bytes);
+                        File::AppendAllBytes(argv[1],ref empty);File::WriteAllBytes(argv[2],ref empty);
                         if(allocations!=before||frees!=freedBefore||bytes.Count!=256||bytes.Capacity!=capacity)return 1;
                         Span<immutable(byte)> after=bytes.AsImmutable();if(after.Data!=address)return 2;
                         for(nuint i=0;i<256;i++)if(after[i]!=(byte)i)return 3;
@@ -93,17 +93,17 @@ public sealed class FileBytesVectorTests
                 using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main(int argc,char** argv){
                     Vector<byte> bytes=new();bytes.Add(0);bytes.Add(255);bytes.Add(128);nuint capacity=bytes.Capacity;
-                    bool caught=false;try{FileBytes::WriteAll(argv[1],ref bytes);return 1;}catch(IOException* error){caught=true;}
+                    bool caught=false;try{File::WriteAllBytes(argv[1],ref bytes);return 1;}catch(IOException* error){caught=true;}
                     if(!caught)return 2;caught=false;
-                    try{FileBytes::AppendAll(argv[1],ref bytes);return 3;}catch(IOException* error){caught=true;}
+                    try{File::AppendAllBytes(argv[1],ref bytes);return 3;}catch(IOException* error){caught=true;}
                     if(!caught)return 4;
                     Vector<byte> empty=new();
-                    try{FileBytes::WriteAll(argv[1],ref empty);return 5;}catch(IOException* error){}
-                    try{FileBytes::AppendAll(argv[1],ref empty);return 6;}catch(IOException* error){}
+                    try{File::WriteAllBytes(argv[1],ref empty);return 5;}catch(IOException* error){}
+                    try{File::AppendAllBytes(argv[1],ref empty);return 6;}catch(IOException* error){}
                     if(argc>2){
                         // Linux /dev/full defers a small buffered write error until Close.
-                        try{FileBytes::WriteAll(argv[2],ref bytes);return 7;}catch(IOException* error){}
-                        try{FileBytes::AppendAll(argv[2],ref bytes);return 8;}catch(IOException* error){}
+                        try{File::WriteAllBytes(argv[2],ref bytes);return 7;}catch(IOException* error){}
+                        try{File::AppendAllBytes(argv[2],ref bytes);return 8;}catch(IOException* error){}
                     }
                     if(bytes.Count!=3||bytes.Capacity!=capacity||bytes[0]!=0||bytes[1]!=255||bytes[2]!=128)return 9;
                     if(empty.Count!=0||empty.Capacity!=0)return 10;return 0;
@@ -122,10 +122,10 @@ public sealed class FileBytesVectorTests
     }
     private static string Compile(string directory,string program,int optimization)
     {
-        // Every native fixture selects only binary owning dependencies: no String or GC implementation.
+        // Select the File facade and its owning byte/text dependencies.
         string[] names=["core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/Collections/IEnumerable.gf",
-            "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","libc/IO/FileBytes.gf"];
-        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
+            "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","core/IO/IByteReader.gf", "libc/IO/FileStream.gf"];
+        var sources=FileApiTestSources.WithConveniences(names).Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("file-bytes-vector-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));

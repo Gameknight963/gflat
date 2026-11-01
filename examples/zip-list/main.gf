@@ -94,7 +94,7 @@ void PrintName(BinaryBufferReader name)
 
 void ListFile(readonly(char)* path, bool filtered, readonly(char)* pattern, nuint count)
 {
-    Vector<byte> image = FileBytes::ReadAll(path, 134217728);
+    Vector<byte> image = File::ReadAllBytes(path, 134217728);
     // No mutation or growth after this point; both passes borrow this owner.
     BinaryBufferReader input = new();
     if (image.Count != 0) input = new(image.AsSpan().Data!, image.Count);

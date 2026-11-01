@@ -37,14 +37,14 @@ using Standard::IO;
 
 int main()
 {
-    File output = File::OpenWrite("message.txt");
+    FileStream output = File::OpenWrite("message.txt");
     output.Write("Hello\n");
     output.Close();
     return 0;
 }
 ```
 
-`File` owns a binary stream and closes it at scope exit. Call `Close()` explicitly
+`FileStream` owns a binary stream and closes it at scope exit. Call `Close()` explicitly
 to report final flush and close errors.
 
 See [file APIs](../../docs/HOST_RUNTIME.md#files),
@@ -52,8 +52,21 @@ See [file APIs](../../docs/HOST_RUNTIME.md#files),
 
 ### Owning binary and text conveniences
 
-`FileText::ReadAll(path)` returns a String. `FileBytes::ReadAll(path)` returns a
+`File::ReadAllText(path)` returns a String. `File::ReadAllBytes(path)` returns a
 Vector<byte>. Both accept an optional maximum byte count.
+
+```csharp
+using Standard::IO;
+using Standard::Text;
+
+int main()
+{
+    String text = File::ReadAllText("message.txt");
+    File::WriteAllText("copy.txt", ref text);
+    return 0;
+}
+```
+
 See [owning file helpers](../../docs/HOST_RUNTIME.md#owning-binary-and-text-conveniences).
 
 ### File digests
@@ -63,7 +76,7 @@ See [file hashing](../../docs/FILE_HASH.md).
 
 ### Reading lines
 
-`FileLines` reads into a caller buffer or writer. `File.Lines()` provides lazy
+`FileLines` reads into a caller buffer or writer. `FileStream.Lines()` provides lazy
 iteration with a reusable String. See [line reading](../../docs/HOST_RUNTIME.md#reading-lines).
 
 ### Binary numbers

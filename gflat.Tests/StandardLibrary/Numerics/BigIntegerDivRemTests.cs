@@ -36,13 +36,13 @@ public sealed class BigIntegerDivRemTests
             }
             Run(directory,"""
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
-                String ReadText(File* input){
+                String ReadText(FileStream* input){
                     nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     String value=new();value.Resize(count);Span<char> bytes=value.AsSpan();
                     input.ReadExactly(bytes.Data!,count);return move value;
                 }
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                    FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                     for(int row=0;row<rows;row++){
                         String sourceText=ReadText(&input);int divisor=FileBinary::ReadInt32LittleEndian(&input);
                         String expectedText=ReadText(&input);int wanted=FileBinary::ReadInt32LittleEndian(&input);

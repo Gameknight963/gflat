@@ -38,7 +38,7 @@ public sealed class IpAddressBinaryTests
             Run(directory, """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Net;
                 int main(int argc,char** argv){
-                    File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
+                    FileStream file=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     for(int row=0;row<rows;row++){
                         nuint count=(nuint)FileBinary::ReadInt32LittleEndian(&file);byte[16] expected;
                         file.ReadExactly(((byte*)expected).reinterpret<char*>(),count);

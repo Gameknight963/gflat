@@ -1,11 +1,11 @@
 namespace Standard::IO;
 
-// Borrows a binary File; never closes it. LF and CRLF terminate lines.
+// Borrows a binary FileStream; never closes it. LF and CRLF terminate lines.
 public static class FileLines
 {
     // Append one line to a writer. A bare CR and embedded zero bytes are retained.
     // False means EOF before any input; an empty terminated line returns true.
-    public static bool TryReadLine(File* input, ITextWriter* output)
+    public static bool TryReadLine(FileStream* input, ITextWriter* output)
     {
         char[256] chunk;
         nuint count = 0;
@@ -42,7 +42,7 @@ public static class FileLines
 
     // Capacity includes the terminator. Overflow consumes the whole line,
     // stores its terminated prefix, sets length, then throws.
-    public static bool TryReadLine(File* input, char* data, nuint capacity, ref nuint length)
+    public static bool TryReadLine(FileStream* input, char* data, nuint capacity, ref nuint length)
     {
         length = 0;
         if (capacity == 0) throw new Standard::Text::BufferTooSmallException();
@@ -53,7 +53,7 @@ public static class FileLines
         return read;
     }
 
-    public static nuint ReadLine(File* input, char* data, nuint capacity)
+    public static nuint ReadLine(FileStream* input, char* data, nuint capacity)
     {
         nuint length = 0;
         if (!FileLines::TryReadLine(input, data, capacity, ref length))

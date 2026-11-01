@@ -44,7 +44,7 @@ public sealed class BigIntegerPowerTests
             Run(directory,Counters+ReadText+"""
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         for(int row=0;row<rows;row++){
                             String original=ReadText(&input);uint exponent=FileBinary::ReadUInt32LittleEndian(&input);
                             String expected=ReadText(&input);BigInteger source=BigInteger::Parse(original.Data,original.Length);
@@ -112,7 +112,7 @@ public sealed class BigIntegerPowerTests
             Run(directory,Counters+ReadText+"""
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         BigInteger target=BigInteger::Parse("777777777777777777777");BigInteger oldTarget=target;
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);uint exponent=FileBinary::ReadUInt32LittleEndian(&input);
@@ -155,7 +155,7 @@ public sealed class BigIntegerPowerTests
         }
         """;
     private const string ReadText="""
-        String ReadText(File* input){
+        String ReadText(FileStream* input){
             nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
             if(count!=0){Span<char> bytes=text.AsSpan();input.ReadExactly(bytes.Data!,count);}return move text;
         }

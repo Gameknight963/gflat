@@ -60,10 +60,10 @@ public sealed class IpAddressTests
             }
             Run(directory, """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
-                String ReadText(File* file){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(file);
+                String ReadText(FileStream* file){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(file);
                     String result=new();result.Resize(count);Span<char> data=result.AsSpan();file.ReadExactly(data.Data!,count);return move result;}
                 int main(int argc,char** argv){
-                    File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);IpAddress previous=new();
+                    FileStream file=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);IpAddress previous=new();
                     for(int row=0;row<rows;row++){
                         String input=ReadText(&file);String expected=ReadText(&file);String full=ReadText(&file);
                         bool ipv4=FileBinary::ReadInt32LittleEndian(&file)!=0;int comparison=FileBinary::ReadInt32LittleEndian(&file);
@@ -118,7 +118,7 @@ public sealed class IpAddressTests
             Run(directory, """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;
                 int main(int argc,char** argv){
-                    File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
+                    FileStream file=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     IpAddress zero=new();IpAddress seed=IpAddress::Parse("2001:db8::1");
                     if(!zero.IsIpv4)return 1;char[39] output;nuint written=0;
                     if(!zero.TryFormat(output,39,ref written)||written!=7)return 2;

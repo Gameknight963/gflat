@@ -17,7 +17,7 @@ public sealed class JsonReaderOracleTests
                 using Standard; using Standard::Text; using Standard::Json; using Standard::IO;
                 int main(int argc, char** argv) {
                     if (argc != 2) return 2;
-                    String text=FileText::ReadAll(argv[1]);
+                    String text=File::ReadAllText(argv[1]);
                     JsonReader reader=new(text.Data,text.Length);
                     try {
                         while(reader.Read()) {

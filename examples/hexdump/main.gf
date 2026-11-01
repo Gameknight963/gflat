@@ -36,7 +36,7 @@ void PrintRow(ulong offset, readonly(char)* bytes, nuint count)
 
 void DumpFile(readonly(char)* path, nuint skip)
 {
-    File input = File::OpenRead(path);
+    FileStream input = File::OpenRead(path);
     input.SkipExactly(skip);
     char[4096] buffer;
     ulong offset = (ulong)skip;

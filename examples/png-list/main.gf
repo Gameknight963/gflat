@@ -23,7 +23,7 @@ void PrintChunk(ITextWriter* output, ulong offset, readonly(char)* type, uint le
 
 void ListFile(readonly(char)* path, ITextWriter* output)
 {
-    File input = File::OpenRead(path);
+    FileStream input = File::OpenRead(path);
     byte[8] expected = [(byte)137, (byte)80, (byte)78, (byte)71, (byte)13, (byte)10, (byte)26, (byte)10];
     char[8] signature;
     input.ReadExactly(signature, 8);

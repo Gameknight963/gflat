@@ -54,7 +54,7 @@ public sealed class TextSplitPatternTests
                     return true;
                 }
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);int count=FileBinary::ReadInt32LittleEndian(&input);
+                    FileStream input=FileStream::OpenRead(argv[1]);int count=FileBinary::ReadInt32LittleEndian(&input);
                     char[8195] text;char[1028] pattern;
                     for(int sample=0;sample<count;sample++){
                         int length=FileBinary::ReadInt32LittleEndian(&input);int width=FileBinary::ReadInt32LittleEndian(&input);

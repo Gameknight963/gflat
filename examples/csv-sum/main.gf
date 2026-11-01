@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     bool writingOutput = false;
     try
     {
-        String input = FileText::ReadAll(argv[1]);
+        String input = File::ReadAllText(argv[1]);
         CsvReader reader = new(input.Data, input.Length);
         nuint column = 0;
         bool found = false;

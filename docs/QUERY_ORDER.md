@@ -35,7 +35,7 @@ The first `MoveNext()` collects and sorts the complete input. Even
 An infinite source cannot yield an ordered result.
 
 Each enumeration builds a separate buffer from the source's current contents.
-File sources continue from their current position. Sorting uses O(n) element
+FileStream sources continue from their current position. Sorting uses O(n) element
 storage plus index scratch and O(n log n) comparisons.
 
 ## Reading results

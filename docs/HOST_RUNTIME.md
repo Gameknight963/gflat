@@ -191,7 +191,8 @@ are macros in C. See [source selection](PROJECTS.md#standard-library-selection).
 
 ## Files
 
-`Standard::IO::File` is a move-only binary stream. Default construction is closed.
+`Standard::IO::FileStream` is a move-only binary stream. Default construction is closed.
+`File::OpenRead`, `OpenWrite`, `OpenAppend`, and `OpenTemporary` create streams.
 Scope destruction closes it. Call `Close()` explicitly to report final flush
 and close errors:
 
@@ -201,7 +202,7 @@ using Standard::IO;
 
 int main()
 {
-    File output = File::OpenWrite("message.txt");
+    FileStream output = File::OpenWrite("message.txt");
     output.Write("Hello\n");
     output.Close();
     return 0;
@@ -219,7 +220,7 @@ int main()
 
 Paths use libc's native narrow-character encoding. On Windows, that follows the
 configured CRT code page. `FileHandle` is the opaque libc `FILE*` alias used
-internally. Its lifetime belongs to File and libc.
+internally. Its lifetime belongs to FileStream and libc.
 
 #### Temporary files
 
@@ -228,7 +229,7 @@ runs libc cleanup. Abrupt termination follows the host's cleanup behavior.
 
 Temporary streams follow libc's input/output direction rules. Flush before
 switching from output to input. A switch from input to output requires positioning
-unless the read reached EOF. File currently exposes the EOF transition but has
+unless the read reached EOF. FileStream currently exposes the EOF transition but has
 no seek operation. Flushing leaves the cursor at its existing position.
 
 ### Reading and cursor state
@@ -253,13 +254,13 @@ remaining bytes can leave it false until another read is attempted.
 
 ### Copying streams
 
-`CopyTo(destination, buffer, capacity)` copies to a borrowed File or `ITextWriter`
+`CopyTo(destination, buffer, capacity)` copies to a borrowed FileStream or `ITextWriter`
 and returns the copied count. The overload without scratch uses a 4096-byte stack
 buffer. Both streams remain open.
 
-Zero capacity and the same File as source and destination are rejected. Keep the
+Zero capacity and the same FileStream as source and destination are rejected. Keep the
 underlying files distinct even when accessed through separate handles or wrappers.
-A typed File destination is checked for closure before input is consumed. A
+A typed FileStream destination is checked for closure before input is consumed. A
 generic writer validates its own state when called.
 
 A failure can leave partial output and an advanced input cursor. Sink exceptions
@@ -288,23 +289,25 @@ on failure. Rename and destination replacement follow the host C runtime's rules
 
 | API | Owned result or input |
 | --- | --- |
-| `FileBytes::ReadAll(path)` | `Vector<byte>` |
-| `FileText::ReadAll(path)` | `String` |
-| `WriteAll(path, ...)` | Replaces file contents |
-| `AppendAll(path, ...)` | Appends file contents |
+| `File::ReadAllBytes(path)` | `Vector<byte>` |
+| `File::ReadAllText(path)` | `String` |
+| `File::WriteAllText(path, ...)` | Replaces file contents with text bytes |
+| `File::WriteAllBytes(path, ...)` | Replaces file contents with bytes |
+| `File::AppendAllText(path, ...)` | Appends text bytes |
+| `File::AppendAllBytes(path, ...)` | Appends bytes |
 
 These helpers preserve file bytes, including embedded zeros, line endings, and
 BOMs. String results keep the same bytes. Reads close the file before returning.
 Write helpers close explicitly so delayed errors propagate.
 
-`FileBytes` accepts counted bytes or `ref immutable(Vector<byte>)` for writes.
-`FileText` accepts C strings, counted bytes, or `ref immutable(String)`. Empty
-writes still open the file, so WriteAll creates or truncates it. Failed writes
+`WriteAllBytes` and `AppendAllBytes` accept counted bytes or `ref immutable(Vector<byte>)`.
+The text overloads accept C strings, counted bytes, or `ref immutable(String)`. Empty
+writes still open the file, so a whole-file write creates or truncates it. Failed writes
 can leave partial file contents.
 
 #### Read limits
 
-Both `ReadAll` methods accept `maximumBytes`. An exact-length file succeeds.
+Both whole-file read methods accept `maximumBytes`. An exact-length file succeeds.
 A longer file throws `IOException("File exceeds maximum byte count")` after an
 extra-byte EOF check. A zero limit accepts only an empty file.
 
@@ -313,16 +316,23 @@ buffering add storage overhead. On read, limit, or allocation failure, partial
 results are destroyed and the file closes. An existing assignment target remains
 unchanged. Allocation failure throws `BadAllocException`.
 
+### Selecting file sources
+
+`FileStream.gf` provides stream IO with the byte-reader and IO exception sources.
+The static `File` facade adds whole-file String and Vector operations, so selecting
+`File.gf` also requires those types and their dependencies. Low-level code can call
+`FileStream::OpenRead`, `OpenWrite`, `OpenAppend`, and `OpenTemporary` directly.
+
 ### File digests
 
 `FileHash::SHA256` and `FileHash::SHA512` return `byte[32]` and `byte[64]` digests.
-Path overloads open and close a file. Borrowed `File*` overloads hash from the
+Path overloads open and close a file. Borrowed `FileStream*` overloads hash from the
 current position to EOF and leave the stream open. See [file hashing](FILE_HASH.md).
 
 ### Reading lines
 
 `FileLines::TryReadLine(input, data, capacity, ref length)` reads through a borrowed
-File. It uses the same LF/CRLF and counted-buffer rules as Console line input.
+FileStream. It uses the same LF/CRLF and counted-buffer rules as Console line input.
 Zero capacity throws before reading. An oversized line is drained before
 `BufferTooSmallException`, retaining the terminated prefix. `ReadLine` throws
 `EndOfStreamException` at EOF.
@@ -330,7 +340,7 @@ Zero capacity throws before reading. An oversized line is drained before
 `TryReadLine(input, ITextWriter* output)` appends a line. Source or sink failures
 can leave partial progress. Reuse a String by clearing it between calls.
 
-`File.Lines()` returns a lazy sequence whose iterator reuses one String buffer.
+`FileStream.Lines()` returns a lazy sequence whose iterator reuses one String buffer.
 Its `Current` returns `ref immutable(String)`. Each enumeration consumes the
 current file position. Copying a line, or calling `ToVector()`, preserves an
 independent value. See [file line iteration](FILE_LINE_SEQUENCE.md).

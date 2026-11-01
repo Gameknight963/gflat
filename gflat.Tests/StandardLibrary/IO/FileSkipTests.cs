@@ -39,7 +39,7 @@ public sealed class FileSkipTests
                     nuint[{{success.Count}}] counts = [{{string.Join(",", success.Select(row => row.Skip))}}];
                     int[{{success.Count}}] next = [{{string.Join(",", success.Select(row => row.Next))}}];
                     for (nuint row = 0; row < {{success.Count}}; row++) {
-                        File input = File::OpenRead(paths[row]);
+                        FileStream input = FileStream::OpenRead(paths[row]);
                         int before = attempts; deny = true;
                         input.SkipExactly(counts[row]);
                         if (!input.IsOpen || input.EndOfFile) return 1;
@@ -54,7 +54,7 @@ public sealed class FileSkipTests
                     nuint[{{inputs.Count}}] lengths = [{{string.Join(",", inputs.Select(row => row.Length))}}];
                     for (nuint row = 0; row < {{inputs.Count}}; row++) {
                         for (int huge = 0; huge < 2; huge++) {
-                            File input = File::OpenRead(shortPaths[row]);
+                            FileStream input = FileStream::OpenRead(shortPaths[row]);
                             nuint count = lengths[row] + 1;
                             if (huge != 0) count = (nuint)0 - (nuint)1;
                             try { input.SkipExactly(count); return 5; }
@@ -65,13 +65,13 @@ public sealed class FileSkipTests
                             if (input.EndOfFile || input.ReadByte() != -1 || !input.EndOfFile) return 7;
                         }
                     }
-                    File closed = new File();
+                    FileStream closed = new FileStream();
                     for (nuint count = 0; count < 2; count++) {
                         try { closed.SkipExactly(count); return 8; }
                         catch (ref EndOfStreamException error) { return 9; }
                         catch (ref IOException error) { }
                     }
-                    File output = File::OpenWrite({{Literal(output)}});
+                    FileStream output = FileStream::OpenWrite({{Literal(output)}});
                     output.SkipExactly(0);
                     try { output.SkipExactly(1); return 10; }
                     catch (ref EndOfStreamException error) { return 11; }

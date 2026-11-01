@@ -33,8 +33,8 @@ void PrintDifference(ulong offset, readonly(char)* left, nuint leftCount,
 
 int CompareFiles(readonly(char)* leftPath, readonly(char)* rightPath)
 {
-    File left = File::OpenRead(leftPath);
-    File right = File::OpenRead(rightPath);
+    FileStream left = File::OpenRead(leftPath);
+    FileStream right = File::OpenRead(rightPath);
     char[4096] leftBuffer;
     char[4096] rightBuffer;
     ulong offset = 0ul;

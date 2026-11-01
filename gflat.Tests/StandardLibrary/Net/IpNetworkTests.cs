@@ -15,7 +15,7 @@ public sealed class IpNetworkTests
         }
         """;
     private const string ReadText="""
-        String ReadText(File* input){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
+        String ReadText(FileStream* input){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
             if(count!=0){Span<char> bytes=text.AsSpan();input.ReadExactly(bytes.Data!,count);}return move text;}
         """;
 
@@ -47,7 +47,7 @@ public sealed class IpNetworkTests
             Run(directory,Counters+ReadText+"""
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);byte[16] raw;byte[16] network;byte[16] last;byte[16] outside;byte[16] actual;
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);byte[16] raw;byte[16] network;byte[16] last;byte[16] outside;byte[16] actual;
                         for(int row=0;row<rows;row++){
                             nuint count=(nuint)FileBinary::ReadInt32LittleEndian(&input);int prefix=FileBinary::ReadInt32LittleEndian(&input);bool canonical=FileBinary::ReadInt32LittleEndian(&input)!=0;bool hasOutside=FileBinary::ReadInt32LittleEndian(&input)!=0;
                             if(count!=4&&count!=16)return 1;
@@ -96,7 +96,7 @@ public sealed class IpNetworkTests
             Run(directory,Counters+ReadText+"""
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);IpNetwork zero=new();IpNetwork initial=IpNetwork::Parse("10.0.0.0/8");
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);IpNetwork zero=new();IpNetwork initial=IpNetwork::Parse("10.0.0.0/8");
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);bool expectedCounted=FileBinary::ReadInt32LittleEndian(&input)!=0;bool expectedCString=FileBinary::ReadInt32LittleEndian(&input)!=0;
                             String canonicalCounted=ReadText(&input);String canonicalCString=ReadText(&input);IpNetwork counted=initial;IpNetwork terminated=initial;int before=attempts;deny=true;

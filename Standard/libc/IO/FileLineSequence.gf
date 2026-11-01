@@ -4,22 +4,22 @@ using Standard::Collections;
 
 namespace Standard::IO;
 
-// Borrows an open File at its current position; each enumeration consumes it.
+// Borrows an open FileStream at its current position; each enumeration consumes it.
 public struct FileLineSequence : IEnumerable<String, FileLineSequence::Enumerator>
 {
-    private File* input;
-    public FileLineSequence(File* source) { input = source; }
+    private FileStream* input;
+    public FileLineSequence(FileStream* source) { input = source; }
     public readonly Enumerator GetEnumerator() => new Enumerator(input);
     public Enumerable<String, FileLineSequence, FileLineSequence::Enumerator> AsEnumerable()
         => new Enumerable<String, FileLineSequence, FileLineSequence::Enumerator>(*this);
 
     public struct Enumerator
     {
-        private File* input;
+        private FileStream* input;
         private String current;
         private bool valid;
         private bool finished;
-        public Enumerator(File* source)
+        public Enumerator(FileStream* source)
         {
             input = source; current = new String(); valid = false; finished = false;
         }
@@ -44,9 +44,9 @@ public struct FileLineSequence : IEnumerable<String, FileLineSequence::Enumerato
     }
 }
 
-public FileLineSequence Lines(File* input) => new FileLineSequence(input);
+public FileLineSequence Lines(FileStream* input) => new FileLineSequence(input);
 
-extension File
+extension FileStream
 {
     public FileLineSequence Lines()
     => Standard::IO::Lines(this);

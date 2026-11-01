@@ -202,7 +202,7 @@ public sealed class JsonReaderMutationTests
             if(argc!=2) return 2;
             int row=-1;
             try {
-                File input=File::OpenRead(argv[1]);
+                FileStream input=FileStream::OpenRead(argv[1]);
                 int rows=FileBinary::ReadInt32LittleEndian(&input);
                 if(rows<600 || rows>1500) return Report(row,"Invalid manifest row count");
                 char[1026] bytes;

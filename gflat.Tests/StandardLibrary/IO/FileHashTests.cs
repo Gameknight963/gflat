@@ -30,14 +30,14 @@ public sealed class FileHashTests
                     for(nuint i=0;i<32;i++)if(left[i]!=right[i])return false;return true;
                 }
                 int main(int argc,char** argv){
-                    File expected=File::OpenRead(argv[2]);byte[32] wanted;byte[32] empty;
+                    FileStream expected=FileStream::OpenRead(argv[2]);byte[32] wanted;byte[32] empty;
                     expected.ReadExactly(((byte*)wanted).reinterpret<char*>(),32);expected.ReadExactly(((byte*)empty).reinterpret<char*>(),32);
                     byte[32] pathHash=FileHash::SHA256(argv[1]);
                     if(!Equal(pathHash,wanted))return 1;
                     pathHash[0]=(byte)(pathHash[0]^(byte)255);
                     byte[32] independent=FileHash::SHA256(argv[1]);if(!Equal(independent,wanted))return 2;
                     {
-                        File input=File::OpenRead(argv[1]);byte[32] digest=FileHash::SHA256(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);byte[32] digest=FileHash::SHA256(&input);
                         if(!Equal(digest,wanted)||!input.IsOpen||!input.EndOfFile||input.ReadByte()!=-1)return 3;
                         byte[32] second=FileHash::SHA256(&input);if(!Equal(second,empty)||!input.IsOpen)return 4;
                         input.Close();
@@ -49,7 +49,7 @@ public sealed class FileHashTests
                         expected.ReadExactly(((byte*)wanted).reinterpret<char*>(),32);
                         for(nuint choice=0;choice<6;choice++){
                             nuint capacity=(nuint)capacities[choice];
-                            File input=File::OpenRead(argv[1]);
+                            FileStream input=FileStream::OpenRead(argv[1]);
                             for(int skipped=0;skipped<offset;skipped++)if(input.ReadByte()==-1)return 5;
                             for(nuint i=0;i<4098;i++)scratch[i]='?';
                             byte[32] digest=FileHash::SHA256(&input,&scratch[1],capacity);
@@ -96,7 +96,7 @@ public sealed class FileHashTests
             string executable=Compile(directory,"""
                 using Standard; using Standard::IO; using Standard::Hashing;
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);int caught=0;char[3] scratch=['?','?','?'];
+                    FileStream input=FileStream::OpenRead(argv[1]);int caught=0;char[3] scratch=['?','?','?'];
                     try{FileHash::SHA256(&input,((nuint)1).reinterpret<char*>(),0);}catch(IOException* error){caught++;}
                     if(caught!=1||!input.IsOpen||input.ReadByte()!='a')return 1;
                     try{FileHash::SHA256(&input,&scratch[1],0);}catch(IOException* error){caught++;}
@@ -105,7 +105,7 @@ public sealed class FileHashTests
                     try{FileHash::SHA256(&input);}catch(IOException* error){caught++;}
                     try{FileHash::SHA256(&input,scratch,3);}catch(IOException* error){caught++;}
                     if(caught!=4||input.IsOpen)return 3;
-                    File output=File::OpenWrite(argv[2]);
+                    FileStream output=FileStream::OpenWrite(argv[2]);
                     try{FileHash::SHA256(&output,scratch,3);}catch(EndOfStreamException* error){return 4;}
                     catch(IOException* error){caught++;}
                     if(caught!=5||!output.IsOpen||output.EndOfFile)return 5;
@@ -129,11 +129,12 @@ public sealed class FileHashTests
         WithDirectory(directory=>
         {
             string executable=Compile(directory,DenyAllocation+"""
+                private extern int remove(immutable(char*) path);
                 int main(int argc,char** argv){
                     byte[32] first=FileHash::SHA256(argv[1]);byte[32] second=FileHash::SHA256(argv[1]);
                     // Remove while this process still runs: Windows rejects an open CRT file.
                     // On Unix unlink alone is not proof that a descriptor was closed.
-                    File::Remove(argv[1]);
+                    if (remove(argv[1]) != 0) return 9;
                     first[0]=(byte)(first[0]^(byte)255);
                     if(first[0]==second[0]||second[0]!=(byte)0xba||second[31]!=(byte)0xad||attempts!=0)return 1;
                     return 0;

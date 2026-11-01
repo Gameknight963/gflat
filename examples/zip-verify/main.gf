@@ -216,7 +216,7 @@ void Require(Check status)
 
 nuint VerifyFile(readonly(char)* path)
 {
-    Vector<byte> bytes = FileBytes::ReadAll(path, MaximumArchiveBytes);
+    Vector<byte> bytes = File::ReadAllBytes(path, MaximumArchiveBytes);
     BinaryBufferReader image = new();
     if (bytes.Count != 0) image = new(bytes.AsSpan().Data!, bytes.Count);
     BinaryBufferReader directory = new(); ushort entries = 0; nuint centralOffset = 0;

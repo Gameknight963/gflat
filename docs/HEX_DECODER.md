@@ -11,8 +11,8 @@ using Standard::Encoding;
 
 int main()
 {
-    File input = File::OpenRead("input.hex");
-    File output = File::OpenWrite("output.bin");
+    FileStream input = File::OpenRead("input.hex");
+    FileStream output = File::OpenWrite("output.bin");
     HexDecoder decoder = new(&output);
     char[257] buffer;
     input.CopyTo(&decoder, buffer, 257);

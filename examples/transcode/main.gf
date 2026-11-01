@@ -82,11 +82,11 @@ int main(int argc,char** argv)
         return 2;
     }
     try {
-        Vector<byte> input=FileBytes::ReadAll(argv[2]);
+        Vector<byte> input=File::ReadAllBytes(argv[2]);
         Vector<byte> output;
         if(CString::Equals(argv[1],"utf8-to-utf16le"))output=ToUtf16Le(ref input);
         else output=FromUtf16Le(ref input);
-        FileBytes::WriteAll(argv[3],ref output);
+        File::WriteAllBytes(argv[3],ref output);
     }
     catch(ref Exception error) { Console::Error.WriteLine(error.GetMessage()); return 1; }
     return 0;

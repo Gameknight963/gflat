@@ -28,7 +28,7 @@ public sealed class FileFloatingBinaryTests
                 int main(){
                     uint[{{floats.Length}}] floatBits=[{{string.Join(",",floats.Select(v=>v.ToString(CultureInfo.InvariantCulture)+"u"))}}];
                     ulong[{{doubles.Length}}] doubleBits=[{{string.Join(",",doubles.Select(v=>v.ToString(CultureInfo.InvariantCulture)+"ul"))}}];
-                    File input=File::OpenRead({{Literal(source)}});File output=File::OpenWrite({{Literal(target)}});
+                    FileStream input=FileStream::OpenRead({{Literal(source)}});FileStream output=FileStream::OpenWrite({{Literal(target)}});
                     if(input.ReadByte()!=67)return 1;output.WriteByte('C');
                     for(nuint i=0;i<{{floats.Length}};i++){
                         if(input.ReadByte()!=165)return 2;output.WriteByte((char)165);
@@ -60,10 +60,10 @@ public sealed class FileFloatingBinaryTests
             Run($$"""
                 using Standard; using Standard::IO;
                 int main(){
-                    File first=File::OpenRead({{Literal(shortFloat)}});
+                    FileStream first=FileStream::OpenRead({{Literal(shortFloat)}});
                     try{FileBinary::ReadFloat{{order}}(&first);return 1;}catch(ref EndOfStreamException error){}
                     if(!first.IsOpen||!first.EndOfFile||first.ReadByte()!=-1)return 2;
-                    File second=File::OpenRead({{Literal(shortDouble)}});
+                    FileStream second=FileStream::OpenRead({{Literal(shortDouble)}});
                     try{FileBinary::ReadDouble{{order}}(&second);return 3;}catch(ref EndOfStreamException error){}
                     if(!second.IsOpen||!second.EndOfFile||second.ReadByte()!=-1)return 4;
                     first.Close();second.Close();
@@ -73,7 +73,7 @@ public sealed class FileFloatingBinaryTests
                     try{FileBinary::WriteFloat{{order}}(&first,1.0f);}catch(ref IOException error){caught++;}
                     try{FileBinary::WriteDouble{{order}}(&first,1.0);}catch(ref IOException error){caught++;}
                     if(caught!=4||first.IsOpen)return 7;
-                    File output=File::OpenWrite({{Literal(target)}});
+                    FileStream output=FileStream::OpenWrite({{Literal(target)}});
                     try{FileBinary::ReadFloat{{order}}(&output);return 8;}catch(ref EndOfStreamException error){return 9;}catch(ref IOException error){}
                     if(!output.IsOpen||output.EndOfFile)return 10;
                     output.ClearError();FileBinary::WriteFloat{{order}}(&output,1.0f);
@@ -90,7 +90,7 @@ public sealed class FileFloatingBinaryTests
     private static void Run(string program,int optimization)
     {
         // Select the facade and its core binary helpers explicitly; do not rely on implicit std loading.
-        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf"}
+        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "libc/IO/FileStream.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("main.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

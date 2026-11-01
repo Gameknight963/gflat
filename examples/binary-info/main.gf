@@ -256,7 +256,7 @@ void InspectElf(BinaryBufferReader* input)
 
 void InspectFile(readonly(char)* path)
 {
-    Vector<byte> image = FileBytes::ReadAll(path, 67108864);
+    Vector<byte> image = File::ReadAllBytes(path, 67108864);
     if (image.Count < 4) throw new IOException("Unrecognized or truncated binary signature");
     // No owner growth or mutation after this point: all metadata views borrow image.
     BinaryBufferReader reader = new(image.AsSpan().Data!, image.Count);

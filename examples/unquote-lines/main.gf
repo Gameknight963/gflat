@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     bool decodingLine = false;
     try
     {
-        File input = File::OpenRead(argv[1]);
+        FileStream input = File::OpenRead(argv[1]);
         String line = s"";
         while (true)
         {

@@ -2,7 +2,7 @@ namespace gflat.Tests;
 
 public sealed class StdFileTests
 {
-    private static SourceFile[] Sources(string program) => new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" }
+    private static SourceFile[] Sources(string program) => new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" }
         .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
 
@@ -27,16 +27,16 @@ public sealed class StdFileTests
             Run(directory, $$"""
                 using Standard; using Standard::IO;
                 int main() {
-                    File empty = new File(); empty.Close();
+                    FileStream empty = new FileStream(); empty.Close();
                     {
-                        File original = File::OpenWrite({{Literal(path)}});
-                        File writer = move original;
+                        FileStream original = FileStream::OpenWrite({{Literal(path)}});
+                        FileStream writer = move original;
                         writer.Write("A\0B", 3); writer.Flush();
                         writer.Close(); writer.Close();
                         if (writer.IsOpen) return 1;
                     }
-                    { File append = File::OpenAppend({{Literal(path)}}); append.Write("C\0ignored"); }
-                    File reader = File::OpenRead({{Literal(path)}});
+                    { FileStream append = FileStream::OpenAppend({{Literal(path)}}); append.Write("C\0ignored"); }
+                    FileStream reader = FileStream::OpenRead({{Literal(path)}});
                     char[8] buffer;
                     if (reader.Read(buffer, 8) != (nuint)4) return 2;
                     if (buffer[0] != 'A' || buffer[1] != '\0' || buffer[2] != 'B' || buffer[3] != 'C') return 3;
@@ -54,9 +54,9 @@ public sealed class StdFileTests
         WithDirectory(directory => Run(directory, $$"""
             using Standard; using Standard::IO;
             int main() {
-                try { File missing = File::OpenRead({{Literal(Path.Combine(directory, "missing"))}}); return 1; }
+                try { FileStream missing = FileStream::OpenRead({{Literal(Path.Combine(directory, "missing"))}}); return 1; }
                 catch (IOException* error) { }
-                File closed = new File();
+                FileStream closed = new FileStream();
                 try { closed.Write("hello"); return 2; } catch (IOException* error) { }
                 char[1] buffer;
                 try { closed.Read(buffer, 1); return 3; } catch (IOException* error) { }
@@ -70,7 +70,7 @@ public sealed class StdFileTests
     public void OwningFileCannotBeCopied()
     {
         var error = Assert.Throws<CompileExceptions.TypeCheckException>(() => Compiler.Emit(Sources("""
-            int main() { Standard::IO::File file = new Standard::IO::File(); Standard::IO::File copy = file; return 0; }
+            int main() { Standard::IO::FileStream file = new Standard::IO::FileStream(); Standard::IO::FileStream copy = file; return 0; }
             """)));
         Assert.Contains("copy", error.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -84,7 +84,7 @@ public sealed class StdFileTests
             Run(directory, $$"""
                 int main() {
                     try {
-                        Standard::IO::File file = Standard::IO::File::OpenWrite({{Literal(path)}});
+                        Standard::IO::FileStream file = Standard::IO::FileStream::OpenWrite({{Literal(path)}});
                         file.Write("saved by scope cleanup");
                         throw new Exception("leave scope");
                     } catch (Exception* error) { }

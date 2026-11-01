@@ -4,7 +4,7 @@ public sealed class TextWriterExtensionsTests
 {
     private static ExecutionResult Run(string program, string? path = null, bool strings = false, bool console = false)
     {
-        var names = new List<string> { "core/Text/text_writer_line.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" };
+        var names = new List<string> { "core/Text/text_writer_line.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" };
         if (strings) names.AddRange(["core/Text/String.gf", "core/Text/ByteSearch.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf"]);
         if (console) names.AddRange(["libc/Console/Console.gf", "libc/Console/standard_writers.gf"]);
         if (path != null) program = program.Replace("$PATH", "\"" + path.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"");
@@ -50,14 +50,14 @@ public sealed class TextWriterExtensionsTests
             Run("""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File file = File::OpenWrite($PATH);
+                    FileStream file = FileStream::OpenWrite($PATH);
                     ITextWriter* output = &file;
                     output.WriteLine("A\0B", 3); output.WriteLine(); output.WriteLine("end");
                     file.Close();
                     String text = new String(); ITextWriter* stringWriter = &text;
                     stringWriter.WriteLine("A\0B", 3); stringWriter.WriteLine(); stringWriter.WriteLine("end");
                     if (text.Length != 9 || text.Data[1] != '\0' || text.Data[8] != '\n') return 1;
-                    File input = File::OpenRead($PATH); char[9] actual; input.ReadExactly(actual, 9);
+                    FileStream input = FileStream::OpenRead($PATH); char[9] actual; input.ReadExactly(actual, 9);
                     for (nuint i = 0; i < 9; i++) if (actual[i] != text.Data[i]) return 2;
                     return 0;
                 }

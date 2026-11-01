@@ -14,8 +14,8 @@ using Standard::Encoding;
 int main(int argc, char** argv)
 {
     if (argc != 3) return 2;
-    File input = File::OpenRead(argv[1]);
-    File output = File::OpenWrite(argv[2]);
+    FileStream input = File::OpenRead(argv[1]);
+    FileStream output = File::OpenWrite(argv[2]);
     Base32Encoder encoder = new(&output);
     IByteReader* source = &input;
     source.CopyTo(&encoder);

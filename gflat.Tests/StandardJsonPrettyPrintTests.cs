@@ -64,7 +64,7 @@ public sealed class StandardJsonPrettyPrintTests
                     }
                 }
                 int main(){
-                    File file=File::OpenRead({{Literal(path)}});char[20000] input;char[20000] original;char[40000] expected;char[40002] output;
+                    FileStream file=FileStream::OpenRead({{Literal(path)}});char[20000] input;char[20000] original;char[40000] expected;char[40002] output;
                     for(int row=0;row<{{rows.Count}};row++){
                         int inputSize=FileBinary::ReadInt32LittleEndian(&file);int outputSize=FileBinary::ReadInt32LittleEndian(&file);ulong width=FileBinary::ReadUInt64LittleEndian(&file);int useDefault=FileBinary::ReadInt32LittleEndian(&file);
                         if(inputSize<0||inputSize>20000||outputSize<0||outputSize>40000)return 1;

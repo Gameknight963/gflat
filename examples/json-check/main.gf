@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     }
     try
     {
-        String document = FileText::ReadAll(input, maximumBytes);
+        String document = File::ReadAllText(input, maximumBytes);
         JsonReader reader = new(document.Data, document.Length);
         nuint tokens = 0;
         nuint maximumNesting = 0;

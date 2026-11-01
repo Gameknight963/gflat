@@ -41,7 +41,7 @@ public sealed class BigIntegerParsingTests
             Run(directory, Counters + ReadText + """
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);String saved=text;String expected=ReadText(&input);
                             BigInteger first=new(777);BigInteger second=new(-777);
@@ -79,7 +79,7 @@ public sealed class BigIntegerParsingTests
             Run(directory, Counters + ReadText + """
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);String saved=text;bool nul=false;
                             for(nuint i=0;i<text.Length;i++)if(text.Data[i]=='\0')nul=true;
@@ -134,7 +134,7 @@ public sealed class BigIntegerParsingTests
             Run(directory, Counters + ReadText + """
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         BigInteger target=BigInteger::Parse("777777777777777777777");BigInteger saved=target;
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);String untouched=text;
@@ -228,7 +228,7 @@ public sealed class BigIntegerParsingTests
         }
         """;
     private const string ReadText = """
-        String ReadText(File* input){
+        String ReadText(FileStream* input){
             nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
             if(count!=0){Span<char> bytes=text.AsSpan();input.ReadExactly(bytes.Data!,count);}return move text;
         }

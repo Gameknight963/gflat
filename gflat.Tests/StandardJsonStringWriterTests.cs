@@ -106,7 +106,7 @@ public sealed class StandardJsonStringWriterTests
                         ITextWriter* owning=&text;owning.WriteJsonString(input,{{bytes.Length}});
                         if(allocations!=baseline||text.Length!=buffer.Length)return 2;
                         for(nuint i=0;i<text.Length;i++)if(text.Data[i]!=buffer.Data[i])return 3;
-                        File file=File::OpenWrite({{Literal(path)}});ITextWriter* output=&file;
+                        FileStream file=FileStream::OpenWrite({{Literal(path)}});ITextWriter* output=&file;
                         output.WriteJsonString(input,{{bytes.Length}});file.Close();
                         if(allocations!=baseline)return 4;
                     }
@@ -125,7 +125,7 @@ public sealed class StandardJsonStringWriterTests
     {
         var names=new List<string>{"core/Text/utf8.gf","core/Json/JsonString.gf","core/Json/json_string_writer.gf"};
         if(file)names.AddRange(["core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/Text/BufferTooSmallException.gf","core/Text/BufferWriter.gf",
-            "core/IStringConvertable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf","core/Text/String.gf", "core/Text/ByteSearch.gf","core/IO/IByteReader.gf", "libc/IO/File.gf"]);
+            "core/IStringConvertable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf","core/Text/String.gf", "core/Text/ByteSearch.gf","core/IO/IByteReader.gf", "libc/IO/FileStream.gf"]);
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);

@@ -27,10 +27,10 @@ public sealed class TimeSpanParsingTests
             }
             Run(directory, """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Time;
-                nuint ReadText(File* input,char* text){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
+                nuint ReadText(FileStream* input,char* text){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     input.ReadExactly(text,count);text[count]='\0';return count;}
                 int main(int argc,char** argv){
-                    File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
+                    FileStream file=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     for(int row=0;row<rows;row++){
                         char[64] input;char[64] saved;char[27] canonical;
                         nuint length=ReadText(&file,input);long expected=FileBinary::ReadInt64LittleEndian(&file);
@@ -80,7 +80,7 @@ public sealed class TimeSpanParsingTests
             Run(directory, """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Time;
                 int main(int argc,char** argv){
-                    File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
+                    FileStream file=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     for(int row=0;row<rows;row++){
                         nuint count=(nuint)FileBinary::ReadInt32LittleEndian(&file);char[64] text;
                         file.ReadExactly(text,count);text[count]='\0';TimeSpan value=TimeSpan::FromTicks(73l);

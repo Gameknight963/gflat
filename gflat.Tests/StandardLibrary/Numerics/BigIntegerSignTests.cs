@@ -22,7 +22,7 @@ public sealed class BigIntegerSignTests
             Run(directory,Counters+ReadText+"""
                 int main(int argc,char** argv){
                     {
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);String absText=ReadText(&input);String negText=ReadText(&input);
                             captured=null;capture=true;BigInteger source=BigInteger::Parse(text.Data,text.Length);capture=false;void*? originalStorage=captured;
@@ -61,7 +61,7 @@ public sealed class BigIntegerSignTests
                         {BigInteger a=zero.Abs();BigInteger b=zero.Negate();BigInteger c=retained.Abs();BigInteger d=retained.Negate();
                          if(a.Sign!=0||b.Sign!=0||c.Sign!=0||d.Sign!=0||attempts!=before)return 2;}
                         deny=false;
-                        File input=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
+                        FileStream input=FileStream::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&input);
                         for(int row=0;row<rows;row++){
                             String text=ReadText(&input);String unusedAbs=ReadText(&input);String unusedNeg=ReadText(&input);
                             captured=null;capture=true;BigInteger source=BigInteger::Parse(text.Data,text.Length);capture=false;void*? sourceStorage=captured;BigInteger saved=source;
@@ -99,7 +99,7 @@ public sealed class BigIntegerSignTests
         bool TextEquals(immutable(BigInteger)* value,immutable(String)* expected){String actual=value.ToString();return actual.Equals(expected);}
         """;
     private const string ReadText="""
-        String ReadText(File* input){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
+        String ReadText(FileStream* input){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);String text=new();text.Resize(count);
             if(count!=0){Span<char> bytes=text.AsSpan();input.ReadExactly(bytes.Data!,count);}return move text;}
         """;
     private static void WriteManifest(string path,IEnumerable<Integer> input)

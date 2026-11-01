@@ -83,7 +83,7 @@ public sealed class HMACSHA256Tests
             }
             RunFiles(directory,DenyAllocation+"""
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);
+                    FileStream input=FileStream::OpenRead(argv[1]);
                     char[4097] key;char[8193] data;int[8193] chunks;char[32] expected;char[32] empty;
                     for(int sample=0;sample<CASES;sample++){
                         nuint keyCount=(nuint)FileBinary::ReadUInt32LittleEndian(&input);

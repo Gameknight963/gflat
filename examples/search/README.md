@@ -3,7 +3,7 @@
 Print file lines containing a literal byte substring:
 
 ```text
-gflat build examples/search/search.gfproj --run -- Standard/libc/IO/File.gf IOException
+gflat build examples/search/search.gfproj --run -- Standard/libc/IO/FileStream.gf IOException
 ```
 
 Matching is case-sensitive by default. An empty search string matches every

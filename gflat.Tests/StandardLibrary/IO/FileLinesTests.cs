@@ -12,7 +12,7 @@ public sealed class FileLinesTests
         {
             string path = Path.Combine(directory, "input.bin");
             File.WriteAllBytes(path, contents);
-            var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileLines.gf" };
+            var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf", "libc/IO/FileLines.gf" };
             if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
             var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program(Literal(path))));
@@ -32,7 +32,7 @@ public sealed class FileLinesTests
         Run(System.Text.Encoding.UTF8.GetBytes("\r\nhello\nA\0B\rX\r"), path => $$"""
             using Standard; using Standard::Text; using Standard::IO;
             int main() {
-                File input = File::OpenRead({{path}});
+                FileStream input = FileStream::OpenRead({{path}});
                 char[16] buffer; nuint length = 99;
                 if (!FileLines::TryReadLine(&input, buffer, 16, ref length) || length != (nuint)0 || buffer[0] != '\0') return 1;
                 if (FileLines::ReadLine(&input, buffer, 16) != (nuint)5 || buffer[4] != 'o' || buffer[5] != '\0') return 2;
@@ -51,7 +51,7 @@ public sealed class FileLinesTests
         Run(System.Text.Encoding.UTF8.GetBytes(new string('x', 1000) + "\r\nnext\n\n"), path => $$"""
             using Standard; using Standard::Text; using Standard::IO;
             int main() {
-                File input = File::OpenRead({{path}});
+                FileStream input = FileStream::OpenRead({{path}});
                 char[5] buffer; nuint length = 99;
                 try { FileLines::TryReadLine(&input, buffer, 5, ref length); return 1; }
                 catch (BufferTooSmallException* error) { }
@@ -70,7 +70,7 @@ public sealed class FileLinesTests
         Run([65, 10], path => $$"""
             using Standard; using Standard::Text; using Standard::IO;
             int main() {
-                File input = File::OpenRead({{path}});
+                FileStream input = FileStream::OpenRead({{path}});
                 char[4] buffer; nuint length = 99;
                 try { FileLines::TryReadLine(&input, buffer, 0, ref length); return 1; } catch (BufferTooSmallException* error) { }
                 if (length != (nuint)0 || FileLines::ReadLine(&input, buffer, 4) != (nuint)1 || buffer[0] != 'A') return 2;
@@ -89,7 +89,7 @@ public sealed class FileLinesTests
         Run(bytes, path => $$"""
             using Standard; using Standard::Text; using Standard::IO;
             int main() {
-                File input = File::OpenRead({{path}});
+                FileStream input = FileStream::OpenRead({{path}});
                 String line = s"prefix:";
                 if (!FileLines::TryReadLine(&input, &line)) return 1;
                 if (line.Length != (nuint)266 || line.Data[7] != 'x' || line.Data[262] != '\r' || line.Data[263] != '\r' || line.Data[264] != '\0' || line.Data[265] != 'Z') return 2;

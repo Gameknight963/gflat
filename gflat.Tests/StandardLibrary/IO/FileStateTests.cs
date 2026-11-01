@@ -8,7 +8,7 @@ public sealed class FileStateTests
 
     private static string Compile(string directory, string program)
     {
-        var files = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" }
+        var files = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
@@ -30,7 +30,7 @@ public sealed class FileStateTests
             string exe = Compile(directory, $$"""
                 using Standard; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     if (input.EndOfFile || input.PeekByte() != 65 || input.PeekByte() != 65 || input.EndOfFile) return 1;
                     if (input.ReadByte() != 65 || input.PeekByte() != 0 || input.ReadByte() != 0 || input.ReadByte() != 255) return 2;
                     if (input.EndOfFile) return 3;
@@ -72,8 +72,8 @@ public sealed class FileStateTests
                 void Wait(immutable(char*) stage) { puts(stage); fflush(null); getchar(); }
                 int main() {
                     {
-                        File original = File::OpenTemporary();
-                        File temporary = move original;
+                        FileStream original = FileStream::OpenTemporary();
+                        FileStream temporary = move original;
                         if (!temporary.IsOpen) return 1;
                         temporary.Write("temporary bytes"); temporary.Flush();
                         Wait("open");
@@ -82,13 +82,13 @@ public sealed class FileStateTests
                         Wait("closed");
                     }
                     try {
-                        File temporary = File::OpenTemporary();
+                        FileStream temporary = FileStream::OpenTemporary();
                         temporary.Write("scope cleanup"); temporary.Flush();
                         Wait("scope");
                         throw new Exception("leave scope");
                     } catch (Exception* error) { }
                     Wait("unwound");
-                    for (int i = 0; i < 600; i++) { File temporary = File::OpenTemporary(); temporary.WriteByte('x'); }
+                    for (int i = 0; i < 600; i++) { FileStream temporary = FileStream::OpenTemporary(); temporary.WriteByte('x'); }
                     return 0;
                 }
                 """);

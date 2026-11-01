@@ -31,14 +31,14 @@ int main(int argc, char** argv)
 {
     if (argc != 2) return 2;
     {
-        File output = File::OpenWrite(argv[1]);
+        FileStream output = File::OpenWrite(argv[1]);
         WriteVarUInt32(&output, 3u);
         WriteZigZagInt32(&output, -150);
         output.Write("abc", 3);
         output.Close();
     }
     {
-        File input = File::OpenRead(argv[1]);
+        FileStream input = File::OpenRead(argv[1]);
         if (ReadPayloadLength(&input) != 3u) return 3;
         if (ReadZigZagInt32(&input) != -150) return 4;
         char[3] payload;
@@ -72,7 +72,7 @@ Reads can consume a prefix before failure. Writes send one encoded stack buffer
 and can leave partial output if the destination throws. Handle the failed record
 before continuing with the stream.
 
-The File-specific [FileVarInt](FILE_VARINT.md) methods use libc's buffered byte IO.
+The FileStream-specific [FileVarInt](FILE_VARINT.md) methods use libc's buffered byte IO.
 
 ## Explicit sources
 

@@ -46,9 +46,9 @@ public sealed class FileExtraLongTests
                     private extern void free(void* value);
                 }
                 int main() {
-                    File input = File::OpenRead({{{Literal(inputPath)}}});
-                    File reference = File::OpenRead({{{Literal(inputPath)}}});
-                    File output = File::OpenWrite({{{Literal(outputPath)}}});
+                    FileStream input = FileStream::OpenRead({{{Literal(inputPath)}}});
+                    FileStream reference = FileStream::OpenRead({{{Literal(inputPath)}}});
+                    FileStream output = FileStream::OpenWrite({{{Literal(outputPath)}}});
                     deny = true;
                     for (int row = 0; row < {{{values.Count}}}; row++) {
                         extralong actual = FileBinary::ReadExtraLongLittleEndian(&input);
@@ -97,7 +97,7 @@ public sealed class FileExtraLongTests
                     readonly(char)*[16] paths = [{{{string.Join(", ", paths)}}}];
                     for (nuint count = 0; count < 16; count++) {
                         for (int order = 0; order < 2; order++) {
-                            File input = File::OpenRead(paths[count]);
+                            FileStream input = FileStream::OpenRead(paths[count]);
                             extralong saved = (extralong)71;
                             try {
                                 if (order == 0) saved = FileBinary::ReadExtraLongLittleEndian(&input);
@@ -108,7 +108,7 @@ public sealed class FileExtraLongTests
                             if (saved != (extralong)71 || !input.IsOpen || !input.EndOfFile || input.ReadByte() != -1) return 2;
                         }
                     }
-                    File output = File::OpenWrite({{{Literal(target)}}});
+                    FileStream output = FileStream::OpenWrite({{{Literal(target)}}});
                     extralong saved = (extralong)71;
                     try { saved = FileBinary::ReadExtraLongLittleEndian(&output); return 3; }
                     catch (ref EndOfStreamException error) { return 4; }
@@ -129,7 +129,7 @@ public sealed class FileExtraLongTests
                     try { FileBinary::WriteExtraLongBigEndian(&output, (extralong)1); }
                     catch (ref IOException error) { caught++; }
                     if (caught != 4 || saved != (extralong)71 || output.IsOpen) return 8;
-                    File input = File::OpenRead({{{Literal(target)}}});
+                    FileStream input = FileStream::OpenRead({{{Literal(target)}}});
                     try { FileBinary::WriteExtraLongLittleEndian(&input, (extralong)1); return 9; }
                     catch (ref IOException error) { }
                     if (!input.IsOpen) return 10;
@@ -142,7 +142,7 @@ public sealed class FileExtraLongTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
+        var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("file-extra-long.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);

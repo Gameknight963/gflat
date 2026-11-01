@@ -223,11 +223,11 @@ public sealed class StandardReadToEndTests
                 using Standard::Text;
 
                 int main() {
-                    File file = File::OpenRead({{literal}}); IByteReader* input = &file;
+                    FileStream file = FileStream::OpenRead({{literal}}); IByteReader* input = &file;
                     String text = input.ReadToEnd(6);
                     if (!file.IsOpen || text.Length != 6 || text[1] != '\0' || (byte)text[2] != (byte)255) return 40;
                     if (text[3] != '\r' || text[4] != '\n' || input.ReadByte() != -1) return 41;
-                    file.Close(); file = File::OpenRead({{literal}}); bool caught = false;
+                    file.Close(); file = FileStream::OpenRead({{literal}}); bool caught = false;
                     try { input.ReadToEnd(ref text, 2); }
                     catch (ref IOException error) { caught = true; }
                     if (!caught || !file.IsOpen || input.ReadByte() != 13) return 42;

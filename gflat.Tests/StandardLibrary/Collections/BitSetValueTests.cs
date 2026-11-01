@@ -57,7 +57,7 @@ public sealed class BitSetValueTests
                 nuint Hash(immutable(BitSet)* value)nothrow=>value.GetHashCode();
                 int main(){
                     {
-                        File input=File::OpenRead({{Literal(path)}});BitSet bits=new();char[256] expected;
+                        FileStream input=FileStream::OpenRead({{Literal(path)}});BitSet bits=new();char[256] expected;
                         for(int sample=0;sample<{{records.Count}};sample++){
                             int operation=FileBinary::ReadInt32LittleEndian(&input);int argument=FileBinary::ReadInt32LittleEndian(&input);int second=FileBinary::ReadInt32LittleEndian(&input);int size=FileBinary::ReadInt32LittleEndian(&input);int ones=FileBinary::ReadInt32LittleEndian(&input);
                             if(size<0||size>256)return 1;input.ReadExactly(&expected[0],(nuint)size);

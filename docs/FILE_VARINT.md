@@ -1,12 +1,12 @@
 # Canonical variable-length integers in files
 
 `Standard::IO::FileVarInt` reads and writes canonical [base-128 integers](VARINT.md)
-at a File's current position.
+at a FileStream's current position.
 
 | Read | Write | Maximum bytes |
 | --- | --- | --- |
-| `ReadUInt32(File*)` | `WriteUInt32(File*, uint)` | 5 |
-| `ReadUInt64(File*)` | `WriteUInt64(File*, ulong)` | 10 |
+| `ReadUInt32(FileStream*)` | `WriteUInt32(FileStream*, uint)` | 5 |
+| `ReadUInt64(FileStream*)` | `WriteUInt64(FileStream*, ulong)` | 10 |
 
 ```csharp
 using Standard;
@@ -17,12 +17,12 @@ int main(int argc, char** argv)
 {
     if (argc != 2) return 2;
     {
-        File output = File::OpenWrite(argv[1]);
+        FileStream output = File::OpenWrite(argv[1]);
         FileVarInt::WriteUInt32(&output, 3u);
         FileVarInt::WriteUInt64(&output, VarInt::ZigZagEncode(-42l));
         output.Close();
     }
-    File input = File::OpenRead(argv[1]);
+    FileStream input = File::OpenRead(argv[1]);
     uint count = FileVarInt::ReadUInt32(&input);
     long signedValue = VarInt::ZigZagDecode(FileVarInt::ReadUInt64(&input));
     input.Close();

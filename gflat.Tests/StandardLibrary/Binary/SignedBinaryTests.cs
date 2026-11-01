@@ -92,7 +92,7 @@ public class SignedBinaryTests
             string source = Path.Combine(directory, "source.bin"), target = Path.Combine(directory, "target.bin"), partial = Path.Combine(directory, "partial.bin");
             var expected = new List<byte>();
             string order = little ? "LittleEndian" : "BigEndian";
-            var program = new StringBuilder($"using Standard; using Standard::IO; using Standard::Binary; int main(){{File input=File::OpenRead({Literal(source)}); File output=File::OpenWrite({Literal(target)});");
+            var program = new StringBuilder($"using Standard; using Standard::IO; using Standard::Binary; int main(){{FileStream input=FileStream::OpenRead({Literal(source)}); FileStream output=FileStream::OpenWrite({Literal(target)});");
             foreach (int width in new[] { 2, 4, 8 })
             foreach (long original in Values)
             {
@@ -105,7 +105,7 @@ public class SignedBinaryTests
             foreach (int width in new[] { 2, 4, 8 })
             {
                 program.Append($"try{{FileBinary::ReadInt{width * 8}{order}(&input);return 2;}}catch(EndOfStreamException* error){{}}");
-                program.Append($"{{File truncated=File::OpenRead({Literal(partial)});try{{FileBinary::ReadInt{width * 8}{order}(&truncated);return 3;}}catch(EndOfStreamException* error){{}}}}");
+                program.Append($"{{FileStream truncated=FileStream::OpenRead({Literal(partial)});try{{FileBinary::ReadInt{width * 8}{order}(&truncated);return 3;}}catch(EndOfStreamException* error){{}}}}");
             }
             program.Append("output.Close(); input.Close();");
             foreach (int width in new[] { 2, 4, 8 })
@@ -115,7 +115,7 @@ public class SignedBinaryTests
             }
             program.Append("return 0;}");
             File.WriteAllBytes(source, expected.ToArray()); File.WriteAllBytes(partial, [255]);
-            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
+            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program.ToString()));
             RunNative(Compiler.Emit(sources), optimization);

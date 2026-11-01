@@ -210,7 +210,7 @@ public sealed class Base64EncoderTests
             File.WriteAllBytes(input,data);
             Run(DenyAllocation+"""
                 int main(){
-                    File input=File::OpenRead("INPUT");File output=File::OpenWrite("OUTPUT");
+                    FileStream input=FileStream::OpenRead("INPUT");FileStream output=FileStream::OpenWrite("OUTPUT");
                     Base64Encoder writer=new(&output);char[257] buffer;
                     if(input.CopyTo(&writer,buffer,257)!=65537)return 1;
                     writer.Complete();input.Close();output.Close();

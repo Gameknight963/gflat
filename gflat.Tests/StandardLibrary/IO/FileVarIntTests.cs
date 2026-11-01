@@ -39,7 +39,7 @@ public sealed class FileVarIntTests
                 int main(int argc,char** argv){
                     const uint[{{narrow.Count}}] narrow=[{{string.Join(",",narrow.Select(v=>v+"u"))}}];
                     const ulong[{{wide.Count}}] wide=[{{string.Join(",",wide.Select(v=>v+"ul"))}}];
-                    File input=File::OpenRead(argv[1]);File output=File::OpenWrite(argv[2]);
+                    FileStream input=FileStream::OpenRead(argv[1]);FileStream output=FileStream::OpenWrite(argv[2]);
                     for(nuint i=0;i<{{narrow.Count}};i++){
                         if(FileVarInt::ReadUInt32(&input)!=narrow[i]||input.ReadByte()!=90)return 1;
                         FileVarInt::WriteUInt32(&output,narrow[i]);output.WriteByte((char)90);
@@ -66,7 +66,7 @@ public sealed class FileVarIntTests
             string executable = Compile(directory, """
                 using Standard; using Standard::IO;
                 int main(int argc,char** argv){
-                    File input=File::OpenRead(argv[1]);int caught=0;
+                    FileStream input=FileStream::OpenRead(argv[1]);int caught=0;
                     try{
                         if(argv[2][0]=='4')FileVarInt::ReadUInt32(&input);
                         else FileVarInt::ReadUInt64(&input);
@@ -114,17 +114,17 @@ public sealed class FileVarIntTests
             string executable = Compile(directory, """
                 using Standard; using Standard::IO;
                 int main(int argc,char** argv){
-                    File closed=new();int caught=0;
+                    FileStream closed=new();int caught=0;
                     try{FileVarInt::ReadUInt32(&closed);}catch(EndOfStreamException* error){return 1;}catch(IOException* error){caught++;}
                     try{FileVarInt::ReadUInt64(&closed);}catch(EndOfStreamException* error){return 2;}catch(IOException* error){caught++;}
                     try{FileVarInt::WriteUInt32(&closed,1u);}catch(IOException* error){caught++;}
                     try{FileVarInt::WriteUInt64(&closed,1ul);}catch(IOException* error){caught++;}
                     if(caught!=4||closed.IsOpen)return 3;
-                    File output=File::OpenWrite(argv[2]);
+                    FileStream output=FileStream::OpenWrite(argv[2]);
                     try{FileVarInt::ReadUInt64(&output);}catch(EndOfStreamException* error){return 4;}catch(IOException* error){caught++;}
                     if(caught!=5||!output.IsOpen||output.EndOfFile)return 5;
                     output.ClearError();FileVarInt::WriteUInt32(&output,300u);output.Close();
-                    File input=File::OpenRead(argv[1]);
+                    FileStream input=FileStream::OpenRead(argv[1]);
                     try{FileVarInt::WriteUInt64(&input,1ul);}catch(IOException* error){caught++;}
                     if(caught!=6||!input.IsOpen)return 6;
                     input.ClearError();if(FileVarInt::ReadUInt32(&input)!=300u)return 7;input.Close();

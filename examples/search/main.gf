@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     bool writingOutput = false;
     try
     {
-        File input = File::OpenRead(argv[fileIndex]);
+        FileStream input = File::OpenRead(argv[fileIndex]);
         String line = new String();
         char[4096] buffer;
         while (true)

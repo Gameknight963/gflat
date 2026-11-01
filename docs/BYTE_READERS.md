@@ -1,7 +1,7 @@
 # Borrowed byte readers
 
 `Standard::IO::IByteReader` supplies raw bytes through `Read(char* data, nuint count)`.
-File, BufferedReader, and the optional Windows TcpClient implement it.
+FileStream, BufferedReader, and the optional Windows TcpClient implement it.
 
 | Read result | Meaning |
 | --- | --- |
@@ -193,8 +193,8 @@ void DecodeHexFrom(IByteReader* input, ITextWriter* output)
 
 void DecodeFile(readonly(char)* sourcePath, readonly(char)* destinationPath)
 {
-    File source = File::OpenRead(sourcePath);
-    File destination = File::OpenWrite(destinationPath);
+    FileStream source = File::OpenRead(sourcePath);
+    FileStream destination = File::OpenWrite(destinationPath);
     DecodeHexFrom(&source, &destination);
     destination.Close();
     source.Close();

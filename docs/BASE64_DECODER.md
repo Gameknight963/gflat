@@ -14,8 +14,8 @@ using Standard::Encoding;
 
 int main()
 {
-    File input = File::OpenRead("input.txt");
-    File output = File::OpenWrite("output.bin");
+    FileStream input = File::OpenRead("input.txt");
+    FileStream output = File::OpenWrite("output.bin");
     Base64Decoder decoder = new(&output);
     char[4096] buffer;
     input.CopyTo(&decoder, buffer, 4096);

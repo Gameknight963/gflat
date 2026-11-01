@@ -36,7 +36,7 @@ public sealed class StandardBoundedFileReadTests
             }
             Run(directory, """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Collections;
-                String ReadPath(File* input) {
+                String ReadPath(FileStream* input) {
                     nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     String result=new(); result.Resize(count); Span<char> data=result.AsSpan();
                     input.ReadExactly(data.Data!,count); return move result;
@@ -45,7 +45,7 @@ public sealed class StandardBoundedFileReadTests
                     return CString::Equals(error.GetMessage(),"File exceeds maximum byte count");
                 }
                 int main(int argc,char** argv) {
-                    File cases=File::OpenRead(argv[1]); int rows=FileBinary::ReadInt32LittleEndian(&cases);
+                    FileStream cases=FileStream::OpenRead(argv[1]); int rows=FileBinary::ReadInt32LittleEndian(&cases);
                     for(int row=0;row<rows;row++) {
                         String path=ReadPath(&cases); nuint length=(nuint)FileBinary::ReadInt32LittleEndian(&cases);
                         nuint limit=(nuint)FileBinary::ReadUInt64LittleEndian(&cases);
@@ -53,20 +53,20 @@ public sealed class StandardBoundedFileReadTests
                         for(nuint i=0;i<length;i++) expected.Add((byte)cases.ReadByte());
                         if(length>limit) {
                             bool caught=false;
-                            try { String result=FileText::ReadAll(path.Data,limit); return 1; }
+                            try { String result=File::ReadAllText(path.Data,limit); return 1; }
                             catch(EndOfStreamException* error) { return 2; }
                             catch(IOException* error) { caught=LimitError(error); }
                             if(!caught)return 3;
                             caught=false;
-                            try { Vector<byte> result=FileBytes::ReadAll(path.Data,limit); return 4; }
+                            try { Vector<byte> result=File::ReadAllBytes(path.Data,limit); return 4; }
                             catch(EndOfStreamException* error) { return 5; }
                             catch(IOException* error) { caught=LimitError(error); }
                             if(!caught)return 6;
                         } else {
-                            String text=FileText::ReadAll(path.Data,limit);
-                            String legacyText=FileText::ReadAll(path.Data);
-                            Vector<byte> bytes=FileBytes::ReadAll(path.Data,limit);
-                            Vector<byte> legacyBytes=FileBytes::ReadAll(path.Data);
+                            String text=File::ReadAllText(path.Data,limit);
+                            String legacyText=File::ReadAllText(path.Data);
+                            Vector<byte> bytes=File::ReadAllBytes(path.Data,limit);
+                            Vector<byte> legacyBytes=File::ReadAllBytes(path.Data);
                             if(text.Length!=length||legacyText.Length!=length||bytes.Count!=length||legacyBytes.Count!=length)return 7;
                             if(text.Length>limit||bytes.Count>limit)return 8;
                             for(nuint i=0;i<length;i++) {
@@ -104,20 +104,20 @@ public sealed class StandardBoundedFileReadTests
                         nuint[4] limits;limits[0]=0;limits[1]=4096;limits[2]=4097;limits[3]=8192;
                         for(int i=0;i<4;i++) {
                             int live=allocated-released;bool caught=false;
-                            try { target=FileText::ReadAll(argv[1],limits[i]);return 1; }
+                            try { target=File::ReadAllText(argv[1],limits[i]);return 1; }
                             catch(IOException* error) {caught=CString::Equals(error.GetMessage(),"File exceeds maximum byte count");}
                             if(!caught||!target.Equals("sentinel")||allocated-released!=live)return 2;
                             caught=false;
-                            try { bytes=FileBytes::ReadAll(argv[1],limits[i]);return 3; }
+                            try { bytes=File::ReadAllBytes(argv[1],limits[i]);return 3; }
                             catch(IOException* error) {caught=CString::Equals(error.GetMessage(),"File exceeds maximum byte count");}
                             if(!caught||bytes.Count!=1||bytes[0]!=73||allocated-released!=live)return 4;
                         }
                         int before=allocated;failAfter=0;
-                        {String text=FileText::ReadAll(argv[2],0);Vector<byte> value=FileBytes::ReadAll(argv[2],0);
+                        {String text=File::ReadAllText(argv[2],0);Vector<byte> value=File::ReadAllBytes(argv[2],0);
                          if(text.Length!=0||value.Count!=0||allocated!=before)return 5;}
                         failAfter=-1;
-                        try {target=FileText::ReadAll(argv[3],0);return 6;}catch(IOException* error){}
-                        try {bytes=FileBytes::ReadAll(argv[3],0);return 7;}catch(IOException* error){}
+                        try {target=File::ReadAllText(argv[3],0);return 6;}catch(IOException* error){}
+                        try {bytes=File::ReadAllBytes(argv[3],0);return 7;}catch(IOException* error){}
                         if(!target.Equals("sentinel")||bytes.Count!=1||bytes[0]!=73)return 8;
                         // Remove while alive: Windows CRT rejects removal of an open input stream.
                         File::Remove(argv[1]);File::Remove(argv[2]);
@@ -145,14 +145,14 @@ public sealed class StandardBoundedFileReadTests
                         for(int kind=0;kind<2;kind++) {
                             int before=allocated;int points=0;
                             // Successful probes contain only result allocations, no exception payload.
-                            if(kind==0){String proof=FileText::ReadAll(argv[1],9000);points=allocated-before;}
-                            else {Vector<byte> proof=FileBytes::ReadAll(argv[1],9000);points=allocated-before;}
+                            if(kind==0){String proof=File::ReadAllText(argv[1],9000);points=allocated-before;}
+                            else {Vector<byte> proof=File::ReadAllBytes(argv[1],9000);points=allocated-before;}
                             if(points<2)return 1;
                             for(int point=0;point<points;point++) {
                                 int live=allocated-released;int deniedBefore=denied;bool caught=false;failAfter=point;
                                 try {
-                                    if(kind==0)target=FileText::ReadAll(argv[1],9000);
-                                    else bytes=FileBytes::ReadAll(argv[1],9000);
+                                    if(kind==0)target=File::ReadAllText(argv[1],9000);
+                                    else bytes=File::ReadAllBytes(argv[1],9000);
                                     return 2;
                                 } catch(BadAllocException* error) {caught=true;}
                                 // Payload allocations may also be denied and use the EH reserve.
@@ -162,7 +162,7 @@ public sealed class StandardBoundedFileReadTests
                             }
                         }
                         // A normal read after all failed reads also checks source contents.
-                        String text=FileText::ReadAll(argv[1],9000);Vector<byte> data=FileBytes::ReadAll(argv[1],9000);
+                        String text=File::ReadAllText(argv[1],9000);Vector<byte> data=File::ReadAllBytes(argv[1],9000);
                         if(text.Length!=9000||data.Count!=9000)return 5;
                         for(nuint i=0;i<9000;i++)if((byte)text.Data[i]!=(byte)i||data[i]!=(byte)i)return 6;
                         File::Remove(argv[1]);

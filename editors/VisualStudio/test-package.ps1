@@ -1471,22 +1471,22 @@ int SmokeHashesAndViews() {
     return 0;
 }
 int SmokeBoundedFiles(char* path) {
-    String text = FileText::ReadAll(path, 3);
-    Vector<byte> bytes = FileBytes::ReadAll(path, 3);
+    String text = File::ReadAllText(path, 3);
+    Vector<byte> bytes = File::ReadAllBytes(path, 3);
     if (!text.Equals("a\0b", 3) || bytes.Count != 3 || bytes[1] != (byte)0) return 143;
     int rejected = 0;
-    try { String excess = FileText::ReadAll(path, 2); }
+    try { String excess = File::ReadAllText(path, 2); }
     catch (ref IOException error) { if (CString::Equals(error.GetMessage(), "File exceeds maximum byte count")) rejected++; }
-    try { Vector<byte> excess = FileBytes::ReadAll(path, 2); }
+    try { Vector<byte> excess = File::ReadAllBytes(path, 2); }
     catch (ref IOException error) { if (CString::Equals(error.GetMessage(), "File exceeds maximum byte count")) rejected++; }
     if (rejected != 2) return 144;
-    FileBytes::WriteAll(path, ref bytes);
-    FileBytes::AppendAll(path, ref bytes);
-    Vector<byte> appended = FileBytes::ReadAll(path, 6);
+    File::WriteAllBytes(path, ref bytes);
+    File::AppendAllBytes(path, ref bytes);
+    Vector<byte> appended = File::ReadAllBytes(path, 6);
     if (appended.Count != 6 || appended[3] != (byte)'a' || appended[4] != (byte)0 || appended[5] != (byte)'b') return 158;
     Vector<byte> empty = new();
-    FileBytes::WriteAll(path, ref empty);
-    Vector<byte> cleared = FileBytes::ReadAll(path, 0);
+    File::WriteAllBytes(path, ref empty);
+    Vector<byte> cleared = File::ReadAllBytes(path, 0);
     if (cleared.Count != 0 || bytes.Count != 3) return 159;
     return 0;
 }

@@ -16,7 +16,7 @@ void RecordWord(HashMap<String, nuint>* counts, ref String word)
 void ReadWords(readonly(char)* path, HashMap<String, nuint>* counts)
 {
     String word = new();
-    File input = File::OpenRead(path);
+    FileStream input = File::OpenRead(path);
     char[4096] buffer;
     while (true)
     {

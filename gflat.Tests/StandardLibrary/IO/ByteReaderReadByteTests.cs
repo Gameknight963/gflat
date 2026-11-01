@@ -96,7 +96,7 @@ public sealed class ByteReaderReadByteTests
     [Fact]
     public void ExistingFileReadByteRemainsTheSelectedInstanceMember()
     {
-        var source = new SourceFile("file-read-byte-selection.gf", "using Standard::IO; int Probe(File* input) => input.ReadByte();");
+        var source = new SourceFile("file-read-byte-selection.gf", "using Standard::IO; int Probe(FileStream* input) => input.ReadByte();");
         var snapshot = new AnalysisSnapshot(Sources(source));
         var call = Assert.Single(snapshot.Nodes.Select(entry => entry.Node).OfType<CallExpression>(),
             candidate => candidate.Span.SourceId == source.Id && candidate.Callee is MemberAccessExpression { Member: "ReadByte" });
@@ -123,7 +123,7 @@ public sealed class ByteReaderReadByteTests
             Run($$"""
                 using Standard::IO;
                 int main() {
-                    File file = File::OpenRead({{literal}}); IByteReader* input = &file;
+                    FileStream file = FileStream::OpenRead({{literal}}); IByteReader* input = &file;
                     if (file.ReadByte() != 0 || input.ReadByte() != 255 || ReadByte(&file) != 10) return 30;
                     if (file.ReadByte() != -1 || input.ReadByte() != -1 || !file.IsOpen) return 31;
                     file.Close(); return 0;

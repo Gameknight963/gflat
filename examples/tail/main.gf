@@ -21,8 +21,8 @@ int main(int argc, char** argv)
 
     try
     {
-        File input = File::OpenRead(path);
-        File* source = &input;
+        FileStream input = File::OpenRead(path);
+        FileStream* source = &input;
         Queue<String> lines = new();
         if (count != 0)
         {

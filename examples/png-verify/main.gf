@@ -190,7 +190,7 @@ void Require(Check status)
 
 ImageInfo VerifyFile(readonly(char)* path)
 {
-    Vector<byte> bytes = FileBytes::ReadAll(path, MaximumArchiveBytes);
+    Vector<byte> bytes = File::ReadAllBytes(path, MaximumArchiveBytes);
     BinaryBufferReader image = new();
     if (bytes.Count != 0) image = new(bytes.AsSpan().Data!, bytes.Count);
     ImageInfo info = new();

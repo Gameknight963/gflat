@@ -41,7 +41,7 @@ void PrintEntry(ulong offset, readonly(char)* id, uint size, readonly(char)*? fo
 
 void ListFile(readonly(char)* path)
 {
-    File input = File::OpenRead(path);
+    FileStream input = File::OpenRead(path);
     char[4] id;
     input.ReadExactly(id, 4);
     if (id[0] != 'R' || id[1] != 'I' || id[2] != 'F' || id[3] != 'F')

@@ -13,8 +13,8 @@ int main(int argc, char** argv)
     }
     try
     {
-        File input = File::OpenRead(argv[1]);
-        File* source = &input;
+        FileStream input = File::OpenRead(argv[1]);
+        FileStream* source = &input;
         FileLineSequence::Enumerator lines = source.Lines().GetEnumerator();
         while (lines.MoveNext())
         {

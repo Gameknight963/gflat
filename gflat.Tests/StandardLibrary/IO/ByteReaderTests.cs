@@ -142,7 +142,7 @@ public sealed class ByteReaderTests
                     public replace void Free(void* storage)nothrow{}
                 }
                 int main(){
-                    File file=File::OpenRead("PATH");IByteReader* input=&file;
+                    FileStream file=FileStream::OpenRead("PATH");IByteReader* input=&file;
                     char[260] output;output[0]='?';output[259]='?';BufferWriter sink=new(&output[1],258);
                     HexDecoder decoder=new(&sink);char[9] scratch;for(nuint i=0;i<9;i++)scratch[i]='!';
                     if(CopyTo(input,&decoder,&scratch[1],7)!=514)return 1;

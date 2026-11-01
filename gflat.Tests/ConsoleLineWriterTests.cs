@@ -24,7 +24,7 @@ public sealed class ConsoleLineWriterTests
         {
             string executable=Compile(directory,DenyAllocation+"""
                 int main(int argc,char** argv){
-                    File expected=File::OpenRead(argv[1]);
+                    FileStream expected=FileStream::OpenRead(argv[1]);
                     int rows=FileBinary::ReadInt32LittleEndian(&expected);
                     char[16385] storage;char[16384] wanted;BufferWriter sink=new(storage,16385);
                     for(int row=0;row<rows;row++){

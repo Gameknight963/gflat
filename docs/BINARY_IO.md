@@ -39,13 +39,13 @@ int main(int argc, char** argv)
 {
     if (argc != 2) return 2;
     {
-        File output = File::OpenWrite(argv[1]);
+        FileStream output = File::OpenWrite(argv[1]);
         WriteLength(&output, 42u);
         WriteDoubleLittleEndian(&output, -1.5);
         output.Close();
     }
     {
-        File input = File::OpenRead(argv[1]);
+        FileStream input = File::OpenRead(argv[1]);
         if (ReadLength(&input) != 42u) return 3;
         if (ReadDoubleLittleEndian(&input) != -1.5) return 4;
         input.Close();
@@ -68,7 +68,7 @@ Writes encode the scalar into a stack buffer and make one destination call.
 A destination exception can leave partial output. Keep each endpoint alive
 and at the same address for the call.
 
-`FileBinary` offers the same operations with `File*` arguments. For a compact
+`FileBinary` offers the same operations with `FileStream*` arguments. For a compact
 variable-width representation, use [stream varints](STREAM_VARINT.md).
 
 ## Explicit source selection

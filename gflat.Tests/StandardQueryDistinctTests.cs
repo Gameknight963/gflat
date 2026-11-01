@@ -278,8 +278,8 @@ public sealed class StandardQueryDistinctTests
             Run(Allocator+"""
                 int main(){
                     {
-                        File input=File::OpenRead("INPUT");File output=File::OpenWrite("OUTPUT");
-                        File* source=&input;var query=source.Lines().AsEnumerable().Distinct();
+                        FileStream input=FileStream::OpenRead("INPUT");FileStream output=FileStream::OpenWrite("OUTPUT");
+                        FileStream* source=&input;var query=source.Lines().AsEnumerable().Distinct();
                         foreach(String line in query){output.Write(line.Data,line.Length);output.Write("\n",1);}
                         if(!input.IsOpen||query.Count()!=0)return 1;
                         input.Close();output.Close();

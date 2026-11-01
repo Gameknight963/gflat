@@ -1,6 +1,6 @@
 # Borrowed file lines
 
-`File.Lines()` returns a deferred FileLineSequence:
+`FileStream.Lines()` returns a deferred FileLineSequence:
 
 ```csharp
 using Standard::Text;
@@ -11,8 +11,8 @@ using Standard::Collections;
 
 int main()
 {
-    File input = File::OpenRead("input.txt");
-    File* source = &input;
+    FileStream input = File::OpenRead("input.txt");
+    FileStream* source = &input;
     Vector<String> lines = source.Lines().AsEnumerable().ToVector();
     return (int)lines.Count;
 }
@@ -24,7 +24,7 @@ nonempty unterminated line are yielded.
 
 ## Ownership and file position
 
-Keep the File alive, open, and at the same address while using the sequence.
+Keep the FileStream alive, open, and at the same address while using the sequence.
 All enumerators share its cursor. A new enumeration continues from the current
 position. Query Any, Count, and Take consume input too.
 

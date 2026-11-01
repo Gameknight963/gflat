@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     bool writingOutput = false;
     try
     {
-        String input = FileText::ReadAll(argv[1]);
+        String input = File::ReadAllText(argv[1]);
         CsvReader reader = new(input.Data, input.Length);
         String field = new();
         nuint column = 0;
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
         reader.Reset();
         column = 0;
         writingOutput = true;
-        File output = File::OpenWrite(argv[3]);
+        FileStream output = File::OpenWrite(argv[3]);
         CsvWriter writer = new(&output);
         while (reader.Read())
         {

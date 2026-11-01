@@ -11,8 +11,8 @@ using Standard::IO;
 
 int main()
 {
-    File input = File::OpenRead("input.txt");
-    File output = File::OpenWrite("prefixed.txt");
+    FileStream input = File::OpenRead("input.txt");
+    FileStream output = File::OpenWrite("prefixed.txt");
     LinePrefixWriter prefixed = new(&output, "> ", 2);
     char[4096] buffer;
     input.CopyTo(&prefixed, buffer, 4096);

@@ -25,24 +25,24 @@ int main(int argc, char** argv)
 | Overload | Position and ownership |
 | --- | --- |
 | `SHA256(path)` | Opens, hashes, and closes the complete file |
-| `SHA256(File* input)` | Hashes from current position to EOF, leaving the File open |
-| `SHA256(File* input, buffer, capacity)` | Same operation with caller scratch |
+| `SHA256(FileStream* input)` | Hashes from current position to EOF, leaving the FileStream open |
+| `SHA256(FileStream* input, buffer, capacity)` | Same operation with caller scratch |
 
 Matching `SHA512` overloads return `byte[64]` instead of `byte[32]`. Hexadecimal
 output needs twice the digest size: 64 characters for SHA-256 or 128 for SHA-512.
 
 ## Whole files and remaining stream bytes
 
-Borrowed overloads leave the File at EOF. An already exhausted File produces the
+Borrowed overloads leave the FileStream at EOF. An already exhausted FileStream produces the
 empty-message digest. Scratch capacity must be positive, and scratch must be
-separate from the File object. Changing a file concurrently can change the bytes
+separate from the FileStream object. Changing a file concurrently can change the bytes
 observed during hashing.
 
 ## Failures and allocation
 
-Opening, reading, closing, a closed File, or zero scratch capacity can throw
+Opening, reading, closing, a closed FileStream, or zero scratch capacity can throw
 `IOException`. A read failure may leave input consumed. The path overload closes
-its owned File while unwinding. A normal close failure prevents returning a digest.
+its owned FileStream while unwinding. A normal close failure prevents returning a digest.
 
 Messages exceeding the SHA algorithm's length limit throw `Exception`.
 

@@ -14,9 +14,9 @@ public sealed class FileFailureTests
 
     private static void Run(string directory, string program, bool strings = false)
     {
-        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileLines.gf" };
-        if (strings) names.AddRange(["libc/IO/FileText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
-        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
+        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf", "libc/IO/FileLines.gf" };
+        if (strings) names.AddRange(FileApiTestSources.ConvenienceDependencies);
+        var files = names.Distinct(StringComparer.Ordinal).Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files));
@@ -35,7 +35,7 @@ public sealed class FileFailureTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File output = File::OpenWrite({{Literal(path)}});
+                    FileStream output = FileStream::OpenWrite({{Literal(path)}});
                     try { output.ReadByte(); return 1; }
                     catch (EndOfStreamException* error) { return 2; }
                     catch (IOException* error) { }
@@ -46,7 +46,7 @@ public sealed class FileFailureTests
                     catch (EndOfStreamException* error) { return 5; }
                     catch (IOException* error) { }
                     output.ClearError(); output.Write("abc"); output.Close();
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     try { input.Write("x"); return 6; } catch (IOException* error) { }
                     input.ClearError(); input.ReadExactly(buffer, 3);
                     if (buffer[0] != 'a' || buffer[1] != 'b' || buffer[2] != 'c') return 7;
@@ -82,7 +82,7 @@ public sealed class FileFailureTests
                     }
                 }
                 int main() {
-                    try { String text = FileText::ReadAll({{Literal(path)}}); return 1; }
+                    try { String text = File::ReadAllText({{Literal(path)}}); return 1; }
                     catch (BadAllocException* error) { }
                     if (State::First == null || State::Released != 1) return 2;
                     File::Remove({{Literal(path)}});
@@ -106,7 +106,7 @@ public sealed class FileFailureTests
                     public void Write(readonly(char)* text, nuint count) { throw new Exception("writer rejected bytes"); }
                 }
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     FailingWriter output = new FailingWriter();
                     try { FileLines::TryReadLine(&input, &output); return 1; } catch (Exception* error) { }
                     if (!input.IsOpen) return 2;
@@ -139,7 +139,7 @@ public sealed class FileFailureTests
                     public replace void Free(void* data) nothrow { free(data); }
                 }
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     String line = new String(); State::Fail = true;
                     try { FileLines::TryReadLine(&input, &line); return 1; } catch (BadAllocException* error) { }
                     if (line.Length != (nuint)0 || line.Data[0] != '\0' || !input.IsOpen) return 2;
@@ -162,7 +162,7 @@ public sealed class FileFailureTests
         WithDirectory(directory => Run(directory, """
             using Standard; using Standard::Text; using Standard::IO;
             int main() {
-                File output = File::OpenWrite("/dev/full");
+                FileStream output = FileStream::OpenWrite("/dev/full");
                 bool buffered = false;
                 try { output.Write("buffered"); buffered = true; } catch (IOException* error) { }
                 if (buffered) {
@@ -171,12 +171,12 @@ public sealed class FileFailureTests
                 }
                 else { try { output.Close(); } catch (IOException* error) { } }
                 output.Close();
-                { File scoped = File::OpenWrite("/dev/full"); try { scoped.Write("buffered"); } catch (IOException* error) { } }
-                try { FileText::WriteAll("/dev/full", "buffered"); return 3; } catch (IOException* error) { }
-                try { FileText::AppendAll("/dev/full", "buffered"); return 4; } catch (IOException* error) { }
+                { FileStream scoped = FileStream::OpenWrite("/dev/full"); try { scoped.Write("buffered"); } catch (IOException* error) { } }
+                try { File::WriteAllText("/dev/full", "buffered"); return 3; } catch (IOException* error) { }
+                try { File::AppendAllText("/dev/full", "buffered"); return 4; } catch (IOException* error) { }
                 String owned = s"body";
-                try { FileText::WriteAll("/dev/full", ref owned); return 5; } catch (IOException* error) { }
-                try { FileText::AppendAll("/dev/full", ref owned); return 6; } catch (IOException* error) { }
+                try { File::WriteAllText("/dev/full", ref owned); return 5; } catch (IOException* error) { }
+                try { File::AppendAllText("/dev/full", ref owned); return 6; } catch (IOException* error) { }
                 if (owned.Length != 4 || owned.Data[0] != 'b') return 7;
                 return 0;
             }
@@ -194,8 +194,8 @@ public sealed class FileFailureTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(source)}});
-                    File output = File::OpenRead({{Literal(target)}});
+                    FileStream input = FileStream::OpenRead({{Literal(source)}});
+                    FileStream output = FileStream::OpenRead({{Literal(target)}});
                     try { input.CopyTo(&output); return 1; } catch (IOException* error) { }
                     if (!input.IsOpen || !output.IsOpen) return 2;
                     if (input.ReadByte() != -1) return 3;

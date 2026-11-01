@@ -44,9 +44,9 @@ using Standard::Queries;
 
 int main()
 {
-    File input = File::OpenRead("input.txt");
-    File output = File::OpenWrite("unique.txt");
-    File* source = &input;
+    FileStream input = File::OpenRead("input.txt");
+    FileStream output = File::OpenWrite("unique.txt");
+    FileStream* source = &input;
     foreach (String line in source.Lines().AsEnumerable().Distinct())
     {
         output.Write(line.Data, line.Length);

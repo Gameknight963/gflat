@@ -323,10 +323,10 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
                 int*? releasedObject=owner.Release();
                 if(releasedObject!=null) delete releasedObject!;
                 int swapLeft=1; int swapRight=2; Swap(ref swapLeft,ref swapRight);
-                String limitedFileText=FileText::ReadAll("sample.txt",1024);
-                Vector<byte> limitedFileBytes=FileBytes::ReadAll("sample.bin",1024);
-                FileBytes::WriteAll("copy.bin",ref limitedFileBytes);
-                FileBytes::AppendAll("copy.bin",ref limitedFileBytes);
+                String limitedFileText=File::ReadAllText("sample.txt",1024);
+                Vector<byte> limitedFileBytes=File::ReadAllBytes("sample.bin",1024);
+                File::WriteAllBytes("copy.bin",ref limitedFileBytes);
+                File::AppendAllBytes("copy.bin",ref limitedFileBytes);
                 Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
                 String joined=parts.AsImmutable().Join(",");
                 Date parsedDate=Date::Parse("2024-02-29");
@@ -384,7 +384,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
                 char[8] terminated; CString::TryCopy("ok",terminated,8);
                 CString::TryAppend("!",terminated,8);
                 Arena scratch=new(); scratch.AllocateZeroed(16,8);
-                File temporary=File::OpenTemporary();
+                FileStream temporary=FileStream::OpenTemporary();
                 FileBinary::WriteDoubleBigEndian(&temporary,1.25);
                 FileVarInt::WriteUInt32(&temporary,300u);
                 FileVarInt::WriteUInt64(&temporary,300ul);
@@ -677,21 +677,21 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         var swapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,swapCall),Protocol.JsonOptions);
         Assert.Contains("ref int left",swapHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("span_algorithms.gf",JsonSerializer.Serialize(model.Definition(source.Path,swapCall),Protocol.JsonOptions));
-        foreach(string fileApi in new[]{"FileText","FileBytes"})
+        foreach(string fileApi in new[]{"ReadAllText","ReadAllBytes"})
         {
-            int call=text.IndexOf(fileApi+"::ReadAll",StringComparison.Ordinal)+fileApi.Length+2;
+            int call=text.IndexOf("File::"+fileApi,StringComparison.Ordinal)+"File::".Length;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains("nuint maximumBytes",hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains(fileApi+".gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            Assert.Contains("File.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
         int durationFactory=text.IndexOf("TimeSpan::FromMilliseconds",StringComparison.Ordinal)+"TimeSpan::".Length;
         var durationHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationFactory),Protocol.JsonOptions);
         Assert.Contains("TimeSpan",durationHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("TimeSpan.gf",JsonSerializer.Serialize(model.Definition(source.Path,durationFactory),Protocol.JsonOptions));
-        int binaryWrite=text.IndexOf("FileBytes::WriteAll",StringComparison.Ordinal)+"FileBytes::".Length;
+        int binaryWrite=text.IndexOf("File::WriteAllBytes",StringComparison.Ordinal)+"File::".Length;
         var binaryWriteHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,binaryWrite),Protocol.JsonOptions);
         Assert.Contains("Vector",binaryWriteHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("FileBytes.gf",JsonSerializer.Serialize(model.Definition(source.Path,binaryWrite),Protocol.JsonOptions));
+        Assert.Contains("File.gf",JsonSerializer.Serialize(model.Definition(source.Path,binaryWrite),Protocol.JsonOptions));
         int durationSeconds=text.IndexOf("remainingTime.TotalSeconds",StringComparison.Ordinal)+"remainingTime.".Length;
         var secondsHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationSeconds),Protocol.JsonOptions);
         Assert.Contains("double",secondsHover.GetProperty("contents").GetProperty("value").GetString());

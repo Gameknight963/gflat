@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     }
     try
     {
-        String document = FileText::ReadAll(argv[1]);
+        String document = File::ReadAllText(argv[1]);
         JsonText::Minify(document.Data, document.Length, Console::Out);
         Console::WriteLine();
         Console::Flush();

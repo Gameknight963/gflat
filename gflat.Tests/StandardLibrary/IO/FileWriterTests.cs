@@ -14,7 +14,7 @@ public sealed class FileWriterTests
 
     private static void Run(string directory, string program, bool strings = false)
     {
-        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/primitive_format.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" };
+        var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/primitive_format.gf", "core/IO/IByteReader.gf", "libc/IO/FileStream.gf" };
         if (strings) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf"]);
         var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
@@ -44,8 +44,8 @@ public sealed class FileWriterTests
                     public immutable void Format(ITextWriter* output) { output.Write("<tag>", 5); }
                 }
                 int main() {
-                    if (sizeof(File) != sizeof(void*)) return 1;
-                    File file = File::OpenWrite({{Literal(path)}});
+                    if (sizeof(FileStream) != sizeof(void*)) return 1;
+                    FileStream file = FileStream::OpenWrite({{Literal(path)}});
                     ITextWriter* writer = &file;
                     writer.Write("A\0B", 3);
                     int value = -42; value.Format(&file); false.Format(writer);
@@ -75,7 +75,7 @@ public sealed class FileWriterTests
                     public replace void Free(void* data) nothrow { }
                 }
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     char[12006] storage; BufferWriter output = new BufferWriter(storage, 12006);
                     char[31] scratch;
                     if (input.CopyTo(&output, scratch, 31) != (nuint)12005) return 1;
@@ -98,7 +98,7 @@ public sealed class FileWriterTests
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     ITextWriter* self = &input;
                     try { input.CopyTo(self); return 1; } catch (IOException* error) { }
                     char[8] storage; BufferWriter output = new BufferWriter(storage, 8);
@@ -129,7 +129,7 @@ public sealed class FileWriterTests
                     public void Write(readonly(char)* data, nuint count) { Count = count; throw new Exception("sink rejected bytes"); }
                 }
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     Reject output = new Reject();
                     char[17] scratch;
                     try { input.CopyTo(&output, scratch, 17); return 1; } catch (Exception* error) { }
@@ -159,7 +159,7 @@ public sealed class FileWriterTests
                     public replace void Free(void* data) nothrow { free(data); }
                 }
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     String output = s"kept";
                     readonly(char)* original = output.Data;
                     try { input.CopyTo(&output); return 1; } catch (BadAllocException* error) { }
@@ -184,7 +184,7 @@ public sealed class FileWriterTests
                     public void Write(readonly(char)* data, nuint count) { throw new Exception("unexpected sink call"); }
                 }
                 int main() {
-                    File input = File::OpenRead({{Literal(path)}});
+                    FileStream input = FileStream::OpenRead({{Literal(path)}});
                     Reject output = new Reject();
                     if (input.CopyTo(&output) != (nuint)0 || !input.IsOpen) return 1;
                     return 0;

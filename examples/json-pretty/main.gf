@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     }
     try
     {
-        String document = FileText::ReadAll(argv[1]);
+        String document = File::ReadAllText(argv[1]);
         JsonText::PrettyPrint(document.Data, document.Length, Console::Out, (nuint)indentSpaces);
         Console::WriteLine();
         Console::Flush();

@@ -6,7 +6,7 @@ namespace Standard::IO;
 public static class FileHash
 {
     // Hash remaining bytes without closing or rewinding the borrowed file.
-    public static byte[32] SHA256(File* input, char* buffer, nuint capacity)
+    public static byte[32] SHA256(FileStream* input, char* buffer, nuint capacity)
     {
         if (!input.IsOpen) throw new IOException("File is closed");
         if (capacity == 0) throw new IOException("File hash buffer must not be empty");
@@ -21,7 +21,7 @@ public static class FileHash
         return state.GetHash();
     }
 
-    public static byte[32] SHA256(File* input)
+    public static byte[32] SHA256(FileStream* input)
     {
         char[4096] buffer;
         return FileHash::SHA256(input, buffer, 4096);
@@ -30,7 +30,7 @@ public static class FileHash
     // Own the file for this call and observe close failure before returning.
     public static byte[32] SHA256(immutable(char*) path)
     {
-        File input = File::OpenRead(path);
+        FileStream input = FileStream::OpenRead(path);
         byte[32] digest = FileHash::SHA256(&input);
         input.Close();
         return digest;
@@ -38,7 +38,7 @@ public static class FileHash
 
     // Hashes remaining file bytes into a 64-byte digest, leaving the file open.
     // Closed files and zero capacity reject before reading. IO failure can leave input consumed.
-    public static byte[64] SHA512(File* input, char* buffer, nuint capacity)
+    public static byte[64] SHA512(FileStream* input, char* buffer, nuint capacity)
     {
         if (!input.IsOpen) throw new IOException("File is closed");
         if (capacity == 0) throw new IOException("File hash buffer must not be empty");
@@ -54,7 +54,7 @@ public static class FileHash
     }
 
     // Hashes an open file through 4096 bytes of stack scratch, leaving it at EOF.
-    public static byte[64] SHA512(File* input)
+    public static byte[64] SHA512(FileStream* input)
     {
         char[4096] buffer;
         return FileHash::SHA512(input, buffer, 4096);
@@ -63,7 +63,7 @@ public static class FileHash
     // Hashes a binary file and closes it before returning the 64-byte digest.
     public static byte[64] SHA512(immutable(char*) path)
     {
-        File input = File::OpenRead(path);
+        FileStream input = FileStream::OpenRead(path);
         byte[64] digest = FileHash::SHA512(&input);
         input.Close();
         return digest;

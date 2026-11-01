@@ -10,7 +10,7 @@ public sealed class FileExtraLongEditorTests
     {
         const string text = """
             using Standard; using Standard::IO;
-            void Observe(File* stream) {
+            void Observe(FileStream* stream) {
                 extralong first = FileBinary::ReadExtraLongLittleEndian(stream);
                 extralong second = FileBinary::ReadExtraLongBigEndian(stream);
                 FileBinary::WriteExtraLongLittleEndian(stream, first);
@@ -35,7 +35,7 @@ public sealed class FileExtraLongEditorTests
             string hover = Json(model.Hover(source.Path, use)).GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains(name, hover);
             Assert.Contains(writing ? "void" : "extralong", hover);
-            Assert.Contains(writing ? "File* output" : "File* input", hover);
+            Assert.Contains(writing ? "FileStream* output" : "FileStream* input", hover);
             Assert.DoesNotContain("nothrow", hover);
             string prefix = "public static " + (writing ? "void " : "extralong ");
             int declaration = library.Text.IndexOf(prefix + name + "(", StringComparison.Ordinal);

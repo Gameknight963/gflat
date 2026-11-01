@@ -111,7 +111,7 @@ int main()
 {
     Vector<char> buffer = new();
     buffer.Resize(4096);
-    File input = File::OpenTemporary();
+    FileStream input = File::OpenTemporary();
     nuint read = input.Read(buffer.AsSpan().Data!, buffer.Count);
     buffer.Truncate(read);
     if (!buffer.IsEmpty || buffer.Capacity != 4096) return 1;

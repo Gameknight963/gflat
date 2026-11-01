@@ -16,13 +16,13 @@ int main(int argc, char** argv)
     }
     try
     {
-        String document = FileText::ReadAll(argv[1]);
+        String document = File::ReadAllText(argv[1]);
         Span<readonly(char)> input = new(document.Data, document.Length);
         String pointerText = new();
         Span<readonly(char)> pointer = new(argv[2], CString::Length(argv[2]));
         if (pointerFile)
         {
-            pointerText = FileText::ReadAll(argv[3]);
+            pointerText = File::ReadAllText(argv[3]);
             pointer = new(pointerText.Data, pointerText.Length);
         }
         Span<readonly(char)> value = new();

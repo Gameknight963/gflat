@@ -30,8 +30,8 @@ int main(int argc, char** argv)
         Vector<String> sample = new();
         PseudoRandom random = new(seed);
         {
-            File input = File::OpenRead(argv[1]);
-            File* source = &input;
+            FileStream input = File::OpenRead(argv[1]);
+            FileStream* source = &input;
             ulong seen = 0ul;
             ulong maximum = (ulong)0 - (ulong)1;
             {

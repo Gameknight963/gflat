@@ -16,7 +16,7 @@ public sealed class FileDirectionTests
                 public replace void Free(void* storage)nothrow{free(storage);}
             }
             int main(){
-                File stream=File::OpenTemporary();
+                FileStream stream=FileStream::OpenTemporary();
                 if(!stream.IsOpen||stream.EndOfFile)return 1;
                 int before=attempts;deny=true;
                 stream.WriteByte('a');stream.Flush();

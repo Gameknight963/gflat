@@ -22,7 +22,7 @@ public sealed class FileLineSequenceTests
         => Run(Encoding.UTF8.GetBytes("first\nsecond\nthird\n"), path => Counters + $$"""
             int main() {
                 {
-                    File input = File::OpenRead({{path}});
+                    FileStream input = FileStream::OpenRead({{path}});
                     FileLineSequence sequence = input.Lines();
                     readonly(FileLineSequence)* view = &sequence;
                     {
@@ -57,7 +57,7 @@ public sealed class FileLineSequenceTests
     public void CountedLinesPreserveZerosBareCrAndFinalLineAndMaterializeIndependentStrings(int optimization)
         => Run(Encoding.UTF8.GetBytes("\r\none\nA\0B\rX\r\nlast\r"),path=>Counters+$$"""
             int main(){ {
-                File input=File::OpenRead({{path}});File* source=&input;var view=source.Lines();
+                FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;var view=source.Lines();
                 if(allocations!=0 || input.PeekByte()!=13)return 1;
                 Vector<String> lines=view.AsEnumerable().ToVector();
                 if(lines.Count!=4 || lines[0].Length!=0 || lines[1].Length!=3 || lines[1][0]!='o')return 2;
@@ -74,7 +74,7 @@ public sealed class FileLineSequenceTests
     public void EmptyInputAndReadonlyCurrentDoNotAllocateCopies(int optimization)
     {
         Run([],path=>Counters+$$"""
-            int main(){File input=File::OpenRead({{path}});File* source=&input;var view=source.Lines();
+            int main(){FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;var view=source.Lines();
                 {var iterator=view.GetEnumerator();if(allocations!=0)return 1;
                     int caught=0;try{iterator.Current;}catch{caught++;}int before=allocations;
                     if(iterator.MoveNext() || iterator.MoveNext() || allocations!=before)return 2;
@@ -83,7 +83,7 @@ public sealed class FileLineSequenceTests
                 }return allocations-releases;}
             """,optimization);
         Run(Encoding.UTF8.GetBytes("first\nsecond\n"),path=>Counters+$$"""
-            int main(){ {File input=File::OpenRead({{path}});File* source=&input;
+            int main(){ {FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;
                 {var iterator=source.Lines().GetEnumerator();if(!iterator.MoveNext())return 1;
                     int before=allocations;readonly(char)* address=iterator.Current.Data;
                     if(iterator.Current.Length!=5 || iterator.Current[0]!='f' || iterator.Current.Data!=address || allocations!=before)return 2;
@@ -100,13 +100,13 @@ public sealed class FileLineSequenceTests
         => Run(Encoding.UTF8.GetBytes("first\nsecond\nthird\n"),path=>Counters+$$"""
             int calls=0;bool Fail(String line){calls++;if(calls==2)throw new Exception("predicate");return true;}
             int main(){
-                {File input=File::OpenRead({{path}});File* source=&input;var view=source.Lines();
+                {FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;var view=source.Lines();
                     foreach(String line in view){if(line.Length!=5)return 1;break;}
                     if(allocations!=releases || !input.IsOpen || input.PeekByte()!='s')return 2;
                     {Vector<String> remainder=view.AsEnumerable().ToVector();if(remainder.Count!=2 || remainder[0][0]!='s' || remainder[1][0]!='t')return 3;}
                     if(view.AsEnumerable().Any() || !input.IsOpen || allocations!=releases)return 4;
                 }
-                {File input=File::OpenRead({{path}});File* source=&input;var query=source.Lines().AsEnumerable();bool caught=false;
+                {FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;var query=source.Lines().AsEnumerable();bool caught=false;
                     try{query.Where(Fail).ToVector();}catch{caught=true;}
                     if(!caught || calls!=2 || allocations!=releases || !input.IsOpen || input.PeekByte()!='t')return 5;
                     if(query.Count()!=1 || !input.IsOpen || allocations!=releases)return 6;
@@ -119,7 +119,7 @@ public sealed class FileLineSequenceTests
     [InlineData(2)]
     public void LongLinesGrowOnceAndReuseTheBufferForEmptyAndShortLines(int optimization)
         => Run(Encoding.UTF8.GetBytes(new string('a',1300)+"\r\n\nb\n"+new string('c',513)),path=>Counters+$$"""
-            int main(){ {File input=File::OpenRead({{path}});File* source=&input;
+            int main(){ {FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;
                 {var iterator=source.Lines().GetEnumerator();
                     if(!iterator.MoveNext() || iterator.Current.Length!=1300 || iterator.Current[1299]!='a')return 1;
                     int before=allocations;nuint capacity=iterator.Current.Capacity;
@@ -137,7 +137,7 @@ public sealed class FileLineSequenceTests
     public void AllocationAndReadFailuresDisposeCurrentStorageAndLeaveTheBorrowedFileOpen(int optimization)
         => Run(Encoding.UTF8.GetBytes("first\nsecond\n"),path=>Counters+$$"""
             int main(){
-                {File input=File::OpenRead({{path}});File* source=&input;
+                {FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;
                     {var iterator=source.Lines().GetEnumerator();failAllocation=true;bool caught=false;
                         try{iterator.MoveNext();}catch{caught=true;}failAllocation=false;
                         if(!caught || !input.IsOpen || input.PeekByte()!='s')return 1;
@@ -147,7 +147,7 @@ public sealed class FileLineSequenceTests
                     {String next=source.Lines().AsEnumerable().First();if(next.Length!=6 || next[0]!='s')return 4;}
                     if(allocations!=releases || !input.IsOpen)return 5;
                 }
-                {File output=File::OpenWrite({{path}});File* source=&output;
+                {FileStream output=FileStream::OpenWrite({{path}});FileStream* source=&output;
                     {var iterator=source.Lines().GetEnumerator();bool caught=false;try{iterator.MoveNext();}catch{caught=true;}
                         if(!caught || !output.IsOpen || allocations!=releases)return 6;
                     }
@@ -167,8 +167,8 @@ public sealed class FileLineSequenceTests
             int main()
             {
                 {
-                    File input = File::OpenRead({{{path}}});
-                    File* source = &input;
+                    FileStream input = FileStream::OpenRead({{{path}}});
+                    FileStream* source = &input;
                     {
                         String prefix = source.Lines().AsEnumerable().First();
                         if (!prefix.Equals("prefix") || !input.IsOpen || input.EndOfFile) return 1;
@@ -222,7 +222,7 @@ public sealed class FileLineSequenceTests
     [InlineData("iterator.Current.Clear();")]
     public void CurrentCannotMutateTheIteratorsOwnedString(string invalid)
         => RunCompileFailure(path=>$$"""
-            using Standard; using Standard::Text; using Standard::IO; using Standard::Queries; using Standard::Collections;int main(){File input=File::OpenRead({{path}});File* source=&input;
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Queries; using Standard::Collections;int main(){FileStream input=FileStream::OpenRead({{path}});FileStream* source=&input;
                 var iterator=source.Lines().GetEnumerator();iterator.MoveNext();{{invalid}}return 0;}
             """);
 
@@ -230,7 +230,7 @@ public sealed class FileLineSequenceTests
     {
         var core=Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Standard/core"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)));
-        var io=new[]{"IO/File.gf","IO/FileLines.gf","IO/FileLineSequence.gf"}
+        var io=new[]{"IO/FileStream.gf","IO/FileLines.gf","IO/FileLineSequence.gf"}
             .Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",file))));
         return core.Concat(io).Append(new SourceFile("lines.gf",program));
     }

@@ -134,8 +134,8 @@ public sealed class BufferedReaderTests
             Run($$"""
                 using Standard;using Standard::IO;
                 struct CountedFile:IByteReader{
-                    private File* file;public nuint Reads;
-                    public CountedFile(File* input){file=input;Reads=0;}
+                    private FileStream* file;public nuint Reads;
+                    public CountedFile(FileStream* input){file=input;Reads=0;}
                     public nuint Read(char* output,nuint count){if(count!=0)Reads++;return file.Read(output,count);}
                 }
                 struct Source:IByteReader{
@@ -158,11 +158,11 @@ public sealed class BufferedReaderTests
                     Source defaultSource=new();allocated=allocations;freed=releases;
                     {BufferedReader defaults=new(&defaultSource);if(defaults.Capacity!=4096||defaults.BufferedCount!=0||defaultSource.Calls!=0||allocations!=allocated+1)return 55;}
                     if(releases!=freed+1)return 56;
-                    File direct=File::OpenRead("PATH");CountedFile directSource=new(&direct);
+                    FileStream direct=FileStream::OpenRead("PATH");CountedFile directSource=new(&direct);
                     uint[64] expected=[{{string.Join(",", values.Select(value => value + "u"))}}];
                     for(nuint i=0;i<64;i++)if(Standard::IO::ReadVarUInt32(&directSource)!=expected[i])return 47;
                     if(directSource.Reads!=120||!direct.IsOpen)return 48;direct.Close();
-                    File file=File::OpenRead("PATH");CountedFile counted=new(&file);allocated=allocations;freed=releases;
+                    FileStream file=FileStream::OpenRead("PATH");CountedFile counted=new(&file);allocated=allocations;freed=releases;
                     {
                         BufferedReader reader=new(&counted,17);
                         for(nuint i=0;i<64;i++)if(Standard::IO::ReadVarUInt32(&reader)!=expected[i])return 49;

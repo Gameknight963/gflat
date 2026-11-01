@@ -16,7 +16,7 @@ void WriteChecksum(uint value)
 
 void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
 {
-    File input = File::OpenRead(path);
+    FileStream input = File::OpenRead(path);
     CRC32 crc = new();
     Adler32 adler = new();
     char[4096] buffer;
@@ -34,7 +34,7 @@ void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
 
 uint ReadCRC32C(readonly(char)* path)
 {
-    File input = File::OpenRead(path);
+    FileStream input = File::OpenRead(path);
     CRC32C crc = new();
     char[4096] buffer;
     while (true)

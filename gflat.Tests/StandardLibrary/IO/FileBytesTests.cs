@@ -14,11 +14,11 @@ public sealed class FileBytesTests
 
     private static void Run(string directory, string program)
     {
-        // Deliberately no String, text codecs, or managed collector sources.
+        // Select the File facade and its owning byte/text dependencies.
         string[] names = ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
             "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Memory/Span.gf", "core/Collections/Vector.gf",
-            "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileBytes.gf"];
-        var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
+            "core/IO/IByteReader.gf", "libc/IO/FileStream.gf"];
+        var files = FileApiTestSources.WithConveniences(names).Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files));
@@ -44,7 +44,7 @@ public sealed class FileBytesTests
             Run(directory, $$"""
                 using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main() {
-                    Vector<byte> bytes = FileBytes::ReadAll({{Literal(input)}});
+                    Vector<byte> bytes = File::ReadAllBytes({{Literal(input)}});
                     if (bytes.Count != (nuint){{length}}) return 1;
                     if (bytes.Count == 0 && bytes.Capacity != 0) return 2;
                     for (nuint i = 0; i < bytes.Count; i++) if (bytes[i] != (byte)i) return 3;
@@ -53,7 +53,7 @@ public sealed class FileBytesTests
                     byte sentinel = 0;
                     readonly(byte)* data = &sentinel;
                     if (view.Length != 0) data = view.Data!;
-                    FileBytes::WriteAll({{Literal(output)}}, data, view.Length);
+                    File::WriteAllBytes({{Literal(output)}}, data, view.Length);
                     File::Remove({{Literal(input)}});
                     return 0;
                 }
@@ -73,10 +73,10 @@ public sealed class FileBytesTests
                 using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
                 int main() {
                     byte[4] data; data[0] = 0; data[1] = 255; data[2] = 128; data[3] = 42;
-                    FileBytes::WriteAll({{Literal(path)}}, data, 0);
-                    FileBytes::AppendAll({{Literal(path)}}, data, 4);
-                    FileBytes::AppendAll({{Literal(path)}}, &data[1], 2);
-                    FileBytes::AppendAll({{Literal(path)}}, data, 0);
+                    File::WriteAllBytes({{Literal(path)}}, data, 0);
+                    File::AppendAllBytes({{Literal(path)}}, data, 4);
+                    File::AppendAllBytes({{Literal(path)}}, &data[1], 2);
+                    File::AppendAllBytes({{Literal(path)}}, data, 0);
                     return 0;
                 }
                 """);
@@ -109,7 +109,7 @@ public sealed class FileBytesTests
                     }
                 }
                 int main() {
-                    try { Vector<byte> bytes = FileBytes::ReadAll({{Literal(path)}}); return 1; }
+                    try { Vector<byte> bytes = File::ReadAllBytes({{Literal(path)}}); return 1; }
                     catch (BadAllocException* error) { }
                     if (State::Last == null || State::Released != 1) return 2;
                     File::Remove({{Literal(path)}});
@@ -128,9 +128,9 @@ public sealed class FileBytesTests
             using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int main() {
                 byte value = (byte)42;
-                try { FileBytes::WriteAll("/dev/full", &value, 1); return 1; }
+                try { File::WriteAllBytes("/dev/full", &value, 1); return 1; }
                 catch (IOException* error) { }
-                try { FileBytes::AppendAll("/dev/full", &value, 1); return 2; }
+                try { File::AppendAllBytes("/dev/full", &value, 1); return 2; }
                 catch (IOException* error) { }
                 return 0;
             }
@@ -152,9 +152,9 @@ public sealed class FileBytesTests
                     public replace void Free(void* data) nothrow { }
                 }
                 int main() {
-                    Vector<byte> bytes = FileBytes::ReadAll({{Literal(empty)}});
+                    Vector<byte> bytes = File::ReadAllBytes({{Literal(empty)}});
                     if (bytes.Count != 0 || bytes.Capacity != 0 || State::Calls != 0) return 1;
-                    try { Vector<byte> absent = FileBytes::ReadAll({{Literal(missing)}}); return 2; }
+                    try { Vector<byte> absent = File::ReadAllBytes({{Literal(missing)}}); return 2; }
                     catch (IOException* error) { }
                     return 0;
                 }

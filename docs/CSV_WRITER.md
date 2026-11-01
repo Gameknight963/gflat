@@ -9,7 +9,7 @@ using Standard::IO;
 
 int main()
 {
-    File output = File::OpenWrite("inventory.csv");
+    FileStream output = File::OpenWrite("inventory.csv");
     CsvWriter writer = new(&output);
     writer.WriteField("bolts, large", 12);
     writer.WriteField("12", 2);
@@ -45,7 +45,7 @@ including for the last record when a final line ending is wanted.
 | Two empty fields, then `WriteEndRecord()` | Comma followed by CRLF |
 | One empty field without a record ending | Empty bytes, indistinguishable from zero records |
 
-Use a binary File or String destination when exact bytes matter. A Console stream
+Use a binary FileStream or String destination when exact bytes matter. A Console stream
 can translate line endings according to its text mode.
 
 ## Lifetimes and failures

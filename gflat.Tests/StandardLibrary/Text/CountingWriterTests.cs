@@ -144,7 +144,7 @@ public sealed class CountingWriterTests
             byte[] encoded=Encoding.ASCII.GetBytes(Convert.ToBase64String(bytes));File.WriteAllBytes(path,encoded);
             Run(DenyAllocation+"""
                 int main(){
-                    File input=File::OpenRead("PATH");CountingWriter count=new();
+                    FileStream input=FileStream::OpenRead("PATH");CountingWriter count=new();
                     Base64Decoder decoder=new(&count);char[257] buffer;
                     if(input.CopyTo(&decoder,buffer,257)!=ENCODED)return 1;
                     decoder.Complete();input.Close();

@@ -3,6 +3,8 @@
 `Standard::Compression::ZipArchive` opens a ZIP image in memory and indexes its
 entries. Entries can be stored or DEFLATE-compressed.
 
+To create an archive, see [writing ZIP archives](ZIP_WRITER.md).
+
 ```csharp
 using Standard::Collections;
 using Standard::Compression;

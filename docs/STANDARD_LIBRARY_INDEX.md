@@ -118,6 +118,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Gzip::DecompressMember` | [Gzip members](../Standard/core/Compression/GZIP.md) |
 | `Zlib::Decompress` | [Zlib streams](../Standard/core/Compression/ZLIB.md) |
 | `ZipArchive`, `ZipArchiveEntry` | [Reading ZIP archives](../Standard/core/Compression/ZIP.md) |
+| `ZipArchiveWriter` | [Writing stored ZIP archives](../Standard/core/Compression/ZIP_WRITER.md) |
 | `Base32`, `Base32Text` | [Padded Base32](BASE32.md) |
 | `Base32Encoder`, `Base32Decoder` | [Streaming Base32 output](BASE32_ENCODER.md), [Streaming Base32 decoding](BASE32_DECODER.md) through borrowed writers |
 | `Base64Encoder`, `Base64Decoder` | [Streaming Base64 output](BASE64_ENCODER.md), [Streaming Base64 decoding](BASE64_DECODER.md) through borrowed writers |

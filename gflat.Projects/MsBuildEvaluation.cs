@@ -59,13 +59,17 @@ internal static class MsBuildEvaluation
                 nativeInputs = NativeLinkInputs.Create(nativeLibraries, nativeDirectories, Path.GetDirectoryName(path)!);
             }
             catch (ArgumentException error) { throw new ProjectException(path, "Native link inputs: " + error.Message); }
+            PreprocessorInputs preprocessing;
+            try { preprocessing = new(Files("IncludeDirectory"), project.GetItems("Define").Select(item => item.EvaluatedInclude)); }
+            catch (ArgumentException error) { throw new ProjectException(path, "Preprocessor inputs: " + error.Message); }
             // MSBuild's evaluated glob expressions match paths relative to the project.
             return new ProjectModel(path, kind, target == null ? null : Path.GetFullPath(target, Path.GetDirectoryName(path)!),
                 Files("Compile"), Files("ProjectReference"),
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
                 project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
-                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"), disablesBuiltins, nativeInputs);
+                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"), disablesBuiltins, nativeInputs,
+                preprocessing);
         }
         catch (InvalidProjectFileException error)
         {

@@ -30,6 +30,11 @@ public static class Program
             NativeLinkInputs nativeLinkInputs = NativeLinkInputs.Empty;
             var nativeManifests = new List<string>();
             var sourceLists = new List<string>();
+            PreprocessorInputs preprocessing = PreprocessorInputs.Empty;
+            var preprocessorManifests = new List<string>();
+            string? dependencyFile = null;
+            void IncludeDirectory(string value) => preprocessing = preprocessing.Append(new([Path.GetFullPath(value)], []));
+            void Define(string value) => preprocessing = preprocessing.Append(new([], [value]));
             void AddLibrary(string kind, string value) => nativeLinkInputs = nativeLinkInputs.Append(
                 NativeLinkInputs.Create([new NativeLibraryInput(kind, value)], [], Environment.CurrentDirectory));
             for (int i = 0; i < args.Length; i++)
@@ -38,6 +43,7 @@ public static class Program
                 switch (args[i])
                 {
                     case "--help": case "-h":
+                        Console.WriteLine("Preprocessing: -I PATH / --include-directory PATH, -D NAME[=TOKENS] / --define NAME[=TOKENS].");
                         Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-stdlib]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
                         Console.WriteLine("gflat doctor [--native] [--clang path]");
                         Console.WriteLine("Debug symbols: -g or --debug; --no-debug disables the project's DebugSymbols setting.");
@@ -66,6 +72,14 @@ public static class Program
                         sourceLists.Add(sourceList);
                         sourcePaths.AddRange(File.ReadAllLines(sourceList).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath));
                         break;
+                    case "-I": case "--include-directory": IncludeDirectory(Value()); break;
+                    case "-D": case "--define": Define(Value()); break;
+                    case "--preprocessor-inputs":
+                        string preprocessingManifest = Path.GetFullPath(Value());
+                        preprocessorManifests.Add(preprocessingManifest);
+                        preprocessing = PreprocessorInputs.Read(preprocessingManifest).Append(preprocessing);
+                        break;
+                    case "--dependencies": dependencyFile = Path.GetFullPath(Value()); break;
                     case "--native-library": AddLibrary("Name", Value()); break;
                     case "--native-library-file": AddLibrary("File", Value()); break;
                     case "--native-library-dir": nativeLinkInputs = nativeLinkInputs.Append(NativeLinkInputs.Create([], [Value()], Environment.CurrentDirectory)); break;
@@ -78,6 +92,8 @@ public static class Program
                     case "--run": run = true; break;
                     case "--emit-ir": irOnly = true; break;
                     default:
+                        if (args[i].StartsWith("-I", StringComparison.Ordinal) && args[i].Length > 2) { IncludeDirectory(args[i][2..]); break; }
+                        if (args[i].StartsWith("-D", StringComparison.Ordinal) && args[i].Length > 2) { Define(args[i][2..]); break; }
                         if (args[i].StartsWith('-')) throw new ArgumentException($"Unexpected argument '{args[i]}'");
                         sourcePaths.Add(Path.GetFullPath(args[i])); break;
                 }
@@ -91,6 +107,8 @@ public static class Program
                     throw new ArgumentException("--source-list is a source-build option. Pass project files directly.");
                 if (nativeManifests.Count != 0)
                     throw new ArgumentException("--native-link-inputs is an internal source-build option. Use --native-library, --native-library-file, and --native-library-dir with projects.");
+                if (preprocessorManifests.Count != 0 || dependencyFile != null)
+                    throw new ArgumentException("--preprocessor-inputs and --dependencies are internal source-build options. Use -I and -D with projects.");
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
                 var root = ProjectModel.Load(projectPath, explicitConfiguration ? configuration : null,
@@ -120,7 +138,7 @@ public static class Program
             if (graph?.Root.Kind == ProjectKind.SourceLibrary)
                 return ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
                     clang: clang, exceptionReserveBytes: exceptionReserveBytes, optimizationLevel: optimizationLevel,
-                    sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs);
+                    sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs, preprocessorOverrides: preprocessing);
             outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : ".exe"));
             var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
@@ -131,29 +149,59 @@ public static class Program
                     graph?.Projects.Any(project => pathComparer.Equals(project.FilePath, path)) == true)
                     throw new ArgumentException("Output must differ from every source file and source list.");
                 if (nativeLinkInputs.Libraries.Any(library => library.Kind == "File" && pathComparer.Equals(library.Value, path)) ||
-                    nativeManifests.Contains(path, pathComparer))
+                    nativeManifests.Contains(path, pathComparer) || preprocessorManifests.Contains(path, pathComparer))
                     throw new ArgumentException("Output must differ from native library files and link manifests.");
             }
             ValidateOutput(outputPath);
+            if (dependencyFile != null)
+            {
+                ValidateOutput(dependencyFile);
+                ValidateOutput(dependencyFile + ".state");
+                if (pathComparer.Equals(dependencyFile, outputPath) || pathComparer.Equals(dependencyFile + ".state", outputPath)) throw new ArgumentException("Dependencies and output must use different paths.");
+            }
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib, debugSymbols, noBuiltins, nativeLinkInputs);
+                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib, debugSymbols, noBuiltins, nativeLinkInputs, preprocessing);
                 if (result != 0 || !run) return result;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }
             var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
+            var included = new HashSet<string>(pathComparer);
+            var compilationOptions = new CompilationOptions
+            {
+                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
+                IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
+                DependencyObserver = paths =>
+                {
+                    included.UnionWith(paths);
+                    if (included.Contains(outputPath) || dependencyFile != null && (included.Contains(dependencyFile) || included.Contains(dependencyFile + ".state")))
+                        throw new ArgumentException("Output must differ from included source files.");
+                }
+            };
+            void WriteDependencies()
+            {
+                if (dependencyFile != null) PreprocessorInputs.WriteDependencies(dependencyFile, included);
+            }
             if (check)
             {
-                Compiler.Check(sources, diagnostics, new() { NoStdLib = noStdLib, NoBuiltins = noBuiltins == true });
+                Compiler.Check(sources, diagnostics, compilationOptions);
+                WriteDependencies();
                 if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
                 return 0;
             }
-            string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true });
+            string ir = Compiler.Emit(sources, diagnostics, compilationOptions);
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
             // Use the native toolchain's emitted-IR predicate to validate its PDB output.
             if (OperatingSystem.IsWindows() && !irOnly && NativeToolchain.HasDebugInformation(ir))
-                ValidateOutput(Path.ChangeExtension(outputPath, ".pdb"));
+            {
+                string pdb = Path.ChangeExtension(outputPath, ".pdb");
+                ValidateOutput(pdb);
+                if (pathComparer.Equals(pdb, dependencyFile) || pathComparer.Equals(pdb, dependencyFile == null ? null : dependencyFile + ".state"))
+                    throw new ArgumentException("PDB and dependency outputs must use different paths.");
+                if (included.Contains(pdb)) throw new ArgumentException("PDB output must differ from included source files.");
+            }
+            WriteDependencies();
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }
             string temporaryIr = Path.Combine(Path.GetTempPath(), "gflat_" + Guid.NewGuid().ToString("N") + ".ll");

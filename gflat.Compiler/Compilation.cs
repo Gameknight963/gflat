@@ -1,6 +1,7 @@
 using gflat.ast;
 using gflat.CompileExceptions;
 using gflat.diagnostics;
+using gflat.Preprocessing;
 
 namespace gflat;
 
@@ -10,6 +11,8 @@ public sealed class Compilation
     public IReadOnlyList<SourceFile> Sources { get; }
     public IReadOnlyList<CompilationUnit> SyntaxTrees { get; }
     public CompilationUnit Unit { get; }
+    public IReadOnlyList<string> PreprocessorDependencies { get; private set; } = [];
+    public IReadOnlyList<MacroSymbol> MacroSymbols { get; private set; } = [];
     public IReadOnlyDictionary<SourceId, IReadOnlyList<Token>> SourceTokens => sourceTokens;
     private readonly Dictionary<SourceId, IReadOnlyList<Token>> sourceTokens = new();
 
@@ -24,33 +27,82 @@ public sealed class Compilation
             captured.Add(source);
         }
         cancellationToken.ThrowIfCancellationRequested();
-        Sources = captured.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
-        if (Sources.Count == 0) throw new ArgumentException("Specify at least one source file.");
-        if (Sources.Select(s => s.Id).Distinct().Count() != Sources.Count)
+        var roots = captured.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
+        if (roots.Length == 0) throw new ArgumentException("Specify at least one source file.");
+        if (roots.Select(s => s.Id).Distinct().Count() != roots.Length)
             throw new ArgumentException("A source path may only occur once in a compilation.");
-        SyntaxTrees = Sources.Select(source =>
+        var allSources = roots.ToDictionary(s => s.Id);
+        var dependencies = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var macroSymbols = new List<MacroSymbol>();
+        var loader = options?.IncludeLoader;
+        var preprocessingOptions = (options ?? new()) with { IncludeLoader = path =>
+            roots.FirstOrDefault(s => !s.Path.StartsWith('<') && string.Equals(Path.GetFullPath(s.Path), path,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) ?? loader?.Invoke(path) };
+        void Register(PreprocessingResult result)
+        {
+            foreach (var file in result.Sources)
+            {
+                allSources[file.Id] = file;
+                if (captureTokens) sourceTokens[file.Id] = (tokenCache?.Tokenize(file, new DiagnosticBag()) ?? Lexer.Tokenize(file, new DiagnosticBag())).AsReadOnly();
+            }
+            dependencies.UnionWith(result.Dependencies);
+            macroSymbols.AddRange(result.Symbols);
+        }
+        var includedByRoot = new Dictionary<SourceId, SourceId[]>();
+        SyntaxTrees = roots.Select(source =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var tokens = tokenCache?.Tokenize(source, recoverErrors ? diagnostics : null)
-                ?? Lexer.Tokenize(source, recoverErrors ? diagnostics : null);
-            if (captureTokens) sourceTokens[source.Id] = tokens.AsReadOnly();
+            List<Token> tokens;
+            if (Preprocessor.IsNeeded(source, preprocessingOptions))
+            {
+                var preprocessor = new Preprocessor(preprocessingOptions, diagnostics, cancellationToken);
+                try { tokens = preprocessor.Process(source).Tokens; }
+                catch (TypeCheckException error) when (recoverErrors)
+                {
+                    diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, error.Span, error.Description);
+                    tokens = Lexer.Tokenize(new SourceFile(source.Path, ""));
+                }
+                finally
+                {
+                    Register(new([], preprocessor.Sources, preprocessor.Dependencies, preprocessor.Symbols));
+                    includedByRoot[source.Id] = preprocessor.Sources.Select(file => file.Id).ToArray();
+                }
+            }
+            else
+            {
+                tokens = tokenCache?.Tokenize(source, recoverErrors ? diagnostics : null)
+                    ?? Lexer.Tokenize(source, recoverErrors ? diagnostics : null);
+                if (captureTokens) sourceTokens[source.Id] = tokens.AsReadOnly();
+            }
             cancellationToken.ThrowIfCancellationRequested();
             var tree = Parser.Parse(tokens, diagnostics, recoverErrors);
+            tree.Span = source.Span(0, source.Text.Length);
             cancellationToken.ThrowIfCancellationRequested();
             return tree;
         }).ToArray();
         Unit = new CompilationUnit(new(), SyntaxTrees.SelectMany(t => t.Namespaces).ToList(), SyntaxTrees.SelectMany(t => t.Members).ToList(), 0);
         foreach (var tree in SyntaxTrees)
-            Unit.FileUsings[tree.Span.SourceId!.Value] = tree.Usings.Select(u => u.Name).ToArray();
-        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, Sources, cancellationToken, tokenCache, captureTokens ? sourceTokens : null); }
+        {
+            var rootId = tree.Span.SourceId!.Value;
+            var imports = tree.Usings.Select(u => u.Name).ToArray();
+            Unit.FileUsings[rootId] = imports;
+            foreach (var includedId in includedByRoot.GetValueOrDefault(rootId) ?? [])
+                Unit.FileUsings.TryAdd(includedId, imports);
+        }
+        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, allSources.Values.ToArray(), cancellationToken, tokenCache, captureTokens ? sourceTokens : null, preprocessingOptions, Register); }
         catch (TypeCheckException error) when (recoverErrors)
         { diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description); }
+        Sources = allSources.Values.ToArray();
+        PreprocessorDependencies = dependencies.ToArray();
+        MacroSymbols = macroSymbols.ToArray();
+        options?.DependencyObserver?.Invoke(PreprocessorDependencies);
         cancellationToken.ThrowIfCancellationRequested();
     }
 
     public static void AddStandardLibrary(CompilationUnit unit, DiagnosticBag diagnostics, IEnumerable<SourceFile>? inputs = null,
         CancellationToken cancellationToken = default, SourceTokenCache? tokenCache = null,
-        IDictionary<SourceId, IReadOnlyList<Token>>? sourceTokens = null)
+        IDictionary<SourceId, IReadOnlyList<Token>>? sourceTokens = null, CompilationOptions? options = null,
+        Action<PreprocessingResult>? register = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var files = inputs?.ToArray() ?? unit.Members.Select(m => m.Span.Source)
@@ -84,8 +136,15 @@ public sealed class Compilation
             if (relative == "core/Exception.gf" && hasException) continue;
             if (relative == "core/BadAllocException.gf" && !includeBadAlloc) continue;
             var source = StandardLibrary.Load(relative);
-            var tokens = tokenCache?.Tokenize(source, null) ?? Lexer.Tokenize(source);
-            if (sourceTokens != null) sourceTokens[source.Id] = tokens.AsReadOnly();
+            List<Token> tokens;
+            if (Preprocessor.IsNeeded(source, options))
+            {
+                var processed = new Preprocessor(options, diagnostics, cancellationToken).Process(source);
+                register?.Invoke(processed);
+                tokens = processed.Tokens;
+            }
+            else tokens = tokenCache?.Tokenize(source, null) ?? Lexer.Tokenize(source);
+            if (sourceTokens != null && !sourceTokens.ContainsKey(source.Id)) sourceTokens[source.Id] = tokens.AsReadOnly();
             cancellationToken.ThrowIfCancellationRequested();
             var tree = Parser.Parse(tokens, diagnostics);
             cancellationToken.ThrowIfCancellationRequested();

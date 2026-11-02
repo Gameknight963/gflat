@@ -20,6 +20,7 @@ projects](../docs/PROJECTS.md#running-in-visual-studio).
 
 ## Language and ownership
 
+- [macros](macros/main.gf): share macros through a header and escape one expansion scan with `@`
 - [hello](hello/main.gf): a minimal native executable
 - [interpolation](interpolation/main.gf): interpolate strings and a custom formattable value
 - [values](values/main.gf): move owning strings into and out of a vector

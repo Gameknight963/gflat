@@ -28,7 +28,7 @@ public sealed class GflatEditorPackage : AsyncPackage
 public sealed class GflatLanguageInfo : IVsLanguageInfo
 {
     public int GetLanguageName(out string name) { name = "gflat"; return VSConstants.S_OK; }
-    public int GetFileExtensions(out string extensions) { extensions = ".gf"; return VSConstants.S_OK; }
+    public int GetFileExtensions(out string extensions) { extensions = ".gf;.gfh"; return VSConstants.S_OK; }
 
     // MEF/TextMate and LSP supply these features, not a legacy language service.
     public int GetColorizer(IVsTextLines buffer, out IVsColorizer colorizer)

@@ -19,11 +19,11 @@ internal sealed class WorkspaceAnalysisCache
         for (int index = entries.Count - 1; index >= 0; index--)
         {
             Entry entry = entries[index];
-            if (entry.Options != options || !SameSources(entry.Sources, sources, compareText: false)) continue;
+            if (!SameOptions(entry.Options, options) || !SameSources(entry.Sources, sources, compareText: false)) continue;
             if (entry.Snapshot.BodySources != null && (bodySources == null || !entry.Snapshot.BodySources.SetEquals(bodySources))) continue;
             entries.RemoveAt(index);
             if (automatic != null && SameSources(entry.Sources, sources, compareText: true)
-                && SameSources(entry.AutomaticSources, automatic, compareText: true))
+                && SameSources(entry.AutomaticSources, automatic, compareText: true) && SameIncludes(entry.Snapshot, options))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 entries.Add(entry);
@@ -42,6 +42,29 @@ internal sealed class WorkspaceAnalysisCache
             if (entries.Count > 4) entries.RemoveAt(0);
         }
         return (snapshot, model);
+    }
+
+    private static bool SameOptions(CompilationOptions left, CompilationOptions right) =>
+        (left with { IncludeDirectories = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) ==
+        (right with { IncludeDirectories = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) &&
+        left.IncludeDirectories.SequenceEqual(right.IncludeDirectories, Workspace.Paths) &&
+        left.Defines.Count == right.Defines.Count && left.Defines.All(pair => right.Defines.TryGetValue(pair.Key, out var value) && value == pair.Value);
+
+    private static readonly IReadOnlyDictionary<string, string> EmptyDefines = new Dictionary<string, string>();
+
+    private static bool SameIncludes(AnalysisSnapshot snapshot, CompilationOptions options)
+    {
+        try
+        {
+            var previous = snapshot.Sources.Where(source => !source.Path.StartsWith('<')).ToDictionary(source => Path.GetFullPath(source.Path), Workspace.Paths);
+            foreach (string path in snapshot.PreprocessorDependencies.Where(path => !path.StartsWith('<')))
+            {
+                var current = options.IncludeLoader?.Invoke(path) ?? (File.Exists(path) ? new SourceFile(path, File.ReadAllText(path)) : null);
+                if (previous.TryGetValue(path, out var source) ? current?.Text != source.Text : current != null) return false;
+            }
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static SourceFile[]? ReadAutomaticSources(CompilationOptions options)

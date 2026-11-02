@@ -34,6 +34,7 @@ browse the [examples](examples/README.md).
 - Replaceable allocation and managed references (`T^`)
 - Native stack-unwinding exceptions
 - Custom string prefixes and interpolation
+- [Macros and textual includes](docs/PREPROCESSOR.md) with conditional compilation
 - Compile-time name, layout, and type queries
 - [Standard](Standard/README.md): strings, collections, queries, text and binary formats, console and file IO
 

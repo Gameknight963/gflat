@@ -18,6 +18,7 @@
   <Project Path="distinct-lines/distinct-lines.gfproj" />
   <Project Path="file-compare/file-compare.gfproj" />
   <Project Path="hello/hello.gfproj" />
+  <Project Path="macros/macros.gfproj" />
   <Project Path="hexdump/hexdump.gfproj" />
   <Project Path="interpolation/interpolation.gfproj" />
   <Project Path="ip-count/ip-count.gfproj" />

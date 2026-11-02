@@ -50,7 +50,7 @@ public sealed partial class EditorModel
         cancellationToken.ThrowIfCancellationRequested();
         this.snapshot = snapshot;
         IndexScopeEnvironments();
-        var allFiles = files.Concat(snapshot.Nodes.Select(n => n.Span.Source).OfType<SourceFile>())
+        var allFiles = files.Concat(snapshot.Sources).Concat(snapshot.Nodes.Select(n => n.Span.Source).OfType<SourceFile>())
             .DistinctBy(s => s.Path, Workspace.Paths).ToArray();
         sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
         var nodesBySource = snapshot.Nodes.Where(n => n.Span.Source != null)
@@ -810,6 +810,7 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         options ??= new();
+        if (MacroHover(path, offset) is { } macro) return macro;
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
         if (query != null) return query;
         if (ReflectionMemberHover(path, offset, presentation) is { } reflectionMember) return reflectionMember;
@@ -894,6 +895,8 @@ public sealed partial class EditorModel
     }
     public object? Definition(string path, int offset)
     {
+        if (MacroAt(path, offset) is { Declaration.Source: { } file } macro && !file.Path.StartsWith('<'))
+            return new Location(Workspace.FileUri(file.Path), Workspace.ToRange(macro.Declaration));
         int index = TokenAt(path, offset);
         var symbol = index < 0 ? null : Resolve(path, index);
         return symbol?.NameSpan.Source is not SourceFile source || source.Path.StartsWith('<') ? null : new Location(Workspace.FileUri(source.Path), Workspace.ToRange(symbol.NameSpan));

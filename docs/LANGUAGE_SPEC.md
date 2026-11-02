@@ -27,9 +27,17 @@ The native entry point is a non-generic global `main` returning `int`.
 It cannot be overloaded. Namespace and type members named `main` are ordinary
 functions, with normal name mangling and exception propagation.
 
+## Preprocessing
+
+[C-style macros and textual includes](PREPROCESSOR.md) run before parsing each
+root source. Supported forms include `#define`, `#include`, conditional directives,
+`#` stringification, `##` concatenation, variadics, and `#pragma once`.
+Arguments expand before stringification and concatenation. `@NAME` and `@(tokens)`
+skip the current expansion scan.
+
 ## Lexical and grammar rules
 
-Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. Comments are `//` to end of line or non-nesting `/* ... */`. Unterminated comments are errors.
+Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. `@NAME` permits a keyword identifier and excludes `@` from its name. Double-underscore names are used by compiler hooks. Comments are `//` to end of line or non-nesting `/* ... */`. Unterminated comments are errors.
 
 LF, CRLF, and bare CR each end a logical source line. Source text and offsets retain the original line-ending characters.
 

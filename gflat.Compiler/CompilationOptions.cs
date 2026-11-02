@@ -3,6 +3,10 @@ namespace gflat;
 /// <summary>Source selection and code generation options for a compilation.</summary>
 public sealed record CompilationOptions
 {
+    public IReadOnlyList<string> IncludeDirectories { get; init; } = [];
+    public IReadOnlyDictionary<string, string> Defines { get; init; } = new Dictionary<string, string>();
+    public Func<string, SourceFile?>? IncludeLoader { get; init; }
+    public Action<IReadOnlyList<string>>? DependencyObserver { get; init; }
     public bool NoStdLib { get; init; }
     public bool DebugSymbols { get; init; }
 

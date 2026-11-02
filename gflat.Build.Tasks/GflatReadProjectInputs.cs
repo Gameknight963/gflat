@@ -22,6 +22,9 @@ public sealed class GflatReadProjectInputs : Task
     [Output] public ITaskItem[] NativeLibraryDirectories { get; set; } = [];
     [Output] public ITaskItem[] NativeLibraryFiles { get; set; } = [];
     [Output] public bool HasLogicalLibraries { get; set; }
+    public string PreprocessorOverrides { get; set; } = "";
+    [Output] public ITaskItem[] IncludeDirectories { get; set; } = [];
+    [Output] public ITaskItem[] Defines { get; set; } = [];
 
     public override bool Execute()
     {
@@ -36,6 +39,8 @@ public sealed class GflatReadProjectInputs : Task
             var visited = new HashSet<string>(comparer);
             var inputs = new HashSet<string>(comparer);
             var nativeProjects = new List<NativeLinkProject>();
+            var includeDirectories = new List<string>();
+            var definitions = new List<string>();
             using (var collection = new ProjectCollection())
             {
                 void Visit(string file, bool asReference)
@@ -47,6 +52,8 @@ public sealed class GflatReadProjectInputs : Task
                     var project = new Project(file, properties, null, collection);
                     inputs.Add(file);
                     foreach (var import in project.Imports) inputs.Add(import.ImportedProject.FullPath);
+                    includeDirectories.AddRange(project.GetItems("IncludeDirectory").Select(item => item.GetMetadataValue("FullPath")));
+                    if (!asReference) definitions.AddRange(project.GetItems("Define").Select(item => item.EvaluatedInclude));
                     var references = project.GetItems("ProjectReference").Select(reference => reference.GetMetadataValue("FullPath")).ToArray();
                     var libraries = new List<NativeLibraryInput>();
                     var directories = new List<string>();
@@ -63,6 +70,10 @@ public sealed class GflatReadProjectInputs : Task
                 Visit(ProjectFile, false);
             }
             ProjectInputs = inputs.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
+            var preprocessing = new PreprocessorInputs(includeDirectories, definitions);
+            if (PreprocessorOverrides.Length != 0) preprocessing = preprocessing.Append(PreprocessorInputs.Read(PreprocessorOverrides));
+            IncludeDirectories = preprocessing.Directories.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
+            Defines = preprocessing.Defines.Select(pair => (ITaskItem)new TaskItem(pair.Key + "=" + pair.Value)).ToArray();
             NativeLinkInputs nativeInputs = NativeLinkProjectOrder.Aggregate(Path.GetFullPath(ProjectFile), nativeProjects);
             if (NativeLinkOverrides.Length != 0) nativeInputs = nativeInputs.Append(NativeLinkInputs.Read(NativeLinkOverrides));
             NativeLibraries = nativeInputs.Libraries.Select(library =>
@@ -84,7 +95,7 @@ public sealed class GflatReadProjectInputs : Task
         }
         catch (Exception error) when (error is ArgumentException || error is IOException || error is InvalidDataException || error is UnauthorizedAccessException)
         {
-            Log.LogError("Native link inputs: " + error.Message);
+            Log.LogError("Project inputs: " + error.Message);
             return false;
         }
     }

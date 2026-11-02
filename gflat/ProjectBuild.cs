@@ -7,7 +7,7 @@ internal static class ProjectBuild
     internal static int Run(ProjectModel project, string target, string configuration, string platform,
         bool emitIr = false, string? output = null, string? clang = null, int? exceptionReserveBytes = null, int? optimizationLevel = null,
         ProjectGraph? sourceGraph = null, bool noStdLib = false, bool? debugSymbols = null, bool? noBuiltins = null,
-        NativeLinkInputs? nativeLinkOverrides = null)
+        NativeLinkInputs? nativeLinkOverrides = null, PreprocessorInputs? preprocessorOverrides = null)
     {
         // Explicit source-list invocations in the targets avoid recursively building the project.
         string assembly = typeof(Program).Assembly.Location;
@@ -40,6 +40,13 @@ internal static class ProjectBuild
         // Isolate MSBuild's working-directory/environment changes from embedding
         // hosts. The same apphost runs our bundled engine; no dotnet/MSBuild installation.
         string? overrideManifest = null;
+        string? preprocessingManifest = null;
+        if (preprocessorOverrides != null && (preprocessorOverrides.Directories.Count != 0 || preprocessorOverrides.Defines.Count != 0))
+        {
+            preprocessingManifest = Path.Combine(Path.GetTempPath(), "gflat_preprocessor_" + Guid.NewGuid().ToString("N") + ".xml");
+            preprocessorOverrides.Write(preprocessingManifest);
+            Property("GflatPreprocessorOverrides", preprocessingManifest);
+        }
         if (nativeLinkOverrides != null && (nativeLinkOverrides.Libraries.Count != 0 || nativeLinkOverrides.Directories.Count != 0))
         {
             overrideManifest = Path.Combine(Path.GetTempPath(), "gflat_native_link_" + Guid.NewGuid().ToString("N") + ".xml");
@@ -63,6 +70,12 @@ internal static class ProjectBuild
         }
         finally
         {
+            if (preprocessingManifest != null)
+            {
+                try { File.Delete(preprocessingManifest); }
+                catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
+                { Console.Error.WriteLine($"Warning: could not delete preprocessor inputs '{preprocessingManifest}': {cleanup.Message}"); }
+            }
             if (overrideManifest != null)
             {
                 try { File.Delete(overrideManifest); }

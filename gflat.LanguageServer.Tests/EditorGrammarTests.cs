@@ -9,6 +9,18 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Fact]
+    public void DirectivesAndEscapedKeywordsHaveLexicalClassifications()
+    {
+        var grammar = Grammar();
+        var directive = grammar.TokenizeLine("#define ANSWER 42", null, TimeSpan.FromSeconds(2));
+        AssertScope(directive, 1, "keyword.control.directive");
+        var code = grammar.TokenizeLine("int @class = ANSWER;", directive.RuleStack, TimeSpan.FromSeconds(2));
+        AssertScope(code, 4, "variable.other");
+        var token = Assert.Single(code.Tokens, token => token.StartIndex <= 5 && token.EndIndex > 5);
+        Assert.DoesNotContain(token.Scopes, scope => scope.StartsWith("meta.preprocessor", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("namespace Console;", "namespace", "keyword")]
     [InlineData("throw new Standard::IOException();", "new", "keyword")]

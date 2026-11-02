@@ -26,11 +26,15 @@ namespace gflat
             T result = parse();
             if (result != null && start.Source != null)
             {
-                int end = _pos > 0 ? _tokens[_pos - 1].End + 1 : start.Start;
-                result.Span = start.Source.Span(start.Start, Math.Max(0, end - start.Start));
+                result.Span = Range(start, _pos > 0 ? _tokens[_pos - 1] : start);
             }
             return result;
         }
+
+        private static SourceSpan Range(Token start, Token end) => Range(start.Span, end);
+        private static SourceSpan Range(SourceSpan start, Token end) => start.Source != null &&
+            start.Source.Id == end.Source?.Id && end.End >= start.Start
+            ? start.Source.Span(start.Start, end.End + 1 - start.Start) : start;
 
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
@@ -67,7 +71,7 @@ namespace gflat
                     }
                 }
                 return new BlockStatement([], _tokens[start].Line) {
-                    Span = _tokens[start].Source?.Span(_tokens[start].Start, Math.Max(1, Current.Start - _tokens[start].Start)) ?? error.Span
+                    Span = Range(_tokens[start], Current)
                 };
             }
         }
@@ -92,8 +96,11 @@ namespace gflat
                     _copyTokensOnSplit = false;
                 }
                 Token pair = Current;
-                _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, pair.Start, column: pair.Column) { Source = pair.Source };
-                _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, pair.Start + 1, pair.End, column: pair.Column + 1) { Source = pair.Source });
+                bool expanded = pair.ExpandedStart.HasValue;
+                _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, expanded ? pair.End : pair.Start, column: pair.Column)
+                    { Source = pair.Source, ExpandedStart = pair.ExpandedStart, ExpandedEnd = pair.ExpandedStart };
+                _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, expanded ? pair.Start : pair.Start + 1, pair.End, column: pair.Column + (expanded ? 0 : 1))
+                    { Source = pair.Source, ExpandedStart = pair.ExpandedEnd, ExpandedEnd = pair.ExpandedEnd });
                 return Consume();
             }
             if (Current.Kind != kind)
@@ -398,8 +405,7 @@ namespace gflat
                 throw new TypeCheckException("Fields cannot be virtual, override, or abstract", modifier.Span);
             if (genericStart.Kind == TokenKind.Less)
             {
-                SourceSpan span = genericStart.Source?.Span(genericStart.Start,
-                    _tokens[_pos - 1].End + 1 - genericStart.Start) ?? genericStart.Span;
+                SourceSpan span = Range(genericStart, _tokens[_pos - 1]);
                 throw new TypeCheckException("Fields cannot declare generic parameters", span);
             }
         }
@@ -889,7 +895,7 @@ namespace gflat
                 {
                     Token prefix = Consume();
                     Token marker = Expect(TokenKind.StringLiteral);
-                    if (marker.Text != "\"\"" || prefix.End + 1 != marker.Start)
+                    if (marker.Text != "\"\"" || prefix.SyntaxEnd + 1 != marker.SyntaxStart)
                         throw new TypeCheckException("A string literal operator must use an identifier immediately followed by empty quotes", line);
                     if (!isStatic || isConst || isVirtual || isOverride || isAbstract || isReadonly)
                         throw new TypeCheckException("String literal operators must be static, non-const, non-virtual methods", line);
@@ -1001,7 +1007,7 @@ namespace gflat
                     method = new MethodDeclaration(method.Name, method.ReturnType, method.Parameters, method.Body,
                         method.Accessibility, method.IsStatic, method.IsVirtual, method.IsOverride, method.IsAbstract,
                         method.Line, isReadOnly: true) { PropertyName = name, IsImmutable = isImmutable || accessorImmutable };
-                method.Span = start.Source?.Span(start.Start, _tokens[_pos - 1].End + 1 - start.Start) ?? start.Span;
+                method.Span = Range(start, _tokens[_pos - 1]);
                 if (!getter) method.Parameters[^1].Span = keyword.Span;
                 method.IsNoThrow = isNoThrow;
                 if (getter) get = method; else set = method;
@@ -1881,7 +1887,7 @@ namespace gflat
                 // Keep intermediate nodes located too: in f().member, both f()
                 // and the final access need their own complete source ranges.
                 if (start.Source != null && _pos > 0)
-                    left.Span = start.Source.Span(start.Start, Math.Max(0, _tokens[_pos - 1].End + 1 - start.Start));
+                    left.Span = Range(start, _tokens[_pos - 1]);
                 if (Check(TokenKind.Less) && IsGenericCallAhead(TokenKind.DoubleColon))
                 {
                     Consume();
@@ -1996,9 +2002,9 @@ namespace gflat
                 if (op.Kind == TokenKind.DoubleColon)
                 {
                     Token memberToken = Expect(TokenKind.Identifier);
-                    if (Check(TokenKind.InterpolatedStringStart) && memberToken.End + 1 == Current.Start)
+                    if (Check(TokenKind.InterpolatedStringStart) && memberToken.SyntaxEnd + 1 == Current.SyntaxStart)
                     { left = ParseInterpolatedString(left, memberToken.Text!); continue; }
-                    if (Check(TokenKind.StringLiteral) && memberToken.End + 1 == Current.Start)
+                    if (Check(TokenKind.StringLiteral) && memberToken.SyntaxEnd + 1 == Current.SyntaxStart)
                     {
                         Token strToken = Consume();
                         left = new PrefixedStringLiteralExpression(left, memberToken.Text!, new LiteralExpression(strToken, strToken.Line), op.Line);
@@ -2290,9 +2296,9 @@ namespace gflat
             if (Check(TokenKind.Identifier))
             {
                 Token token = Consume();
-                if (Check(TokenKind.InterpolatedStringStart) && token.End + 1 == Current.Start)
+                if (Check(TokenKind.InterpolatedStringStart) && token.SyntaxEnd + 1 == Current.SyntaxStart)
                     return ParseInterpolatedString(null, token.Text!);
-                if (Check(TokenKind.StringLiteral) && token.End + 1 == Current.Start)
+                if (Check(TokenKind.StringLiteral) && token.SyntaxEnd + 1 == Current.SyntaxStart)
                 {
                     Token strToken = Consume();
                     return new PrefixedStringLiteralExpression(null, token.Text!, new LiteralExpression(strToken, strToken.Line), line);

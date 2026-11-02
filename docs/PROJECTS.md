@@ -263,6 +263,13 @@ Project evaluation, checking, and native builds work on Windows x64 and Linux x6
 Native builds need Clang and the host's C linker/toolchain. The compiler selects
 the host target. Cross-compilation is not supported.
 
+## Preprocessor inputs
+
+Use `IncludeDirectory` items for header search paths and `Define` items for build
+flags. The CLI accepts `-I` and `-D` for source and project builds. See
+[macros and includes](PREPROCESSOR.md#configure-a-build) for search order and
+incremental header tracking.
+
 ## Native libraries
 
 Foreign `extern` declarations describe calls. Native link requirements provide

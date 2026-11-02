@@ -87,7 +87,7 @@ try {
     $language = [Activator]::CreateInstance($languageType)
     $arguments = [object[]]@($null)
     if ($languageType.GetMethod('GetLanguageName').Invoke($language, $arguments) -ne 0 -or $arguments[0] -ne 'gflat') { throw 'Shell language identity is incorrect' }
-    if ($languageType.GetMethod('GetFileExtensions').Invoke($language, $arguments) -ne 0 -or $arguments[0] -ne '.gf') { throw 'Shell file extension is incorrect' }
+    if ($languageType.GetMethod('GetFileExtensions').Invoke($language, $arguments) -ne 0 -or $arguments[0] -ne '.gf;.gfh') { throw 'Shell file extension is incorrect' }
     $icons = $client.GetType('gflat.VisualStudio.HoverIcons', $true).GetField('Catalog').GetValue($null)
     [Reflection.Assembly]::LoadFrom($assemblies['Newtonsoft.Json']) | Out-Null
     if ($Mode -eq 'Prepare') {
@@ -132,3 +132,4 @@ try {
     Write-Host 'Rich hover decoded successfully by the installed Visual Studio SDK, including catalog icon, classified runs, and native navigation callbacks.'
 }
 finally { [AppDomain]::CurrentDomain.remove_AssemblyResolve($resolver) }
+

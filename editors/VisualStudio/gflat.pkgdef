@@ -25,6 +25,9 @@
 [$RootKey$\Languages\File Extensions\.gf]
 @="{54830AC1-0C42-42AC-A4D8-2D4E18A319C4}"
 
+[$RootKey$\Languages\File Extensions\.gfh]
+@="{54830AC1-0C42-42AC-A4D8-2D4E18A319C4}"
+
 [$RootKey$\TextMate\LanguageConfiguration\GrammarMapping]
 "source.gflat"="$PackageFolder$\gflat-language-configuration.json"
 

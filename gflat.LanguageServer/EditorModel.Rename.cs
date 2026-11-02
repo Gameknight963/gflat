@@ -56,7 +56,11 @@ public sealed partial class EditorModel
                 text = text.Remove(span.Start, span.Length).Insert(span.Start, newName);
             return new SourceFile(source.Path, text);
         }).ToArray();
-        var changedSnapshot = new AnalysisSnapshot(changedSources, snapshot.Options);
+        var changedFiles = changedSources.ToDictionary(file => Path.GetFullPath(file.Path), Workspace.Paths);
+        var changedOptions = snapshot.Options with { DependencyObserver = null,
+            IncludeLoader = path => changedFiles.GetValueOrDefault(path) ?? snapshot.Options.IncludeLoader?.Invoke(path) };
+        var roots = snapshot.RootSources.Select(source => changedFiles.GetValueOrDefault(Path.GetFullPath(source.Path)) ?? source).ToArray();
+        var changedSnapshot = new AnalysisSnapshot(roots, changedOptions);
         if (changedSnapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
             throw new InvalidOperationException("Rename would introduce compiler errors or conflicting declarations.");
         var changedModel = new EditorModel(changedSnapshot, changedSources);

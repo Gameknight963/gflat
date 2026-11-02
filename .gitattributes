@@ -1,3 +1,4 @@
 # C++ highlighting is kind of correct (better than nothing for sure)
 *.gf linguist-language=C++
+*.gfh linguist-language=C++
 *.gfproj linguist-language=XML

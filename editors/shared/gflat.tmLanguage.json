@@ -2,9 +2,24 @@
   "name": "gflat",
   "scopeName": "source.gflat",
   "fileTypes": [
-    "gf"
+    "gf",
+    "gfh"
   ],
   "patterns": [
+    {
+      "name": "meta.preprocessor.gflat",
+      "begin": "^\\s*(#)\\s*(define|undef|include|if|ifdef|ifndef|elif|elifdef|elifndef|else|endif|pragma|error|warning)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.gflat" },
+        "2": { "name": "keyword.control.directive.gflat" }
+      },
+      "end": "(?<!\\\\)$",
+      "patterns": [ { "include": "$self" } ]
+    },
+    {
+      "name": "variable.other.gflat",
+      "match": "@[A-Za-z_][A-Za-z0-9_]*"
+    },
     {
       "name": "storage.modifier.gflat",
       "match": "\\bimplementation\\b(?=\\s+[A-Za-z_][A-Za-z0-9_:]*\\s*[:{])|\\bextension\\b(?=\\s+implementation\\b)|\\bextension\\b(?=\\s*(?:<[^;{}]*>\\s*)?[A-Za-z_][A-Za-z0-9_:]*(?:\\s*<[^;{}]*>)?\\s*(?:\\{|$))|\\bexplicit\\b(?=\\s+operator\\b)|\\bconstrained\\b(?=\\s+(?:(?:public|private|protected|internal|weak|expect|replace|constrained)\\s+)*alias\\b)"

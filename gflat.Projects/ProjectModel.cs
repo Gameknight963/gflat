@@ -30,11 +30,12 @@ public sealed class ProjectModel
     public IReadOnlyList<string> References { get; }
     public IReadOnlyList<string> Imports { get; }
     public NativeLinkInputs NativeLinkInputs { get; }
+    public PreprocessorInputs PreprocessorInputs { get; }
     private readonly string[] sources;
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string? targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false, NativeLinkInputs? nativeLinkInputs = null)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false, NativeLinkInputs? nativeLinkInputs = null, PreprocessorInputs? preprocessorInputs = null)
     {
         Configuration = configuration;
         Platform = platform;
@@ -46,6 +47,7 @@ public sealed class ProjectModel
         FilePath = path; Kind = kind; TargetPath = targetPath; this.sources = sources;
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
         NativeLinkInputs = nativeLinkInputs ?? gflat.Projects.NativeLinkInputs.Empty;
+        PreprocessorInputs = preprocessorInputs ?? gflat.Projects.PreprocessorInputs.Empty;
     }
     public static ProjectModel Load(string path) => Load(path, null, null);
     public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false, bool? debugSymbols = null, bool? noBuiltins = null)
@@ -72,9 +74,20 @@ public sealed class ProjectGraph
     public IReadOnlyList<ProjectModel> Projects { get; }
     public IReadOnlyList<string> Sources { get; }
     public NativeLinkInputs NativeLinkInputs { get; }
+    public PreprocessorInputs PreprocessorInputs { get; }
     private ProjectGraph(ProjectModel root, List<ProjectModel> projects, List<string> sources)
     {
         Root = root; Projects = projects; Sources = sources;
+        var byPath = projects.ToDictionary(project => project.FilePath, ProjectModel.Paths);
+        var seen = new HashSet<string>(ProjectModel.Paths);
+        IEnumerable<string> IncludeDirectories(ProjectModel project)
+        {
+            if (!seen.Add(project.FilePath)) yield break;
+            foreach (string directory in project.PreprocessorInputs.Directories) yield return directory;
+            foreach (string reference in project.References)
+                foreach (string directory in IncludeDirectories(byPath[reference])) yield return directory;
+        }
+        PreprocessorInputs = new(IncludeDirectories(root), root.PreprocessorInputs.Defines.Select(pair => pair.Key + "=" + pair.Value));
         NativeLinkInputs = NativeLinkProjectOrder.Aggregate(root.FilePath, projects.Select(project =>
             new NativeLinkProject(project.FilePath, project.References, project.NativeLinkInputs)));
     }

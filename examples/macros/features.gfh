@@ -1,0 +1,5 @@
+#pragma once
+
+#define VERSION 12
+#define STRINGIFY(value) #value
+#define JOIN(left, right) left##right

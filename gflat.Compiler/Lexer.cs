@@ -54,6 +54,14 @@ public class Lexer
                 continue;
             }
 
+            if (c == '@' && i + 1 < code.Length && (char.IsAsciiLetter(code[i + 1]) || code[i + 1] == '_'))
+            {
+                int start = ++i;
+                while (i < code.Length && (char.IsAsciiLetterOrDigit(code[i]) || code[i] == '_')) i++;
+                tokens.Add(new Token(TokenKind.Identifier, line, start, i - 1, code[start..i]));
+                continue;
+            }
+
             if (char.IsAsciiLetter(c) || c == '_')
             {
                 int start = i;
@@ -328,7 +336,7 @@ public class Lexer
         }
     }
 
-    private static List<Token> ReadInterpolatedString(string source, int startIndex, out int endIndex, int line, bool tokenizeExpressions = true)
+    internal static List<Token> ReadInterpolatedString(string source, int startIndex, out int endIndex, int line, bool tokenizeExpressions = true)
     {
         var tokens = new List<Token> { new(TokenKind.InterpolatedStringStart, line, startIndex, startIndex + 1) };
         int i = startIndex + 2, segmentStart = i;

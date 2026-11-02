@@ -37,7 +37,7 @@ public static class Workspace
         var discoveryDirectories = new HashSet<string>(Paths);
         var evaluated = new HashSet<string>(Paths);
         projects ??= new();
-        foreach (var document in documents.Values.Where(d => d.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)))
+        foreach (var document in documents.Values.Where(d => d.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase) || d.Path.EndsWith(".gfh", StringComparison.OrdinalIgnoreCase)))
         {
             cancellationToken.ThrowIfCancellationRequested();
             WatchDiscovery(document.Path);
@@ -64,7 +64,8 @@ public static class Workspace
                         result.Graph.Projects.Any(p => p.IncludesFile(path) && Paths.Equals(ProjectWorkspace.FindProject(path), p.FilePath)))).Distinct(Paths).ToArray();
                     configured.UnionWith(files);
                     watched.UnionWith(files);
-                    Check(files, new() { NoStdLib = true });
+                    Check(files, new() { NoStdLib = true, IncludeDirectories = result.Graph.PreprocessorInputs.Directories,
+                        Defines = result.Graph.PreprocessorInputs.Defines });
                 }
                 else configured.Add(document.Path);
             }
@@ -132,11 +133,19 @@ public static class Workspace
                 if (options?.NoStdLib != true && !snapshots.Any(s => Paths.Equals(s.Path, open.Path))) snapshots.Add(new(open.Path, open.Text));
             try
             {
-                var bodySources = bodyPaths == null ? null : snapshots.Where(source => bodyPaths.Contains(source.Path)).Select(source => source.Id).ToHashSet();
+                options = (options ?? new()) with { IncludeLoader = path => documents.TryGetValue(path, out var open) ? new(path, open.Text) :
+                    File.Exists(path) ? new(path, File.ReadAllText(path)) : null };
+                var bodySources = bodyPaths?.Select(path => new SourceFile(path, "").Id).ToHashSet();
                 var (analysis, model) = projects.Analyses.Get(snapshots, options, cancellationToken, bodySources);
                 foreach (var source in analysis.Nodes.Select(n => n.Span.Source).OfType<SourceFile>().DistinctBy(s => s.Id))
                     if (StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(source.Path, relative))) watched.Add(source.Path);
-                foreach (var source in snapshots) models[source.Path] = model;
+                watched.UnionWith(analysis.PreprocessorDependencies.Where(path => !path.StartsWith('<')));
+                foreach (var source in snapshots.Concat(analysis.Sources))
+                {
+                    if (source.Path.StartsWith('<')) continue;
+                    models[source.Path] = model;
+                    configured.Add(source.Path);
+                }
                 foreach (var diagnostic in analysis.Diagnostics)
                 {
                     string path = diagnostic.FilePath ?? snapshots[0].Path;

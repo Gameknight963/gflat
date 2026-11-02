@@ -109,7 +109,7 @@ public partial class LlvmEmitter
         _argumentOwners.Peek().Clear();
     }
 
-    private void ProtectArgument(TypeExpression type, string value)
+    private string ProtectArgument(TypeExpression type, string value)
     {
         string address = NewTemp(), llvmType = EmitType(type);
         EmitAlloca(llvmType, address);
@@ -117,6 +117,7 @@ public partial class LlvmEmitter
         var cleanup = new TemporaryCleanup(type, address);
         _deferScopes[^1].Add(cleanup);
         _argumentOwners.Peek().Add((cleanup, type, address));
+        return address;
     }
 
     private void GuardPlacementAlignment(string pointer, string pointerType, TypeExpression type)
@@ -150,9 +151,15 @@ public partial class LlvmEmitter
         string source = Pop(), value = NewTemp();
         Emit($"    {value} = load {llvm}, {llvm}* {source}");
         ProtectManagedValue(type, value);
-        EmitManagedReferences(type, source, false);
+        bool customRelocation = _typeChecker.RequiresRelocation(type);
+        if (!customRelocation) EmitManagedReferences(type, source, false);
         SetOwnerLive(source, false);
-        if (node.Operand is IdentifierExpression) RegisterMovedLocalStorage(type, source);
+        if (node.Operand is IdentifierExpression)
+        {
+            if (customRelocation) CurrentFunction.RelocatedLocals.Add(source);
+            else RegisterMovedLocalStorage(type, source);
+        }
+        RememberOwnedLocation(type, value, source);
         if (destination != null)
         {
             EmitManagedStore(type, value, destination, initialize: true);

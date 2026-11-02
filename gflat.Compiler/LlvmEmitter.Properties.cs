@@ -31,12 +31,12 @@ public partial class LlvmEmitter
                 string slot = NewTemp();
                 if (_typeChecker.UsesCollector && HasManagedReferences(_typeChecker.GetType(temporary)))
                 {
-                    slot = CreateManagedTemporary(_typeChecker.GetType(temporary), value);
+                    slot = CreateManagedTemporary(_typeChecker.GetType(temporary), value, relocate: true);
                 }
                 else
                 {
                     EmitAlloca(type, slot);
-                    Emit($"    store {type} {value}, {type}* {slot}");
+                    EmitManagedStore(_typeChecker.GetType(temporary), value, slot, initialize: true);
                 }
                 _locals[temporary.Name] = slot;
                 temporaries.Add(temporary.Name);

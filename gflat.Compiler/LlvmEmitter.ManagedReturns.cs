@@ -8,7 +8,7 @@ public partial class LlvmEmitter
     // Filling it before callee cleanup avoids a gap with no live reference,
     // which would otherwise reclaim returned objects under reference counting.
     private bool UsesManagedResultStorage(TypeExpression type)
-        => _typeChecker.UsesCollector && HasManagedReferences(type);
+        => (_typeChecker.UsesCollector && HasManagedReferences(type)) || _typeChecker.RequiresRelocation(type);
 
     private string EmitFunctionReturnType(TypeExpression type)
         => UsesManagedResultStorage(type) ? "void" : EmitType(type);
@@ -38,6 +38,7 @@ public partial class LlvmEmitter
             EmitCallInstruction("void", callee, args, handleUnwind: handleUnwind);
             string value = NewTemp();
             Emit($"    {value} = load {EmitType(type)}, {EmitType(type)}* {result}");
+            RememberOwnedLocation(type, value, result);
             return value;
         }
 

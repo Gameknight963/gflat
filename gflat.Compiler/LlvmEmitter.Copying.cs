@@ -12,6 +12,8 @@ public partial class LlvmEmitter
             _typeChecker.GetClassByIdentity(named.Name) is not { } cls) return value;
         string result = NewTemp();
         Emit($"    {result} = insertvalue %{cls.Name} {value}, i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**), 0");
+        if (CurrentFunction.OwnedValueLocations.TryGetValue(value, out string? address))
+            RememberOwnedLocation(type, result, address);
         return result;
     }
 
@@ -46,6 +48,7 @@ public partial class LlvmEmitter
         EmitCopyInto(type, source, destination);
         string value = NewTemp();
         Emit($"    {value} = load {llvm}, {llvm}* {destination}");
+        RememberOwnedLocation(type, value, destination);
         Push(value);
     }
 

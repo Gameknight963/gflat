@@ -2,6 +2,28 @@ namespace gflat.Tests;
 
 public sealed class ManagedReturnStorageTests
 {
+    [Fact]
+    public void CustomRelocationReadsLiveManagedFieldsAndBalancesReferences() => Succeeds("""
+        struct Holder {
+            public int^ data;
+            private int^* address;
+            public Holder(int value) { data = new^ int(value); address = &data; }
+            public move Holder(Holder* source) nothrow { data = source.data; address = &data; }
+            public bool Valid() => address == &data && *data == 42;
+        }
+        Holder Forward(Holder input) { return input; }
+        int main() {
+            {
+                Holder first = new(42);
+                Holder second = Forward(move first);
+                if (!second.Valid() || rc_live_count() != 1) return 101;
+                first = new(42);
+                if (!first.Valid() || rc_live_count() != 2) return 102;
+            }
+            return rc_live_count();
+        }
+        """);
+
     // This collector deliberately reclaims at the last ReferenceRemoved call.
     // Poisoning retired storage makes a gap between callee and caller roots
     // observable without relying on a system allocator's reuse behavior.

@@ -3141,6 +3141,17 @@ namespace gflat
                 string kindStr = _currentStruct != null ? "struct" : "class";
                 throw new TypeCheckException($"Constructor name '{DisplayName(node.Name)}' does not match {kindStr} name '{DisplayName(ownerName)}'", node.Line);
             }
+            if (node.IsMove)
+            {
+                if (node.Parameters.Count != 1 || ResolveAlias(node.Parameters[0].Type) is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } moveSource ||
+                    moveSource.Inner.IsReadOnlyValue || moveSource.Inner.IsImmutableValue ||
+                    ResolveAlias(moveSource.Inner) is not NamedTypeExpression moveOwner || moveOwner.Name != ownerName || node.IsConst)
+                    throw new TypeCheckException("A move constructor takes exactly one mutable, non-null pointer to its own type", node.Span);
+                if (!node.IsNoThrow) throw new TypeCheckException("A move constructor must declare nothrow", node.Span);
+                if (node.BaseArguments != null) throw new TypeCheckException("A move constructor relocates its base and cannot specify a base initializer", node.Span);
+                if ((_currentStruct?.Constructors ?? _currentClass!.Constructors).Count(constructor => constructor.IsMove) != 1)
+                    throw new TypeCheckException("A type has exactly one move constructor", node.Span);
+            }
             if (node.IsCopy)
             {
                 if (node.Parameters.Count != 1 || ResolveAlias(node.Parameters[0].Type) is not PointerTypeExpression { IsNullable: false, IsReadOnly: true } source ||
@@ -3190,7 +3201,7 @@ namespace gflat
                     }
 
                     List<ConstructorDeclaration> matches = new();
-                    foreach (ConstructorDeclaration baseCtor in baseClass.Constructors)
+                    foreach (ConstructorDeclaration baseCtor in baseClass.Constructors.Where(constructor => !constructor.IsMove))
                     {
                         if (!AcceptsArgumentCount(baseCtor.Parameters, node.BaseArguments.Count))
                             continue;
@@ -3221,7 +3232,7 @@ namespace gflat
                     _resolvedBaseConstructors[node] = selectedBase;
                     AddDefaultArguments(node.BaseArguments, selectedBase.Parameters, node);
                 }
-                else if (_currentClass != null && _currentClass.BaseClass != null)
+                else if (!node.IsMove && _currentClass != null && _currentClass.BaseClass != null)
                 {
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
                     foreach (var constructor in baseClass.Constructors.ToArray())
@@ -3396,9 +3407,9 @@ namespace gflat
                         _referenceReturns[node] = address;
                         valType = GetType(address);
                     }
-                    if (HasDestructor(retType) && node.Value is not IdentifierExpression && !ValidateCopyUse(node.Value, retType))
+                    if ((HasDestructor(retType) || RequiresRelocation(retType)) && node.Value is not IdentifierExpression && !ValidateCopyUse(node.Value, retType))
                         throw new TypeCheckException("Cannot transfer a destructor-bearing value from borrowed storage", node.Line);
-                    if (HasDestructor(retType) && node.Value is IdentifierExpression owned)
+                    if ((HasDestructor(retType) || RequiresRelocation(retType)) && node.Value is IdentifierExpression owned)
                     {
                         if (_scopes.Any(scope => scope.ContainsKey(owned.Name)) && owned.Name != "this")
                             _ownedReturns[node] = owned.Name;
@@ -5364,7 +5375,7 @@ namespace gflat
                 else
                 {
                     List<ConstructorDeclaration> matches = new();
-                    foreach (ConstructorDeclaration ctor in cInfo.Constructors)
+                    foreach (ConstructorDeclaration ctor in cInfo.Constructors.Where(ctor => !ctor.IsMove))
                     {
                         if (!AcceptsArgumentCount(ctor.Parameters, node.Arguments.Count))
                             continue;
@@ -5463,7 +5474,7 @@ namespace gflat
             else
             {
                 List<ConstructorDeclaration> matches = new();
-                foreach (ConstructorDeclaration ctor in sInfo.Constructors)
+                foreach (ConstructorDeclaration ctor in sInfo.Constructors.Where(ctor => !ctor.IsMove))
                 {
                     if (!AcceptsArgumentCount(ctor.Parameters, node.Arguments.Count))
                         continue;
@@ -5785,10 +5796,10 @@ namespace gflat
             foreach (var parameter in node.Parameters)
             {
                 ValidateParameterType(parameter.Type, parameter.Line);
-                if (HasDestructor(parameter.Type))
+                if (HasDestructor(parameter.Type) || RequiresRelocation(parameter.Type))
                     throw new TypeCheckException("Extern functions must borrow owning values through pointers", parameter.Line);
             }
-            if (HasDestructor(node.ReturnType))
+            if (HasDestructor(node.ReturnType) || RequiresRelocation(node.ReturnType))
                 throw new TypeCheckException("Extern functions cannot return owning values; use an explicit pointer contract", node.Line);
         }
 

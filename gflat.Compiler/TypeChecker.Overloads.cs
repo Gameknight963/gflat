@@ -88,7 +88,7 @@ public partial class TypeChecker
                 using var context = EnterSignatureContext(ctor, owner.Owner, owner.IsClass);
                 AnalyzeSafely(() =>
                 {
-                    string key = OverloadKey(ctor.Parameters);
+                    string key = (ctor.IsMove ? "$move$" : "") + OverloadKey(ctor.Parameters);
                     if (keys.TryGetValue(key, out var first))
                         DuplicateDeclaration(first, ctor, "Constructors cannot differ only by readonly, immutable, or parameter modifiers");
                     keys[key] = ctor;

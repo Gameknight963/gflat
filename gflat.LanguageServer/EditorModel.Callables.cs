@@ -62,7 +62,7 @@ public sealed partial class EditorModel
                 {
                     // Recover source names only when checked constructors are unavailable.
                     string? creationOwner = TypeOwner(creation.Type, creationPath, syntax.Span.Start);
-                    creationFamily = symbols.Where(s => s.Syntax.Node is ConstructorDeclaration && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
+                    creationFamily = symbols.Where(s => s.Syntax.Node is ConstructorDeclaration { IsMove: false } && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
                 }
                 if (creationToken != null && creationFamily.Length > 0)
                 {

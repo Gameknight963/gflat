@@ -83,7 +83,7 @@ public partial class TypeChecker
                 continue;
             }
             optional = true;
-            if (p.Type is ReferenceTypeExpression || declaration is OperatorDeclaration || declaration is ConstructorDeclaration { IsCopy: true } ||
+            if (p.Type is ReferenceTypeExpression || declaration is OperatorDeclaration || declaration is ConstructorDeclaration { IsCopy: true } or ConstructorDeclaration { IsMove: true } ||
                 declaration is MethodDeclaration { PropertyName: not null } or MethodDeclaration { StringLiteralPrefix: not null })
                 throw new TypeCheckException("Default arguments are not supported for ref parameters, operators, indexers, or copy constructors", p.Span);
             defaultParameterContexts.TryAdd(p, new(_currentNamespace, declarationNamespaces.GetValueOrDefault(declaration) ?? _currentNamespacePath, _currentClass, _currentStruct));

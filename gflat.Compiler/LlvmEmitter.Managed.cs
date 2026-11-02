@@ -75,6 +75,7 @@ public partial class LlvmEmitter
     private void EmitManagedStore(TypeExpression type, string value, string address, bool initialize = false)
     {
         if (!initialize) EmitManagedReferences(type, address, false);
+        if (RelocateOwnedValue(type, value, address)) return;
         string llvm = EmitType(type);
         Emit($"    store {llvm} {value}, {llvm}* {address}");
         EmitManagedReferences(type, address, true);
@@ -96,7 +97,7 @@ public partial class LlvmEmitter
             if (done != null) { e.Emit($"    br label %{done}"); e.Emit(done + ":"); }
         }
     }
-    private string CreateManagedTemporary(TypeExpression type, string? initialValue = null)
+    private string CreateManagedTemporary(TypeExpression type, string? initialValue = null, bool relocate = false)
     {
         string address = NewTemp(), flag = NewTemp(), llvm = EmitType(type);
         EmitAlloca(llvm, address); EmitAlloca("i1", flag);
@@ -105,8 +106,13 @@ public partial class LlvmEmitter
         prologue.AppendLine($"    store i1 false, i1* {flag}");
         // Register the initial contents once. An already evaluated value can
         // be published directly instead of registering null and removing it again.
-        Emit($"    store {llvm} {initialValue ?? "zeroinitializer"}, {llvm}* {address}");
-        EmitManagedReferences(type, address, true);
+        if (relocate && initialValue != null)
+            EmitManagedStore(type, initialValue, address, initialize: true);
+        else
+        {
+            Emit($"    store {llvm} {initialValue ?? "zeroinitializer"}, {llvm}* {address}");
+            EmitManagedReferences(type, address, true);
+        }
         Emit($"    store i1 true, i1* {flag}");
         var cleanup = new ManagedReferenceCleanup(type, address, flag);
         if (_deferScopes.Count != 0) _deferScopes[^1].Add(cleanup);
@@ -171,10 +177,10 @@ public partial class LlvmEmitter
         if (CurrentFunction.PendingOwnerRoots.TryGetValue(address, out string? pending))
             Emit($"    store i1 true, i1* {pending}");
     }
-    private void RegisterManagedParameter(Parameter p, string address)
+    private void RegisterManagedParameter(Parameter p, string address, bool register = true)
     {
         if (!_typeChecker.UsesCollector || !HasManagedReferences(p.Type)) return;
-        EmitManagedReferences(p.Type, address, true);
+        if (register) EmitManagedReferences(p.Type, address, true);
         if (!_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new ManagedReferenceCleanup(p.Type, address));
         else _parameterOwners.Add(TrackPendingOwnerRoots(p.Type, address, false));
     }

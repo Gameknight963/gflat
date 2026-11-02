@@ -913,8 +913,8 @@ Normal completion, `break`, and exceptions use the usual scope cleanup rules.
 `move local` transfers a whole mutable local or parameter, including its destruction
 responsibility. The source becomes uninitialized: it cannot be read or moved again
 until assigned a new value, and its previous value is not destroyed there. This rule
-also applies to primitive values. No move constructor runs, and no empty replacement
-is created. Owning locals may be declared without an initializer. Initialize them as
+also applies to primitive values. No empty replacement is created. Owning locals may
+be declared without an initializer. Initialize them as
 whole values before use. Owning fields must also be initialized as whole values before
 writing nested fields. Returning a whole owning local implicitly transfers it.
 Returning borrowed fields or indexed elements requires copying.
@@ -940,11 +940,31 @@ not. Source and destination must not overlap. After raw relocation, do not destr
 old value. Release its old allocation separately if appropriate. The compiler does not
 track initialization through raw pointers.
 
-By-value calls, returns, and relocation do not promise stable object addresses. Types
-storing pointers into themselves need a different representation or stable indirection.
-There are no custom move constructors or pinning guarantees in this version. Raw-pointer
-validity remains the caller's responsibility. There is no borrow checker or alias
-invalidation analysis.
+Types can customize relocation with a move constructor:
+
+```csharp
+struct Number {
+    private int value;
+    private int* address;
+    public Number(int initial) { value = initial; address = &value; }
+    public move Number(Number* source) nothrow {
+        value = source.value;
+        address = &value;
+    }
+}
+```
+
+A move constructor takes one mutable, non-null pointer to its own type and declares
+`nothrow`. It constructs the destination whenever a value changes storage, including
+by-value arguments, returns, and explicit moves. The source lifetime ends without
+destruction. Ordinary field initializers are skipped. A class's base is relocated
+before the move constructor body. Without a custom move constructor, relocation
+recursively moves inline fields, bases, and array elements.
+
+Move constructors are selected by relocation, rather than ordinary construction
+overload resolution. Copies continue to use the copy constructor. Object addresses
+can change during calls and returns. Raw-pointer validity remains the caller's
+responsibility.
 
 Extern declarations must use explicit pointers for owning types. Owning objects cannot
 be sliced to a base value. Operator overloads currently require trivial value operands

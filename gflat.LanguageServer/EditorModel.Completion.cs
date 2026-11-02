@@ -13,7 +13,7 @@ public sealed partial class EditorModel
                 (s.Qualified == name || s.Name == name)));
         if (baseName == null) return [];
         string? owner = TypeOwner(new NamedTypeExpression(baseName, null, type.Line), path, offset);
-        return symbols.Where(s => s.Owner == owner && s.Syntax.Node is ConstructorDeclaration && Accessible(s, path, offset));
+        return symbols.Where(s => s.Owner == owner && s.Syntax.Node is ConstructorDeclaration { IsMove: false } && Accessible(s, path, offset));
     }
 
     private sealed record CompletionFilter(bool Restricted, Func<Symbol, bool> Allows);

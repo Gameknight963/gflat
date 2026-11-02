@@ -301,7 +301,7 @@ namespace gflat.semantics
             }
 
             PopScope();
-            CheckDeclaredFieldInitializers();
+            if (!ctor.IsMove) CheckDeclaredFieldInitializers();
             PushScope();
             foreach (Parameter p in ctor.Parameters) DeclareLocal(p.Name, p.Type, isAssigned: true);
             CheckStatement(ctor.Body);

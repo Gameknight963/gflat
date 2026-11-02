@@ -19,7 +19,7 @@ public partial class LlvmEmitter
             string slot = NewTemp();
             if (_typeChecker.UsesCollector && HasManagedReferences(type) && !_typeChecker.HasDestructor(type))
             {
-                slot = CreateManagedTemporary(type, value);
+                slot = CreateManagedTemporary(type, value, relocate: true);
             }
             else
             {
@@ -63,6 +63,7 @@ public partial class LlvmEmitter
             }
             string value = NewTemp(), llvmType = EmitType(resultType);
             Emit($"    {value} = load {llvmType}, {llvmType}* {result}");
+            RememberOwnedLocation(resultType, value, result);
             if (resultRoot != null) EmitManagedStore(resultType, value, resultRoot);
             if (resultCleanup != null)
             {

@@ -820,6 +820,17 @@ namespace gflat
                 return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line));
             }
 
+            if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind == TokenKind.Identifier)
+            {
+                if (isStatic || isConst || isReadonly || isVirtual || isOverride || isAbstract)
+                    throw new TypeCheckException("A move constructor is an ordinary non-const instance constructor", Current.Span);
+                Consume();
+                string owner = Consume().Text;
+                var constructor = ParseConstructorDeclaration(owner, accessibility, line, attributes);
+                constructor.IsMove = true;
+                return Finish(constructor);
+            }
+
             if (Check(TokenKind.Identifier) && Current.Text == "copy" && Peek().Kind == TokenKind.Identifier)
             {
                 if (isStatic || isReadonly || isVirtual || isOverride || isAbstract)

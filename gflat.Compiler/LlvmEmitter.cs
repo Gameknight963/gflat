@@ -722,7 +722,7 @@ public partial class LlvmEmitter : IVisitor
             else node.Accept(this);
             string value = Pop();
             string llvmType = EmitType(type);
-            if (_typeChecker.UsesCollector && HasManagedReferences(type) && !_typeChecker.HasDestructor(type))
+            if (_typeChecker.UsesCollector && HasManagedReferences(type) && !_typeChecker.HasDestructor(type) && !_typeChecker.RequiresRelocation(type))
             {
                 string managedAddress = CreateManagedTemporary(type, value);
                 Push(managedAddress);
@@ -746,6 +746,7 @@ public partial class LlvmEmitter : IVisitor
                 _deferScopes[^1].Add(new ConditionalTemporaryCleanup(type, address, liveSlot));
             }
             else if (needsCleanup) _deferScopes[^1].Add(new TemporaryCleanup(type, address));
+            else RegisterManagedCleanup(type, address);
             Push(address);
         }
         else
@@ -1340,6 +1341,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
@@ -1427,6 +1429,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
@@ -1452,7 +1455,13 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
 
             ConstructorDeclaration? resolvedBaseCtor = _typeChecker.GetResolvedBaseConstructor(node);
-            if (node.BaseArguments != null && resolvedBaseCtor != null)
+            if (node.IsMove)
+            {
+                string source = NewTemp();
+                Emit($"    {source} = bitcast %{className}* {EmitParameterName(node.Parameters[0].Name)} to %{baseInfo.Name}*");
+                EmitRelocateInto(NamedTypeExpression.Resolved(baseInfo.Name, node.Line), source, baseThis);
+            }
+            else if (node.BaseArguments != null && resolvedBaseCtor != null)
             {
                 EmitExpressionWithCleanup(() => WithArgumentOwnership(() =>
                 {
@@ -1495,7 +1504,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"    store i8** {vtablePtr}, i8*** {vtableSlot}");
 
         // 3. Field initializers for this class
-        EmitClassFieldInitializers(className, thisPtr);
+        if (!node.IsMove) EmitClassFieldInitializers(className, thisPtr);
 
 
 
@@ -1734,7 +1743,8 @@ public partial class LlvmEmitter : IVisitor
         }
     }
 
-    private string EmitParamType(TypeExpression type) => EmitType(type);
+    private string EmitParamType(TypeExpression type)
+        => EmitType(type) + (_typeChecker.RequiresRelocation(type) ? "*" : "");
 
     private static string GetOperatorMethodName(TokenKind kind, int paramCount) => kind switch
     {
@@ -1816,6 +1826,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
@@ -1875,6 +1886,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
@@ -1910,6 +1922,7 @@ public partial class LlvmEmitter : IVisitor
                 : $"gflat${structName}$ctor$default";
         }
 
+        if (node.IsMove) return (ns.Length > 0 ? $"gflat${ns}${structName}" : $"gflat${structName}") + "$ctor$move";
         string paramTypes = string.Join("$", node.Parameters.Select(p => GetMangleTypeName(p.Type)));
         return ns.Length > 0
             ? $"gflat${ns}${structName}$ctor${paramTypes}"
@@ -1972,6 +1985,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
@@ -1984,7 +1998,7 @@ public partial class LlvmEmitter : IVisitor
 
         BeginConstruction(structName, node);
 
-        EmitFieldInitializers(structName, thisPtr);
+        if (!node.IsMove) EmitFieldInitializers(structName, thisPtr);
 
 
         if (node.Body != null)
@@ -2193,6 +2207,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
@@ -2299,6 +2314,8 @@ public partial class LlvmEmitter : IVisitor
         if (_typeChecker.GetTransferredLocal(node) is string transferred && _locals.TryGetValue(transferred, out string? localSlot))
         {
             skipLocalPtr = localSlot;
+            if (val != null && _currentFunctionExpectedType != null)
+                RememberOwnedLocation(_currentFunctionExpectedType, val, localSlot);
             SetOwnerLive(localSlot, false);
         }
 
@@ -4037,6 +4054,7 @@ public partial class LlvmEmitter : IVisitor
 
             string val = NewTemp();
             Emit($"    {val} = load %{typeName}, %{typeName}* {temp}");
+            RememberOwnedLocation(node.Type, val, temp);
             PushManaged(node, val);
         }
         else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
@@ -4251,6 +4269,7 @@ public partial class LlvmEmitter : IVisitor
         string result = NewTemp();
         Emit($"    {result} = load {arrayType}, {arrayType}* {storage}");
         ProtectManagedValue(type, result);
+        RememberOwnedLocation(type, result, storage);
         Push(result);
     }
 
@@ -4271,11 +4290,11 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (target != null) EmitValueForTarget(argument, target);
         else argument.Accept(this);
-        if (target != null && _typeChecker.HasDestructor(target))
+        if (target != null && (_typeChecker.HasDestructor(target) || _typeChecker.RequiresRelocation(target)))
         {
             string value = Pop();
-            ProtectArgument(target, value);
-            Push(value);
+            string address = ProtectArgument(target, value);
+            Push(_typeChecker.RequiresRelocation(target) ? address : value);
         }
     }
 
@@ -4554,6 +4573,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (Parameter p in node.Parameters)
         {
             if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
+            if (BindRelocatedParameter(p)) continue;
             string pType = EmitType(p.Type);
             string allocaPtr = NewTemp();
             EmitAlloca($"{pType}", allocaPtr);

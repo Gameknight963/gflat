@@ -702,6 +702,8 @@ public sealed partial class EditorModel
             if (token.Text == "ref" && syntax.Node is PropertyDeclaration { IsRef: true } property && token.End < property.Type.Span.Start) return true;
             if (token.Text == "copy" && syntax.Node is ConstructorDeclaration { IsCopy: true } &&
                 !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
+            if (token.Text == "move" && syntax.Node is ConstructorDeclaration { IsMove: true } &&
+                !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
         }
         return false;
     }

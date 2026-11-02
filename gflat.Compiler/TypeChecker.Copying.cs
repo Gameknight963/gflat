@@ -20,7 +20,7 @@ public partial class TypeChecker
     {
         type = ResolveAlias(type);
         if (type is ArrayTypeExpression a) return a.Size != 0 && RequiresCopy(a.ElementType);
-        if (CopyConstructor(type) != null || HasDestructor(type)) return true;
+        if (CopyConstructor(type) != null || HasDestructor(type) || RequiresRelocation(type)) return true;
         if (type is not NamedTypeExpression n) return false;
         var cls = GetClassByIdentity(n.Name);
         if (cls?.BaseClass is string parent && RequiresCopy(NamedTypeExpression.Resolved(parent, type.Line))) return true;

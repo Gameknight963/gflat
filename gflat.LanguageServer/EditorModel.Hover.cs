@@ -185,6 +185,7 @@ public sealed partial class EditorModel
 
         if (symbol.Syntax.Node is PropertyDeclaration { IsRef: true }) Keyword("ref");
         if (symbol.Syntax.Node is ConstructorDeclaration { IsCopy: true }) Keyword("copy");
+        if (symbol.Syntax.Node is ConstructorDeclaration { IsMove: true }) Keyword("move");
 
         if (symbol.Syntax.Node is AliasDeclaration alias)
         {

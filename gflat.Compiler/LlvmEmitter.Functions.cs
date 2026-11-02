@@ -10,6 +10,8 @@ public partial class LlvmEmitter
         public StringBuilder Output { get; } = new();
         public StringBuilder ManagedPrologue { get; } = new();
         public Dictionary<string, string> PendingOwnerRoots { get; } = new();
+        public Dictionary<string, string> OwnedValueLocations { get; } = new();
+        public HashSet<string> RelocatedLocals { get; } = new();
         public Stack<TryBlockInfo> Handlers { get; } = new();
         public Stack<string> CaughtHandles { get; } = new();
         public bool ExceptionBoundary { get; } = exceptionBoundary;

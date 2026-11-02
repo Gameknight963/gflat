@@ -4117,6 +4117,14 @@ public partial class LlvmEmitter : IVisitor
                 if (allocationCleanup != null) _deferScopes[^1].Remove(allocationCleanup);
             }
 
+            if (adopting && _typeChecker.GetManagedDestructorRegistration(node) is { } registration)
+            {
+                var reference = (ManagedTypeExpression)_typeChecker.ResolveAlias(_typeChecker.GetType(node));
+                var collector = _typeChecker.GetCollectorBinding(reference);
+                EmitInterfaceDestructorEntry(typeName);
+                EmitCallInstruction("void", "@" + CollectorMethodName(collector, registration),
+                    $"i8* {rawMem}, void (i8*)* @gflat${typeName}$interface_destroy", handleUnwind: false);
+            }
             PushManaged(node, typedPtr);
         }
         else

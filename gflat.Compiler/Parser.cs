@@ -808,6 +808,8 @@ namespace gflat
             if (Check(TokenKind.Struct))
                 return Finish(ParseStructDeclaration(accessibility, line, attributes));
 
+            bool isFinalizer = Check(TokenKind.Identifier) && Current.Text == "finalizer" && Peek().Kind == TokenKind.Tilde;
+            if (isFinalizer) Consume();
             if (Check(TokenKind.Tilde))
             {
                 if (isStatic || isConst || isReadonly || isOverride || isAbstract)
@@ -817,7 +819,7 @@ namespace gflat
                 Expect(TokenKind.OpenParen);
                 Expect(TokenKind.CloseParen);
                 BlockStatement dtorBody = ParseBodyOrBlock();
-                return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line));
+                return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line) { IsFinalizer = isFinalizer });
             }
 
             if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind == TokenKind.Identifier)

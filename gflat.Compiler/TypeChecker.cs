@@ -1387,8 +1387,6 @@ namespace gflat
                 if (_globalScope.Aliases.ContainsKey("GC") || managed.Collector is not NamedTypeExpression { Name: "GC" })
                     GetCollectorBinding(managed);
                 ValidateManagedGraph(managed);
-                if (HasDestructor(managed.Inner))
-                    throw new TypeCheckException("Managed pointers cannot reference types with destructors (including base classes and inline fields)", line);
                 if (ResolveAlias(managed.Inner) is not NamedTypeExpression namedInner || !IsInterface(namedInner))
                     ValidateTypeUsage(managed.Inner, line);
                 return;

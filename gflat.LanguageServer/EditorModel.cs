@@ -669,7 +669,7 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var" or "implementation" or "extension" or "explicit" or "constrained")) return false;
+        if (token.Text is not ("move" or "copy" or "finalizer" or "at" or "ref" or "this" or "with" or "var" or "implementation" or "extension" or "explicit" or "constrained")) return false;
         foreach (var syntax in nodes[path])
         {
             if (token.Text == "constrained" && syntax.Node is AliasDeclaration { IsConstrained: true } &&
@@ -704,6 +704,8 @@ public sealed partial class EditorModel
                 !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
             if (token.Text == "move" && syntax.Node is ConstructorDeclaration { IsMove: true } &&
                 !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
+            if (token.Text == "finalizer" && syntax.Node is DestructorDeclaration { IsFinalizer: true } &&
+                !tokens[path].Any(t => t.Kind == TokenKind.Tilde && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
         }
         return false;
     }

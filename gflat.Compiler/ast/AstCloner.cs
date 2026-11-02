@@ -292,7 +292,7 @@ namespace gflat.ast
                         dtorName = _newName + dtor.Name.Substring(_oldName.Length);
                     }
                 }
-                return new DestructorDeclaration(dtorName, (BlockStatement)CloneNode(dtor.Body), dtor.IsVirtual, dtor.Line);
+                return new DestructorDeclaration(dtorName, (BlockStatement)CloneNode(dtor.Body), dtor.IsVirtual, dtor.Line) { IsFinalizer = dtor.IsFinalizer };
             }
             if (node is OperatorDeclaration op)
             {

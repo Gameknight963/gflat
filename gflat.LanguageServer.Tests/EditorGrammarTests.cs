@@ -183,6 +183,7 @@ public class EditorGrammarTests
     [InlineData("public ref T this[int i]", "ref", "storage.modifier")]
     [InlineData("public copy String(immutable(String)* source)", "copy", "storage.modifier")]
     [InlineData("public move String(String* source) nothrow", "move", "storage.modifier")]
+    [InlineData("finalizer ~Resource()", "finalizer", "storage.modifier")]
     [InlineData("replace int Allocate() {", "replace", "storage.modifier")]
     [InlineData("return 0xFFul;", "0xFFul", "constant.numeric")]
     [InlineData("float n = 1_000.25f;", "1_000.25f", "constant.numeric")]

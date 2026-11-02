@@ -333,6 +333,7 @@ public sealed class StaticManagedLifetimeTests
                 private static void*?[128] slots;
                 private static nuint count;
                 public static void* Allocate(nuint bytes, nuint alignment) => (void*)malloc(bytes);
+                public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow {}
                 public static nuint Collect() => 0;
                 public static nuint Count() => count;
                 public static void ReferenceAdded(void* address) nothrow {

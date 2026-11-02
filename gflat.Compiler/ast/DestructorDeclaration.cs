@@ -8,6 +8,7 @@ namespace gflat.ast
         public string Name { get; internal set; }
         public BlockStatement Body { get; }
         public bool IsVirtual { get; }
+        public bool IsFinalizer { get; set; }
 
         public DestructorDeclaration(string name, BlockStatement body, bool isVirtual, int line) : base(line)
         {

@@ -9,8 +9,25 @@ public partial class TypeChecker
         MethodDeclaration ReferenceAdded, MethodDeclaration ReferenceRemoved);
     private readonly Dictionary<string, CollectorBinding> collectorBindings = new();
     private readonly Dictionary<NewExpression, MethodDeclaration> _managedAllocations = new();
+    private readonly Dictionary<NewExpression, MethodDeclaration> _managedDestructors = new();
     public bool UsesCollector => collectorBindings.Count != 0;
     public MethodDeclaration? GetManagedAllocation(NewExpression node) => _managedAllocations.GetValueOrDefault(node);
+    public MethodDeclaration? GetManagedDestructorRegistration(NewExpression node) => _managedDestructors.GetValueOrDefault(node);
+
+    public bool CanManage(TypeExpression type) => CanManage(type, new());
+
+    private bool CanManage(TypeExpression type, HashSet<string> visited)
+    {
+        type = ResolveAlias(type);
+        if (type is ArrayTypeExpression array) return array.Size == 0 || CanManage(array.ElementType, visited);
+        if (type is not NamedTypeExpression named || !visited.Add(named.Name)) return true;
+        var cls = GetClassByIdentity(named.Name);
+        var structure = GetStructByIdentity(named.Name);
+        if ((structure?.Destructor ?? cls?.Destructor) is { IsFinalizer: false }) return false;
+        if (cls?.BaseClass is string parent && !CanManage(NamedTypeExpression.Resolved(parent, type.Line), visited)) return false;
+        return (structure?.Fields.Select(field => field.Type) ?? cls?.Fields.Select(field => field.Type))
+            ?.All(field => CanManage(field, visited)) ?? true;
+    }
 
     private TypeExpression ResolveCollectorType(TypeExpression? collector, int line)
     {
@@ -48,8 +65,22 @@ public partial class TypeChecker
 
     private void CheckManagedAllocation(NewExpression node)
     {
+        if (!CanManage(node.Type))
+            throw new TypeCheckException("Managed allocation requires custom destructors to be marked finalizer, including base classes and inline fields", node.Span);
         var reference = new ManagedTypeExpression(node.Type, false, node.Line, collector: node.Collector);
         _managedAllocations[node] = GetCollectorBinding(reference).Allocate;
+        if (HasDestructor(node.Type))
+        {
+            var collector = GetCollectorBinding(reference);
+            MethodDeclaration? method = collector.IsClass
+                ? GetClassByIdentity(collector.Owner)!.Methods.GetValueOrDefault("RegisterDestructor").Method
+                : GetStructByIdentity(collector.Owner)!.Methods.GetValueOrDefault("RegisterDestructor");
+            if (method == null || !method.IsStatic || method.Accessibility != TokenKind.Public || method.IsGeneric || !method.IsNoThrow ||
+                SignatureType(method.ReturnType, method) != "void" ||
+                !method.Parameters.Select(parameter => SignatureType(parameter.Type, method)).SequenceEqual(["void*", "void(void*)*"]))
+                throw new TypeCheckException("Managed allocation of a finalizable type requires public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow on the collector", node.Span);
+            _managedDestructors[node] = method;
+        }
     }
 
     private void ValidateManagedGraph(ManagedTypeExpression reference)

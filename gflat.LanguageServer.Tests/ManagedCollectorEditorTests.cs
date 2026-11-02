@@ -11,6 +11,7 @@ public sealed class ManagedCollectorEditorTests
                 public static void* Allocate(nuint bytes, nuint alignment) => ((nuint)1).reinterpret<void*>();
                 public static void ReferenceAdded(void* slot) nothrow {}
                 public static void ReferenceRemoved(void* slot) nothrow {}
+                public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow {}
                 public static nuint Collect() => 0;
             }
         }

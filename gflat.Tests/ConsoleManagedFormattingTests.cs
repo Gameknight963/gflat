@@ -150,6 +150,7 @@ public sealed class ConsoleManagedFormattingTests
                     Removed++;
                     TracingCollector::ReferenceRemoved(slot);
                 }
+                public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow => TracingCollector::RegisterDestructor(storage, destroy);
                 public static nuint Collect() => TracingCollector::Collect();
             }
             class Message : IFormattable

@@ -25,6 +25,7 @@ namespace Standard
         {
             public void* address;
             public nuint bytes;
+            public void(void*)*? destroy;
             public bool marked;
             public bool scanned;
             public Allocation*? next;
@@ -104,7 +105,7 @@ namespace Standard
         private static void Register(void* address, nuint bytes)
         {
             State* state = GetState();
-            if (state.collecting || !ValidRange(address, bytes))
+            if (!ValidRange(address, bytes))
                 throw new Exception("Invalid collector allocation");
             Allocation*? existing = state.allocations;
             while (existing != null)
@@ -121,6 +122,7 @@ namespace Standard
             if (allocation == null) throw new BadAllocException();
             allocation!.address = address;
             allocation!.bytes = bytes;
+            allocation!.destroy = null;
             allocation!.marked = false;
             allocation!.scanned = false;
             allocation!.next = state.allocations;
@@ -161,7 +163,24 @@ namespace Standard
             nuint bytes = (nuint)sizeof(T);
             if (bytes == 0) bytes = 1;
             Register((void*)storage, bytes);
+            RegisterDestructor((void*)storage, &Destruction<T>::Run);
             return (managed<T, TracingCollector>)storage;
+        }
+
+        private static class Destruction<T>
+        {
+            public static void Run(void* storage)
+            {
+                T* object = (T*)storage;
+                object.~T();
+            }
+        }
+
+        public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow
+        {
+            Allocation*? allocation = Owner(GetState(), storage);
+            if (allocation == null || allocation!.address != storage) collector_detail::abort();
+            allocation!.destroy = destroy;
         }
 
         private static nuint SlotBucket(void* address, nuint capacity) nothrow
@@ -290,7 +309,7 @@ namespace Standard
         public static nuint Collect()
         {
             State* state = GetState();
-            if (state.collecting) collector_detail::abort();
+            if (state.collecting) return 0;
             state.collecting = true;
             Allocation*? allocation = state.allocations;
             while (allocation != null)
@@ -350,6 +369,12 @@ namespace Standard
                 allocation = next;
             }
             nuint reclaimed = 0;
+            allocation = garbage;
+            while (allocation != null)
+            {
+                if (allocation!.destroy != null) allocation!.destroy!(allocation!.address);
+                allocation = allocation!.next;
+            }
             while (garbage != null)
             {
                 allocation = garbage;

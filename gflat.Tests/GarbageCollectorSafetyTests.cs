@@ -19,6 +19,7 @@ public sealed class GarbageCollectorSafetyTests
                 Removed++;
                 Standard::TracingCollector::ReferenceRemoved(slot);
             }
+            public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow => Standard::TracingCollector::RegisterDestructor(storage, destroy);
             public static nuint Collect() => Standard::TracingCollector::Collect();
         }
         struct Box {

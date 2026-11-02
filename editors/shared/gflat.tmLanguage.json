@@ -105,6 +105,10 @@
     },
     {
       "name": "storage.modifier.gflat",
+      "match": "\\bfinalizer(?=\\s*~)"
+    },
+    {
+      "name": "storage.modifier.gflat",
       "match": "\\b(public|private|protected|internal|unsafe|const|static|inline|readonly|immutable|virtual|override|expect|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
     },
     {

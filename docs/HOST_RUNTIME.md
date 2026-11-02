@@ -590,12 +590,14 @@ Replace it with `replace alias GC = MyCollector;`. `T^` abbreviates
 collector identity, and `new^ T() with OtherCollector` selects it for construction.
 
 `IGarbageCollector` requires static `Allocate`, `ReferenceAdded`,
-`ReferenceRemoved`, and `Collect`. Allocation and reference-lifetime calls are
-compiler-generated. Collection policy belongs to the provider.
+`ReferenceRemoved`, `RegisterDestructor`, and `Collect`. The compiler emits
+allocation, reference-lifetime, and completed-object destructor registration calls.
+Collection policy belongs to the provider.
 
 `GC::Collect()` returns the reclaimed allocation count. The default
 `TracingCollector` keeps objects at fixed addresses and permits one thread.
-Access from another thread terminates. Managed pointees must be destructor-free.
+Access from another thread terminates. `new^` accepts custom destructors marked
+`finalizer`, including those in inline fields and bases.
 
 ### Allocation and adoption
 
@@ -604,14 +606,18 @@ storage through `Memory::Allocate`. A zero-byte request uses one byte. Allocatio
 failure triggers one collection and retry, then throws `BadAllocException`.
 Unsatisfied alignment and registration failure free the pending allocation.
 A failed constructor leaves its allocation collectible once the temporary root ends.
+After successful construction, `RegisterDestructor(storage, destroy)` records
+the object's ordinary destruction callback when cleanup is required. Collection
+runs these callbacks before releasing the unreachable objects' storage.
 
 `TracingCollector::Adopt<T>(storage)` accepts a complete, already constructed
 `Memory::Allocate` allocation and transfers it to managed ownership. It returns
-`managed<T, TracingCollector>`. Failure leaves ownership with the caller.
+`managed<T, TracingCollector>` and registers ordinary destruction for `T`.
+Failure leaves ownership with the caller.
 After success, raw aliases must leave deletion to the collector.
 
 Adopt rejects duplicate and already-managed overlapping allocations. Correct
-allocation origin, complete-object storage, and destructor-free pointees remain
+allocation origin, complete-object storage, and suitability for delayed destruction remain
 the caller's responsibility.
 
 ### Reference lifetimes

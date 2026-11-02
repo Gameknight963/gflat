@@ -715,10 +715,13 @@ The provider implements `Standard::IGarbageCollector`, declared in
 | `void* Allocate(nuint bytes, nuint alignment)` | Supplies non-null storage for construction |
 | `void ReferenceAdded(void* slot) nothrow` | Registers a managed-reference slot after a store |
 | `void ReferenceRemoved(void* slot) nothrow` | Retires a slot before overwrite or lifetime end |
+| `void RegisterDestructor(void* storage, void(void*)* destroy) nothrow` | Records ordinary destruction after construction succeeds |
 | `nuint Collect()` | Library entry point for collection |
 
-The compiler calls the first three members directly. The provider controls when
-to collect. Ordinary managed references contain an address. Interface views keep
+The compiler calls allocation and reference notifications directly. For objects
+requiring destruction, it registers a callback after successful construction.
+The callback destroys the object. The collector releases its storage separately.
+The provider controls when to collect. Ordinary managed references contain an address. Interface views keep
 their object-and-interface-table representation.
 
 `new^ T(...)` creates storage using the global provider. `new^ T(...) with C`
@@ -754,7 +757,8 @@ reference-notification contract cannot report those failures as exceptions.
 
 `Standard::TracingCollector::Adopt<T>(T* storage)` is an ordinary generic library
 method returning `managed<T, Standard::TracingCollector>`. It transfers an already
-constructed, destructor-free allocation to that collector. This is an unsafe
+constructed allocation to that collector, including its ordinary destruction
+callback. This is an unsafe
 operation: the caller must own a complete allocation from the matching `Memory`
 allocator, not stack storage, an interior address, or foreign-allocator storage.
 There is no compiler-maintained registry of native allocations. The library
@@ -798,9 +802,15 @@ additional compiler support.
 
 #### Lifetime and foreign calls
 
-Scope exit retires a managed reference. The collector owns the pointee. Types with destructors,
-including inherited destructors and inline fields requiring destruction, cannot
-be managed pointees. Managed-reference arithmetic and `delete` on managed views
+Scope exit retires a managed reference. The collector owns the pointee. A custom
+destructor opts into managed allocation with `finalizer ~Type()`. Every custom
+destructor in inline fields and base classes must opt in as well. The marker
+changes eligibility for managed allocation. Stack values, native allocations,
+and collected objects use the same destructor and cleanup rules.
+
+The tracing collector runs destruction callbacks for unreachable objects before
+releasing their storage. Failed construction registers no destruction callback.
+Managed-reference arithmetic and `delete` on managed views
 are rejected. Explicit raw-pointer/managed-reference casts are unsafe adapter
 operations. They do not register ownership or validate the allocation. Casting
 away managed immutable is rejected. Method receivers can expose borrowed interior

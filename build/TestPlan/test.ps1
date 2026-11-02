@@ -32,6 +32,22 @@ Write-Output "All $($all.Count) discovered cases occur exactly once in primary s
 
 # Exercise observation-based fallback expansion without executing the test body.
 $manifest = Get-Content "$PlanDirectory/manifest.json" -Raw | ConvertFrom-Json
+$guideParts = @()
+foreach ($part in $manifest) {
+    foreach ($group in $part.classes) {
+        if ($group.name -match '^gflat\.Tests\.StandardLibraryGuide(?:Partition[123])?Tests$') {
+            if (@($group.methods | Where-Object { $_.fallback }).Count -ne 0) {
+                throw 'IR-only documentation tests must be excluded from the optimization fallback'
+            }
+            if ($group.weight -ne 50) { throw 'Documentation case estimate was not applied' }
+            $guideParts += $part.shard
+        }
+    }
+}
+if ($guideParts.Count -ne 4 -or @($guideParts | Sort-Object -Unique).Count -ne 4) {
+    throw 'Documentation partitions must be assigned to four separate shards'
+}
+Write-Output 'Documentation partitions use their case estimates and run once across four shards.'
 $selected = $null
 foreach ($part in $manifest) {
     foreach ($group in $part.classes) {

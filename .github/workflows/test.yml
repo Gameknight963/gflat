@@ -46,9 +46,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: dotnet test gflat.Tests/gflat.Tests.csproj --no-build --no-restore --settings artifacts/test-plan/${{ matrix.shard }}-fallback.runsettings --results-directory artifacts/test-plan/results/fallback --blame-hang-timeout 5m --logger trx
       - name: Summarize stage and test durations
-        if: ${{ !cancelled() }}
+        if: always()
         shell: pwsh
         run: |
+          if (!(Test-Path artifacts/test-plan/manifest.json)) { exit 0 }
           dotnet run --project build/TestPlan --no-build -- report artifacts/test-plan
           if ($LASTEXITCODE -ne 0) { throw 'Timing report failed' }
           Get-Content artifacts/test-plan/timings.md | Add-Content $env:GITHUB_STEP_SUMMARY

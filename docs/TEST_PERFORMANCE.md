@@ -19,6 +19,8 @@ for each test program.
 - The primary pass runs every compiler case once with default optimization O0
 - Tests with an integer parameter named `optimization`, `optimizationLevel`,
   `opt`, or `optLevel` keep their explicit optimization values
+- `[Trait("Optimization", "Independent")]` marks checks whose work is unchanged
+  by native optimization, such as documentation tests that emit IR
 - The O2 fallback reruns methods without that parameter, preserving coverage for
   older tests that use the process default
 - After the primary pass, observed default-optimization compilations add their
@@ -33,6 +35,12 @@ further separation would save work.
 `build/TestPlan` discovers test methods from the built assembly and keeps each
 class in one shard. Initial weights estimate data rows and include the fallback
 pass. Member-data theories have a minimum estimated weight of one row.
+`[Trait("EstimatedCases", "50")]` supplies an estimate for a larger data provider.
+
+Documentation examples run in four disjoint test classes so they can be assigned
+to different jobs. `[Trait("SeparateShards", "Documentation")]` distributes those
+classes across the available shards before reusing a shard. Every example emits
+IR against the complete Standard library.
 
 Generate plans after building the test project:
 

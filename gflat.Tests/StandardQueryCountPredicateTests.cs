@@ -138,10 +138,8 @@ public sealed class StandardQueryCountPredicateTests
 
     private static void Run(string source,int optimization,bool managed=false)
     {
-        string root=Path.Combine(AppContext.BaseDirectory,"Standard");
-        IEnumerable<string> paths=Directory.GetFiles(Path.Combine(root,"core"),"*.gf",SearchOption.AllDirectories);
-        if(managed)paths=paths.Concat(new[]{Path.Combine(root,"libc/GC.gf"),Path.Combine(root,"libc/TracingCollector.gf")});
-        var sources=paths.Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("count-predicate.gf",source));
+        var library = managed ? StandardTestSources.Queries : StandardTestSources.QueriesWithoutCollector;
+        var sources = library.Append(new SourceFile("count-predicate.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Count predicate exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }

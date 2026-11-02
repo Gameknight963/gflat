@@ -205,8 +205,7 @@ public sealed class StandardQueryEndpointTests
 
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-endpoint.gf",source));
+        var sources=StandardTestSources.Queries.Append(new SourceFile("query-endpoint.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Query endpoint exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }
 }

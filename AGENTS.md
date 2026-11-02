@@ -32,4 +32,5 @@
 - Run checks appropriate to the change. Documentation examples are covered by `DocumentationAndDriverTests` and `StandardLibraryGuideTests`
 - Read build and test results before claiming success. Distinguish focused checks from a full suite
 - Avoid running concurrent build or native-test processes against the same outputs
+- Focused compiler and Standard tests select their required library sources explicitly. Reserve full Standard directory loading for integration and documentation coverage
 - VSIX package validation uses Windows PowerShell and the installed Visual Studio SDK. Installing a real extension, registering an SDK, or changing security settings is a separate action

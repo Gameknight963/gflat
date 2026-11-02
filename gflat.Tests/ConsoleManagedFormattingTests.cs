@@ -231,7 +231,6 @@ public sealed class ConsoleManagedFormattingTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        => StandardTestSources.Console
             .Append(new SourceFile("console-managed-formatting.gf", code));
 }

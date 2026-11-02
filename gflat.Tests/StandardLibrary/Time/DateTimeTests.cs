@@ -209,8 +209,7 @@ public sealed class DateTimeTests
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.Latin1.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-time.gf",program));
+        var sources=StandardTestSources.Time.Append(new SourceFile("date-time.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"DateTime exit {result.ExitCode}: {result.StandardError}");
     }
 }

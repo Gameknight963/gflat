@@ -4,8 +4,7 @@ public sealed class StandardQueryIndexedSelectTests
 {
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Queries
             .Append(new SourceFile("indexed-select.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

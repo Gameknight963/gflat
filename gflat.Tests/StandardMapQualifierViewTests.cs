@@ -97,6 +97,5 @@ public sealed class StandardMapQualifierViewTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("views.gf",code));
+        => StandardTestSources.Collections.Append(new SourceFile("views.gf",code));
 }

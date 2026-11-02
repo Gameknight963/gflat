@@ -228,11 +228,9 @@ public sealed class FileLineSequenceTests
 
     private static IEnumerable<SourceFile> Sources(string program)
     {
-        var core=Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Standard/core"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)));
-        var io=new[]{"IO/FileStream.gf","IO/FileLines.gf","IO/FileLineSequence.gf"}
-            .Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/libc",file))));
-        return core.Concat(io).Append(new SourceFile("lines.gf",program));
+        return StandardTestSources.IO.Concat(StandardTestSources.Load(
+            "core/Queries/enumerable_elements.gf",
+            "core/Queries/TakeLastSource.gf", "core/Queries/enumerable_take_last.gf", "core/Collections/Deque.gf")).Append(new SourceFile("lines.gf",program));
     }
     private static void RunCompileFailure(Func<string,string> program)
     {

@@ -59,8 +59,8 @@ public sealed class TranscodeAllocationTests
         Assert.Equal(1, tool.Split(entry).Length - 1);
         // Keep the actual conversion functions; only rename the CLI entry point.
         tool = tool.Replace(entry, "int TranscodeToolMain(int argc,char** argv)");
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Combine(StandardTestSources.Text, StandardTestSources.Console, StandardTestSources.Files,
+                StandardTestSources.Load("core/Collections/vector_resize.gf", "core/Binary/BinaryPrimitives.gf"))
             .Append(new SourceFile("transcode.gf", tool))
             .Append(new SourceFile("allocations.gf", code.ToString()));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });

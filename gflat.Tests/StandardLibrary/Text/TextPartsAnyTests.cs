@@ -157,8 +157,7 @@ public sealed class TextPartsAnyTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.Text.Concat(StandardTestSources.Load("core/Queries/enumerable_predicates.gf")).Concat(StandardTestSources.Load("core/Queries/WhereSource.gf", "core/Queries/enumerable_where.gf"))
             .Append(new SourceFile("text-parts-any.gf",program));
     private static void Run(string program,int optimization)
     {

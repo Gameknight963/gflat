@@ -158,8 +158,7 @@ public sealed class DisjointSetTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("disjoint-set.gf",program));
+        =>StandardTestSources.Collections.Append(new SourceFile("disjoint-set.gf",program));
     private static void Run(string program,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(program),optimization);Assert.True(result.ExitCode==0,$"DisjointSet exit {result.ExitCode}: {result.StandardError}");

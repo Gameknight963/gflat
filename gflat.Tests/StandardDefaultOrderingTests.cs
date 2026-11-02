@@ -122,8 +122,7 @@ public sealed class StandardDefaultOrderingTests
     }
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("default-ordering.gf",program));
+        var sources=StandardTestSources.Collections.Append(new SourceFile("default-ordering.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Default ordering exit {result.ExitCode}: {result.StandardError}");
     }
 }

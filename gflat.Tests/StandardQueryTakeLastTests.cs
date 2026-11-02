@@ -23,8 +23,7 @@ public sealed class StandardQueryTakeLastTests
         """;
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard", "core"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        => StandardTestSources.Queries
             .Append(new SourceFile("query-take-last.gf", program));
 
     private static void Run(string program, int optimization)

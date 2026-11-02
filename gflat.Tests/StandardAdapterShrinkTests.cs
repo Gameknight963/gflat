@@ -86,8 +86,7 @@ public sealed class StandardAdapterShrinkTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Collections
             .Append(new SourceFile("adapter-shrink.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

@@ -120,8 +120,7 @@ public sealed class StandardJsonReaderRawTokenTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
+        => StandardTestSources.Json.Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(code),optimization);

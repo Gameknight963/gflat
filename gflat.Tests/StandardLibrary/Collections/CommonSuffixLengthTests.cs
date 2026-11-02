@@ -200,8 +200,7 @@ public sealed class CommonSuffixLengthTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Collections
             .Append(new SourceFile("common-suffix-length.gf", program));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

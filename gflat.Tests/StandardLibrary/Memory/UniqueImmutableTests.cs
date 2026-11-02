@@ -95,8 +95,7 @@ public sealed class UniqueImmutableTests
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("unique-immutable.gf",source));
+        => StandardTestSources.Memory.Append(new SourceFile("unique-immutable.gf",source));
     private static void Run(string source,int optimization)
         => Assert.Equal(0,CompilerTestHelper.Run(Sources(source),optimization).ExitCode);
 }

@@ -223,8 +223,7 @@ public sealed class ByteReaderSkipTests
         IEnumerable<SourceFile> library;
         if (allStandard)
         {
-            library = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-                .Select(path => new SourceFile(path, File.ReadAllText(path)));
+            library = StandardTestSources.IO;
         }
         else
         {

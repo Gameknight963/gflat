@@ -120,8 +120,7 @@ public sealed class StandardQueryAggregateTests
 
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-aggregate.gf",source));
+        var sources=StandardTestSources.Queries.Append(new SourceFile("query-aggregate.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Aggregate exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }
 }

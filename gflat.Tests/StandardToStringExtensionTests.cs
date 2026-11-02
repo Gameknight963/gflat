@@ -191,8 +191,7 @@ public sealed class StandardToStringExtensionTests
 
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.ASCII.GetBytes(text);writer.Write((byte)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("to-string-extensions.gf",program));
+        =>StandardTestSources.Text.Append(new SourceFile("to-string-extensions.gf",program));
     private static void Run(string program,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(program),optimization);Assert.True(result.ExitCode==0,$"ToString extensions exit {result.ExitCode}: {result.StandardError}");

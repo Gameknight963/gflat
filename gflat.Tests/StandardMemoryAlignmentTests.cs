@@ -65,5 +65,5 @@ public sealed class StandardMemoryAlignmentTests
     }
 
     private static string Bool(bool value)=>value?"true":"false";
-    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("memory-alignment.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Memory alignment exit {result.ExitCode}: {result.StandardError}");}
+    private static void Run(string program,int optimization){var sources=StandardTestSources.Memory.Append(new SourceFile("memory-alignment.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Memory alignment exit {result.ExitCode}: {result.StandardError}");}
 }

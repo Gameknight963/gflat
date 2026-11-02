@@ -120,5 +120,5 @@ public sealed class IpNetworkLastAddressTests
             """,optimization);
 
     private static byte[] FixedBytes(BigInteger value,int count){byte[] encoded=value.ToByteArray(isUnsigned:true,isBigEndian:true);var result=new byte[count];encoded.CopyTo(result,count-encoded.Length);return result;}
-    private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("ip-network-last-address.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"IP network endpoint exit {result.ExitCode}: {result.StandardError}");}
+    private static void Run(string program,int optimization){var sources=StandardTestSources.Net.Append(new SourceFile("ip-network-last-address.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"IP network endpoint exit {result.ExitCode}: {result.StandardError}");}
 }

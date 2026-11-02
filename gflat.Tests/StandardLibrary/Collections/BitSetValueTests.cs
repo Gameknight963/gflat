@@ -156,8 +156,7 @@ public sealed class BitSetValueTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bitset-value.gf",source));
+        var sources=StandardTestSources.Combine(StandardTestSources.Combine(StandardTestSources.Collections, StandardTestSources.Console), StandardTestSources.FileBinary).Append(new SourceFile("bitset-value.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"BitSet value exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }
 }

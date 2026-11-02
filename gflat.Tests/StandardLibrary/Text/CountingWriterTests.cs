@@ -6,8 +6,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class CountingWriterTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.Combine(StandardTestSources.Text, StandardTestSources.FileStreams).Concat(StandardTestSources.Load("core/Encoding/Base64.gf", "core/Encoding/Base64Encoder.gf", "core/Encoding/Base64Decoder.gf"))
             .Append(new SourceFile("counting-writer.gf",program));
 
     private static void Run(string program,int optimization)

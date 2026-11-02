@@ -100,8 +100,7 @@ public sealed class SpanPrefixSuffixTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("span-prefix-suffix.gf",program));
+        var sources=StandardTestSources.Collections.Append(new SourceFile("span-prefix-suffix.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Span prefix/suffix exit {result.ExitCode}: {result.StandardError}");
     }

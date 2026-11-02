@@ -334,8 +334,7 @@ public sealed class LineSequenceTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        => StandardTestSources.IO
             .Append(new SourceFile("line-sequence-tests.gf", Support + program));
 
     private static void Run(string program, int optimization)

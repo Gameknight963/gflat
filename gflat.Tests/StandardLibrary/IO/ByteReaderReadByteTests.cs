@@ -136,8 +136,7 @@ public sealed class ByteReaderReadByteTests
     }
 
     private static IEnumerable<SourceFile> Sources(SourceFile program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(file => new SourceFile(file, File.ReadAllText(file))).Append(program);
+        => StandardTestSources.IO.Append(program);
 
     private static void Run(string code, int optimization)
     {

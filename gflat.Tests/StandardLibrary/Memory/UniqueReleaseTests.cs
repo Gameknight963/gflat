@@ -1,4 +1,4 @@
-﻿using gflat.CompileExceptions;
+using gflat.CompileExceptions;
 
 namespace gflat.Tests.Std.Memory;
 
@@ -81,8 +81,7 @@ public sealed class UniqueReleaseTests
         }
         """;
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("unique-release.gf",source));
+        => StandardTestSources.Memory.Append(new SourceFile("unique-release.gf",source));
     private static void Run(string source,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(source),optimization);

@@ -114,8 +114,7 @@ public sealed class StandardDefaultSearchTests
     private static int Sentinel(int index,int length)=>index<0?length:index;
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("default-search.gf",program));
+        var sources=StandardTestSources.Collections.Append(new SourceFile("default-search.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Default search exit {result.ExitCode}: {result.StandardError}");
     }
 }

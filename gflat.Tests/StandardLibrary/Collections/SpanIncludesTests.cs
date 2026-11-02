@@ -158,8 +158,7 @@ public sealed class SpanIncludesTests
 
     private static void Run(string program, int optimization)
     {
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var files = StandardTestSources.Collections
             .Append(new SourceFile("span-includes.gf", program));
         string ir = Compiler.Emit(files, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

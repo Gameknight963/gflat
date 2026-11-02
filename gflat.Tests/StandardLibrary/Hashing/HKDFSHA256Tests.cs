@@ -187,8 +187,7 @@ public sealed class HKDFSHA256Tests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("hkdf-sha256.gf",code));
+        var sources=StandardTestSources.Combine(StandardTestSources.Hashing, StandardTestSources.FileBinary).Append(new SourceFile("hkdf-sha256.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"HKDFSHA256 exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }

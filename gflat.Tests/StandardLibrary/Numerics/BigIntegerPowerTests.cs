@@ -170,8 +170,7 @@ public sealed class BigIntegerPowerTests
     }
     private static void Run(string directory,string program,string[] arguments,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-power-test.gf",program));
+        var sources=StandardTestSources.Combine(StandardTestSources.Numerics, StandardTestSources.FileBinary).Append(new SourceFile("bigint-power-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
         var compiled=NativeToolchain.Compile(ir,executable,optimizationLevel:optimization);Assert.True(compiled.ExitCode==0,compiled.StandardError);

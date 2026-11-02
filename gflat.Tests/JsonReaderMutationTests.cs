@@ -37,8 +37,9 @@ public sealed class JsonReaderMutationTests
                 }
             }
 
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-                .Select(path => new SourceFile(path, File.ReadAllText(path)))
+            var sources = StandardTestSources.Combine(
+                StandardTestSources.Json, StandardTestSources.Console, StandardTestSources.FileBinary,
+                StandardTestSources.Load("core/Text/text_writer_line.gf"))
                 .Append(new SourceFile("json-mutations.gf", NativeProgram));
             string ir = Path.Combine(directory, "reader.ll");
             string executable = Path.Combine(directory, "reader.exe");

@@ -153,8 +153,7 @@ public sealed class FileVarIntTests
     }
     private static string Compile(string directory,string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("file-varint-test.gf",program));
+        var sources=StandardTestSources.IO.Append(new SourceFile("file-varint-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
         var result=NativeToolchain.Compile(ir,executable,optimizationLevel:optimization);

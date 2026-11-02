@@ -242,8 +242,9 @@ public sealed class IpAddressTests
     }
     private static void Run(string directory, string program, string[] arguments, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("ip-address-test.gf", program));
+        var sources = StandardTestSources.Combine(
+            StandardTestSources.Net, StandardTestSources.FileBinary,
+            StandardTestSources.Load("core/Text/string_span.gf")).Append(new SourceFile("ip-address-test.gf", program));
         string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "main.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
         var compilation = NativeToolchain.Compile(ir, executable, optimizationLevel: optimization);

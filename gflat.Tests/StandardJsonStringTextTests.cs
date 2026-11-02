@@ -115,8 +115,7 @@ public sealed class StandardJsonStringTextTests
 
     private static string Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("json-string-text.gf",program));
+        var sources=StandardTestSources.Json.Append(new SourceFile("json-string-text.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");return result.StandardOutput;
     }

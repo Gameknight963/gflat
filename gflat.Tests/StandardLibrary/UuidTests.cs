@@ -167,8 +167,7 @@ public sealed class UuidTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"").Replace("\t","\\t").Replace("\n","\\n")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("uuid.gf",code));
+        => StandardTestSources.Types.Append(new SourceFile("uuid.gf",code));
     private static void Run(string code,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(code),optimization);

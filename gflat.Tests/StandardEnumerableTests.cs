@@ -2,8 +2,7 @@ namespace gflat.Tests;
 
 public sealed class StandardEnumerableTests
 {
-    private static IEnumerable<SourceFile> Sources(string program) => Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Standard", "core"), "*.gf", SearchOption.AllDirectories)
-        .Select(path => new SourceFile(path, File.ReadAllText(path)))
+    private static IEnumerable<SourceFile> Sources(string program) => StandardTestSources.QueriesWithoutCollector
         .Append(new SourceFile("main.gf", program));
 
     private static void Run(string program, string? output = null)

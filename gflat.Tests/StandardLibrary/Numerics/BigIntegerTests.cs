@@ -7,8 +7,7 @@ namespace gflat.Tests.Std.Numerics;
 public sealed class BigIntegerTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        => StandardTestSources.Numerics
             .Append(new SourceFile("main.gf", code));
 
     private static void Run(string code, int optimization)

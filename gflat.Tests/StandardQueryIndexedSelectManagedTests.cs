@@ -7,8 +7,7 @@ public sealed class StandardQueryIndexedSelectManagedTests
     [InlineData(2)]
     public void ManagedProjectionResultsRemainRootedWithoutCachingAcrossGetterRetry(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Queries
             .Append(new SourceFile("indexed-select-managed.gf", Program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

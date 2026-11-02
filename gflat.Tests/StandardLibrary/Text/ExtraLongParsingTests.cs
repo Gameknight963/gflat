@@ -86,9 +86,9 @@ public sealed class ExtraLongParsingTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code,bool strings=false)
-        => (strings?Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            :[Path.Combine(AppContext.BaseDirectory,"Standard/core/Text/integer_parsing.gf")])
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("extralong-parsing.gf",code));
+        => (strings ? StandardTestSources.Text : StandardTestSources.Load("core/Text/integer_parsing.gf"))
+            .Append(new SourceFile("extralong-parsing.gf",code));
+
     private static void Run(string code,int optimization,bool strings=false)
     {
         var result=CompilerTestHelper.Run(Sources(code,strings),optimization);

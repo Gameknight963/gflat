@@ -252,8 +252,7 @@ public sealed class ConsoleValueFormattingTests
     }
 
     private static IEnumerable<SourceFile> Sources(SourceFile program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(program);
+        => StandardTestSources.Console.Append(program);
 
     private static ExecutionResult Run(string code, int optimization)
     {

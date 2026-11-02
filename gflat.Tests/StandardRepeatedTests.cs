@@ -172,8 +172,7 @@ public sealed class StandardRepeatedTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("repeated.gf",program));
+        var sources=StandardTestSources.Queries.Append(new SourceFile("repeated.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Repeated exit {result.ExitCode}: {result.StandardError}");
     }

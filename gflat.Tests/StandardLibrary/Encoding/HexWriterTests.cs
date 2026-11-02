@@ -120,8 +120,7 @@ public sealed class HexWriterTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("hex-writer.gf",source));
+        var sources=StandardTestSources.Encoding.Append(new SourceFile("hex-writer.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Hex writer exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }
 }

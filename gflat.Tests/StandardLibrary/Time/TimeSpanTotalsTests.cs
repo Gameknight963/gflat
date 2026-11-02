@@ -98,8 +98,7 @@ public sealed class TimeSpanTotalsTests
                 return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Time
             .Append(new SourceFile("time-span-totals.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"TimeSpan totals exit {result.ExitCode}: {result.StandardError}");

@@ -197,8 +197,7 @@ public sealed class IpEndpointTests
                 return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Net
             .Append(new SourceFile("ip-endpoint-integration.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"IpEndpoint integration exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

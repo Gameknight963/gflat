@@ -239,8 +239,7 @@ public sealed class HexDecoderTests
 
     private static void Run(string directory, string program, int optimization, string[]? arguments = null)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("hex-decoder.gf", program));
+        var sources = StandardTestSources.Combine(StandardTestSources.Encoding, StandardTestSources.FileBinary).Append(new SourceFile("hex-decoder.gf", program));
         string input = Path.Combine(directory, "main.ll"), output = Path.Combine(directory, "main.exe");
         File.WriteAllText(input, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
         var compiled = NativeToolchain.Compile(input, output, optimizationLevel: optimization);

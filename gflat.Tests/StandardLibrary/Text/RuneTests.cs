@@ -131,8 +131,7 @@ public sealed class RuneTests
     }
     private static void Run(string source,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("rune.gf",source));
+        var sources=StandardTestSources.Text.Concat(StandardTestSources.Load("core/Queries/SelectSource.gf", "core/Queries/enumerable_select.gf")).Append(new SourceFile("rune.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Rune exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }

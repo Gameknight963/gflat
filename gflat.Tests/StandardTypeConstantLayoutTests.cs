@@ -25,8 +25,7 @@ public sealed class StandardTypeConstantLayoutTests
                 return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("type-constant-layout.gf",program));
+        var sources=StandardTestSources.Values.Append(new SourceFile("type-constant-layout.gf",program));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

@@ -12,8 +12,7 @@ public sealed class JsonWriterOracleTests
     [InlineData(2)]
     public async Task WriterRoundTripsTokensWithoutLosingNumbersOrStringContents(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Combine(StandardTestSources.Json, StandardTestSources.Console, StandardTestSources.Files)
             .Append(new SourceFile("json-writer-oracle.gf", """
                 using Standard; using Standard::Text; using Standard::Json; using Standard::IO;
                 int main(int argc, char** argv) {

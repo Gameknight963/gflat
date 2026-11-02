@@ -115,7 +115,8 @@ public sealed class PlatformUtcClockTests
 
     private static string HostFolder=>OperatingSystem.IsWindows()?"windows":"linux";
     private static IEnumerable<SourceFile> Sources(string folder,string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Platform",folder),"*.gf",SearchOption.AllDirectories))
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("utc-clock.gf",program));
+        => StandardTestSources.Combine(StandardTestSources.Time, StandardTestSources.Console)
+            .Concat(Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Platform",folder),"*.gf",SearchOption.AllDirectories)
+                .Select(path=>new SourceFile(path,File.ReadAllText(path))))
+            .Append(new SourceFile("utc-clock.gf",program));
 }

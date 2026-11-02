@@ -156,8 +156,7 @@ public sealed class RationalParsingTests
     private static void WriteText(BinaryWriter writer,BigInteger value)=>WriteText(writer,Text(value));
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.UTF8.GetBytes(text);writer.Write((ushort)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("rational-parsing.gf",program));
+        =>StandardTestSources.Numerics.Append(new SourceFile("rational-parsing.gf",program));
     private static void Run(string program,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(program),optimization);Assert.True(result.ExitCode==0,$"Rational parsing exit {result.ExitCode}: {result.StandardError}");

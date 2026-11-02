@@ -246,8 +246,7 @@ public sealed class StandardReadToEndTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.IO
             .Append(new SourceFile("read-to-end-tests.gf", code));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

@@ -235,8 +235,7 @@ public sealed class ByteReaderLineTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(file => new SourceFile(file, File.ReadAllText(file))).Append(new SourceFile("byte-reader-lines.gf", code));
+        var sources = StandardTestSources.IO.Append(new SourceFile("byte-reader-lines.gf", code));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }

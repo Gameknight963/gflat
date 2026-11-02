@@ -407,8 +407,7 @@ public sealed class AssignmentResultReceiverTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Load("libc/GC.gf", "libc/TracingCollector.gf")
             .Append(new SourceFile("assignment-result-receiver.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

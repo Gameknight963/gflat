@@ -5,8 +5,7 @@ namespace gflat.Tests.Std.Memory;
 public sealed class StandardSpanBorrowedReadonlyTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(file => new SourceFile(file, File.ReadAllText(file))).Append(new SourceFile("readonly-span.gf", code));
+        => StandardTestSources.Combine(StandardTestSources.Text, StandardTestSources.Memory, StandardTestSources.Load("core/Queries/enumerable_predicates.gf")).Append(new SourceFile("readonly-span.gf", code));
 
     [Theory]
     [InlineData(0)]

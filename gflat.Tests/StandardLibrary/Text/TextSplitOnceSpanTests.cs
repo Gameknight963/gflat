@@ -79,8 +79,7 @@ public sealed class TextSplitOnceSpanTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("split-once.gf",program));
+        var sources=StandardTestSources.Text.Append(new SourceFile("split-once.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
     }

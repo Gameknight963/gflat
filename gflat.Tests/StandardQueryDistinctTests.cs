@@ -5,8 +5,9 @@ namespace gflat.Tests;
 public sealed class StandardQueryDistinctTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.Combine(
+            StandardTestSources.Queries, StandardTestSources.FileStreams,
+            StandardTestSources.Load("libc/IO/FileLines.gf", "libc/IO/FileLineSequence.gf"))
             .Append(new SourceFile("query-distinct.gf",program));
 
     private static void Run(string program,int optimization)

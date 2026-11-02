@@ -187,10 +187,8 @@ public sealed class StandardQuerySearchTests
 
     private static IEnumerable<SourceFile> Sources(string source,bool managed=false)
     {
-        string root=Path.Combine(AppContext.BaseDirectory,"Standard");
-        var files=Directory.GetFiles(Path.Combine(root,"core"),"*.gf",SearchOption.AllDirectories).AsEnumerable();
-        if(managed)files=files.Concat(new[]{Path.Combine(root,"libc/GC.gf"),Path.Combine(root,"libc/TracingCollector.gf")});
-        return files.Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-search.gf",source));
+        var library = managed ? StandardTestSources.Queries : StandardTestSources.QueriesWithoutCollector;
+        return library.Append(new SourceFile("query-search.gf",source));
     }
     private static void Run(string source,int optimization,bool managed=false)
     {

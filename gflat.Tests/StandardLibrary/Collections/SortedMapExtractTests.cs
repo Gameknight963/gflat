@@ -79,8 +79,7 @@ public sealed class SortedMapExtractTests
 
     private static void Run(string code,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",Prelude+code));
+        var sources=StandardTestSources.Collections.Append(new SourceFile("main.gf",Prelude+code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

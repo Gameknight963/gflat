@@ -206,8 +206,7 @@ public sealed class ExtremaTests
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-extrema.gf",source));
+        =>StandardTestSources.Queries.Append(new SourceFile("query-extrema.gf",source));
     private static void Run(string source,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(source),optimization);Assert.True(result.ExitCode==0,$"Query extrema exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

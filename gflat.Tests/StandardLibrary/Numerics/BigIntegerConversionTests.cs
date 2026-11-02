@@ -220,8 +220,7 @@ public sealed class BigIntegerConversionTests
         }
         """;
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-conversions.gf",program));
+        => StandardTestSources.Combine(StandardTestSources.Numerics, StandardTestSources.FileBinary).Append(new SourceFile("bigint-conversions.gf",program));
     private static void Run(string directory,string program,string[] arguments,int optimization)
     {
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");

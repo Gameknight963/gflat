@@ -163,8 +163,7 @@ public sealed class DateParsingTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("date-parsing.gf", code));
+        var sources = StandardTestSources.Time.Append(new SourceFile("date-parsing.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }
 }

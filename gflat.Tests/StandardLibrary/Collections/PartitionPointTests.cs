@@ -151,8 +151,7 @@ public sealed class PartitionPointTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Collections
             .Append(new SourceFile("partition-point.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"PartitionPoint exit {result.ExitCode}: {result.StandardError}");

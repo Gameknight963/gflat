@@ -121,8 +121,7 @@ public sealed class StandardSwapTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.Collections.Concat(StandardTestSources.Load("core/Memory/Unique.gf"))
             .Append(new SourceFile("swap-test.gf",program));
     private static void Run(string program,int optimization)
     {

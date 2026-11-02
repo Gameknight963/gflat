@@ -210,8 +210,7 @@ public sealed class StoredKeyLookupTests
     private static string Insert((string Declaration, string Method, bool Map, bool Hash, string StoredKey) form, string id, string payload)
         => form.Map ? $"values.TryAdd(new Key({id},{payload}),{id})" : $"values.Add(new Key({id},{payload}))";
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("stored-key-lookup.gf", program));
+        => StandardTestSources.Collections.Append(new SourceFile("stored-key-lookup.gf", program));
     private static void Run(string program, int optimization)
     {
         string ir = Compiler.Emit(Sources(program), options: new() { NoStdLib = true, InternalizeFunctions = true });

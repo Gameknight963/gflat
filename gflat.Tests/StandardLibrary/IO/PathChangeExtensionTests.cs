@@ -157,8 +157,7 @@ public sealed class PathChangeExtensionTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("path-change-extension.gf",code));
+        =>StandardTestSources.IO.Append(new SourceFile("path-change-extension.gf",code));
     private static void Run(string code,int optimization) {
         var result=CompilerTestHelper.Run(Sources(code),optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");

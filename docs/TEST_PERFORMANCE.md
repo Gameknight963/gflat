@@ -4,6 +4,16 @@ Compiler tests run in four separate jobs per operating system. Each job runs its
 primary cases, then an O2 fallback pass. Editor and bundled-tool tests run in a
 separate job per operating system.
 
+## Test inputs
+
+Focused fixtures select Standard sources through `StandardTestSources`. Its
+explicit source sets cover related APIs and their dependencies. Add individual
+files with `Load` when a fixture needs an additional API.
+
+Keep full-library builds in project, example, and documentation tests. Loading
+every Standard file in a focused fixture repeats unrelated parsing and checking
+for each test program.
+
 ## Optimization coverage
 
 - The primary pass runs every compiler case once with default optimization O0

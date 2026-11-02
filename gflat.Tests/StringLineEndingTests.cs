@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace gflat.Tests;
 
@@ -171,8 +171,7 @@ public sealed class StringLineEndingTests
 
     private static void Run(string source, int optimization)
     {
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var files = StandardTestSources.Text
             .Append(new SourceFile("string-line-endings.gf", source));
         string ir = Compiler.Emit(files, options: new() { InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

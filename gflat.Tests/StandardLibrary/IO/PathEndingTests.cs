@@ -108,7 +108,6 @@ public sealed class PathEndingTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("path-ending.gf",code));
+        =>StandardTestSources.IO.Append(new SourceFile("path-ending.gf",code));
     private static void Run(string code,int optimization)=>Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);
 }

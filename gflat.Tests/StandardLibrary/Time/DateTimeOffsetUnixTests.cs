@@ -55,8 +55,7 @@ public sealed class DateTimeOffsetUnixTests
                 if(allocated!=released)return 8;return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-time-offset-unix.gf",program));
+        var sources=StandardTestSources.Time.Append(new SourceFile("date-time-offset-unix.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Unix conversions exit {result.ExitCode}: {result.StandardError}");
     }
 }

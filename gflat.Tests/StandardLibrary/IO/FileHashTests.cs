@@ -5,8 +5,7 @@ namespace gflat.Tests.Std.IO;
 public sealed class FileHashTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.IO
             .Append(new SourceFile("file-hash.gf",program));
 
     private const string DenyAllocation="""

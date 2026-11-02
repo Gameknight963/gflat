@@ -11,8 +11,7 @@ public sealed class PlatformClockTests
         string provider = windows ? "Linux::MonotonicClock" : "Windows::PerformanceCounter";
         string symbol = windows ? "clock_gettime" : "QueryPerformanceCounter";
         string path = Path.Combine(AppContext.BaseDirectory, "Platform", folder, filename);
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(file => new SourceFile(file, File.ReadAllText(file)))
+        var sources = StandardTestSources.Time
             .Append(new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("other-platform-clock.gf", $$"""
                 alias Timer=Standard::Time::Stopwatch<{{provider}}>;
@@ -73,8 +72,7 @@ public sealed class PlatformClockTests
                 return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(file=>new SourceFile(file,File.ReadAllText(file)))
+        var sources=StandardTestSources.Time
             .Append(new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("platform-clock.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

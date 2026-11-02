@@ -148,8 +148,7 @@ public sealed class StandardCsvReaderTextTests
     }
 
     private static void Run(string program,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("csv-reader-text.gf",program));
+        var sources=StandardTestSources.Csv.Append(new SourceFile("csv-reader-text.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"CsvReaderText exit {result.ExitCode}: {result.StandardError}");
     }

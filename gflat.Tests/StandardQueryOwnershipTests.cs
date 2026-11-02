@@ -249,8 +249,7 @@ public class StandardQueryOwnershipTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Standard/core"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Queries
             .Append(new SourceFile("main.gf", code));
         string ir = Compiler.Emit(sources);
         string directory = Path.Combine(Path.GetTempPath(), "gflat-query-ownership-" + Guid.NewGuid().ToString("N"));

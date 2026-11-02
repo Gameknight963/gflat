@@ -115,8 +115,7 @@ public sealed class BigIntegerSignTests
     }
     private static void Run(string directory,string source,string[] arguments,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-sign.gf",source));
+        var sources=StandardTestSources.Combine(StandardTestSources.Numerics, StandardTestSources.FileBinary).Append(new SourceFile("bigint-sign.gf",source));
         string input=Path.Combine(directory,"main.ll"),output=Path.Combine(directory,"main.exe");File.WriteAllText(input,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
         var compiled=NativeToolchain.Compile(input,output,optimizationLevel:optimization);Assert.True(compiled.ExitCode==0,compiled.StandardError);
         var result=NativeToolchain.Run(output,arguments,30000);Assert.True(result.ExitCode==0,$"BigInteger sign exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

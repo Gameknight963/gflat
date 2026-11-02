@@ -5,8 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class BitSetSubsetTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        => StandardTestSources.Collections
             .Append(new SourceFile("bitset-subset.gf", code));
 
     private static void Run(string code, int optimization)

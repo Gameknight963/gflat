@@ -155,8 +155,7 @@ public sealed class BufferedReaderPeekTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(file => new SourceFile(file, File.ReadAllText(file))).Append(new SourceFile("buffered-reader-peek.gf", program + "\n" + MemoryHooks));
+        var sources = StandardTestSources.IO.Append(new SourceFile("buffered-reader-peek.gf", program + "\n" + MemoryHooks));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }

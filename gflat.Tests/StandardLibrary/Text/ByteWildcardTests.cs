@@ -113,8 +113,7 @@ public sealed class ByteWildcardTests
                 if(attempts!=0)return 11;return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Text
             .Append(new SourceFile("byte-wildcard-adapters.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

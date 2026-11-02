@@ -84,8 +84,7 @@ public sealed class FileSkipTests
                     return 0;
                 }
                 """;
-            var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-                .Select(path => new SourceFile(path, File.ReadAllText(path)))
+            var sources = StandardTestSources.IO
                 .Append(new SourceFile("file-skip.gf", code));
             var result = CompilerTestHelper.Run(sources, optimization);
             Assert.True(result.ExitCode == 0, $"File skip exit {result.ExitCode}: {result.StandardError}");

@@ -90,8 +90,7 @@ public sealed class BigIntegerTryFormatTests
                 if(allocated!=released)return 8;return 0;
             }
             """;
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Numerics
             .Append(new SourceFile("bigint-try-format.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"BigInteger TryFormat exit {result.ExitCode}: {result.StandardError}");

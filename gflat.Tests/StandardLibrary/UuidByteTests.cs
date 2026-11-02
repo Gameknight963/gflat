@@ -132,8 +132,7 @@ public sealed class UuidByteTests
     }
 
     private static void Run(string program,int optimization){
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("uuid-bytes.gf",program));
+        var sources=StandardTestSources.Types.Concat(StandardTestSources.Load("core/Binary/BinaryPrimitives.gf")).Append(new SourceFile("uuid-bytes.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"UUID bytes exit {result.ExitCode}: {result.StandardError}");
     }
 }

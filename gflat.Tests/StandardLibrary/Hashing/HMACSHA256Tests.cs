@@ -189,8 +189,7 @@ public sealed class HMACSHA256Tests
     private static byte[] Repeat(byte value,int count)=>Enumerable.Repeat(value,count).ToArray();
     private static byte[] RandomBytes(Random random,int count){byte[] bytes=new byte[count];random.NextBytes(bytes);return bytes;}
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.Combine(StandardTestSources.Hashing, StandardTestSources.FileBinary)
             .Append(new SourceFile("hmac-sha256-test.gf",program));
     private static void Run(string program,int optimization)
     {

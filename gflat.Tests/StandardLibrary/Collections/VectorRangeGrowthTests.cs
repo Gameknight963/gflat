@@ -66,8 +66,7 @@ public sealed class VectorRangeGrowthTests
                 public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",counters+code));
+        var sources=StandardTestSources.Collections.Append(new SourceFile("main.gf",counters+code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

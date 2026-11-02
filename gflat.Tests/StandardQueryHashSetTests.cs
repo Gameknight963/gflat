@@ -175,8 +175,7 @@ public sealed class StandardQueryHashSetTests
 
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard/core"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("query-hash-set.gf",code));
+        =>StandardTestSources.Queries.Append(new SourceFile("query-hash-set.gf",code));
     private static void Run(string code,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(code),optimization);

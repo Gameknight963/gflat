@@ -100,8 +100,7 @@ public sealed class StandardJsonValueTextEqualsTests
                 return 0;
             }
             """;
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("main.gf",code));
+        var sources=StandardTestSources.Json.Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
     }

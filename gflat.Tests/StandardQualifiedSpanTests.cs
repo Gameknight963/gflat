@@ -53,6 +53,5 @@ public sealed class StandardQualifiedSpanTests
             "void Test(){int value=1;Vector<Cell> cells=new();cells.Add(new Cell(&value));" + operation + "}")));
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("main.gf", code));
+        => StandardTestSources.Combine(StandardTestSources.Text, StandardTestSources.Memory).Append(new SourceFile("main.gf", code));
 }

@@ -20,8 +20,7 @@ public sealed class DefaultVectorResizeTests
         """;
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        => StandardTestSources.Combine(StandardTestSources.Collections, StandardTestSources.Files)
             .Append(new SourceFile("default-vector-resize.gf", code));
 
     private static void Run(string code, int optimization)

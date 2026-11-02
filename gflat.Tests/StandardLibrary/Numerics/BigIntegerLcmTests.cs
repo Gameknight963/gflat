@@ -140,8 +140,7 @@ public sealed class BigIntegerLcmTests
         """;
     private static void Run(string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("bigint-lcm.gf",program));
+        var sources=StandardTestSources.Numerics.Append(new SourceFile("bigint-lcm.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"BigInteger LCM exit {result.ExitCode}: {result.StandardError}");
     }

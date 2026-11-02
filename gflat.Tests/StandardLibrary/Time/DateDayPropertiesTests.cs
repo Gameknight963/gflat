@@ -67,6 +67,5 @@ public sealed class DateDayPropertiesTests
     }
 
     private static IEnumerable<SourceFile> Sources(string source)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("date-day-properties.gf",source));
+        => StandardTestSources.Time.Append(new SourceFile("date-day-properties.gf",source));
 }

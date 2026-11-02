@@ -132,8 +132,7 @@ public sealed class ConsoleLineWriterTests
 
     private static string Compile(string directory,string program,int optimization)
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("console-writer-line.gf",program));
+        var sources=StandardTestSources.Combine(StandardTestSources.Console.Concat(StandardTestSources.Load("core/Text/CountingWriter.gf")), StandardTestSources.FileBinary).Append(new SourceFile("console-writer-line.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");
         File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
         var result=NativeToolchain.Compile(ir,executable,optimizationLevel:optimization);

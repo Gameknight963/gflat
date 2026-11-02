@@ -7,8 +7,7 @@ public sealed class DateFormattingAliasTests
     [InlineData(2)]
     public void BackedReceiverOverlapFormatsSnapshotAndPreservesAllBytesOnShortCapacity(int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Time
             .Append(new SourceFile("date-formatting-alias.gf", """
                 using Standard; using Standard::Time;
                 int main(){

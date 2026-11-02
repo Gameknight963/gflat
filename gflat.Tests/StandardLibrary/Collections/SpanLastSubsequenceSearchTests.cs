@@ -193,8 +193,7 @@ public sealed class SpanLastSubsequenceSearchTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Collections
             .Append(new SourceFile("span-last-subsequence-search.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
         var result = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

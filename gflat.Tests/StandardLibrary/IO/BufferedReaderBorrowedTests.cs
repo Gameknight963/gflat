@@ -188,8 +188,7 @@ public sealed class BufferedReaderBorrowedTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(file => new SourceFile(file, File.ReadAllText(file))).Append(new SourceFile("borrowed-buffered-reader.gf", program + "\n" + MemoryHooks));
+        => StandardTestSources.IO.Append(new SourceFile("borrowed-buffered-reader.gf", program + "\n" + MemoryHooks));
 
     private static void Run(string program, int optimization)
     {

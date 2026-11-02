@@ -86,6 +86,7 @@ public sealed class InterfaceViewCastTests
                 private static void*? allocation;
                 private static void*?[128] slots;
                 private static nuint count;
+                private static void(void*)*? destructor;
                 public static int Allocations;public static int Releases;public static bool Bad;
                 public static void* Allocate(nuint bytes,nuint alignment){
                     if(allocation!=null)throw new Exception("Unexpected live allocation");
@@ -100,12 +101,16 @@ public sealed class InterfaceViewCastTests
                 public static void ReferenceRemoved(void* slot)nothrow{
                     for(nuint i=0;i<count;i++)if(slots[i]==slot){slots[i]=null;return;}
                 }
+                public static void RegisterDestructor(void* storage,void(void*)* destroy)nothrow{
+                    if(storage!=allocation){Bad=true;return;}destructor=destroy;
+                }
                 public static nuint Collect(){
                     if(allocation==null)return 0;
                     for(nuint i=0;i<count;i++){
                         if(slots[i]!=null){void*? target=*((void*?*)slots[i]!);if(target==allocation)return 0;}
                     }
-                    Memory::Free(allocation!);allocation=null;Releases++;return 1;
+                    if(destructor!=null)destructor!(allocation!);
+                    destructor=null;Memory::Free(allocation!);allocation=null;Releases++;return 1;
                 }
             }
             class Node:IRead{

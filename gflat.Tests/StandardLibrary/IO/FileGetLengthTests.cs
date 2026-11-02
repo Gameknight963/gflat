@@ -70,7 +70,8 @@ public sealed class FileGetLengthTests(ITestOutputHelper output)
             string loop = Path.Combine(directory, "loop");
             File.CreateSymbolicLink(loop, "loop");
             string executable = Compile(directory, optimization);
-            CheckLength(executable, alias);
+            // Length queries follow the link to its target contents.
+            CheckLength(executable, alias, bytes.LongLength);
             CheckFailure(executable, directoryLink);
             CheckFailure(executable, dangling);
             CheckFailure(executable, loop);
@@ -80,9 +81,9 @@ public sealed class FileGetLengthTests(ITestOutputHelper output)
         finally { await TestDirectoryCleanup.DeleteAsync(directory); }
     }
 
-    private static void CheckLength(string executable, string path)
+    private static void CheckLength(string executable, string path, long? expectedLength = null)
     {
-        long expected = new FileInfo(path).Length;
+        long expected = expectedLength ?? new FileInfo(path).Length;
         var result = NativeToolchain.Run(executable, ["get", path], 30000);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
         Assert.Equal(expected, long.Parse(result.StandardOutput, CultureInfo.InvariantCulture));

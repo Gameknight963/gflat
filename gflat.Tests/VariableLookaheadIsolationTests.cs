@@ -12,13 +12,20 @@ public sealed class VariableLookaheadIsolationTests
     public void NestedTypeProbesPreserveLaterShiftExpressions(string statements, int remainingShifts)
     {
         var tokens = Lexer.Tokenize("int F(){" + statements + "int healthy=42; return healthy;}");
+        var original = tokens.ToArray();
         var diagnostics = new DiagnosticBag();
         var unit = Parser.Parse(tokens, diagnostics);
         Assert.False(diagnostics.HasErrors, diagnostics.FormatAll());
-        Assert.Equal(remainingShifts, tokens.Count(token => token.Kind == TokenKind.GreaterGreater));
+        Assert.Equal(original, tokens);
         var method = Assert.IsType<MethodDeclaration>(Assert.Single(unit.Members));
+        Assert.Equal(remainingShifts, method.Body!.Statements.OfType<ExpressionStatement>()
+            .Sum(statement => CountShifts(statement.Expression)));
         Assert.Contains(method.Body!.Statements, statement => statement is VariableDeclaration { Name: "healthy" });
     }
+
+    private static int CountShifts(AstNode node) => node is BinaryExpression binary
+        ? (binary.Operator == TokenKind.GreaterGreater ? 1 : 0) + CountShifts(binary.Left) + CountShifts(binary.Right)
+        : 0;
 
     [Theory]
     [InlineData(0)]

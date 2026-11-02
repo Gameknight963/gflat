@@ -21,7 +21,8 @@ public sealed class StandardJsonPrettyPrintTests
     public void LayoutMatchesDotNetWhereEscapingAgreesAndRawLexemesSurviveFormatting(int optimization)
     {
         var rows=new List<(byte[] Input,byte[] Expected,ulong Width,bool Default)>();
-        void Fixed(string input,string expected,ulong width=2,bool useDefault=false)=>rows.Add((Encoding.UTF8.GetBytes(input),Encoding.UTF8.GetBytes(expected),width,useDefault));
+        // Expected JSON uses LF, including raw multiline literals in CRLF checkouts.
+        void Fixed(string input,string expected,ulong width=2,bool useDefault=false)=>rows.Add((Encoding.UTF8.GetBytes(input),Encoding.UTF8.GetBytes(expected.ReplaceLineEndings("\n")),width,useDefault));
         foreach(string input in new[]{"null"," true "," 17 ","\"abc\"","{}","[ ]","[1,2,3]",
             "{\"name\":\"abc\",\"items\":[1,{},[],{\"ok\":true}],\"empty\":{}}",
             new string('[',70)+"0"+new string(']',70)}){

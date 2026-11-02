@@ -14,6 +14,7 @@ public class Lexer
 
     public static List<Token> Tokenize(string code, gflat.diagnostics.DiagnosticBag? diagnostics = null)
     {
+        using var timing = PipelineTimings.Measure("syntax.lex");
         // Tokens carry offsets without per-token AsyncLocal writes. Helpers'
         // line-based errors receive the matching source span on the error path.
         SourceFile? diagnosticSource = SourceContext.Current?.Source;

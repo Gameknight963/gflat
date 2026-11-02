@@ -4,18 +4,14 @@ permissions:
   contents: read
 jobs:
   compiler-x64:
-    name: compiler (${{ matrix.os }}, O${{ matrix.optimization }})
+    name: compiler (${{ matrix.os }}, shard ${{ matrix.shard }})
     runs-on: ${{ matrix.os }}
-    # The compiler suite alone can exceed 25 minutes on hosted runners.
-    # Include time for restore, editor tests, and bundled-toolchain checks.
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-24.04]
-        optimization: ['0', '2']
-    env:
-      GFLAT_OPT_LEVEL: ${{ matrix.optimization }}
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -25,26 +21,78 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./build/prepare-windows-test-runner.ps1
-      # Pin a known LLVM version on Linux; Windows discovers VS's bundled Clang.
       - name: Select Linux toolchain
         if: runner.os == 'Linux'
         run: |
           clang-18 --version
           clang-18 --driver-mode=g++ --version
           echo "GFLAT_CLANG=clang-18" >> "$GITHUB_ENV"
-      - run: dotnet restore gflat.Tests/gflat.Tests.csproj
-      - run: dotnet restore gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
-      # Allow cold runner/toolchain startup without prematurely killing passing tests.
-      - run: dotnet test gflat.Tests/gflat.Tests.csproj --no-restore --blame-hang-timeout 5m --logger trx
-      - run: dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj --no-restore --blame-hang-timeout 5m --logger trx
+      - name: Build tests and create disjoint shard plans
+        shell: pwsh
+        run: |
+          dotnet build gflat.Tests/gflat.Tests.csproj -m:1 -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { throw 'Test build failed' }
+          $weights = @()
+          $durationFile = 'build/test-durations/${{ runner.os }}.json'
+          if (Test-Path $durationFile) { $weights += $durationFile }
+          dotnet run --project build/TestPlan -- plan gflat.Tests/bin/Debug/net10.0/gflat.Tests.dll artifacts/test-plan 4 @weights
+          if ($LASTEXITCODE -ne 0) { throw 'Test planning failed' }
+      - name: Run primary cases, including explicit O0/O2 theories
+        run: dotnet test gflat.Tests/gflat.Tests.csproj --no-build --no-restore --settings artifacts/test-plan/${{ matrix.shard }}-primary.runsettings --results-directory artifacts/test-plan/results/primary --blame-hang-timeout 5m --logger trx
+      - name: Include observed default compilations in the fallback
         if: ${{ !cancelled() }}
+        run: dotnet run --project build/TestPlan --no-build -- fallback artifacts/test-plan ${{ matrix.shard }}
+      - name: Run O2 fallback for tests without optimization parameters
+        if: ${{ !cancelled() }}
+        run: dotnet test gflat.Tests/gflat.Tests.csproj --no-build --no-restore --settings artifacts/test-plan/${{ matrix.shard }}-fallback.runsettings --results-directory artifacts/test-plan/results/fallback --blame-hang-timeout 5m --logger trx
+      - name: Summarize stage and test durations
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          dotnet run --project build/TestPlan --no-build -- report artifacts/test-plan
+          if ($LASTEXITCODE -ne 0) { throw 'Timing report failed' }
+          Get-Content artifacts/test-plan/timings.md | Add-Content $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}-shard-${{ matrix.shard }}
+          path: artifacts/test-plan/
+  tooling:
+    name: tooling (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Prepare isolated Windows test directory
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./build/prepare-windows-test-runner.ps1
+      - name: Select Linux toolchain
+        if: runner.os == 'Linux'
+        run: echo "GFLAT_CLANG=clang-18" >> "$GITHUB_ENV"
+      - run: dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj --blame-hang-timeout 5m --logger trx
       - name: Build and run Linux projects
         if: runner.os == 'Linux' && !cancelled()
         run: |
+          dotnet build gflat/gflat.csproj
           dotnet gflat/bin/Debug/net10.0/gflat.dll build examples/hello/hello.gfproj --run
           dotnet gflat/bin/Debug/net10.0/gflat.dll build examples/interpolation/interpolation.gfproj --run
+      - name: Verify compiler shard discovery coverage
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          dotnet build gflat.Tests/gflat.Tests.csproj -m:1 -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { throw 'Test build failed' }
+          ./build/TestPlan/test.ps1
       - name: Test bundled tools without installed dotnet or MSBuild
-        if: matrix.optimization == '0'
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: |
           $runtime = if ($IsWindows) { 'win-x64' } else { 'linux-x64' }
@@ -60,7 +108,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.os }}-O${{ matrix.optimization }}
+          name: tooling-results-${{ matrix.os }}
           path: '**/TestResults/**'
   visual-studio-extension:
     runs-on: windows-latest
@@ -94,7 +142,7 @@ jobs:
           if-no-files-found: error
   nightly-bundles:
     name: bundle (${{ matrix.runtime }})
-    needs: [compiler-x64, visual-studio-extension]
+    needs: [compiler-x64, tooling, visual-studio-extension]
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15

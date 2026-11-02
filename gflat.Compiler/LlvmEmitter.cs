@@ -1108,6 +1108,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(CompilationUnit node)
     {
+        using var timing = PipelineTimings.Measure("emit.ir");
         EmitPrimitiveInterfaceTables();
         _currentNamespacePath = "";
         foreach (AstNode member in node.Members)

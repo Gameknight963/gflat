@@ -26,7 +26,9 @@ public static class Compiler
         diagnostics ??= new();
         try
         {
-            var compilation = new Compilation(sources, diagnostics, options: options);
+            Compilation compilation;
+            using (PipelineTimings.Measure("frontend.parse-and-prelude"))
+                compilation = new Compilation(sources, diagnostics, options: options);
             Validate();
             var checker = new TypeChecker(diagnostics);
             compilation.Unit.Accept(checker);

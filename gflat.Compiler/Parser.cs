@@ -137,6 +137,7 @@ namespace gflat
 
         public static CompilationUnit Parse(List<Token> tokens, DiagnosticBag? diagnostics = null, bool recoverErrors = false)
         {
+            using var timing = PipelineTimings.Measure("syntax.parse");
             using var sourceContext = SourceContext.Enter(tokens[0].Span);
             Parser parser = new Parser(diagnostics);
             parser._tokens = tokens;

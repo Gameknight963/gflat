@@ -2092,6 +2092,7 @@ namespace gflat
 
         public void Visit(CompilationUnit node)
         {
+            using var timing = PipelineTimings.Measure("frontend.check");
             _cancellationToken.ThrowIfCancellationRequested();
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;

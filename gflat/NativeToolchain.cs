@@ -86,6 +86,8 @@ public static class NativeToolchain
     /// <summary>Capture a process's output within one timeout covering exit and both output streams; -1 waits indefinitely.</summary>
     public static ProcessResult Run(string executable, IEnumerable<string> arguments, int timeoutMilliseconds = 30000)
     {
+        using var timing = PipelineTimings.Measure(Path.GetFileName(executable).StartsWith("clang", StringComparison.OrdinalIgnoreCase)
+            ? "process.clang" : "process.execute", Path.GetFileName(executable));
         if (timeoutMilliseconds < -1) throw new ArgumentOutOfRangeException(nameof(timeoutMilliseconds));
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo(executable)
@@ -94,6 +96,8 @@ public static class NativeToolchain
             RedirectStandardOutput = true, RedirectStandardError = true
         };
         foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
+        if (PipelineTimings.Enabled && PipelineTimings.TestName is { } test)
+            process.StartInfo.Environment["GFLAT_PROFILE_TEST"] = test;
         process.Start();
         using var deadline = new CancellationTokenSource(timeoutMilliseconds);
         Task<string> stdout = process.StandardOutput.ReadToEndAsync(deadline.Token);
@@ -122,6 +126,7 @@ public static class NativeToolchain
     /// <summary>Run user code with inherited input/output so console prompts remain interactive.</summary>
     public static int RunProgram(string executable, IEnumerable<string> arguments)
     {
+        using var timing = PipelineTimings.Measure("process.execute", Path.GetFileName(executable));
         using var process = new Process { StartInfo = new ProcessStartInfo(executable) { UseShellExecute = false } };
         gflat.Projects.MsBuildHost.RestoreUserProcessEnvironment(process.StartInfo.Environment);
         foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
@@ -132,6 +137,7 @@ public static class NativeToolchain
 
     public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int optimizationLevel = 2)
     {
+        using var timing = PipelineTimings.Measure("native.compile-link", $"O{optimizationLevel}, explicit, C++");
         gflat.Projects.OptimizationLevel.Parse(optimizationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
         string compiler = FindClang(null);
         var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O" + optimizationLevel, "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes) };
@@ -144,6 +150,7 @@ public static class NativeToolchain
     public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null, gflat.Projects.NativeLinkInputs? nativeLibraries = null)
     {
         string optimization = optimizationLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
+        using var timing = PipelineTimings.Measure("native.compile-link", $"O{optimization}, {(optimizationLevel.HasValue ? "explicit" : "default")}");
         gflat.Projects.OptimizationLevel.Parse(optimization);
         var linkInputs = (nativeLibraries ?? gflat.Projects.NativeLinkInputs.Empty).Normalize(Environment.CurrentDirectory);
         var paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;

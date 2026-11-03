@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace gflat.LanguageServer;
 
-public sealed record DisplayPart(string Kind, string Text, bool Bold = false, Location? Target = null, int ClassificationStyle = 0);
+public sealed record DisplayPart(string Kind, string Text, bool Bold = false, Location? Target = null, int ClassificationStyle = 0, string? NavigationHint = null);
 public sealed record HoverDetail(string Label, string Value, DisplayPart[]? ValueParts = null)
 {
     public string Markdown => Label.Length == 0 ? Value : $"**{Label}:** {Value}";
@@ -46,7 +46,7 @@ public sealed class VisualStudioHover
     {
         ["_vs_type"] = "ClassifiedTextElement",
         ["Runs"] = parts.Select(p => new Dictionary<string, object> {
-            ["_vs_type"] = "ClassifiedTextRun", ["ClassificationTypeName"] = Classification(p.Kind), ["Text"] = p.Text, ["Style"] = (p.Bold ? 1 : 0) | p.ClassificationStyle, ["_gflat_target"] = p.Target!
+            ["_vs_type"] = "ClassifiedTextRun", ["ClassificationTypeName"] = Classification(p.Kind), ["Text"] = p.Text, ["Style"] = (p.Bold ? 1 : 0) | p.ClassificationStyle, ["_gflat_target"] = p.Target!, ["_gflat_navigationHint"] = p.NavigationHint!
         }).ToArray()
     };
     private static string Classification(string kind) => kind switch

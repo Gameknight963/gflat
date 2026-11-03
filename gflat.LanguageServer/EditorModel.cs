@@ -838,6 +838,12 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         options ??= new();
+        if (DocumentationReferenceAt(path, offset) is { } documented)
+        {
+            var signature = Signature(documented.Symbol, navigable: true, hoverPath: path, hoverOffset: offset);
+            return new HoverResult(new("markdown", "```gflat\n" + Detail(documented.Symbol) + "\n```"), Workspace.ToRange(documented.Span),
+                presentation?.Render(signature, [], Glyph(documented.Symbol)));
+        }
         if (MacroAt(path, offset) is { Classification: "preprocessor" }) return null;
         if (MacroHover(path, offset, presentation) is { } macro) return macro;
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
@@ -897,7 +903,12 @@ public sealed partial class EditorModel
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = options.ShowTypeLayout && !symbol.IsTypeParameter ? LayoutDetails(symbol) : [];
         if (Documentation(symbol) is { } prose)
-            details = [new("", DocumentationMarkdown(prose), [new("text", prose)]), .. details];
+            details = [new("", DocumentationMarkdown(prose), DocumentationParts(symbol, StructuredDocumentation(symbol)!.Summary)), .. details];
+        if (StructuredDocumentation(symbol) is { Sections.Length: > 0 })
+        {
+            var document = DocumentationLocation(symbol);
+            details = [.. details, new("", "[View documentation](" + document.Uri + ")", [new("text", "View documentation", Target: document, NavigationHint: "View documentation")])];
+        }
         if (!symbol.IsTypeParameter && options.ShowKnownExceptions && (symbol.BoundMethod ?? symbol.Syntax.Node as MethodDeclaration) is { } hoveredMethod && snapshot.Checker is { } exceptionChecker &&
             !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {
@@ -926,6 +937,7 @@ public sealed partial class EditorModel
     }
     public object? Definition(string path, int offset)
     {
+        if (DocumentationReferenceAt(path, offset) is { } documentation) return NavigationLocation(documentation.Symbol);
         if (OverriddenMember(path, offset) is { } overridden) return NavigationLocation(overridden);
         if (MacroAt(path, offset) is { Declaration.Source: { } file } macro && !file.Path.StartsWith('<'))
             return new Location(Workspace.FileUri(file.Path), Workspace.ToRange(macro.Declaration));
@@ -956,7 +968,8 @@ public sealed partial class EditorModel
         int active = Math.Max(0, Array.FindIndex(candidates, candidate => selected != null && candidate.Syntax == selected.Syntax));
         return new { signatures = candidates.Select(s => new {
             label = Detail(s),
-            parameters = s.Parameters!.Select(p => new { label = ParameterText(p) }).ToArray(),
+            documentation = Documentation(s) is { } summary ? new Markup("plaintext", summary) : null,
+            parameters = s.Parameters!.Select(p => new { label = ParameterText(p), documentation = ParameterDocumentation(s, p.Name) is { } description ? new Markup("plaintext", description) : null }).ToArray(),
             _vs_colorizedLabel = visualStudio ? VisualStudioHover.Text(Signature(s, navigable: true)) : null
         }).ToArray(), activeSignature = active, activeParameter = call.Commas };
     }
@@ -1002,6 +1015,9 @@ public sealed partial class EditorModel
             classified.Add((span, kind, modifiers));
         }
         classified.AddRange(macroTokens);
+        foreach (var reference in documentationReferences)
+            if (Workspace.Paths.Equals(reference.Key.Source?.Path, path))
+                classified.Add((reference.Key, Array.IndexOf(TokenTypes, reference.Value.Classification), 0));
         foreach (var item in classified.OrderBy(t => t.Span.Start))
         {
             // VS maps the LSP number token to generic "literal", which masks

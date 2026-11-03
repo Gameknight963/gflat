@@ -5,6 +5,18 @@
     <key>settings</key>
     <array>
       <dict>
+        <key>scope</key><string>comment.line.documentation.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>xml doc comment - text</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>punctuation.definition.documentation.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>xml doc comment - delimiter</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>entity.name.tag.documentation.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>xml doc comment - name</string></dict>
+      </dict>
+      <dict>
         <key>scope</key><string>entity.name.function.preprocessor.gflat</string>
         <key>settings</key><dict><key>vsclassificationtype</key><string>cppMacro</string></dict>
       </dict>

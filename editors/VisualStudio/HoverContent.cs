@@ -31,7 +31,7 @@ public static class HoverContent
                         int line = (int)target["range"]!["start"]!["line"]!;
                         int column = (int)target["range"]!["start"]!["character"]!;
                         if (line >= 0 && column >= 0)
-                            return new ClassifiedTextRun(kind, text, () => navigate(uri.LocalPath, line, column), "Go to definition", style);
+                            return new ClassifiedTextRun(kind, text, () => navigate(uri.LocalPath, line, column), (string?)run["_gflat_navigationHint"] ?? "Go to definition", style);
                     }
                     return new ClassifiedTextRun(kind, text, style);
                 }).ToArray());

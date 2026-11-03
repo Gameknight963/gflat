@@ -154,6 +154,12 @@ public static class Workspace
                     output.TryAdd(path, new());
                     output[path].Add(Convert(diagnostic));
                 }
+                foreach (var issue in model.DocumentationIssues.Where(i => i.Span.Source != null && !i.Span.Source.Path.StartsWith('<')))
+                {
+                    string path = issue.Span.Source!.Path;
+                    output.TryAdd(path, new());
+                    output[path].Add(new(ToRange(issue.Span), 2, "GFLS0003", "gflat", issue.Message));
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception error)

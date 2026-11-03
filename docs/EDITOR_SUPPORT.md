@@ -20,9 +20,23 @@ Document outlines include namespaces, types, and members.
 The server provides hierarchical outlines when the client supports them and flat
 symbol lists otherwise. Document highlights mark declarations and references alike.
 
-Rename supports locals and explicit parameters, including references in `nameof`.
-It requires an error-free project. The server checks each candidate rename for
-new errors and changed bindings before applying it.
+Rename supports source types, members, namespaces, aliases, locals, parameters,
+and macros. Type renames include constructor and destructor names. Interface
+members and overrides are renamed together. Documentation references and
+`nameof` follow their declarations. Rename requires an error-free project and
+checks the edited project for errors and changed bindings.
+
+- Ctrl-click `override` to open the overridden base member
+- Go to Implementation finds interface implementations and overrides
+- Type hierarchy requests show direct bases and derived types
+
+Format Document and Format Selection use four-space indentation and opening
+braces on a new line by default. Indentation follows the client's formatting
+options. Visual Studio's language options include **Opening braces on a new
+line**. Formatting preserves comments, directive bodies, and literal contents.
+
+Quick actions can add missing imports, remove unused imports, implement
+interface members, and generate constructors for instance fields.
 
 Clients supporting versioned workspace edits receive the unsaved document version.
 Other clients receive range edits.
@@ -32,9 +46,22 @@ Other clients receive range edits.
 Hovers show signatures with source type names. Literal hovers show the checked
 type. Visual Studio adds shared symbol icons and clickable source declarations.
 
+Declaration comments use a [Doxygen-style documentation format](DOCUMENTATION.md).
+Hovers and completion show the summary. Signature help includes parameter
+descriptions. **View documentation** opens the full comment in a separate document.
+
 - Macro hovers show the definition and the expanded tokens at the invocation
 - Macro definitions and hovers share token classifications for theme colors
 - Visual Studio uses its preprocessor and C++ macro classifications for highlighting
+- **Inspect macro expansion** opens substitution and rescanning steps
+- **Expand macro inline** replaces an invocation with its expanded tokens inside
+  a raw group, preserving preprocessing suppression
+
+Include completion lists files and directories after `#include "` or
+`#include <`. Quoted includes search the current file's directory and configured
+include directories. Angle includes search configured include directories.
+For a header included in several scopes, **Use header context** selects the
+enclosing scope used for completion, hovers, and navigation.
 
 The optional `Exceptions:` section lists known outgoing exception types. It
 excludes caught exceptions and failures terminated by a `nothrow` boundary.

@@ -9,16 +9,16 @@ public sealed class DeclarationDocumentationTests
     [Theory]
     [InlineData("\n")]
     [InlineData("\r\n")]
-    public void AdjacentProsePreservesParagraphsAndAppearsInPortableRichAndCompletion(string newline)
+    public void ProseSummaryAppearsInPortableRichAndCompletion(string newline)
     {
         string library = string.Join(newline, ["/// First paragraph", "///", "/// Second paragraph with [literal] <tags> and `ticks`", "public int Read(int value) => value;"]);
         var fixture = Analyze(library, "int main() => Read(1);");
         int use = fixture.Client.Text.IndexOf("Read", StringComparison.Ordinal);
-        string documentation = "First paragraph\n\nSecond paragraph with [literal] <tags> and `ticks`";
+        string documentation = "First paragraph";
         var portable = Hover(fixture, use);
         string markdown = portable.GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("First paragraph\n\nSecond paragraph", markdown);
-        Assert.Contains(@"\[literal\]", markdown); Assert.Contains(@"\<tags\>", markdown); Assert.Contains(@"\`ticks\`", markdown);
+        Assert.Contains("First paragraph", markdown);
+        Assert.DoesNotContain("Second paragraph", markdown);
         Assert.False(portable.TryGetProperty("_vs_rawContent", out _));
         var rich = Hover(fixture, use, true);
         var rows = rich.GetProperty("_vs_rawContent").GetProperty("Elements").EnumerateArray().ToArray();

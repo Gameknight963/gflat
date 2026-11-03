@@ -18,6 +18,9 @@ public sealed partial class EditorModel
         int offset = Workspace.Offset(source.Text, System.Text.Json.JsonSerializer.SerializeToElement(range.Start, Protocol.JsonOptions));
         var actions = new List<EditorCodeAction>();
         actions.AddRange(MacroActions(path, offset));
+        if (ExportDocumentation().Length > 0)
+            actions.Add(new("Generate documentation manual", "source", Command:
+                new("Generate documentation manual", "gflat.generateDocumentation", [Workspace.FileUri(path)])));
         var contexts = HeaderContexts(path);
         if (contexts.Length > 1)
             foreach (var context in contexts)

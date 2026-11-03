@@ -56,6 +56,15 @@
       "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|nothrow\\b|$))"
     },
     {
+      "name": "comment.line.documentation.gflat",
+      "begin": "(///)(?!/)",
+      "beginCaptures": { "1": { "name": "punctuation.definition.documentation.gflat" } },
+      "end": "$",
+      "patterns": [
+        { "name": "entity.name.tag.documentation.gflat", "match": "(?<!\\S)[@\\\\](?:brief|details|param|tparam|return|returns|throws|throw|exception|ref|c|code|endcode)\\b" }
+      ]
+    },
+    {
       "name": "comment.line.double-slash.gflat",
       "begin": "//",
       "end": "$"

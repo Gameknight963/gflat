@@ -193,8 +193,8 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,
                             implementationProvider = true, typeHierarchyProvider = true,
                             documentFormattingProvider = true, documentRangeFormattingProvider = true,
-                            codeActionProvider = new { codeActionKinds = new[] { "quickfix", "refactor.rewrite", "refactor.inline", "source.organizeImports" } },
-                            executeCommandProvider = new { commands = new[] { "gflat.selectHeaderContext", "gflat.inspectMacro" } },
+                            codeActionProvider = new { codeActionKinds = new[] { "quickfix", "refactor.rewrite", "refactor.inline", "source" } },
+                            executeCommandProvider = new { commands = new[] { "gflat.selectHeaderContext", "gflat.inspectMacro", "gflat.generateDocumentation" } },
                             documentOnTypeFormattingProvider = new { firstTriggerCharacter = "}", moreTriggerCharacter = new[] { ";" } },
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
@@ -312,6 +312,18 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 string command = query.Parameters.GetProperty("command").GetString()!;
                 var arguments = query.Parameters.GetProperty("arguments");
                 string commandPath = Workspace.FilePath(arguments[0].GetString()!);
+                if (command == "gflat.generateDocumentation" && latest?.Models?.GetValueOrDefault(commandPath) is { } documentationModel)
+                {
+                    string directory = arguments.GetArrayLength() > 1 ? Path.GetFullPath(arguments[1].GetString()!) :
+                        Path.Combine(Path.GetTempPath(), "gflat", "manuals", Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(directory);
+                    var entries = documentationModel.ExportDocumentation();
+                    await File.WriteAllTextAsync(Path.Combine(directory, "index.html"), DocumentationManual.Html(entries));
+                    await File.WriteAllTextAsync(Path.Combine(directory, "documentation.json"), JsonSerializer.Serialize(new { version = 1, entries }, Protocol.JsonOptions));
+                    await Reply(query.Id, new { uri = Workspace.FileUri(Path.Combine(directory, "index.html")), directory });
+                    await Send(new { jsonrpc = "2.0", method = "window/showMessage", @params = new { type = 3, message = "Documentation generated: " + Path.Combine(directory, "index.html") } });
+                    return;
+                }
                 if (command == "gflat.selectHeaderContext" && latest?.Models?.GetValueOrDefault(commandPath) is { } headerModel)
                 {
                     string context = arguments[1].GetString()!;
@@ -410,7 +422,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
             };
             await Reply(query.Id, result);
         }
-        catch (Exception error) when (error is ArgumentException or InvalidOperationException or KeyNotFoundException or JsonException)
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or KeyNotFoundException or JsonException or IOException or UnauthorizedAccessException)
         { await Error(query.Id, -32602, error.Message); }
     }
 
@@ -421,7 +433,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
             return new { changes = groups.ToDictionary(group => Workspace.FileUri(group.Key),
                 group => group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()) };
         return new { documentChanges = groups.Select(group => new {
-            textDocument = new { uri = Workspace.FileUri(group.Key), version = documents.GetValueOrDefault(group.Key)?.Version },
+            textDocument = new Dictionary<string, object?> { ["uri"] = Workspace.FileUri(group.Key), ["version"] = documents.GetValueOrDefault(group.Key)?.Version },
             edits = group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()
         }).ToArray() };
     }

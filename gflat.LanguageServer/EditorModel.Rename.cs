@@ -13,7 +13,7 @@ public sealed partial class EditorModel
         if (snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
             throw new InvalidOperationException("Rename requires an error-free project; fix diagnostics first.");
         int index = TokenAt(path, offset);
-        var symbol = index < 0 ? null : Resolve(path, index);
+        var symbol = DocumentationReferenceAt(path, offset)?.Symbol ?? (index < 0 ? null : Resolve(path, index));
         if (symbol?.Syntax.Node is ConstructorDeclaration)
             symbol = symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && s.Qualified == symbol.Owner);
         return symbol?.Syntax.Node is VariableDeclaration or Parameter or FieldDeclaration or PropertyDeclaration or
@@ -33,8 +33,8 @@ public sealed partial class EditorModel
         }
         var symbol = RenameSymbol(path, offset);
         if (symbol == null) return null;
-        var token = tokens[path][TokenAt(path, offset)];
-        return new(Workspace.ToRange(token.Span), symbol.Name);
+        var span = DocumentationReferenceAt(path, offset)?.Span ?? tokens[path][TokenAt(path, offset)].Span;
+        return new(Workspace.ToRange(span), symbol.Name);
     }
 
     public RenameEdit[] Rename(string path, int offset, string newName)
@@ -63,6 +63,7 @@ public sealed partial class EditorModel
             ? snapshot.MacroSymbols.Where(s => s.Classification == "macro" && s.Declaration == macro.Declaration).Select(s => s.Span)
                 .Append(macro.Declaration).Distinct().ToArray()
             : references.Where(pair => pair.Key.Kind == TokenKind.Identifier && pair.Value != null && names.Contains(pair.Value.NameSpan)).Select(pair => pair.Key.Span)
+                .Concat(documentationReferences.Where(pair => names.Contains(pair.Value.NameSpan)).Select(pair => pair.Key))
                 .Concat(names).Distinct().OrderBy(span => span.Start).ToArray();
         var offsets = spans.GroupBy(span => span.Source!.Path, Workspace.Paths).ToDictionary(group => group.Key, group => {
             var ordered = group.OrderBy(span => span.Start).ToArray();
@@ -90,6 +91,14 @@ public sealed partial class EditorModel
         if (changedSnapshot.Diagnostics.FirstOrDefault(d => d.Severity == DiagnosticSeverity.Error) is { } renameError)
             throw new InvalidOperationException("Rename would introduce compiler errors or conflicting declarations: " + renameError.Message);
         var changedModel = new EditorModel(changedSnapshot, changedSources);
+        foreach (var original in documentationReferences)
+        {
+            if (original.Key.Source is not { } document || document.Path.StartsWith('<')) continue;
+            var actual = changedModel.DocumentationReferenceAt(document.Path, Map(document.Path, original.Key.Start));
+            if (actual == null || !Workspace.Paths.Equals(actual.Value.Symbol.NameSpan.Source?.Path, original.Value.NameSpan.Source?.Path) ||
+                actual.Value.Symbol.NameSpan.Start != Map(original.Value.NameSpan.Source!.Path, original.Value.NameSpan.Start))
+                throw new InvalidOperationException("Rename would change a documentation reference.");
+        }
         foreach (var original in snapshot.MacroSymbols.Where(m => m.Classification == "macro" && m.Declaration.Source is { } source && !source.Path.StartsWith('<')))
         {
             var actual = changedSnapshot.MacroSymbols.FirstOrDefault(m => m.Classification == "macro" &&
@@ -117,6 +126,7 @@ public sealed partial class EditorModel
     private IEnumerable<Symbol> RenameFamily(Symbol symbol)
     {
         yield return symbol;
+        if (symbol.IsTypeParameter) yield break;
         if (symbol.Syntax.Node is NamespaceDeclaration)
         {
             foreach (var other in symbols.Where(s => s.Syntax.Node is NamespaceDeclaration && s.Qualified == symbol.Qualified)) yield return other;

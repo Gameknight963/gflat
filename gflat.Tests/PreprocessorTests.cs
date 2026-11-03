@@ -9,6 +9,16 @@ public sealed class PreprocessorTests
         => new Preprocessor(options).Process(new SourceFile("macros.gf", code));
     private static string[] Words(string code) => Process(code).Tokens.Where(t => t.Kind != TokenKind.EndOfFile).Select(t => t.Text).ToArray();
 
+    [Fact]
+    public void ExpansionPreviewsFollowInvocationTimeDefinitionsAndPreserveArgumentPreviews()
+    {
+        const string code = "#define V 7\n#define TWICE(x) (x + x)\nTWICE(V)\n#undef V\n#define V 9\nTWICE(V)";
+        var result = Process(code);
+        var invocations = result.Symbols.Where(s => s.Name == "TWICE" && !s.Definition).ToArray();
+        Assert.Equal(new[] { "( 7 + 7 )", "( 9 + 9 )" }, invocations.Select(s => s.Expansion));
+        Assert.Equal("7", Assert.Single(result.Symbols, s => s.Span.Start == code.IndexOf("TWICE(V)", StringComparison.Ordinal) + 6).Expansion);
+    }
+
     [Theory]
     [InlineData("#define A 12\nA", "12")]
     [InlineData("#define A B\n#define B A\nA", "A")]

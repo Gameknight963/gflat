@@ -72,4 +72,49 @@ public sealed class PreprocessorEditorTests : IDisposable
         Assert.Equal(new Position(0, 8), definition.Range.Start);
     }
 
+    [Fact]
+    public void NativeMacroHoverShowsExpandedTokensAndDirectiveHelp()
+    {
+        const string code = "#define VALUE 7\n#define DOUBLE(x) (x + VALUE)\nint main()=>DOUBLE(VALUE);";
+        var source = new SourceFile(Path.Combine(root, "main.gf"), code);
+        var model = new EditorModel(new AnalysisSnapshot([source]), [source]);
+        var presentation = new VisualStudioHover(System.Text.Json.JsonSerializer.SerializeToElement(new { }));
+        var hover = Assert.IsType<HoverResult>(model.Hover(source.Path, code.LastIndexOf("DOUBLE", StringComparison.Ordinal), presentation));
+        Assert.Contains("**Expands to:** ( 7 + 7 )", hover.Contents.Value);
+        string rich = System.Text.Json.JsonSerializer.Serialize(hover.RawContent);
+        Assert.Contains("cppMacro", rich);
+        Assert.Contains("preprocessor keyword", rich);
+        Assert.Contains("\"ClassificationTypeName\":\"cppMacro\",\"Text\":\"VALUE\"", rich);
+        Assert.NotNull(hover.RawContent);
+        if (Environment.GetEnvironmentVariable("GFLAT_HOVER_CAPTURE") is { Length: > 0 } capture)
+            File.WriteAllText(capture + ".macro", System.Text.Json.JsonSerializer.Serialize(hover, Protocol.JsonOptions));
+        var directive = Assert.IsType<HoverResult>(model.Hover(source.Path, 2, presentation));
+        Assert.Contains("Defines an object-like", directive.Contents.Value);
+        Assert.NotNull(directive.RawContent);
+    }
+
+    [Fact]
+    public void MacroSemanticTokensCoverDefinitionsBodiesAndCalls()
+    {
+        const string code = "#define VALUE 7\n#define DOUBLE(x) (VALUE + x)\nint main()=>DOUBLE(VALUE);";
+        var source = new SourceFile(Path.Combine(root, "main.gf"), code);
+        var model = new EditorModel(new AnalysisSnapshot([source]), [source]);
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path));
+        int[] data = json.GetProperty("data").EnumerateArray().Select(e => e.GetInt32()).ToArray();
+        var actual = new List<(int Line, int Column, string Kind)>();
+        int line = 0, column = 0;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column = data[i] == 0 ? column + data[i + 1] : data[i + 1];
+            line += data[i];
+            actual.Add((line, column, EditorModel.TokenTypes[data[i + 3]]));
+        }
+        Assert.Contains((0, 0, "preprocessor"), actual);
+        Assert.Contains((0, 8, "macro"), actual);
+        Assert.Contains((1, 19, "macro"), actual);
+        Assert.Contains((2, 12, "macro"), actual);
+        Assert.Contains((2, 19, "macro"), actual);
+        Assert.Equal("cppMacro", EditorModel.VisualStudioTokenTypes[Array.IndexOf(EditorModel.TokenTypes, "macro")]);
+    }
+
 }

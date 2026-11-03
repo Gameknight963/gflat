@@ -9,8 +9,8 @@ namespace gflat.LanguageServer;
 /// <summary>Read-only editor queries over one analyzed set of source snapshots.</summary>
 public sealed partial class EditorModel
 {
-    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter"];
-    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name"];
+    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter", "macro", "preprocessor"];
+    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name", "cppMacro", "preprocessor keyword"];
     public static readonly string[] TokenModifiers = ["declaration", "static", "readonly"];
     private sealed record Symbol(string Name, int Kind, string Classification, Syntax Syntax, SourceSpan NameSpan,
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
@@ -810,7 +810,7 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         options ??= new();
-        if (MacroHover(path, offset) is { } macro) return macro;
+        if (MacroHover(path, offset, presentation) is { } macro) return macro;
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
         if (query != null) return query;
         if (ReflectionMemberHover(path, offset, presentation) is { } reflectionMember) return reflectionMember;
@@ -931,6 +931,10 @@ public sealed partial class EditorModel
     public object SemanticTokens(string path, TextRange? range = null)
     {
         var data = new List<int>();
+        var classified = new List<(SourceSpan Span, int Kind, int Modifiers)>();
+        var macros = snapshot.MacroSymbols.Where(m => m.Span.Source != null && Workspace.Paths.Equals(m.Span.Source.Path, path))
+            .DistinctBy(m => (m.Span.Start, m.Span.Length)).ToArray();
+        var macroOffsets = macros.SelectMany(m => Enumerable.Range(m.Span.Start, m.Span.Length)).ToHashSet();
         int previousLine = 0, previousColumn = 0;
         var ts = tokens[path];
         var placementKeywords = nodes[path].Select(n => n.Node).OfType<NewExpression>()
@@ -947,6 +951,7 @@ public sealed partial class EditorModel
             bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
+            if (macroOffsets.Contains(ts[i].Start)) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier && !reflectionMember) continue;
             var span = ts[i].Span;
@@ -957,7 +962,15 @@ public sealed partial class EditorModel
             int modifiers = symbol?.NameSpan.Source?.Path == path && symbol.NameSpan.Start == span.Start ? 1 : 0;
             if (symbol?.Static == true) modifiers |= 2;
             if (symbol?.Syntax.Node is FieldDeclaration { IsReadOnly: true } or FieldDeclaration { IsConst: true } or VariableDeclaration { IsConst: true }) modifiers |= 4;
-            data.AddRange([line - previousLine, line == previousLine ? column - previousColumn : column, span.Length, kind, modifiers]);
+            classified.Add((span, kind, modifiers));
+        }
+        foreach (var macro in macros)
+            classified.Add((macro.Span, Array.IndexOf(TokenTypes, macro.Classification), macro.Definition ? 1 : 0));
+        foreach (var item in classified.OrderBy(t => t.Span.Start))
+        {
+            int line = item.Span.Line - 1, column = item.Span.Column - 1;
+            if (item.Kind < 0 || range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
+            data.AddRange([line - previousLine, line == previousLine ? column - previousColumn : column, item.Span.Length, item.Kind, item.Modifiers]);
             previousLine = line; previousColumn = column;
         }
         return new { data };

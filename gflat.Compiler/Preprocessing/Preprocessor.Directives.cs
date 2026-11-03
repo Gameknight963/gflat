@@ -37,6 +37,9 @@ public sealed partial class Preprocessor
             string directive = line[1].Text;
             var arguments = line.Skip(2).ToList();
             SourceSpan location = line[1].Span;
+            symbols.Add(new(directive, source.Span(line[0].Span.Start,
+                location.Start + location.Length - line[0].Span.Start), false, default,
+                "#" + directive, Classification: "preprocessor"));
             if (directive is "if" or "ifdef" or "ifndef")
             {
                 bool parent = Active();
@@ -64,6 +67,7 @@ public sealed partial class Preprocessor
                 case "define": Define(arguments, location); break;
                 case "undef":
                     RequireName(arguments, location);
+                    Reference(arguments[0]);
                     if (arguments[0].Text is "__FILE__" or "__LINE__") throw Error("Cannot undefine a predefined macro", location);
                     macros.Remove(arguments[0].Text); break;
                 case "include":
@@ -167,11 +171,21 @@ public sealed partial class Preprocessor
             throw Error($"Conflicting redefinition of macro '{name.Text}'. Use #undef before replacing it", name.Span);
         macros[name.Text] = macro;
         symbols.Add(Symbol(macro, name.Span, true));
+        for (int n = 0; n < body.Count; n++)
+        {
+            if (body[n].Text == "@" && n + 1 < body.Count)
+            {
+                n = body[n + 1].Text == "(" ? Closing(body, n + 1) : n + 1;
+                continue;
+            }
+            if (!(parameters ?? []).Contains(body[n].Text)) Reference(body[n]);
+        }
     }
 
     private bool DefinedName(List<Piece> input, SourceSpan span)
     {
         RequireName(input, span);
+        Reference(input[0]);
         return macros.ContainsKey(input[0].Text) || input[0].Text is "__FILE__" or "__LINE__";
     }
     private static void RequireName(List<Piece> input, SourceSpan span)

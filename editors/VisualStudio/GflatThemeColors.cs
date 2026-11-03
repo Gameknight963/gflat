@@ -49,7 +49,7 @@ public sealed class GflatThemeColors : IWpfTextViewConnectionListener
             var source = maps.GetClassificationFormatMap("text");
             var target = maps.GetClassificationFormatMap("tooltip");
             foreach (string name in new[] {
-                "comment", "excluded code", "identifier", "keyword", "keyword - control",
+                "comment", "excluded code", "identifier", "keyword", "keyword - control", "cppMacro", "preprocessor keyword",
                 "number", "string", "string - verbatim", "string - escape character",
                 "operator", "punctuation", "class name", "struct name", "interface name",
                 "enum name", "type parameter name", "type", "field name", "enum member name",

@@ -97,6 +97,16 @@ try {
     $protocol = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.LanguageServer.Protocol.Internal'])
     $hoverType = $protocol.GetType('Microsoft.VisualStudio.LanguageServer.Protocol.VSInternalHover', $true)
     $hover = [Newtonsoft.Json.JsonConvert]::DeserializeObject([IO.File]::ReadAllText($CapturePath), $hoverType)
+    $macroHover = [Newtonsoft.Json.JsonConvert]::DeserializeObject([IO.File]::ReadAllText($CapturePath + '.macro'), $hoverType)
+    if ($macroHover.RawContent.GetType().FullName -ne 'Microsoft.VisualStudio.Text.Adornments.ContainerElement') { throw 'Macro hover was not decoded as native VS content' }
+    $macroHeader = @($macroHover.RawContent.Elements)[0]
+    $macroRuns = @($macroHeader.Elements | Where-Object { $_.GetType().Name -eq 'ClassifiedTextElement' })[0].Runs
+    foreach ($classification in @('cppMacro', 'preprocessor keyword')) {
+        if (-not ($macroRuns | Where-Object { $_.ClassificationTypeName -eq $classification })) { throw "Macro hover classification missing: $classification" }
+    }
+    $expansionRuns = @($macroHover.RawContent.Elements)[1].Runs
+    if (($expansionRuns.Text -join '') -ne 'Expands to: ( 7 + 7 )') { throw 'Macro hover expansion differs from the invocation' }
+    Write-Host 'Macro definition and expansion decoded successfully by the installed Visual Studio SDK.'
     $signatureType = $protocol.GetType('Microsoft.VisualStudio.LanguageServer.Protocol.VSInternalSignatureInformation', $true)
     $signature = [Newtonsoft.Json.JsonConvert]::DeserializeObject([IO.File]::ReadAllText($CapturePath + '.signature'), $signatureType)
     $signatureRuns = @($signature.ColorizedLabel.Runs)

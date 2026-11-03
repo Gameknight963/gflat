@@ -56,6 +56,8 @@ namespace gflat.PackageTests
                 new[] { "entity.name.type.gflat", "type" },
                 new[] { "keyword.control.gflat", "keyword - control" },
                 new[] { "keyword.other.gflat", "keyword" },
+                new[] { "entity.name.function.preprocessor.gflat", "cppMacro" },
+                new[] { "keyword.control.directive.gflat", "preprocessor keyword" },
                 new[] { "comment.line.double-slash.gflat", "comment" },
                 new[] { "comment.block.gflat", "comment" }
             }) {
@@ -70,9 +72,15 @@ namespace gflat.PackageTests
 
         public static void Run(Type listenerType)
         {
-            var type = Interface<IClassificationType>(m => m.MethodName == "get_Classification" ? "keyword" : null);
+            foreach (string classification in new[] { "keyword", "cppMacro", "preprocessor keyword" })
+                RunClassification(listenerType, classification);
+        }
+
+        private static void RunClassification(Type listenerType, string classification)
+        {
+            var type = Interface<IClassificationType>(m => m.MethodName == "get_Classification" ? classification : null);
             var registry = Interface<IClassificationTypeRegistryService>(m =>
-                m.MethodName == "GetClassificationType" && (string)m.Args[0] == "keyword" ? type : null);
+                m.MethodName == "GetClassificationType" && (string)m.Args[0] == classification ? type : null);
             var source = TextFormattingRunProperties.CreateTextFormattingRunProperties(new Typeface("Consolas"), 20, Colors.Red);
             var original = TextFormattingRunProperties.CreateTextFormattingRunProperties(new Typeface("Segoe UI"), 13, Colors.Blue)
                 .SetBackgroundBrush(Brushes.Black).SetBold(true);

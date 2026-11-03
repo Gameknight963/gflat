@@ -5,6 +5,14 @@
     <key>settings</key>
     <array>
       <dict>
+        <key>scope</key><string>entity.name.function.preprocessor.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>cppMacro</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>punctuation.definition.directive.gflat, keyword.control.directive.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>preprocessor keyword</string></dict>
+      </dict>
+      <dict>
         <key>scope</key><string>comment.line.double-slash.gflat, comment.block.gflat</string>
         <key>settings</key><dict><key>vsclassificationtype</key><string>comment</string></dict>
       </dict>

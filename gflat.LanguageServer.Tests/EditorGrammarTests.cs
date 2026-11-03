@@ -15,6 +15,7 @@ public class EditorGrammarTests
         var grammar = Grammar();
         var directive = grammar.TokenizeLine("#define ANSWER 42", null, TimeSpan.FromSeconds(2));
         AssertScope(directive, 1, "keyword.control.directive");
+        AssertScope(directive, 8, "entity.name.function.preprocessor");
         var code = grammar.TokenizeLine("int @class = ANSWER;", directive.RuleStack, TimeSpan.FromSeconds(2));
         AssertScope(code, 4, "variable.other");
         var token = Assert.Single(code.Tokens, token => token.StartIndex <= 5 && token.EndIndex > 5);
@@ -22,6 +23,9 @@ public class EditorGrammarTests
     }
 
     [Theory]
+    [InlineData("#define ANSWER 42", "define", "preprocessor keyword")]
+    [InlineData("#define ANSWER 42", "ANSWER", "cppMacro")]
+    [InlineData("#include \"file.gfh\"", "include", "preprocessor keyword")]
     [InlineData("namespace Console;", "namespace", "keyword")]
     [InlineData("throw new Standard::IOException();", "new", "keyword")]
     [InlineData("throw new Standard::IOException();", "throw", "keyword - control")]

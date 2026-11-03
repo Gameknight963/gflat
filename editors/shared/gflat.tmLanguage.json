@@ -8,7 +8,34 @@
   "patterns": [
     {
       "name": "meta.preprocessor.gflat",
-      "begin": "^\\s*(#)\\s*(define|undef|include|if|ifdef|ifndef|elif|elifdef|elifndef|else|endif|pragma|error|warning)\\b",
+      "begin": "^\\s*(#)\\s*(define)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.gflat" },
+        "2": { "name": "keyword.control.directive.gflat" },
+        "3": { "name": "entity.name.function.preprocessor.gflat" }
+      },
+      "end": "(?<!\\\\)$",
+      "patterns": [
+        { "match": "##|#", "name": "keyword.operator.gflat" },
+        { "include": "$self" }
+      ]
+    },
+    {
+      "name": "meta.preprocessor.gflat",
+      "begin": "^\\s*(#)\\s*(include)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.gflat" },
+        "2": { "name": "keyword.control.directive.gflat" }
+      },
+      "end": "(?<!\\\\)$",
+      "patterns": [
+        { "name": "string.quoted.double.gflat", "begin": "<", "end": ">|$" },
+        { "include": "$self" }
+      ]
+    },
+    {
+      "name": "meta.preprocessor.gflat",
+      "begin": "^\\s*(#)\\s*(undef|if|ifdef|ifndef|elif|elifdef|elifndef|else|endif|pragma|error|warning)\\b",
       "beginCaptures": {
         "1": { "name": "punctuation.definition.directive.gflat" },
         "2": { "name": "keyword.control.directive.gflat" }

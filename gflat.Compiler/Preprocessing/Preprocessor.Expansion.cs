@@ -2,18 +2,30 @@ namespace gflat.Preprocessing;
 
 public sealed partial class Preprocessor
 {
-    private static MacroSymbol Symbol(Macro macro, SourceSpan span, bool definition) => new(macro.Name, span, definition, macro.Span,
+    private MacroSymbol Symbol(Macro macro, SourceSpan span, bool definition) => new(macro.Name, span, definition, macro.Span,
         "#define " + macro.Name + (macro.Parameters == null ? "" : "(" + string.Join(", ", macro.Parameters.Concat(macro.Variadic ? ["..."] : [])) + ")") +
-        (macro.Body.Count == 0 ? "" : " " + Render(macro.Body)));
+        (macro.Body.Count == 0 ? "" : " " + Render(macro.Body)), Parameters: macro.Parameters,
+        ReferencedMacros: macro.Body.Where(p => macros.ContainsKey(p.Text) || p.Text is "__LINE__" or "__FILE__")
+            .Select(p => p.Text).Distinct(StringComparer.Ordinal).ToArray());
 
     private static string Quote(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"")
         .Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t") + "\"";
+
+    private void Reference(Piece token)
+    {
+        if (token.Generated) return;
+        if (macros.TryGetValue(token.Text, out var macro))
+            symbols.Add(Symbol(macro, token.Span, false));
+        else if (token.Text is "__LINE__" or "__FILE__")
+            symbols.Add(new(token.Text, token.Span, false, default, token.Text));
+    }
 
     private List<Piece> Expand(IEnumerable<Piece> input, int depth = 0)
     {
         var work = input.Where(p => p.Text != "\n").ToList();
         if (depth > 128) throw Error("Macro argument expansion is too deeply nested", work.FirstOrDefault()?.Span ?? default);
         var output = new List<Piece>();
+        var previewIds = new HashSet<int>();
         for (int i = 0; i < work.Count;)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -44,7 +56,9 @@ public sealed partial class Preprocessor
             if (token.Hidden?.Contains(token.Text) == true || !Name(token.Text)) { output.Add(token); i++; continue; }
             if (token.Text is "__LINE__" or "__FILE__")
             {
-                output.Add(token with { Text = token.Text == "__LINE__" ? token.Span.Line.ToString(System.Globalization.CultureInfo.InvariantCulture) : Quote(token.Span.Source?.Path ?? "<input>"), Generated = true, Verbatim = false });
+                string value = token.Text == "__LINE__" ? token.Span.Line.ToString(System.Globalization.CultureInfo.InvariantCulture) : Quote(token.Span.Source?.Path ?? "<input>");
+                if (!token.Generated) symbols.Add(new(token.Text, token.Span, false, default, token.Text, value));
+                output.Add(token with { Text = value, Generated = true, Verbatim = false });
                 i++; continue;
             }
             if (!macros.TryGetValue(token.Text, out var macro)) { output.Add(token); i++; continue; }
@@ -52,7 +66,7 @@ public sealed partial class Preprocessor
             var arguments = new Dictionary<string, List<Piece>>(StringComparer.Ordinal);
             if (macro.Parameters != null)
             {
-                if (i + 1 >= work.Count || work[i + 1].Text != "(") { output.Add(token); i++; continue; }
+                if (i + 1 >= work.Count || work[i + 1].Text != "(") { Reference(token); output.Add(token); i++; continue; }
                 int end = Closing(work, i + 1);
                 var args = Arguments(work.GetRange(i + 2, end - i - 2));
                 if (args.Count == 1 && args[0].Count == 0 && macro.Parameters.Length == 0 && !macro.Variadic) args.Clear();
@@ -73,7 +87,13 @@ public sealed partial class Preprocessor
             }
             if (++expansions > 100000 || work.Count + output.Count > 1000000)
                 throw Error("Macro expansion limit exceeded", token.Span);
-            symbols.Add(Symbol(macro, token.Span, false));
+            int occurrence = -1;
+            if (!token.Generated)
+            {
+                occurrence = symbols.Count;
+                previewIds.Add(occurrence);
+                symbols.Add(Symbol(macro, token.Span, false) with { Expansion = "" });
+            }
             var expanded = new Dictionary<string, List<Piece>>(StringComparer.Ordinal);
             List<Piece> Argument(string name)
             {
@@ -141,10 +161,30 @@ public sealed partial class Preprocessor
             }
             var suppressed = new HashSet<string>(token.Hidden ?? [], StringComparer.Ordinal) { macro.Name };
             replacement = replacement.Where(p => p.Text.Length != 0).Select(p => p with
-            { Hidden = new HashSet<string>((p.Hidden ?? []).Concat(suppressed), StringComparer.Ordinal) }).ToList();
+            {
+                Hidden = new HashSet<string>((p.Hidden ?? []).Concat(suppressed), StringComparer.Ordinal),
+                Occurrences = (p.Occurrences ?? []).Concat(token.Occurrences ?? [])
+                    .Concat(occurrence >= 0 ? [occurrence] : Array.Empty<int>()).Distinct().ToArray()
+            }).ToList();
             if (replacement.Count != 0) replacement[0] = replacement[0] with { Space = token.Space };
             work.RemoveRange(i, consumed);
             work.InsertRange(i, replacement);
+        }
+        // Capture the tokens produced by this invocation during the actual expansion.
+        // Re-expanding for a tooltip would use the wrong definitions after #undef.
+        var previews = new Dictionary<int, List<Piece>>();
+        foreach (var piece in output)
+            foreach (int id in piece.Occurrences ?? [])
+            {
+                if (!previewIds.Contains(id)) continue;
+                if (!previews.TryGetValue(id, out var preview)) previews[id] = preview = [];
+                if (preview.Count < 512) preview.Add(piece);
+            }
+        foreach (var (id, preview) in previews)
+        {
+            string text = Render(preview);
+            symbols[id] = symbols[id] with { Expansion = text.Length > 2048 ? text[..2048] + "…" :
+                preview.Count == 512 ? text + " …" : text };
         }
         return output;
     }

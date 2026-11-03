@@ -26,6 +26,7 @@ public sealed partial class Preprocessor
             bool parens = i + 1 < input.Count && input[i + 1].Text == "(";
             if (parens) i++;
             if (++i >= input.Count || !Name(input[i].Text)) throw Error("defined requires a macro name", origin.Span);
+            Reference(input[i]);
             bool exists = macros.ContainsKey(input[i].Text) || input[i].Text is "__LINE__" or "__FILE__";
             if (parens && (++i >= input.Count || input[i].Text != ")")) throw Error("Expected ')' after defined", origin.Span);
             prepared.Add(origin with { Text = exists ? "1" : "0", Generated = true });

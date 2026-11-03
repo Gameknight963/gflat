@@ -46,6 +46,17 @@ public sealed class InheritanceNavigationTests
     }
 
     [Fact]
+    public void GenericInterfaceMembersFindConcreteImplementations()
+    {
+        const string code = "interface I<T> { T Read(T value); } struct Item : I<int> { public int Read(int value) => value; }";
+        var source = new SourceFile(Path.GetFullPath("generic-implementation-navigation.gf"), code);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        Assert.Single(model.Implementations(source.Path, code.IndexOf("Read", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void HierarchySeparatesDirectBasesAndDirectSubtypes()
     {
         var (model, source) = Analyze();

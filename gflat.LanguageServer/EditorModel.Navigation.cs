@@ -45,11 +45,22 @@ public sealed partial class EditorModel
         MethodDeclaration { IsOverride: true } or MethodDeclaration { IsAbstract: true } ||
         symbols.Any(s => s.Syntax.Node is InterfaceDeclaration && s.Qualified == symbol.Owner);
 
-    private bool SameMember(Symbol left, Symbol right) => left.Name == right.Name && left.Static == right.Static &&
-        left.Syntax.Node.GetType() == right.Syntax.Node.GetType() &&
-        (left.Parameters == null && right.Parameters == null || left.Parameters != null && right.Parameters != null &&
-         left.Parameters.Count == right.Parameters.Count && (ContractMember(left) && ContractMember(right) ||
-             left.Parameters.Zip(right.Parameters).All(pair => DisplayType(pair.First.Type) == DisplayType(pair.Second.Type))));
+    private bool SameMember(Symbol left, Symbol right)
+    {
+        if (left.Name != right.Name || left.Static != right.Static || left.Syntax.Node.GetType() != right.Syntax.Node.GetType()) return false;
+        if (left.Parameters == null || right.Parameters == null) return left.Parameters == null && right.Parameters == null;
+        if (left.Parameters.Count != right.Parameters.Count) return false;
+        bool ParametersMatch(Symbol first, Symbol second) => first.Parameters!.Select(p => DisplayType(p.Type)).SequenceEqual(second.Parameters!.Select(p => DisplayType(p.Type)));
+        if (ContractMember(left) && ContractMember(right) || ParametersMatch(left, right)) return true;
+        bool ProjectedMatch(Symbol contract, Symbol implementation)
+        {
+            var declaration = symbols.FirstOrDefault(s => s.Syntax.Node is InterfaceDeclaration && s.Qualified == contract.Owner);
+            var owner = symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && s.Qualified == implementation.Owner);
+            return declaration != null && owner != null && ContractMembers(owner, declaration).Any(member =>
+                member.NameSpan == contract.NameSpan && member.Parameters != null && ParametersMatch(member, implementation));
+        }
+        return ProjectedMatch(left, right) || ProjectedMatch(right, left);
+    }
 
     private Symbol? OverriddenMember(string path, int offset)
     {

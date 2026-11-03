@@ -4,8 +4,11 @@ using gflat.diagnostics;
 
 namespace gflat.Preprocessing;
 
+public sealed record MacroToken(string Text, string Classification, SourceSpan Span = default);
+
 public sealed record MacroSymbol(string Name, SourceSpan Span, bool Definition, SourceSpan Declaration, string Signature,
-    string? Expansion = null, string Classification = "macro", string[]? Parameters = null, string[]? ReferencedMacros = null);
+    string? Expansion = null, string Classification = "macro", IReadOnlyList<MacroToken>? DeclarationTokens = null,
+    IReadOnlyList<MacroToken>? ExpansionTokens = null);
 
 public sealed record PreprocessingResult(List<Token> Tokens, IReadOnlyList<SourceFile> Sources,
     IReadOnlyList<string> Dependencies, IReadOnlyList<MacroSymbol> Symbols);
@@ -15,7 +18,8 @@ public sealed partial class Preprocessor
     private sealed record Piece(string Text, SourceSpan Span, bool Space = false, bool Verbatim = false,
         HashSet<string>? Hidden = null, bool Generated = false, bool JoinLeft = false, bool LiteralFragment = false,
         int[]? Occurrences = null);
-    private sealed record Macro(string Name, string[]? Parameters, bool Variadic, List<Piece> Body, SourceSpan Span);
+    private sealed record Macro(string Name, string[]? Parameters, bool Variadic, List<Piece> Body, SourceSpan Span,
+        IReadOnlyList<MacroToken>? DeclarationTokens = null);
     private readonly CompilationOptions options;
     private readonly DiagnosticBag diagnostics;
     private readonly CancellationToken cancellation;

@@ -170,6 +170,8 @@ public sealed partial class Preprocessor
              !previous.Body.Select(p => (p.Text, p.Space)).SequenceEqual(body.Select(p => (p.Text, p.Space)))))
             throw Error($"Conflicting redefinition of macro '{name.Text}'. Use #undef before replacing it", name.Span);
         macros[name.Text] = macro;
+        macro = macro with { DeclarationTokens = MacroDeclarationTokens(macro, input) };
+        macros[name.Text] = macro;
         symbols.Add(Symbol(macro, name.Span, true));
         for (int n = 0; n < body.Count; n++)
         {

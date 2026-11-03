@@ -104,8 +104,10 @@ try {
     foreach ($classification in @('cppMacro', 'preprocessor keyword')) {
         if (-not ($macroRuns | Where-Object { $_.ClassificationTypeName -eq $classification })) { throw "Macro hover classification missing: $classification" }
     }
+    if (-not ($macroRuns | Where-Object { $_.Text -eq 'x' -and $_.ClassificationTypeName -eq 'identifier' -and [int]$_.Style -eq 16 })) { throw 'Macro parameters must retain their source identifier classification and declaration style' }
     $expansionRuns = @($macroHover.RawContent.Elements)[1].Runs
     if (($expansionRuns.Text -join '') -ne 'Expands to: ( 7 + 7 )') { throw 'Macro hover expansion differs from the invocation' }
+    if (-not ($expansionRuns | Where-Object { $_.Text -eq '7' -and $_.ClassificationTypeName -eq 'number' -and [int]$_.Style -eq 8 })) { throw 'Macro expansion numbers lost their classification or font style' }
     Write-Host 'Macro definition and expansion decoded successfully by the installed Visual Studio SDK.'
     $signatureType = $protocol.GetType('Microsoft.VisualStudio.LanguageServer.Protocol.VSInternalSignatureInformation', $true)
     $signature = [Newtonsoft.Json.JsonConvert]::DeserializeObject([IO.File]::ReadAllText($CapturePath + '.signature'), $signatureType)

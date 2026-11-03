@@ -71,7 +71,7 @@ public sealed class ReflectionTemplateEditorTests
     }
 
     [Fact]
-    public void QueryHelpDistinguishesAnEnclosingTypeFromAMissingIncludeContext()
+    public void QueriesReportTypeInformationWithoutIncludeSpecificExplanations()
     {
         var (model, header) = Model(false);
         int offset = Body.LastIndexOf("typeof", StringComparison.Ordinal);
@@ -80,8 +80,9 @@ public sealed class ReflectionTemplateEditorTests
         Assert.DoesNotContain("generic", text);
         var standalone = Model(false, standalone: true);
         string missing = Hover(standalone.Model, standalone.Header, offset).GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("enclosing type", missing);
-        Assert.DoesNotContain(" or ", missing);
+        Assert.Contains("(reflection)typeof(*this)", missing);
+        Assert.DoesNotContain("Include this file", missing);
+        Assert.DoesNotContain("Evaluated for each generic specialization", missing);
     }
 
     [Fact]
@@ -94,7 +95,8 @@ public sealed class ReflectionTemplateEditorTests
         Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         string text = Hover(new(snapshot, [source, header]), header, Body.LastIndexOf("typeof", StringComparison.Ordinal))
             .GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("depends on where this file is included", text);
+        Assert.Contains("(reflection)typeof(*this)", text);
+        Assert.DoesNotContain("file is included", text);
         Assert.DoesNotContain("**Name:** First", text);
         Assert.DoesNotContain("**Type:** First", text);
     }

@@ -10,6 +10,48 @@ public sealed class PreprocessorTests
     private static string[] Words(string code) => Process(code).Tokens.Where(t => t.Kind != TokenKind.EndOfFile).Select(t => t.Text).ToArray();
 
     [Fact]
+    public void MacroDescriptorsCarryClassifiedDeclarationsAndExpansions()
+    {
+        const string code = "#define VERSION 12\n#define ST(x) #x\n#define JOIN(left, right) left##right\nST(VERSION) JOIN(4, 2)";
+        var result = Process(code);
+        foreach (var symbol in result.Symbols.Where(s => s.Definition))
+            Assert.Equal(symbol.Signature, string.Concat(symbol.DeclarationTokens!.Select(t => t.Text)));
+        var version = Assert.Single(result.Symbols, s => s.Name == "VERSION" && s.Definition);
+        var number = Assert.Single(version.DeclarationTokens!, t => t.Text == "12");
+        Assert.Equal("number", number.Classification);
+        Assert.Equal(code.IndexOf("12", StringComparison.Ordinal), number.Span.Start);
+        var join = Assert.Single(result.Symbols, s => s.Name == "JOIN" && s.Definition);
+        Assert.All(join.DeclarationTokens!.Where(t => t.Text is "left" or "right"), t => Assert.Equal("identifier", t.Classification));
+        Assert.Equal("operator", Assert.Single(join.DeclarationTokens!, t => t.Text == "##").Classification);
+        foreach (var symbol in result.Symbols.Where(s => s.ExpansionTokens != null))
+            Assert.Equal(symbol.Expansion, string.Concat(symbol.ExpansionTokens!.Select(t => t.Text)));
+        Assert.Equal("string", Assert.Single(result.Symbols.Single(s => s.Name == "ST" && !s.Definition).ExpansionTokens!).Classification);
+        Assert.Equal("number", Assert.Single(result.Symbols.Single(s => s.Name == "JOIN" && !s.Definition).ExpansionTokens!).Classification);
+    }
+
+    [Fact]
+    public void ClassificationRespectsEscapesParameterShadowingAndUninvokedFragments()
+    {
+        var result = Process("#define left 12\n#define VERSION 7\n#define JOIN(left, right) left##right\n#define RAW @VERSION\n#define FRAGMENT (\n");
+        var join = result.Symbols.Single(s => s.Name == "JOIN" && s.Definition);
+        Assert.All(join.DeclarationTokens!.Where(t => t.Text == "left"), t => Assert.Equal("identifier", t.Classification));
+        var raw = result.Symbols.Single(s => s.Name == "RAW" && s.Definition);
+        Assert.Equal("#define RAW @VERSION", raw.Signature);
+        Assert.Equal("identifier", Assert.Single(raw.DeclarationTokens!, t => t.Text == "VERSION").Classification);
+    }
+
+    [Fact]
+    public void ClassifiedExpansionTruncationKeepsTheSamePreviewText()
+    {
+        var result = Process("#define LONG \"" + new string('a', 3000) + "\"\nLONG");
+        var use = result.Symbols.Single(s => s.Name == "LONG" && !s.Definition);
+        Assert.Equal(2049, use.Expansion!.Length);
+        Assert.EndsWith("…", use.Expansion);
+        Assert.Equal(use.Expansion, string.Concat(use.ExpansionTokens!.Select(t => t.Text)));
+        Assert.Equal("string", use.ExpansionTokens![0].Classification);
+    }
+
+    [Fact]
     public void ExpansionPreviewsFollowInvocationTimeDefinitionsAndPreserveArgumentPreviews()
     {
         const string code = "#define V 7\n#define TWICE(x) (x + x)\nTWICE(V)\n#undef V\n#define V 9\nTWICE(V)";

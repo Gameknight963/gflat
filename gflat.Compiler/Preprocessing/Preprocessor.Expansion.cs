@@ -3,10 +3,7 @@ namespace gflat.Preprocessing;
 public sealed partial class Preprocessor
 {
     private MacroSymbol Symbol(Macro macro, SourceSpan span, bool definition) => new(macro.Name, span, definition, macro.Span,
-        "#define " + macro.Name + (macro.Parameters == null ? "" : "(" + string.Join(", ", macro.Parameters.Concat(macro.Variadic ? ["..."] : [])) + ")") +
-        (macro.Body.Count == 0 ? "" : " " + Render(macro.Body)), Parameters: macro.Parameters,
-        ReferencedMacros: macro.Body.Where(p => macros.ContainsKey(p.Text) || p.Text is "__LINE__" or "__FILE__")
-            .Select(p => p.Text).Distinct(StringComparer.Ordinal).ToArray());
+        string.Concat(macro.DeclarationTokens!.Select(t => t.Text)), DeclarationTokens: macro.DeclarationTokens);
 
     private static string Quote(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"")
         .Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t") + "\"";
@@ -17,7 +14,7 @@ public sealed partial class Preprocessor
         if (macros.TryGetValue(token.Text, out var macro))
             symbols.Add(Symbol(macro, token.Span, false));
         else if (token.Text is "__LINE__" or "__FILE__")
-            symbols.Add(new(token.Text, token.Span, false, default, token.Text));
+            symbols.Add(new(token.Text, token.Span, false, default, token.Text, DeclarationTokens: [new(token.Text, "macro")]));
     }
 
     private List<Piece> Expand(IEnumerable<Piece> input, int depth = 0)
@@ -57,7 +54,9 @@ public sealed partial class Preprocessor
             if (token.Text is "__LINE__" or "__FILE__")
             {
                 string value = token.Text == "__LINE__" ? token.Span.Line.ToString(System.Globalization.CultureInfo.InvariantCulture) : Quote(token.Span.Source?.Path ?? "<input>");
-                if (!token.Generated) symbols.Add(new(token.Text, token.Span, false, default, token.Text, value));
+                if (!token.Generated) symbols.Add(new(token.Text, token.Span, false, default, token.Text, value,
+                    DeclarationTokens: [new(token.Text, "macro")],
+                    ExpansionTokens: [new(value, token.Text == "__LINE__" ? "number" : "string")]));
                 output.Add(token with { Text = value, Generated = true, Verbatim = false });
                 i++; continue;
             }
@@ -182,9 +181,8 @@ public sealed partial class Preprocessor
             }
         foreach (var (id, preview) in previews)
         {
-            string text = Render(preview);
-            symbols[id] = symbols[id] with { Expansion = text.Length > 2048 ? text[..2048] + "…" :
-                preview.Count == 512 ? text + " …" : text };
+            var tokens = LimitMacroTokens(ClassifiedPieces(preview), 2048, preview.Count == 512);
+            symbols[id] = symbols[id] with { Expansion = string.Concat(tokens.Select(t => t.Text)), ExpansionTokens = tokens };
         }
         return output;
     }

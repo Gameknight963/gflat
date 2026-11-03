@@ -242,7 +242,7 @@ public class Lexer
         return tokens;
     }
 
-    private static TokenKind GetKeyword(string text)
+    internal static TokenKind GetKeyword(string text)
     {
         return text switch
         {

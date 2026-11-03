@@ -72,7 +72,7 @@ namespace gflat.PackageTests
 
         public static void Run(Type listenerType)
         {
-            foreach (string classification in new[] { "keyword", "cppMacro", "preprocessor keyword" })
+            foreach (string classification in new[] { "keyword", "cppMacro", "preprocessor keyword", "identifier", "number", "string", "operator", "punctuation" })
                 RunClassification(listenerType, classification);
         }
 

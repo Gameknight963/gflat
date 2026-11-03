@@ -9,8 +9,8 @@ namespace gflat.LanguageServer;
 /// <summary>Read-only editor queries over one analyzed set of source snapshots.</summary>
 public sealed partial class EditorModel
 {
-    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter", "macro", "preprocessor", "field", "constant"];
-    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name", "cppMacro", "preprocessor keyword", "field name", "constant name"];
+    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter", "macro", "preprocessor", "field", "constant", "identifier", "number", "string", "operator", "punctuation"];
+    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name", "cppMacro", "preprocessor keyword", "field name", "constant name", "identifier", "number", "string", "operator", "punctuation"];
     public static readonly string[] TokenModifiers = ["declaration", "static", "readonly"];
     private sealed record Symbol(string Name, int Kind, string Classification, Syntax Syntax, SourceSpan NameSpan,
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
@@ -956,9 +956,14 @@ public sealed partial class EditorModel
     {
         var data = new List<int>();
         var classified = new List<(SourceSpan Span, int Kind, int Modifiers)>();
-        var macros = snapshot.MacroSymbols.Where(m => m.Span.Source != null && Workspace.Paths.Equals(m.Span.Source.Path, path))
-            .DistinctBy(m => (m.Span.Start, m.Span.Length)).ToArray();
-        var macroOffsets = macros.SelectMany(m => Enumerable.Range(m.Span.Start, m.Span.Length)).ToHashSet();
+        var macroTokens = MacroSourceClassifications(path);
+        var macroStarts = macroTokens.Select(token => token.Span.Start).ToArray();
+        bool MacroCovers(int offset)
+        {
+            int index = Array.BinarySearch(macroStarts, offset);
+            if (index < 0) index = ~index - 1;
+            return index >= 0 && offset < macroTokens[index].Span.Start + macroTokens[index].Span.Length;
+        }
         int previousLine = 0, previousColumn = 0;
         var ts = tokens[path];
         var placementKeywords = nodes[path].Select(n => n.Node).OfType<NewExpression>()
@@ -975,7 +980,7 @@ public sealed partial class EditorModel
             bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
-            if (macroOffsets.Contains(ts[i].Start)) continue;
+            if (MacroCovers(ts[i].Start)) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier && !reflectionMember) continue;
             var span = ts[i].Span;
@@ -988,8 +993,7 @@ public sealed partial class EditorModel
             if (symbol?.Syntax.Node is FieldDeclaration { IsReadOnly: true } or FieldDeclaration { IsConst: true } or VariableDeclaration { IsConst: true }) modifiers |= 4;
             classified.Add((span, kind, modifiers));
         }
-        foreach (var macro in macros)
-            classified.Add((macro.Span, Array.IndexOf(TokenTypes, macro.Classification), macro.Definition ? 1 : 0));
+        classified.AddRange(macroTokens);
         foreach (var item in classified.OrderBy(t => t.Span.Start))
         {
             int line = item.Span.Line - 1, column = item.Span.Column - 1;

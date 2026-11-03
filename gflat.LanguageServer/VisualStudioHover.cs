@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace gflat.LanguageServer;
 
-public sealed record DisplayPart(string Kind, string Text, bool Bold = false, Location? Target = null);
+public sealed record DisplayPart(string Kind, string Text, bool Bold = false, Location? Target = null, int ClassificationStyle = 0);
 public sealed record HoverDetail(string Label, string Value, DisplayPart[]? ValueParts = null)
 {
     public string Markdown => Label.Length == 0 ? Value : $"**{Label}:** {Value}";
@@ -16,6 +16,8 @@ public sealed record HoverResult(Markup Contents, TextRange Range,
 /// <summary>VS's existing LSP rich-content wire format. No VS assemblies or UI in the server.</summary>
 public sealed class VisualStudioHover
 {
+    internal const int UseClassificationFont = 8;
+    internal const int UseClassificationStyle = 16;
     private readonly Dictionary<string, (Guid Guid, int Id)> icons = [];
     public VisualStudioHover(JsonElement catalog)
     {
@@ -44,7 +46,7 @@ public sealed class VisualStudioHover
     {
         ["_vs_type"] = "ClassifiedTextElement",
         ["Runs"] = parts.Select(p => new Dictionary<string, object> {
-            ["_vs_type"] = "ClassifiedTextRun", ["ClassificationTypeName"] = Classification(p.Kind), ["Text"] = p.Text, ["Style"] = p.Bold ? 1 : 0, ["_gflat_target"] = p.Target!
+            ["_vs_type"] = "ClassifiedTextRun", ["ClassificationTypeName"] = Classification(p.Kind), ["Text"] = p.Text, ["Style"] = (p.Bold ? 1 : 0) | p.ClassificationStyle, ["_gflat_target"] = p.Target!
         }).ToArray()
     };
     private static string Classification(string kind) => kind switch

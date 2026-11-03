@@ -175,6 +175,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,
                             implementationProvider = true, typeHierarchyProvider = true,
                             documentFormattingProvider = true, documentRangeFormattingProvider = true,
+                            codeActionProvider = new { codeActionKinds = new[] { "quickfix", "refactor.rewrite", "refactor.inline", "source.organizeImports" } },
                             documentOnTypeFormattingProvider = new { firstTriggerCharacter = "}", moreTriggerCharacter = new[] { ";" } },
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
@@ -240,6 +241,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                     case "textDocument/completion":
                     case "textDocument/hover":
                     case "textDocument/definition":
+                    case "textDocument/codeAction":
                     case "textDocument/formatting":
                     case "textDocument/rangeFormatting":
                     case "textDocument/onTypeFormatting":
@@ -330,6 +332,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 "textDocument/hover" => model.Hover(path, offset, hoverPresentation, hoverOptions),
                 "textDocument/definition" => model.Definition(path, offset),
                 "textDocument/implementation" => model.Implementations(path, offset),
+                "textDocument/codeAction" => model.CodeActions(path, range ?? new(new(0, 0), new(0, 0))).Where(action =>
+                    !query.Parameters.TryGetProperty("context", out var context) || !context.TryGetProperty("only", out var only) ||
+                    only.EnumerateArray().Any(kind => action.Kind == kind.GetString() || action.Kind.StartsWith(kind.GetString() + ".", StringComparison.Ordinal))).ToArray(),
                 "textDocument/prepareTypeHierarchy" => model.PrepareTypeHierarchy(path, offset),
                 "textDocument/documentHighlight" => model.DocumentHighlights(path, offset),
                 "textDocument/prepareRename" => model.PrepareRename(path, offset),
@@ -376,7 +381,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
 
     private static bool RequiresFullAnalysis(string method)
         => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename" or
-            "textDocument/implementation" or "textDocument/prepareTypeHierarchy" or "typeHierarchy/supertypes" or "typeHierarchy/subtypes";
+            "textDocument/implementation" or "textDocument/prepareTypeHierarchy" or "typeHierarchy/supertypes" or "typeHierarchy/subtypes" or "textDocument/codeAction";
 
     private async Task Schedule(bool invalidateProjects = false)
     {

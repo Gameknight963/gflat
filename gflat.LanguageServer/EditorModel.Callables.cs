@@ -39,11 +39,11 @@ public sealed partial class EditorModel
         // Checking rewrites creation.Type and may reuse a declaration's type span.
         // The captured child span still identifies the type actually written here.
         var writtenCreationTypes = new Dictionary<NewExpression, SourceSpan>(ReferenceEqualityComparer.Instance);
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
             if (syntax.Node is TypeExpression && syntax.Parent?.Node is NewExpression creation &&
                 (!writtenCreationTypes.TryGetValue(creation, out var previous) || syntax.Span.Start < previous.Start))
                 writtenCreationTypes[creation] = syntax.Span;
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
         {
             if (syntax.Node is NewExpression creation && syntax.Span.Source?.Path is { } creationPath)
             {

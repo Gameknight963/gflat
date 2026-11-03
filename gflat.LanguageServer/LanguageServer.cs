@@ -38,6 +38,11 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     private bool versionedWorkspaceEdits;
     private bool hierarchicalDocumentSymbols;
     private bool bracesOnNewLine = true;
+    private readonly Dictionary<string, string> selectedHeaderContexts = new(Workspace.Paths);
+    private readonly HashSet<string> pendingClientRequests = new();
+    private bool semanticRefreshSupported;
+    private bool visualStudioDocumentOpen;
+    private bool showDocumentSupported;
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
     {
@@ -65,6 +70,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         break;
                     case Finished result when result.Generation == generation && !shutdown:
                         latest = result.Result;
+                        if (latest.Models != null)
+                            foreach (var selection in selectedHeaderContexts)
+                                if (latest.Models.GetValueOrDefault(selection.Key) is { } model && model.HeaderContexts(selection.Key).Any(c => c.Id == selection.Value))
+                                    latest.Models[selection.Key] = model.WithHeaderContext(selection.Key, selection.Value);
                         latestDocuments = result.Documents;
                         latestProjectRevision = result.ProjectRevision;
                         analyzedGeneration = result.Generation;
@@ -123,6 +132,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         using (json)
         {
             var request = json.RootElement;
+            if (request.ValueKind == JsonValueKind.Object && !request.TryGetProperty("method", out _) &&
+                request.TryGetProperty("id", out var responseId) && responseId.ValueKind == JsonValueKind.String &&
+                pendingClientRequests.Remove(responseId.GetString()!)) return null;
             if (request.ValueKind != JsonValueKind.Object || !request.TryGetProperty("method", out var methodElement) || methodElement.ValueKind != JsonValueKind.String)
             {
                 await Error(null, -32600, "Expected a JSON-RPC request");
@@ -160,22 +172,29 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             capabilities.TryGetProperty("workspace", out var workspaceCapabilities) &&
                             workspaceCapabilities.TryGetProperty("workspaceEdit", out var editCapabilities) &&
                             editCapabilities.TryGetProperty("documentChanges", out var documentChanges) && documentChanges.ValueKind == JsonValueKind.True;
+                        semanticRefreshSupported = capabilities.ValueKind == JsonValueKind.Object &&
+                            capabilities.TryGetProperty("workspace", out var refreshWorkspace) && refreshWorkspace.TryGetProperty("semanticTokens", out var refreshTokens) &&
+                            refreshTokens.TryGetProperty("refreshSupport", out var refreshSupport) && refreshSupport.ValueKind == JsonValueKind.True;
+                        showDocumentSupported = capabilities.ValueKind == JsonValueKind.Object && capabilities.TryGetProperty("window", out var windowCapabilities) &&
+                            windowCapabilities.TryGetProperty("showDocument", out var showDocument) && showDocument.TryGetProperty("support", out var showSupport) && showSupport.ValueKind == JsonValueKind.True;
                         if (parameters.TryGetProperty("initializationOptions", out var options) && options.ValueKind == JsonValueKind.Object &&
                             options.TryGetProperty("visualStudioClassifications", out var vsColors) && vsColors.ValueKind == JsonValueKind.True)
                             tokenTypes = EditorModel.VisualStudioTokenTypes;
                         if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("hoverIcons", out var hoverIcons))
                             hoverPresentation = new VisualStudioHover(hoverIcons);
                         hoverOptions = hoverOptions.Update(options);
+                        visualStudioDocumentOpen = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioDocumentOpen", out var nativeOpen) && nativeOpen.ValueKind == JsonValueKind.True;
                         UpdateFormattingOptions(options);
                         await Reply(id, new { capabilities = new {
                             positionEncoding = "utf-16",
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
-                            completionProvider = new { triggerCharacters = new[] { ".", ":" } },
+                            completionProvider = new { triggerCharacters = new[] { ".", ":", "/", "\\", "\"", "<" } },
                             hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true, documentHighlightProvider = true,
                             renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,
                             implementationProvider = true, typeHierarchyProvider = true,
                             documentFormattingProvider = true, documentRangeFormattingProvider = true,
                             codeActionProvider = new { codeActionKinds = new[] { "quickfix", "refactor.rewrite", "refactor.inline", "source.organizeImports" } },
+                            executeCommandProvider = new { commands = new[] { "gflat.selectHeaderContext", "gflat.inspectMacro" } },
                             documentOnTypeFormattingProvider = new { firstTriggerCharacter = "}", moreTriggerCharacter = new[] { ";" } },
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
@@ -241,6 +260,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                     case "textDocument/completion":
                     case "textDocument/hover":
                     case "textDocument/definition":
+                    case "workspace/executeCommand":
                     case "textDocument/codeAction":
                     case "textDocument/formatting":
                     case "textDocument/rangeFormatting":
@@ -287,6 +307,48 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         if (query.Generation != generation) { await Error(query.Id, -32801, "Document changed"); return; }
         try
         {
+            if (query.Method == "workspace/executeCommand")
+            {
+                string command = query.Parameters.GetProperty("command").GetString()!;
+                var arguments = query.Parameters.GetProperty("arguments");
+                string commandPath = Workspace.FilePath(arguments[0].GetString()!);
+                if (command == "gflat.selectHeaderContext" && latest?.Models?.GetValueOrDefault(commandPath) is { } headerModel)
+                {
+                    string context = arguments[1].GetString()!;
+                    latest.Models[commandPath] = headerModel.WithHeaderContext(commandPath, context);
+                    selectedHeaderContexts[commandPath] = context;
+                    await Reply(query.Id, null);
+                    if (semanticRefreshSupported)
+                    {
+                        string refreshId = "gflat-header-refresh-" + Guid.NewGuid().ToString("N");
+                        pendingClientRequests.Add(refreshId);
+                        await Send(new { jsonrpc = "2.0", id = refreshId, method = "workspace/semanticTokens/refresh", @params = new { } });
+                    }
+                    return;
+                }
+                if (command == "gflat.inspectMacro" && latest?.Models?.GetValueOrDefault(commandPath)?.MacroInspection(commandPath, arguments[1].GetInt32()) is { } inspection)
+                {
+                    await Reply(query.Id, inspection);
+                    if (visualStudioDocumentOpen || showDocumentSupported)
+                    {
+                        string directory = Path.Combine(Path.GetTempPath(), "gflat", "macro-expansions");
+                        Directory.CreateDirectory(directory);
+                        string file = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".txt");
+                        await File.WriteAllTextAsync(file, inspection);
+                        if (visualStudioDocumentOpen)
+                            await Send(new { jsonrpc = "2.0", method = "gflat/showDocument", @params = new { uri = Workspace.FileUri(file) } });
+                        else
+                        {
+                            string showId = "gflat-document-" + Guid.NewGuid().ToString("N");
+                            pendingClientRequests.Add(showId);
+                            await Send(new { jsonrpc = "2.0", id = showId, method = "window/showDocument", @params = new { uri = Workspace.FileUri(file), takeFocus = true } });
+                        }
+                    }
+                    else await Send(new { jsonrpc = "2.0", method = "window/showMessage", @params = new { type = 3, message = inspection } });
+                    return;
+                }
+                throw new ArgumentException("The requested editor command is unavailable.");
+            }
             if (query.Method == "workspace/symbol")
             {
                 string search = query.Parameters.GetProperty("query").GetString() ?? throw new ArgumentException("query must be a string");
@@ -381,7 +443,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
 
     private static bool RequiresFullAnalysis(string method)
         => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename" or
-            "textDocument/implementation" or "textDocument/prepareTypeHierarchy" or "typeHierarchy/supertypes" or "typeHierarchy/subtypes" or "textDocument/codeAction";
+            "textDocument/implementation" or "textDocument/prepareTypeHierarchy" or "typeHierarchy/supertypes" or "typeHierarchy/subtypes" or "textDocument/codeAction" or "workspace/executeCommand";
 
     private async Task Schedule(bool invalidateProjects = false)
     {

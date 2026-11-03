@@ -53,6 +53,7 @@
     <Compile Include="GflatLanguageClient.cs" />
     <Compile Include="GflatEditorPackage.cs" />
     <Compile Include="GflatOptions.cs" />
+    <Compile Include="GflatEditorMessages.cs" />
     <Compile Include="HoverIcons.cs" />
     <Compile Include="HoverConnection.cs" />
     <Compile Include="HoverContent.cs" />

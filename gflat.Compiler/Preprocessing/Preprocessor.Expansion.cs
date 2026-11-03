@@ -39,7 +39,8 @@ public sealed partial class Preprocessor
                 if (work[i + 1].Text == "(")
                 {
                     int end = Closing(work, i + 1);
-                    output.AddRange(work.GetRange(i + 2, end - i - 2));
+                    output.AddRange(work.GetRange(i + 2, end - i - 2).Select((piece, index) =>
+                        piece with { JoinLeft = index > 0 && !piece.Space }));
                     i = end + 1;
                 }
                 else
@@ -56,7 +57,7 @@ public sealed partial class Preprocessor
                 string value = token.Text == "__LINE__" ? token.Span.Line.ToString(System.Globalization.CultureInfo.InvariantCulture) : Quote(token.Span.Source?.Path ?? "<input>");
                 if (!token.Generated) symbols.Add(new(token.Text, token.Span, false, default, token.Text, value,
                     DeclarationTokens: [new(token.Text, "macro")],
-                    ExpansionTokens: [new(value, token.Text == "__LINE__" ? "number" : "string")]));
+                    ExpansionTokens: [new(value, token.Text == "__LINE__" ? "number" : "string")], Invocation: token.Span, FullExpansion: value));
                 output.Add(token with { Text = value, Generated = true, Verbatim = false });
                 i++; continue;
             }
@@ -91,12 +92,22 @@ public sealed partial class Preprocessor
             {
                 occurrence = symbols.Count;
                 previewIds.Add(occurrence);
-                symbols.Add(Symbol(macro, token.Span, false) with { Expansion = "" });
+                var last = work[i + consumed - 1].Span;
+                var invocation = token.Span.Source != null && last.Source == token.Span.Source && last.Start >= token.Span.Start
+                    ? token.Span.Source.Span(token.Span.Start, last.Start + last.Length - token.Span.Start) : token.Span;
+                symbols.Add(Symbol(macro, token.Span, false) with { Expansion = "", Invocation = invocation, FullExpansion = "" });
             }
             var expanded = new Dictionary<string, List<Piece>>(StringComparer.Ordinal);
             List<Piece> Argument(string name)
             {
-                if (!expanded.TryGetValue(name, out var value)) expanded[name] = value = Expand(arguments[name], depth + 1);
+                if (!expanded.TryGetValue(name, out var value))
+                {
+                    int before = symbols.Count;
+                    expanded[name] = value = Expand(arguments[name], depth + 1);
+                    var argumentSteps = symbols.Skip(before).SelectMany(symbol => symbol.Steps ?? []).Take(64).ToArray();
+                    foreach (int id in (token.Occurrences ?? []).Concat(occurrence >= 0 ? [occurrence] : Array.Empty<int>()).Distinct())
+                        symbols[id] = symbols[id] with { Steps = (symbols[id].Steps ?? []).Concat(argumentSteps).Take(64).ToArray() };
+                }
                 return value;
             }
             List<Piece> Substitute(List<Piece> body)
@@ -166,6 +177,13 @@ public sealed partial class Preprocessor
                     .Concat(occurrence >= 0 ? [occurrence] : Array.Empty<int>()).Distinct().ToArray()
             }).ToList();
             if (replacement.Count != 0) replacement[0] = replacement[0] with { Space = token.Space };
+            foreach (int id in (token.Occurrences ?? []).Concat(occurrence >= 0 ? [occurrence] : Array.Empty<int>()).Distinct())
+            {
+                if ((symbols[id].Steps?.Count ?? 0) >= 64) continue;
+                static string Preview(string text) => text.Length <= 2048 ? text : text[..2048] + "...";
+                var step = new MacroExpansionStep(macro.Name, Preview(Render(work.GetRange(i, consumed))), Preview(Render(replacement)), macro.Span);
+                symbols[id] = symbols[id] with { Steps = (symbols[id].Steps ?? []).Append(step).ToArray() };
+            }
             work.RemoveRange(i, consumed);
             work.InsertRange(i, replacement);
         }
@@ -182,7 +200,8 @@ public sealed partial class Preprocessor
         foreach (var (id, preview) in previews)
         {
             var tokens = LimitMacroTokens(ClassifiedPieces(preview), 2048, preview.Count == 512);
-            symbols[id] = symbols[id] with { Expansion = string.Concat(tokens.Select(t => t.Text)), ExpansionTokens = tokens };
+            symbols[id] = symbols[id] with { Expansion = string.Concat(tokens.Select(t => t.Text)), ExpansionTokens = tokens,
+                FullExpansion = preview.Count < 512 ? Render(preview) : null };
         }
         return output;
     }

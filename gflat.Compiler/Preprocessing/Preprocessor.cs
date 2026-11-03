@@ -5,10 +5,12 @@ using gflat.diagnostics;
 namespace gflat.Preprocessing;
 
 public sealed record MacroToken(string Text, string Classification, SourceSpan Span = default);
+public sealed record MacroExpansionStep(string Name, string Before, string After, SourceSpan Declaration);
 
 public sealed record MacroSymbol(string Name, SourceSpan Span, bool Definition, SourceSpan Declaration, string Signature,
     string? Expansion = null, string Classification = "macro", IReadOnlyList<MacroToken>? DeclarationTokens = null,
-    IReadOnlyList<MacroToken>? ExpansionTokens = null);
+    IReadOnlyList<MacroToken>? ExpansionTokens = null, SourceSpan Invocation = default, string? FullExpansion = null,
+    IReadOnlyList<MacroExpansionStep>? Steps = null);
 
 public sealed record PreprocessingResult(List<Token> Tokens, IReadOnlyList<SourceFile> Sources,
     IReadOnlyList<string> Dependencies, IReadOnlyList<MacroSymbol> Symbols);
@@ -43,6 +45,7 @@ public sealed partial class Preprocessor
 
     public static bool IsNeeded(SourceFile source, CompilationOptions? options = null) =>
         options?.Defines.Count > 0 || source.Text.Contains('#') || source.Text.Contains("@(") ||
+        source.Text.Contains("__LINE__", StringComparison.Ordinal) || source.Text.Contains("__FILE__", StringComparison.Ordinal) ||
         source.Text.Contains("\\\n") || source.Text.Contains("\\\r");
 
     public PreprocessingResult Process(SourceFile source)

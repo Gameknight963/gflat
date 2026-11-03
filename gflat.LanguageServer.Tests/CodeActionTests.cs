@@ -27,7 +27,7 @@ public sealed class CodeActionTests
         var range = Workspace.ToRange(source.Span(code.IndexOf(marker, StringComparison.Ordinal), 0));
         var action = Assert.Single(model.CodeActions(source.Path, range), a => a.Title == title);
         string changed = code;
-        foreach (var edit in action.Edit.Changes[Workspace.FileUri(source.Path)].OrderByDescending(e => Workspace.Offset(code, JsonSerializer.SerializeToElement(e.Range.Start, Protocol.JsonOptions))))
+        foreach (var edit in action.Edit!.Changes[Workspace.FileUri(source.Path)].OrderByDescending(e => Workspace.Offset(code, JsonSerializer.SerializeToElement(e.Range.Start, Protocol.JsonOptions))))
         {
             int start = Workspace.Offset(code, JsonSerializer.SerializeToElement(edit.Range.Start, Protocol.JsonOptions));
             int end = Workspace.Offset(code, JsonSerializer.SerializeToElement(edit.Range.End, Protocol.JsonOptions));

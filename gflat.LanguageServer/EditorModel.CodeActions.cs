@@ -4,7 +4,8 @@ using gflat.ast;
 namespace gflat.LanguageServer;
 
 public sealed record ActionWorkspaceEdit(Dictionary<string, SourceEdit[]> Changes);
-public sealed record EditorCodeAction(string Title, string Kind, ActionWorkspaceEdit Edit);
+public sealed record EditorCommand(string Title, string Command, object[] Arguments);
+public sealed record EditorCodeAction(string Title, string Kind, ActionWorkspaceEdit? Edit = null, EditorCommand? Command = null);
 
 public sealed partial class EditorModel
 {
@@ -16,6 +17,12 @@ public sealed partial class EditorModel
         var source = sources[path];
         int offset = Workspace.Offset(source.Text, System.Text.Json.JsonSerializer.SerializeToElement(range.Start, Protocol.JsonOptions));
         var actions = new List<EditorCodeAction>();
+        actions.AddRange(MacroActions(path, offset));
+        var contexts = HeaderContexts(path);
+        if (contexts.Length > 1)
+            foreach (var context in contexts)
+                actions.Add(new("Use header context: " + context.Label, "refactor.rewrite", Command:
+                    new("Use header context", "gflat.selectHeaderContext", [Workspace.FileUri(path), context.Id])));
         var imports = new List<(string Name, SourceSpan Span)>();
         var fileTokens = tokens[path];
         for (int i = 0; i < fileTokens.Length; i++)

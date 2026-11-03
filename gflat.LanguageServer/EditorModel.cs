@@ -28,7 +28,7 @@ public sealed partial class EditorModel
     private readonly AnalysisSnapshot snapshot;
     public bool IsPartialAnalysis => snapshot.BodySources != null;
     public SourceEdit[] Format(string path, FormattingOptions options, TextRange? range = null)
-        => SourceFormatter.Format(sources[path], options, range, snapshot.Nodes);
+        => SourceFormatter.Format(sources[path], options, range, activeNodes);
     private readonly Dictionary<string, SourceFile> sources;
     private readonly Dictionary<string, Token[]> tokens = new(Workspace.Paths);
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
@@ -47,15 +47,19 @@ public sealed partial class EditorModel
     private readonly Dictionary<(string Path, int End), Syntax[]> callsByCalleeEnd = [];
     private readonly HashSet<Token> typePositionTokens = new(ReferenceEqualityComparer.Instance);
 
-    public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files, CancellationToken cancellationToken = default)
+    public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files, CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string>? headerContexts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         this.snapshot = snapshot;
+        headerSelections = headerContexts ?? new Dictionary<string, string>(Workspace.Paths);
+        activeNodes = snapshot.Nodes.Where(n => n.Span.Source?.Path is not { } path || !headerSelections.TryGetValue(path, out string? selected) ||
+            InclusionContext(n, path)?.Id == selected).ToArray();
         IndexScopeEnvironments();
-        var allFiles = files.Concat(snapshot.Sources).Concat(snapshot.Nodes.Select(n => n.Span.Source).OfType<SourceFile>())
+        var allFiles = files.Concat(snapshot.Sources).Concat(activeNodes.Select(n => n.Span.Source).OfType<SourceFile>())
             .DistinctBy(s => s.Path, Workspace.Paths).ToArray();
         sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
-        var nodesBySource = snapshot.Nodes.Where(n => n.Span.Source != null)
+        var nodesBySource = activeNodes.Where(n => n.Span.Source != null)
             .GroupBy(n => n.Span.Source!.Id).ToDictionary(group => group.Key, group => group.ToArray());
         foreach (var file in allFiles)
         {
@@ -87,7 +91,7 @@ public sealed partial class EditorModel
                     typePositionTokens.Add(fileTokens[index]);
             }
         }
-        foreach (var entry in snapshot.Nodes)
+        foreach (var entry in activeNodes)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var (name, kind, classification, type) = Describe(entry.Node);
@@ -162,7 +166,7 @@ public sealed partial class EditorModel
         // Containers retain source parents; their member lists reflect qualified
         // binding and weak replacement selection.
         var methodScopes = new Dictionary<MethodDeclaration, (string Namespace, string? Owner, bool HasNamespace)>(ReferenceEqualityComparer.Instance);
-        foreach (var container in snapshot.Nodes)
+        foreach (var container in activeNodes)
         {
             IEnumerable<AstNode>? members = container.Node switch
             {
@@ -180,9 +184,9 @@ public sealed partial class EditorModel
             foreach (var method in members.OfType<MethodDeclaration>())
                 methodScopes[method] = (containerNamespace, containerOwner, containerHasNamespace);
         }
-        scopeEnvironments.EnsureCapacity(snapshot.Nodes.Count);
+        scopeEnvironments.EnsureCapacity(activeNodes.Count);
         var pending = new Stack<Syntax>();
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
         {
             Syntax? current = syntax;
             ScopeEnvironment environment = new("", null, false, false);
@@ -793,6 +797,7 @@ public sealed partial class EditorModel
 
     private object Completion(string path, int offset, TextRange? replacementRange)
     {
+        if (IncludeCompletion(path, offset) is { } include) return include;
         var ts = tokens[path];
         if (InCommentOrLiteral(path, offset)) return new { isIncomplete = false, items = Array.Empty<object>() };
         int index = Array.FindIndex(ts, t => t.Start >= offset);

@@ -26,7 +26,7 @@ public sealed partial class EditorModel
 
     private void IndexSourceTypeNames()
     {
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
         {
             var span = syntax.Node switch {
                 NamedTypeExpression named => named.NameSpan,

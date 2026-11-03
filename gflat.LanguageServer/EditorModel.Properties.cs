@@ -13,7 +13,7 @@ public sealed partial class EditorModel
             var property = (PropertyDeclaration)symbol.Syntax.Node;
             return new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().Select(accessor => (accessor.Span, Symbol: symbol));
         }).GroupBy(entry => entry.Span).ToDictionary(group => group.Key, group => group.First().Symbol);
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
         {
             AstNode site = syntax.Node;
             var call = checker.GetPropertyRead(site);

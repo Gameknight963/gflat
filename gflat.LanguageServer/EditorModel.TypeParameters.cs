@@ -10,7 +10,7 @@ public sealed partial class EditorModel
         // Parameters are source identities scoped to their declaring definition.
         // Blocks have no ordinary named symbol, but their type parameters still
         // own a lexical scope covering the receiver and all member bodies.
-        var blockScopes = snapshot.Nodes.Where(node => node.Node is ExtensionDeclaration && node.Span.Source != null)
+        var blockScopes = activeNodes.Where(node => node.Node is ExtensionDeclaration && node.Span.Source != null)
             .Select(node => {
                 var marker = tokens[node.Span.Source!.Path].First(token => token.Start >= node.Span.Start);
                 return new Symbol("extension", 0, "keyword", node, marker.Span,

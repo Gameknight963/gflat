@@ -50,7 +50,7 @@ public sealed partial class EditorModel
     private void IndexSpliceReferences()
     {
         if (snapshot.Checker is not { } checker) return;
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
         {
             if (syntax.Node is ReflectExpression query && query.Target.Span.Source?.Path is { } queryPath &&
                 checker.TryGetReflectionTarget(query, out var queried) && queried is { Kind: not "Type" } &&

@@ -12,7 +12,7 @@ public sealed partial class EditorModel
         var fields = symbols.Where(symbol => symbol.Syntax.Node is FieldDeclaration)
             .ToDictionary(symbol => (symbol.Syntax.Span, symbol.Name));
         if (fields.Count == 0) return;
-        foreach (var syntax in snapshot.Nodes)
+        foreach (var syntax in activeNodes)
         {
             var site = syntax.Node;
             if (site is not (IdentifierExpression or MemberAccessExpression or NamespaceAccessExpression)) continue;

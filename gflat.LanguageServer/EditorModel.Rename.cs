@@ -52,7 +52,7 @@ public sealed partial class EditorModel
         var family = symbol == null ? [] : RenameFamily(symbol).DistinctBy(s => s.NameSpan).ToArray();
         var names = family.Select(s => s.NameSpan).ToHashSet();
         if (symbol != null && IsType(symbol.Syntax.Node))
-            foreach (var destructor in snapshot.Nodes.Where(n => n.Node is DestructorDeclaration &&
+            foreach (var destructor in activeNodes.Where(n => n.Node is DestructorDeclaration &&
                 Owner(Parents(n)) == symbol.Qualified && n.Span.Source != null))
             {
                 var name = tokens[destructor.Span.Source!.Path].FirstOrDefault(t => t.Start >= destructor.Span.Start &&

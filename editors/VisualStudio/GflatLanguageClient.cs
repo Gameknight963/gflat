@@ -26,13 +26,14 @@ public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustom
     [ImportingConstructor]
     public GflatLanguageClient(HoverConnection hover) => this.hover = hover;
     public object? MiddleLayer => null;
-    public object? CustomMessageTarget => null;
+    private readonly GflatEditorMessages messages = new();
+    public object CustomMessageTarget => messages;
     public Task AttachForCustomMessageAsync(JsonRpc rpc) { hover.Rpc = rpc; return Task.CompletedTask; }
     public string Name => "G\u266d";
     public IEnumerable<string> ConfigurationSections => Array.Empty<string>();
     // VS's built-in semantic token classifier recognizes the Roslyn classification
     // names. Other LSP clients receive the standard token legend by default.
-    public object? InitializationOptions => new { visualStudioClassifications = true, hoverIcons = HoverIcons.Catalog, visualStudioNativeHover = true };
+    public object? InitializationOptions => new { visualStudioClassifications = true, hoverIcons = HoverIcons.Catalog, visualStudioNativeHover = true, visualStudioDocumentOpen = true };
     public IEnumerable<string> FilesToWatch => new[] { "gflat-workspace.json", "**/*.gf", "**/*.gfh", "**/*.gfproj", "**/*.props", "**/*.targets" };
     public bool ShowNotificationOnInitializeFailed => true;
     public event AsyncEventHandler<EventArgs>? StartAsync;

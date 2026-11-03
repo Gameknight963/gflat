@@ -11,7 +11,7 @@ public sealed partial class EditorModel
         var gaps = new Dictionary<string, List<(int Start, int End)>>(Workspace.Paths);
         // Do not ignore an entire type span: array bounds can contain real calls.
         // Only the gaps between captured type children contain type separators.
-        foreach (var siblings in snapshot.Nodes.Where(syntax => syntax.Node is TypeExpression &&
+        foreach (var siblings in activeNodes.Where(syntax => syntax.Node is TypeExpression &&
                      syntax.Parent?.Node is TypeExpression or CallExpression)
                      .GroupBy(syntax => syntax.Parent!, ReferenceEqualityComparer.Instance))
         {

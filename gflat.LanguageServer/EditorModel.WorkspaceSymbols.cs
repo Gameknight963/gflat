@@ -19,7 +19,7 @@ public sealed partial class EditorModel
             .Select(entry => new WorkspaceSymbolInformation(entry.Symbol.Name, entry.Kind,
                 new Location(Workspace.FileUri(entry.Symbol.NameSpan.Source!.Path), Workspace.ToRange(entry.Symbol.NameSpan)),
                 entry.Symbol.Owner ?? (entry.Symbol.Namespace.Length == 0 ? null : entry.Symbol.Namespace)))
-            .Concat(snapshot.Nodes.Where(syntax => syntax.Node is DestructorDeclaration or OperatorDeclaration &&
+            .Concat(activeNodes.Where(syntax => syntax.Node is DestructorDeclaration or OperatorDeclaration &&
                     syntax.Span.Source is { } source && !source.Path.StartsWith('<'))
                 .Select(syntax => {
                     string owner = Owner(Parents(syntax)) ?? Namespace(Parents(syntax));

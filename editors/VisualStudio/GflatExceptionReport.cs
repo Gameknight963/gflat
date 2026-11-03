@@ -8,7 +8,7 @@ namespace gflat.VisualStudio;
 // and display behavior can be tested without launching Visual Studio.
 internal sealed class GflatExceptionReport
 {
-    internal string Type = "gflat exception";
+    internal string Type = "G\u266d exception";
     internal string Message = "";
     internal bool Unhandled;
 

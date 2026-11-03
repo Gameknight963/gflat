@@ -1,4 +1,4 @@
-<Rule Name="GflatLocal" DisplayName="gflat application" PageTemplate="debugger"
+<Rule Name="GflatLocal" DisplayName="G&#x266D; application" PageTemplate="debugger"
       Description="Run the native executable without debugging (Ctrl+F5)."
       xmlns="http://schemas.microsoft.com/build/2009/properties">
   <Rule.DataSource><DataSource Persistence="UserFileWithXamlDefaults" HasConfigurationCondition="true" /></Rule.DataSource>

@@ -21,7 +21,7 @@ if ($PSCmdlet.ShouldProcess($registration.Key, 'Register gflat project files in 
     }
     Set-ItemProperty -LiteralPath $registration.Key -Name 'GflatOwner' -Value 'gflat.VisualStudio.Explorer.v1'
     Set-ItemProperty -LiteralPath $registration.Key -Name 'VisualStudioPath' -Value $registration.VisualStudioPath
-    Set-Item -LiteralPath $registration.Key -Value 'gflat Project File'
+    Set-Item -LiteralPath $registration.Key -Value ('G' + [char]0x266D + ' Project File')
     Set-Item -LiteralPath (Join-Path $registration.Key 'DefaultIcon') -Value ('"' + $registration.Executable + '",0')
     Set-Item -LiteralPath (Join-Path $registration.Key 'shell\open\command') -Value ('"' + $registration.Executable + '" "%1"')
     $openWith = Join-Path $registration.Extension 'OpenWithProgids'

@@ -28,7 +28,7 @@ public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustom
     public object? MiddleLayer => null;
     public object? CustomMessageTarget => null;
     public Task AttachForCustomMessageAsync(JsonRpc rpc) { hover.Rpc = rpc; return Task.CompletedTask; }
-    public string Name => "gflat";
+    public string Name => "G\u266d";
     public IEnumerable<string> ConfigurationSections => Array.Empty<string>();
     // VS's built-in semantic token classifier recognizes the Roslyn classification
     // names. Other LSP clients receive the standard token legend by default.
@@ -46,7 +46,7 @@ public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustom
         token.ThrowIfCancellationRequested();
         Dispose();
         string executable = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "Server", "gflat.LanguageServer.exe");
-        if (!File.Exists(executable)) throw new FileNotFoundException("The bundled gflat language server is missing. Reinstall the extension.", executable);
+        if (!File.Exists(executable)) throw new FileNotFoundException("The bundled G\u266d language server is missing. Reinstall the extension.", executable);
         var process = new Process
         {
             StartInfo = new ProcessStartInfo(executable)
@@ -56,7 +56,7 @@ public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustom
             }
         };
         process.ErrorDataReceived += (_, args) => { if (args.Data != null) Debug.WriteLine("gflat: " + args.Data); };
-        if (!process.Start()) { process.Dispose(); throw new InvalidOperationException("Could not start the gflat language server"); }
+        if (!process.Start()) { process.Dispose(); throw new InvalidOperationException("Could not start the G\u266d language server"); }
         server = process;
         process.BeginErrorReadLine();
         return new Connection(process.StandardOutput.BaseStream, process.StandardInput.BaseStream);
@@ -90,7 +90,7 @@ public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustom
     }
     private void OptionsChanged() => _ = SendOptionsAsync();
     public Task<InitializationFailureContext?> OnServerInitializeFailedAsync(ILanguageClientInitializationInfo initializationState)
-        => Task.FromResult<InitializationFailureContext?>(new InitializationFailureContext { FailureMessage = "gflat language server initialization failed. Try reinstalling the extension." });
+        => Task.FromResult<InitializationFailureContext?>(new InitializationFailureContext { FailureMessage = "G\u266d language server initialization failed. Try reinstalling the extension." });
 
     public void Dispose()
     {

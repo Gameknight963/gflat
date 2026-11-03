@@ -642,7 +642,7 @@ collection. Explicit Collect calls remain available.
 Use the concrete type to access these members, which are outside the common
 collector interface. ManagedBytes excludes bookkeeping allocations.
 
-The implementation uses ordinary gflat state and private LLVM operations for
+The implementation uses ordinary G♭ state and private LLVM operations for
 thread identity, an atomic owner check, and unaligned pointer loads. Its Memory
 hooks must avoid reentering the collector. See the
 [managed graph example](../examples/managed/README.md).

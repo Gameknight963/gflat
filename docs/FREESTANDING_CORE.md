@@ -18,7 +18,7 @@ selected file with Try methods.
 ## Verified executable
 
 [`FreestandingCoreUtilitiesTests`](../gflat.Tests/FreestandingCoreUtilitiesTests.cs)
-builds a gflat `main` with selected sources, `NoStdLib`, `NoBuiltins`, and internal
+builds a G♭ `main` with selected sources, `NoStdLib`, `NoBuiltins`, and internal
 function linkage. Its startup calls main and exits through the operating system.
 
 ```console

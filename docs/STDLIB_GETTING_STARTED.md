@@ -1,6 +1,6 @@
 # Getting started with the standard library
 
-A gflat project includes Standard by default. Import namespaces for the APIs
+A G♭ project includes Standard by default. Import namespaces for the APIs
 you use. For example, Standard::Text contains Strings and parsing, while
 Standard::Memory contains spans. See the [namespace layout](../Standard/README.md#namespaces-and-files)
 and [project setup](PROJECTS.md).

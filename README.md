@@ -1,12 +1,13 @@
-﻿![GitHub Repo Views](https://gitviews.com/repo/gameknight963/gflat.svg?style=flat&label-color=purple)
+![GitHub Repo Views](https://gitviews.com/repo/gameknight963/gflat.svg?style=flat&label-color=purple)
 [![compiler](https://github.com/Gameknight963/gflat/actions/workflows/test.yml/badge.svg)](https://github.com/Gameknight963/gflat/actions/workflows/test.yml)
 
-# gflat
+# G♭ 
+(gflat)
 
 A compiled language with C#-inspired syntax, control over storage and layout,
 scope-based destruction, and native code generation through LLVM.
 
-gflat is experimental. The language, compiler, library, and project format change
+G♭ is experimental. The language, compiler, library, and project format change
 frequently. Nightly builds are demos of the current work.
 
 ```csharp
@@ -99,7 +100,7 @@ Run `gflat doctor --native` to check the toolchain if setup fails.
 ### Visual Studio
 
 Install the VSIX and restart Visual Studio. Use **File > New > Project**, search
-for **gflat**, and choose a Console Application or Source Library. You can also
+for **G♭**, and choose a Console Application or Source Library. You can also
 add an existing `.gfproj` to a solution.
 
 See [editor setup](docs/EDITOR_SUPPORT.md) for SDK-style projects and other editors.

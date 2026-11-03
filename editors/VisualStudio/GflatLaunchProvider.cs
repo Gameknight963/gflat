@@ -32,7 +32,7 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
     public override async Task<IReadOnlyList<IDebugLaunchSettings>> QueryDebugTargetsAsync(DebugLaunchOptions launchOptions)
     {
         var provider = project.Services.ProjectPropertiesProvider ??
-            throw new InvalidOperationException("CPS cannot read the gflat project's launch properties.");
+            throw new InvalidOperationException("CPS cannot read the G\u266d project's launch properties.");
         var properties = provider.GetCommonProperties();
         var settings = GflatLaunch.CreateSettings(launchOptions,
             await properties.GetEvaluatedPropertyValueAsync("OutputType"),
@@ -57,15 +57,15 @@ internal static class GflatLaunch
         string targetPath, string arguments, string workingDirectory, string projectDirectory)
     {
         if (!CanLaunch(options, kind, emitIr))
-            throw new InvalidOperationException("Only executable gflat projects with native output can run.");
+            throw new InvalidOperationException("Only executable G\u266d projects with native output can run.");
         if (string.IsNullOrWhiteSpace(targetPath))
-            throw new InvalidOperationException("The gflat project has no TargetPath.");
+            throw new InvalidOperationException("The G\u266d project has no TargetPath.");
         string executable = Resolve(projectDirectory, targetPath);
         if (!File.Exists(executable))
-            throw new FileNotFoundException("The gflat executable was not built. Build the project before running it.", executable);
+            throw new FileNotFoundException("The G\u266d executable was not built. Build the project before running it.", executable);
         string directory = string.IsNullOrWhiteSpace(workingDirectory) ? projectDirectory : Resolve(projectDirectory, workingDirectory);
         if (!Directory.Exists(directory))
-            throw new DirectoryNotFoundException("The gflat working directory does not exist: " + directory);
+            throw new DirectoryNotFoundException("The G\u266d working directory does not exist: " + directory);
         return new DebugLaunchSettings(options)
         {
             LaunchOperation = DebugLaunchOperation.CreateProcess,

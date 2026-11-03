@@ -1,7 +1,7 @@
 <VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
   <TemplateData>
-    <Name>gflat Source Library</Name>
-    <Description>Reusable gflat source code referenced by other gflat projects.</Description>
+    <Name>G&#x266D; Source Library</Name>
+    <Description>Reusable G&#x266D; source code referenced by other G&#x266D; projects.</Description>
     <ProjectType>gflat</ProjectType>
     <TemplateID>gflat.SourceLibrary</TemplateID>
     <DefaultName>GflatLibrary</DefaultName>

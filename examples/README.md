@@ -14,7 +14,7 @@ Arguments after `--` go to the program. For build configuration and toolchain se
 [projects](../docs/PROJECTS.md).
 
 In Visual Studio, open [examples.slnx](examples.slnx), set an executable project as the
-startup project, then use **F5** or **Ctrl+F5**. The **gflat application** launch page
+startup project, then use **F5** or **Ctrl+F5**. The **G♭ application** launch page
 sets arguments and working directory. See [debugging
 projects](../docs/PROJECTS.md#running-in-visual-studio).
 

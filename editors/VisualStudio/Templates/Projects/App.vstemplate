@@ -1,7 +1,7 @@
 <VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
   <TemplateData>
-    <Name>gflat Console Application</Name>
-    <Description>A native console application with the gflat standard library.</Description>
+    <Name>G&#x266D; Console Application</Name>
+    <Description>A native console application with the G&#x266D; standard library.</Description>
     <ProjectType>gflat</ProjectType>
     <TemplateID>gflat.ConsoleApplication</TemplateID>
     <DefaultName>GflatApp</DefaultName>

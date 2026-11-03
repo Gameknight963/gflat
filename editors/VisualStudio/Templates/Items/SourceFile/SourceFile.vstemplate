@@ -1,7 +1,7 @@
 <VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
   <TemplateData>
-    <Name>gflat source file</Name>
-    <Description>An empty gflat source file.</Description>
+    <Name>G&#x266D; source file</Name>
+    <Description>An empty G&#x266D; source file.</Description>
     <ProjectType>gflat</ProjectType>
     <DefaultName>Source.gf</DefaultName>
     <SortOrder>10</SortOrder>

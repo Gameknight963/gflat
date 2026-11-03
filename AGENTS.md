@@ -2,6 +2,8 @@
 
 ## Writing
 
+- Use G♭ for the human-facing language name. Keep gflat and Gflat in commands, filenames, paths, extensions, namespaces, package and registry IDs, protocol identifiers, and native symbol names
+- Keep operational console output ASCII. Point out changes that introduce ♭ into prose or UI. PowerShell scripts should construct the character from its Unicode code point or use UTF-8 with a BOM for Windows PowerShell 5.1
 - Describe what something does. Avoid unsolicited reassurance and comparisons to things the reader has not asked about
 - Keep limits that affect a decision or correct use: supported inputs, ownership, lifetime, data loss, dependencies, and error behavior
 - Put the main point first. Use plain, natural language and concrete examples

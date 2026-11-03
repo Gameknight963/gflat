@@ -119,7 +119,7 @@ If Windows denies write access, the script relaunches itself with a UAC prompt.
 Accept it to continue. The elevated window stays open until you press Enter, so
 you can read the result. Use `-WhatIf` to preview the changes.
 
-It selects the newest installed Visual Studio and finds its installed gflat VSIX.
+It selects the newest installed Visual Studio and finds its installed G♭ VSIX.
 To select another installation or supply the SDK directory explicitly:
 
 ```powershell
@@ -287,7 +287,7 @@ keywords can therefore use their final colors while analysis runs.
 
 ## Quick Info preferences
 
-The Visual Studio language options include a gflat **IntelliSense** page, registered
+The Visual Studio language options include a `gflat` **IntelliSense** page, registered
 through the SDK's language editor options API. **Show known exceptions** defaults
 to off. **Show type size and alignment** defaults to on. Visual Studio persists
 these user preferences. Applying changes updates tooltips without restarting the

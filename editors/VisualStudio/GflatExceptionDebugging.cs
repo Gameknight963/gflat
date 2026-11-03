@@ -68,7 +68,7 @@ public sealed class GflatExceptionDebugging : IDkmDebugMonitorExceptionNotificat
         => IsGflat(exception) ? DkmExceptionDetails.Create(inspectionSession, exception, null) : exception.GetExceptionDetails(inspectionSession);
     public string GetFormattedDescription(DkmExceptionDetails details) => IsGflat(details.Exception) ? GetDescription(details.Exception) : details.GetFormattedDescription();
     public string GetExceptionMessage(DkmExceptionDetails details) => IsGflat(details.Exception) ? GetAdditionalInformation(details.Exception) : details.GetExceptionMessage()!;
-    public string GetTypeName(DkmExceptionDetails details, bool fullName) => IsGflat(details.Exception) ? details.Exception.Name ?? "gflat exception" : details.GetTypeName(fullName);
+    public string GetTypeName(DkmExceptionDetails details, bool fullName) => IsGflat(details.Exception) ? details.Exception.Name ?? "G\u266d exception" : details.GetTypeName(fullName);
     public string GetSource(DkmExceptionDetails details) => IsGflat(details.Exception) ? null! : details.GetSource()!;
     public int GetHResult(DkmExceptionDetails details) => IsGflat(details.Exception) ? 0 : details.GetHResult();
     public string GetStackTrace(DkmExceptionDetails details) => IsGflat(details.Exception) ? null! : details.GetStackTrace()!;

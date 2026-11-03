@@ -1,10 +1,10 @@
-# gflat language reference
+# G♭ language reference
 
 Version 0.3, experimental. This document describes the supported language.
 
 ## Design charter
 
-gflat combines object-oriented APIs with control over storage and layout.
+G♭ combines object-oriented APIs with control over storage and layout.
 
 - `T` is a value, stored as a local, an inline field, or an element in an allocation
 - Structs support constructors, methods, properties, interfaces, and destruction
@@ -803,7 +803,7 @@ Raw manual freeing of collector-owned storage is invalid and is not guarded by
 compiler interception. Collection removes registrations for reclaimed objects'
 fields before freeing their storage.
 
-All default tracing bookkeeping and collection algorithms are written in gflat.
+All default tracing bookkeeping and collection algorithms are written in G♭.
 Collector state uses ordinary static fields. Private inline LLVM provides thread
 ownership validation and an unaligned pointer load. Other providers implement the same static contract. moving collectors, pinning, and thread rendezvous still require
 additional compiler support.
@@ -994,7 +994,7 @@ Struct and class destruction runs the destructor body, then inline object fields
 
 Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer and copy only when their elements support copying. Initialization preserves the array size. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
 
-Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests. Use pointers and primitive C interfaces for interoperation.
+Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are G♭ layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests. Use pointers and primitive C interfaces for interoperation.
 
 ## Static classes and provider contracts
 
@@ -1206,14 +1206,14 @@ file. Its native linker symbol is unchanged. Namespace extern declarations accep
 Private externs still participate in ordinary namespace declaration uniqueness.
 Repeating the same qualified declaration name in multiple source files is rejected.
 Privacy restricts access rather than creating a file-local declaration namespace.
-Different gflat namespaces may independently declare the same native C symbol,
+Different G♭ namespaces may independently declare the same native C symbol,
 provided their native signatures and `nothrow` contracts agree.
 An extern may declare a trailing `nothrow` contract, for example
 `private extern int abs(int value) nothrow;`. This promises that the foreign
 implementation never unwinds through the call. The compiler emits an LLVM
 `nounwind` declaration and omits exception handling for direct calls. It cannot
 enforce this promise inside foreign code. Violating it is invalid native
-behavior. Ordinary gflat `nothrow` bodies still enforce their termination
+behavior. Ordinary G♭ `nothrow` bodies still enforce their termination
 boundary. Repeated declarations of one native symbol must agree on `nothrow`.
 Converting the function to an ordinary function pointer does not preserve this
 contract: calls through that pointer remain potentially throwing.
@@ -1232,7 +1232,7 @@ Scalar function boundaries use the host C ABI consistently for ordinary function
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.
 
-Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. `throws` has been removed. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across gflat frames, but gflat types do not yet have C++ RTTI or typed C++ catch interoperability.
+Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. `throws` has been removed. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across G♭ frames, but G♭ types do not yet have C++ RTTI or typed C++ catch interoperability.
 
 Exception payloads first use `Memory::Allocate`. If it returns null, the native
 exception runtime uses a process-wide emergency reserve. Its own ownership records
@@ -1250,7 +1250,7 @@ the reserve directly instead of calling that allocator again. An unavailable or
 exhausted reserve terminates. This prevents recursive allocation failures. It
 does not relax the allocation hooks' non-throwing callback contract.
 
-`throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type. `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available. Its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions. Typed gflat catches do not.
+`throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type. `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available. Its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions. Typed G♭ catches do not.
 
 The default `Exception` borrows its null-terminated message pointer. Its constructors
 do not copy or take ownership of the bytes, and `GetMessage()` returns the stored
@@ -1871,7 +1871,7 @@ and the supplied arguments. Instance calls retain virtual dispatch.
 
 Advanced code can call `__llvm<Result>("body IR", arguments...)`. This reserved
 unqualified builtin emits a private `alwaysinline` helper whose argument types
-come from the gflat expressions and whose result type is explicit. LLVM arguments
+come from the G♭ expressions and whose result type is explicit. LLVM arguments
 are `%0`, `%1`, and so on. The body must provide its own terminator.
 
 ```csharp

@@ -1,8 +1,8 @@
-[$RootKey$\TextMate\Repositories]
+﻿[$RootKey$\TextMate\Repositories]
 "gflat"="$PackageFolder$\Grammars"
 
 [$RootKey$\Packages\{25453519-83CF-4439-B0A4-6D79CD8F267C}]
-@="gflat Editor"
+@="G♭ Editor"
 "InprocServer32"="$WinDir$\SYSTEM32\MSCOREE.DLL"
 "Class"="gflat.VisualStudio.GflatEditorPackage"
 "CodeBase"="$PackageFolder$\gflat.VisualStudio.dll"
@@ -38,8 +38,8 @@
 @="ProjectFactory"
 "ProjectFactoryPackage"="{3347BEE8-D7A1-4082-95E4-38A439553CC2}"
 "Package"="{3347BEE8-D7A1-4082-95E4-38A439553CC2}"
-"DisplayName"="gflat"
-"DisplayProjectFileExtensions"="gflat Projects (*.gfproj);*.gfproj"
+"DisplayName"="G♭"
+"DisplayProjectFileExtensions"="G♭ Projects (*.gfproj);*.gfproj"
 "DefaultProjectExtension"="gfproj"
 "PossibleProjectExtensions"="gfproj"
 "Capabilities"="Gflat;HandlesOwnReload;OpenProjectFile;UseFileGlobs"
@@ -48,7 +48,7 @@
 "Language(VsTemplate)"="gflat"
 
 [$RootKey$\Projects\{6423F711-946A-41AB-B95B-0F9B5911F803}\AddItemTemplates\TemplateDirs\{6423F711-946A-41AB-B95B-0F9B5911F803}\/1]
-@="gflat"
+@="G♭"
 "TemplatesDir"="$PackageFolder$\ItemTemplates"
 "SortPriority"=dword:00000064
 

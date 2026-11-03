@@ -66,7 +66,7 @@ precompiled tasks under `build/tasks/`. Keep
 `Standard/` there too when using the standard library.
 
 Downloaded compiler and language-server bundles include MSBuild and the .NET runtime.
-Clang and the native platform toolchain produce native executables. The .NET SDK is required to build gflat itself from source.
+Clang and the native platform toolchain produce native executables. The .NET SDK is required to build G♭ itself from source.
 
 ## Creating a project
 
@@ -170,7 +170,7 @@ and its exit code becomes the compiler command's exit code.
 
 The bundled `gflat build`, `check`, and `clean` commands run the project targets
 without an installed .NET SDK. You can also use an installed MSBuild directly.
-For example, when developing gflat with the .NET 10 SDK:
+For example, when developing G♭ with the .NET 10 SDK:
 
 ```text
 dotnet build gflat
@@ -295,7 +295,7 @@ For example, link a Windows SDK library:
 
 Use names and binary formats supported by your host toolchain. A native file
 must match the target architecture and ABI.
-Native code and its dependencies are built separately from the gflat sources.
+Native code and its dependencies are built separately from the G♭ sources.
 
 ### Requirements from source libraries
 
@@ -329,7 +329,7 @@ Link-time library selection leaves runtime lookup to the host loader.
 ### A small C object
 
 Save this as `native_add.c` and build it with the native compiler for the same
-host target as gflat:
+host target as G♭:
 
 ```c
 int native_add(int left, int right)
@@ -386,7 +386,7 @@ work you want to do:
 
 Use **Add > Existing Project** to add another `.gfproj` to a solution.
 
-Use **File > New > Project** and search for **gflat** to create a Console
+Use **File > New > Project** and search for **G♭** to create a Console
 Application or Source Library directly in your solution. These are native Visual
 Studio project templates, generated from the same starting files as `gflat new`.
 They import the same build rules as CLI and standalone MSBuild projects. CPS
@@ -401,7 +401,7 @@ configurations, property pages, and MSBuild invocation. The extension supplies a
 `.gf` item template, App/Library project templates, and the bundled compiler and SDK locations.
 
 The compiler solution contains only .NET projects, so `dotnet build/test gflat.slnx`
-can bootstrap the tools without first building gflat programs. Build the standard
+can bootstrap the tools without first building G♭ programs. Build the standard
 library or examples from their separate solutions after the compiler is available.
 The available configurations are `Debug|AnyCPU` and `Release|AnyCPU`. `AnyCPU` is
 an MSBuild configuration label, not a native ABI selection.
@@ -413,7 +413,7 @@ Set an executable `.gfproj` as the startup project and use **F5** to debug or
 and Visual Studio's normal build and launch services. Source libraries and LLVM
 IR output configurations cannot launch.
 
-The **gflat application** launch page provides command arguments and a working
+The **G♭ application** launch page provides command arguments and a working
 directory, which defaults to the project directory. Relative working directories
 are resolved from that directory. These settings are stored per configuration in
 `.gfproj.user`, which generated projects ignore in Git.
@@ -424,7 +424,7 @@ buffers, and aggregate fields. Windows builds write a PDB beside the executable;
 Linux builds embed DWARF. Standalone compilation uses `--debug` (or `-g`).
 Use `--no-debug` to override the project setting. Optimization is independent.
 Start with optimization level 0 for predictable stepping and variable inspection.
-Watch initially uses the native debugger's expression evaluator, so gflat-specific
+Watch initially uses the native debugger's expression evaluator, so G♭-specific
 expressions and property evaluation are not fully supported.
 
 #### Standard values in Locals and Watch
@@ -439,10 +439,10 @@ Expand **[Raw View]** to inspect the underlying fields.
 
 #### Exception debugging in Visual Studio
 
-Debug builds report gflat exception type names, messages, and codes through the
+Debug builds report G♭ exception type names, messages, and codes through the
 native debugger. Use **Debug > Windows > Exception Settings > C++ Exceptions**
-and add a gflat type name (for example `App::Problem`) to break when it is thrown.
-gflat does not enable first-chance breaking by default or override your settings.
+and add a G♭ type name (for example `App::Problem`) to break when it is thrown.
+G♭ does not enable first-chance breaking by default or override your settings.
 Explicit `throw;` reports a rethrow. Internal cleanup propagation does not.
 
 An exception reaching a termination boundary reports an unhandled event before
@@ -524,7 +524,7 @@ startup and linker settings.
 
 ### Unused functions and data
 
-Executable builds give gflat function definitions other than `main` internal LLVM
+Executable builds give G♭ function definitions other than `main` internal LLVM
 linkage, allowing LLVM to remove unused definitions. Native compilation also places
 functions and data in separate sections and asks the linker to discard unreferenced sections,
 including at optimization level 0. Native callbacks, virtual/interface tables,
@@ -534,14 +534,14 @@ static initialization and cleanup retain the functions they reference.
 other native object files and custom entry points. The compiler API likewise
 preserves those definitions by default. Use
 `CompilationOptions { InternalizeFunctions = true }` for a complete executable
-whose gflat functions are only called through that compilation or passed pointers.
-This controls native linkage independently of gflat `public`/`private` access.
+whose G♭ functions are only called through that compilation or passed pointers.
+This controls native linkage independently of G♭ `public`/`private` access.
 
 ### 128-bit integer helpers
 
 On Windows, 128-bit integer code uses the selected Clang installation's
 `compiler-rt` builtins for operations such as division and remainder. That LLVM
 installation must include its builtins library. This also applies to `NoStdLib`
-programs: compiler arithmetic helpers are separate from gflat's standard library.
+programs: compiler arithmetic helpers are separate from G♭'s standard library.
 Other hosts keep their normal compiler runtime selection. See Clang's
 [compiler runtime documentation](https://clang.llvm.org/docs/Toolchain.html#compiler-runtime).

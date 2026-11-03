@@ -35,6 +35,7 @@ try {
     & $install -VisualStudioPath $first -ClassesRoot $classes
     & $install -VisualStudioPath $first -ClassesRoot $classes
     Assert-True ((Get-Item -LiteralPath $one.Extension).GetValue('') -eq $one.ProgId) 'Initial default was not registered'
+    Assert-True ((Get-Item -LiteralPath $one.Key).GetValue('') -eq ('G' + [char]0x266D + ' Project File')) 'Explorer type label lost the Unicode brand'
     Assert-True ((Get-Item -LiteralPath (Join-Path $one.Key 'shell/open/command')).GetValue('') -eq ('"' + $one.Executable + '" "%1"')) 'Incorrect project launch command'
     & $install -VisualStudioPath $second -ClassesRoot $classes
     Assert-True ((Get-Item -LiteralPath $one.Extension).GetValue('') -eq $one.ProgId) 'Second installation replaced the default'

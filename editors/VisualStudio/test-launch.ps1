@@ -1,26 +1,43 @@
 #requires -PSEdition Desktop
-param([Parameter(Mandatory)][string]$PackageDirectory)
+param(
+    [Parameter(Mandatory)][string]$PackageDirectory,
+    [string]$VisualStudioDirectory
+)
 $ErrorActionPreference = 'Stop'
 # Use the installed CPS types and the actual packaged settings builder, without
 # starting a process or changing the user's Visual Studio startup project.
-$ide = Get-ChildItem -LiteralPath (Join-Path $env:ProgramFiles 'Microsoft Visual Studio') -Directory | ForEach-Object {
-    Get-ChildItem -LiteralPath $_.FullName -Directory | ForEach-Object {
-        $candidate = Join-Path $_.FullName 'Common7/IDE'
-        if (Test-Path -LiteralPath (Join-Path $candidate 'CommonExtensions/Microsoft/Project/Microsoft.VisualStudio.ProjectSystem.VS.dll')) { $candidate }
-    }
-} | Sort-Object { [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $_ 'devenv.exe')).FileMajorPart } -Descending | Select-Object -First 1
+$ide = if ($VisualStudioDirectory) {
+    Join-Path $VisualStudioDirectory 'Common7/IDE'
+} else {
+    Get-ChildItem -LiteralPath (Join-Path $env:ProgramFiles 'Microsoft Visual Studio') -Directory | ForEach-Object {
+        Get-ChildItem -LiteralPath $_.FullName -Directory | ForEach-Object {
+            $candidate = Join-Path $_.FullName 'Common7/IDE'
+            if (Test-Path -LiteralPath (Join-Path $candidate 'CommonExtensions/Microsoft/Project/Microsoft.VisualStudio.ProjectSystem.VS.dll')) { $candidate }
+        }
+    } | Sort-Object { [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $_ 'devenv.exe')).FileMajorPart } -Descending | Select-Object -First 1
+}
 if (-not $ide) { Write-Host 'CPS launch SDK check unavailable: full IDE not installed.'; return }
 $assemblies = @{}
-foreach ($folder in @('CommonExtensions/Microsoft/Project', 'PrivateAssemblies', 'PublicAssemblies', '.')) {
+$assemblyCandidates = @{}
+foreach ($folder in @('CommonExtensions/Microsoft/Project', 'PrivateAssemblies', 'PublicAssemblies', '.', '../../MSBuild/Current/Bin')) {
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $ide $folder) -Filter '*.dll' -File)) {
         if (-not $assemblies.ContainsKey($file.BaseName)) { $assemblies[$file.BaseName] = $file.FullName }
+        $assemblyCandidates[$file.BaseName] = @($assemblyCandidates[$file.BaseName]) + $file.FullName
     }
 }
 $assemblies['netstandard'] = Join-Path $ide 'Remote Debugger/x64/netstandard.dll'
 $assemblies['Microsoft.Build.Framework'] = [IO.Path]::GetFullPath((Join-Path $ide '../../MSBuild/Current/Bin/Microsoft.Build.Framework.dll'))
 $resolver = [ResolveEventHandler] {
     param($sender, $eventArgs)
-    $name = ([Reflection.AssemblyName]$eventArgs.Name).Name
+    $requested = [Reflection.AssemblyName]$eventArgs.Name
+    $name = $requested.Name
+    # MSBuild can ship a serviced dependency beside its own assemblies. Match
+    # that identity before falling back to the IDE's copy of the same DLL.
+    foreach ($candidate in $assemblyCandidates[$name]) {
+        if ($candidate -and [Reflection.AssemblyName]::GetAssemblyName($candidate).FullName -eq $requested.FullName) {
+            return [Reflection.Assembly]::LoadFrom($candidate)
+        }
+    }
     if ($assemblies.ContainsKey($name)) { return [Reflection.Assembly]::LoadFrom($assemblies[$name]) }
     return $null
 }

@@ -11,17 +11,20 @@ public sealed class ProjectDocumentationTests
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
-    public async Task CompleteExplicitImportExamplesCheckWithoutToolchainEnvironment(int example)
+    [InlineData(3)]
+    public async Task CompleteProjectExamplesCheckWithoutToolchainEnvironment(int example)
     {
         string document = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Guides", "PROJECTS.md"));
         string[] projects = Regex.Matches(document, @"(?ms)^```xml\r?\n(?<xml>.*?)^```")
             .Select(match => (Text: match.Groups["xml"].Value, Project: XElement.Parse(match.Groups["xml"].Value)))
             .Where(item => item.Project.Name == "Project"
-                && item.Project.Elements("Import").Any(import =>
-                    (string?)import.Attribute("Project") == "$(GflatSdkRoot)/build/Gflat.props"))
+                && ((string?)item.Project.Attribute("Sdk") == "Gflat.Sdk"
+                    || item.Project.Elements("Import").Any(import =>
+                        (string?)import.Attribute("Project") == "$(GflatSdkRoot)/build/Gflat.props")))
+            .Where(item => !item.Project.Elements("ItemGroup").Elements("NativeLibraryFile").Any())
             .Select(item => item.Text)
             .ToArray();
-        Assert.Equal(3, projects.Length);
+        Assert.Equal(4, projects.Length);
 
         string directory = Path.Combine(Path.GetTempPath(), "gflat documented project " + Guid.NewGuid().ToString("N"));
         string app = Path.Combine(directory, "Application");

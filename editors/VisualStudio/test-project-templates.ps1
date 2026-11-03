@@ -33,10 +33,9 @@ foreach ($kind in @('app', 'library')) {
     $projectText = Get-Content -Raw -LiteralPath (Join-Path $template $projectNode.File)
     if ($projectText -match '(?i)[a-z]:[/\\]|\.\.[/\\]') { throw 'Project template contains a build-machine or relative SDK installation path' }
     [xml]$projectDefinition = $projectText
-    if ($projectDefinition.Project.Sdk) { throw 'Project templates must not require an installed MSBuild SDK' }
-    $imports = @($projectDefinition.Project.Import | ForEach-Object { $_.Project })
-    if ($imports -notcontains '$(GflatSdkRoot)/build/Gflat.props' -or $imports -notcontains '$(GflatSdkRoot)/build/Gflat.targets') {
-        throw 'Project templates must import the bundled build rules explicitly'
+    if ($projectDefinition.Project.Sdk -ne 'Gflat.Sdk') { throw 'Project templates must use Gflat.Sdk' }
+    if ($projectDefinition.Project.Import -or $projectDefinition.Project.PropertyGroup.GflatSdkRoot) {
+        throw 'Project templates must resolve their toolchain through the SDK'
     }
     $projectText.Replace('$projectname$', $name).Replace('$safeprojectname$', $safeName) | Set-Content -LiteralPath $project -Encoding utf8
     foreach ($item in $projectNode.ProjectItem) {
@@ -46,9 +45,14 @@ foreach ($kind in @('app', 'library')) {
         if ($item.ReplaceParameters -eq 'true') { $text = $text.Replace('$projectname$', $name).Replace('$safeprojectname$', $safeName) }
         $text | Set-Content -LiteralPath (Join-Path $directory $destination) -Encoding utf8
     }
-    # Simulate CPS's initial-evaluation defaults using the actual packaged SDK.
-    dotnet msbuild $project -t:Check "-p:GflatSdkRoot=$sdk" "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal
-    if ($LASTEXITCODE -ne 0) { throw "CPS-style $kind template evaluation/check failed" }
+    # Use the packaged resolver entry without registering an SDK on this machine.
+    $previousSdkPath = $env:MSBuildSDKsPath
+    try {
+        $env:MSBuildSDKsPath = Join-Path $PackageDirectory 'Compiler/Sdks'
+        dotnet msbuild $project -t:Check "-p:GflatDefaultSdkRoot=$sdk" "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal
+        if ($LASTEXITCODE -ne 0) { throw "SDK-style $kind template evaluation/check failed" }
+    }
+    finally { $env:MSBuildSDKsPath = $previousSdkPath }
     # The standalone bundled compiler must discover the same SDK without VS.
     if ($kind -eq 'app') {
         $result = & $compiler build $project --run

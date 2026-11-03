@@ -108,17 +108,16 @@ public sealed class ProjectCreationTests
     }
 
     [Fact]
-    public void GeneratedProjectsUseExplicitImportsWithoutSdkRegistration()
+    public void GeneratedProjectsUseSdkWithoutInstallationPaths()
     {
         string directory = TemporaryDirectory();
         try
         {
             string path = ProjectCreation.Create(directory, useStd: false);
             var xml = System.Xml.Linq.XElement.Load(path);
-            Assert.Null(xml.Attribute("Sdk"));
-            Assert.Equal(new[] { "$(GflatSdkRoot)/build/Gflat.props", "$(GflatSdkRoot)/build/Gflat.targets" },
-                xml.Elements("Import").Select(import => (string?)import.Attribute("Project")));
-            AssertToolchainImportsResolve(path, ProjectCreation.FindToolchainRoot());
+            Assert.Equal("Gflat.Sdk", (string?)xml.Attribute("Sdk"));
+            Assert.Empty(xml.Elements("Import"));
+            Assert.Empty(xml.Elements("PropertyGroup").Elements("GflatSdkRoot"));
             Assert.True(ProjectModel.Load(path).NoStdLib);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
@@ -158,8 +157,8 @@ public sealed class ProjectCreationTests
         Assert.Equal(Path.GetFullPath(toolchain), Path.GetFullPath(decodedRoot, directory));
         foreach (var import in xml.Elements("Import"))
         {
-            string imported = import.Attribute("Project")!.Value.Replace("$(GflatSdkRoot)", decodedRoot);
-            Assert.True(File.Exists(Path.GetFullPath(imported, directory)), imported);
+            Assert.Equal("Gflat.Sdk", (string?)import.Attribute("Sdk"));
+            Assert.Contains((string?)import.Attribute("Project"), new[] { "Sdk.props", "Sdk.targets" });
         }
     }
 
@@ -183,22 +182,33 @@ public sealed class ProjectCreationTests
     }
 
     [Fact]
-    public void VisualStudioTemplateImportsWorkWithoutAStoredInstallationPath()
+    public async Task SdkProjectWorksInStandaloneMsBuildWithoutAStoredInstallationPath()
     {
         string directory = TemporaryDirectory();
         try
         {
             string path = ProjectCreation.Create(directory, "Template", useStd: false);
-            var xml = System.Xml.Linq.XElement.Load(path);
-            foreach (var property in xml.Elements("PropertyGroup").Elements("GflatSdkRoot")
-                .Where(property => property.Value != "$(GflatDefaultSdkRoot)").ToArray())
-                property.Remove();
-            xml.Save(path);
             Assert.Equal(0, Program.Main(["check", path]));
-            var result = NativeToolchain.Run("dotnet", ["msbuild", path, "-t:Check", "-nologo", "-v:q",
-                "-p:GflatSdkRoot=" + ProjectCreation.FindToolchainRoot(),
-                "-p:GflatCompilerCommand=dotnet \"" + typeof(Program).Assembly.Location + "\""], 30000);
-            Assert.True(result.ExitCode == 0, result.StandardOutput + result.StandardError);
+            var start = new System.Diagnostics.ProcessStartInfo("dotnet") {
+                UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
+            };
+            foreach (string argument in new[] { "msbuild", path, "-t:Check", "-nologo", "-v:q",
+                "-p:GflatDefaultSdkRoot=" + ProjectCreation.FindToolchainRoot(),
+                "-p:GflatCompilerCommand=dotnet \"" + typeof(Program).Assembly.Location + "\"" })
+                start.ArgumentList.Add(argument);
+            start.Environment["MSBuildSDKsPath"] = Path.Combine(AppContext.BaseDirectory, "Sdks");
+            using var process = System.Diagnostics.Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            try { await process.WaitForExitAsync(timeout.Token); }
+            catch (OperationCanceledException)
+            {
+                process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync();
+                throw new TimeoutException("SDK project evaluation timed out");
+            }
+            Assert.True(process.ExitCode == 0, (await stdout) + (await stderr));
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }

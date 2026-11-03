@@ -24,18 +24,13 @@ build rules. The CLI and language server resolve the SDK from their own package
 using a private SDK search directory.
 
 For Visual Studio and its standalone MSBuild, run the Windows extension's
-[SDK setup script](EDITOR_SUPPORT.md#optional-sdk-style-project-setup). This is
+[SDK setup script](EDITOR_SUPPORT.md#sdk-style-project-registration). This is
 separate from CLI setup. To select another toolchain for SDK-style projects,
 set `GflatSdkRoot` in the environment before evaluation; SDK props are imported
 before the project body. It must name a directory containing `build/Gflat.props`
 and `build/Gflat.targets`.
 
 ## Build-rule imports
-
-The Windows Visual Studio extension also provides optional
-[SDK install/uninstall scripts](EDITOR_SUPPORT.md#optional-sdk-style-project-setup)
-for SDK-style projects opened by Visual Studio's MSBuild. The explicit-import
-format below works with the CLI's private engine without installing anything.
 
 Projects can also import the toolchain's build rules explicitly:
 
@@ -53,11 +48,9 @@ Projects can also import the toolchain's build rules explicitly:
 </Project>
 ```
 
-`gflat new` writes the relative fallback path for you. The compiler and language
-server supply `GflatDefaultSdkRoot` from their own distribution, so a moved project
-can use the currently running toolchain. An explicit `GflatSdkRoot` takes priority.
-Visual Studio supplies that property from the installed VSIX, including during
-initial project evaluation.
+`gflat new` and the Visual Studio templates create SDK-style projects. The SDK
+resolves the build rules from the selected installation. Explicit imports remain
+available for projects that select a toolchain path directly.
 
 For standalone MSBuild, the relative fallback must locate the toolchain. Otherwise
 set `GflatSdkRoot` in the environment or pass `-p:GflatSdkRoot=/path/to/gflat`.
@@ -85,17 +78,11 @@ project filename. Applications use Standard and print a greeting by default.
 The default `OutputType` is `Executable`. A source library uses `SourceLibrary`:
 
 ```xml
-<Project DefaultTargets="Build">
-  <PropertyGroup>
-    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
-    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">../path/to/gflat</GflatSdkRoot>
-  </PropertyGroup>
-  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+<Project Sdk="Gflat.Sdk">
   <PropertyGroup>
     <OutputType>SourceLibrary</OutputType>
     <NoStdLib>true</NoStdLib>
   </PropertyGroup>
-  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
 </Project>
 ```
 
@@ -132,17 +119,11 @@ The build rules include `**/*.gf`, excluding `bin`, `obj`, `.git`, `.vs`, and
 `.local-notes`. Use ordinary MSBuild items and conditions:
 
 ```xml
-<Project DefaultTargets="Build">
-  <PropertyGroup>
-    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
-    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">../path/to/gflat</GflatSdkRoot>
-  </PropertyGroup>
-  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+<Project Sdk="Gflat.Sdk">
   <ItemGroup>
     <Compile Remove="scratch/**/*.gf" />
     <ProjectReference Include="../Utilities/Utilities.gfproj" />
   </ItemGroup>
-  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
 </Project>
 ```
 
@@ -495,7 +476,7 @@ builds, including `GFLAT_CLANG`. Exit code 0 means the requested checks passed;
 Convert the old `<GflatProject>` XML format to an MSBuild `<Project>` with the
 imports above. Replace `Sources` and `Reference` with `Compile` and
 `ProjectReference` items. For Visual Studio SDK-style projects, use the extension's
-[setup scripts](EDITOR_SUPPORT.md#optional-sdk-style-project-setup).
+[setup scripts](EDITOR_SUPPORT.md#sdk-style-project-registration).
 
 References: [Microsoft's CPS documentation](https://github.com/microsoft/VSProjectSystem)
 and [MSBuild project files](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference).

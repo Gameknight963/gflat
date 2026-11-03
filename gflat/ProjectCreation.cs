@@ -57,16 +57,19 @@ public static class ProjectCreation
         toolchainRoot = toolchainRoot == null ? FindToolchainRoot() : Path.GetFullPath(toolchainRoot);
         if (!ProjectSdk.IsRoot(toolchainRoot))
             throw new ArgumentException("Cannot locate gflat build rules: expected build/Gflat.props and build/Gflat.targets.");
-        var roots = new XElement("PropertyGroup");
-        if (!explicitRoot)
-            roots.Add(new XElement("GflatSdkRoot", new XAttribute("Condition", "'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''"), "$(GflatDefaultSdkRoot)"));
-        roots.Add(new XElement("GflatSdkRoot", new XAttribute("Condition", "'$(GflatSdkRoot)' == ''"),
-            ProjectSdk.EscapePropertyValue(Path.GetRelativePath(directory, toolchainRoot).Replace('\\', '/'))));
         var properties = new XElement("PropertyGroup", new XElement("OutputType", library ? "SourceLibrary" : "Executable"));
         if (!useStd) properties.Add(new XElement("NoStdLib", "true"));
-        var xml = new XElement("Project", new XAttribute("DefaultTargets", "Build"), roots,
-            new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.props")), properties,
-            new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.targets")));
+        var xml = new XElement("Project", new XAttribute("Sdk", "Gflat.Sdk"), properties);
+        if (explicitRoot)
+        {
+            // Explicit SDK imports let a selected root take effect before Sdk.props.
+            xml.Attribute("Sdk")!.Remove();
+            xml.AddFirst(new XElement("PropertyGroup", new XElement("GflatSdkRoot",
+                new XAttribute("Condition", "'$(GflatSdkRoot)' == ''"),
+                ProjectSdk.EscapePropertyValue(Path.GetRelativePath(directory, toolchainRoot).Replace('\\', '/')))));
+            properties.AddBeforeSelf(new XElement("Import", new XAttribute("Project", "Sdk.props"), new XAttribute("Sdk", "Gflat.Sdk")));
+            xml.Add(new XElement("Import", new XAttribute("Project", "Sdk.targets"), new XAttribute("Sdk", "Gflat.Sdk")));
+        }
         string source = library ? "// Add reusable types and functions here.\nnamespace Library;\n\npublic int Answer() => 42;\n"
             : useStd ? "int main()\n{\n    Console::WriteLine(\"Hello from gflat!\");\n    return 0;\n}\n"
             : "int main() => 0;\n";

@@ -275,18 +275,8 @@ public partial class TypeChecker
     private bool CheckReflectionMember(MemberAccessExpression node)
     {
         if (!IsReflectionType(GetType(node.Object))) return false;
-        TypeExpression resultType = node.Member switch {
-            "Name" or "QualifiedName" or "Kind" or "Accessibility" => new PointerTypeExpression(new NamedTypeExpression("char", null, node.Line), false, node.Line, isReadOnly: true),
-            "Fields" or "StaticFields" or "Methods" or "Bases" or "Overloads" or "ParameterTypes" or "Parameters" or "Constraints" => new ArrayTypeExpression(ReflectionType(node.Line), (int?)null, node.Line),
-            "Type" or "DeclaringType" or "ElementType" or "ReturnType" or "Target" or "CollectorType" => ReflectionType(node.Line),
-            "Size" or "Alignment" or "Offset" or "Length" or "ParameterCount" or "Position" => new NamedTypeExpression("nuint", null, node.Line),
-            "IsType" or "IsStruct" or "IsClass" or "IsInterface" or "IsEnum" or "IsPrimitive" or
-            "IsArray" or "IsReference" or "IsFunctionPointer" or "IsFunctionSignature" or "IsReadOnly" or
-            "IsImmutable" or "IsPointer" or "IsManaged" or "IsNullable" or "IsStatic" or "IsConst" or
-            "IsPublic" or "IsPrivate" or "IsRef" or "IsConstrained" or "IsNoThrow" or "IsVirtual" or "IsOverride" or "IsAbstract" or "HasLayout" or "HasElementType" or
-            "HasDestructor" or "HasFixedLength" or "HasDefaultValue" => new NamedTypeExpression("bool", null, node.Line),
-            _ => throw new TypeCheckException($"Unknown reflection member '{node.Member}'", node.Span)
-        };
+        TypeExpression resultType = ReflectionMemberType(node.Member, node.Line)
+            ?? throw new TypeCheckException($"Unknown reflection member '{node.Member}'", node.Span);
         RecordType(node, resultType);
         if (_constEvaluator.TryEvaluate(node, out var value, out var error))
         {
@@ -296,6 +286,20 @@ public partial class TypeChecker
         else if (_currentFunction is not MethodDeclaration { IsConst: true }) throw new TypeCheckException(error ?? "Reflection query requires a constant", node.Span);
         return true;
     }
+
+    public static TypeExpression? ReflectionMemberType(string member, int line)
+        => member switch {
+            "Name" or "QualifiedName" or "Kind" or "Accessibility" => new PointerTypeExpression(new NamedTypeExpression("char", null, line), false, line, isReadOnly: true),
+            "Fields" or "StaticFields" or "Methods" or "Bases" or "Overloads" or "ParameterTypes" or "Parameters" or "Constraints" => new ArrayTypeExpression(ReflectionType(line), (int?)null, line),
+            "Type" or "DeclaringType" or "ElementType" or "ReturnType" or "Target" or "CollectorType" => ReflectionType(line),
+            "Size" or "Alignment" or "Offset" or "Length" or "ParameterCount" or "Position" => new NamedTypeExpression("nuint", null, line),
+            "IsType" or "IsStruct" or "IsClass" or "IsInterface" or "IsEnum" or "IsPrimitive" or
+            "IsArray" or "IsReference" or "IsFunctionPointer" or "IsFunctionSignature" or "IsReadOnly" or
+            "IsImmutable" or "IsPointer" or "IsManaged" or "IsNullable" or "IsStatic" or "IsConst" or
+            "IsPublic" or "IsPrivate" or "IsRef" or "IsConstrained" or "IsNoThrow" or "IsVirtual" or "IsOverride" or "IsAbstract" or "HasLayout" or "HasElementType" or
+            "HasDestructor" or "HasFixedLength" or "HasDefaultValue" => new NamedTypeExpression("bool", null, line),
+            _ => null
+        };
 
     private bool CheckReflectionSequenceMember(MemberAccessExpression node, TypeExpression type)
     {

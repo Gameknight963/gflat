@@ -42,6 +42,8 @@ public partial class TypeChecker
 
     private string DisplayTypeNameCore(TypeExpression type, InheritedTypeProtection inherited) => type switch
     {
+        SpliceTypeExpression splice => "[:" + (splice.Reflection.Span.Source is { } source
+            ? source.Text.Substring(splice.Reflection.Span.Start, splice.Reflection.Span.Length) : "<type expression>") + ":]",
         NamedTypeExpression n => DisplayName(n.Name) + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
         NestedTypeExpression n => DisplayTypeName(n.Parent) + "::" + n.Member + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
         ReferenceTypeExpression r => "ref " + DisplayTypeName(r.Inner),

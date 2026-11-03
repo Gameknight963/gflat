@@ -9,6 +9,21 @@ public sealed partial class EditorModel
     private readonly Dictionary<Token, Symbol> reflectedDeclarationReferences = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<Token> reflectionMemberTokens = new(ReferenceEqualityComparer.Instance);
 
+    private TypeExpression? ReflectionExpressionType(AstNode node, string path, int offset)
+    {
+        var checkedType = snapshot.Checker?.GetType(node);
+        if (checkedType != null && TypeChecker.TypeName(checkedType) != "<error>") return checkedType;
+        return node switch
+        {
+            TypeofExpression or ReflectExpression => TypeChecker.ReflectionType(node.Line),
+            IdentifierExpression identifier => Visible(path, offset, identifier.Name).FirstOrDefault(s => s.Name == identifier.Name)?.Type,
+            MemberAccessExpression member when ReflectionExpressionType(member.Object, path, offset) is { } receiver && TypeChecker.IsReflectionType(receiver)
+                => TypeChecker.ReflectionMemberType(member.Member, member.Line),
+            IndexExpression index when ReflectionExpressionType(index.Target, path, offset) is ArrayTypeExpression array => array.ElementType,
+            _ => null
+        };
+    }
+
     private Symbol? ReflectedSymbol(ConstValue.Reflection value)
     {
         if (value.Declaration is MethodDeclaration method)
@@ -46,7 +61,7 @@ public sealed partial class EditorModel
                 if (nameToken != null) reflectedDeclarationReferences[nameToken] = declaration;
             }
             if (syntax.Node is MemberAccessExpression member && syntax.Span.Source?.Path is { } memberPath &&
-                TypeChecker.IsReflectionType(checker.GetType(member.Object)))
+                ReflectionExpressionType(member.Object, memberPath, syntax.Span.Start) is { } receiverType && TypeChecker.IsReflectionType(receiverType))
             {
                 var memberToken = tokens[memberPath].FirstOrDefault(t => t.Kind == TokenKind.Identifier &&
                     t.Text == member.Member && t.Start >= member.Object.Span.Start + member.Object.Span.Length &&
@@ -115,8 +130,17 @@ public sealed partial class EditorModel
         if (snapshot.Checker is not { } checker) return null;
         var syntax = nodes[path].Where(n => n.Node is MemberAccessExpression member &&
             offset >= member.Object.Span.Start + member.Object.Span.Length && Contains(n, offset) &&
-            TypeChecker.IsReflectionType(checker.GetType(member.Object))).MinBy(n => n.Span.Length);
-        if (syntax == null || !checker.TryGetConstValue(syntax.Node, out var value)) return null;
+            ReflectionExpressionType(member.Object, path, offset) is { } receiverType && TypeChecker.IsReflectionType(receiverType)).MinBy(n => n.Span.Length);
+        if (syntax == null) return null;
+        if (!checker.TryGetConstValue(syntax.Node, out var value))
+        {
+            var member = (MemberAccessExpression)syntax.Node;
+            if (TypeChecker.ReflectionMemberType(member.Member, member.Line) is not { } memberType) return null;
+            DisplayPart[] signature = [.. TypeDisplayParts(memberType, path, offset), new("text", " "),
+                new("keyword", "reflection"), new("punctuation", "."), new("property", member.Member)];
+            return new HoverResult(new("markdown", "```gflat\n" + string.Concat(signature.Select(p => p.Text)) + "\n```"),
+                Workspace.ToRange(syntax.Span), presentation?.Render(signature, [], "property.public"));
+        }
         var parts = new List<DisplayPart>();
         parts.Add(new("punctuation", "("));
         parts.AddRange(TypeDisplayParts(checker.GetType(syntax.Node), path, offset));

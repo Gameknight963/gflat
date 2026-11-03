@@ -55,6 +55,7 @@ public sealed partial class EditorModel
         void Type(TypeExpression type) => ShortTypeText(DisplayType(type));
         void ShortTypeText(string original, Symbol? finalType = null)
         {
+            if (original.Contains("[:", StringComparison.Ordinal)) { TypeText(original); return; }
             Dictionary<int, Symbol>? shortened = navigable ? new() : null;
             string text = ShortType(original, hoverPath, hoverOffset, shortened);
             TypeText(text, finalType, shortened);
@@ -75,15 +76,19 @@ public sealed partial class EditorModel
                 }
             }
             int cursor = 0;
+            bool inSplice = false;
             for (int i = 0; i < tokens.Length; i++)
             {
                 var token = tokens[i];
+                if (token.Kind == TokenKind.OpenBracket && i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.Colon) inSplice = true;
                 Add(text[cursor..token.Start]);
                 string kind = (TypeChecker.IsPrimitive(token.Text) || token.Text == "ref") ? "keyword" : token.Kind == TokenKind.Identifier
                     ? i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon ? "namespace" : "type"
                     : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
                 Location? target = null;
-                if (navigable && token.Kind == TokenKind.Identifier)
+                if (inSplice && token.Kind == TokenKind.Identifier)
+                    kind = token.Text == "this" ? "keyword" : i > 0 && tokens[i - 1].Kind == TokenKind.Dot ? "property" : "variable";
+                if (navigable && !inSplice && token.Kind == TokenKind.Identifier)
                 {
                     int first = i;
                     while (first >= 2 && tokens[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
@@ -104,6 +109,7 @@ public sealed partial class EditorModel
                     target = SymbolLocation(finalType);
                 }
                 Add(text[token.Start..(token.End + 1)], kind, target);
+                if (token.Kind == TokenKind.CloseBracket && i > 0 && tokens[i - 1].Kind == TokenKind.Colon) inSplice = false;
                 cursor = token.End + 1;
             }
             Add(text[cursor..]);

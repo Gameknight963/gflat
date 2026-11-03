@@ -119,7 +119,7 @@ public sealed partial class EditorModel
                 AliasDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement),
                 EnumDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement),
                 Parameter => parents.FirstOrDefault(p => p.Node is MethodDeclaration or ExternDeclaration or ConstructorDeclaration or LambdaExpression or OperatorDeclaration),
-                ForeachStatement or CatchClause => entry,
+                ForeachStatement or StaticForeachStatement or CatchClause => entry,
                 _ => null
             };
             TypeExpression? declaredType = type;
@@ -252,6 +252,7 @@ public sealed partial class EditorModel
         EnumMemberDeclaration e => (e.Name, 20, "enumMember", null),
         AliasDeclaration a => (a.Name, 7, "type", a.TargetType),
         ForeachStatement f => (f.VariableName, 6, "variable", f.ElementType),
+        StaticForeachStatement f => (f.VariableName, 6, "variable", f.ElementType),
         CatchClause c => (c.VariableName, 6, "variable", c.ExceptionType),
         _ => (null, 0, "", null)
     };
@@ -348,6 +349,8 @@ public sealed partial class EditorModel
         if (separatorIndex < 1) return [];
         var separator = insertedSeparator ?? ts[separatorIndex];
         var left = ts[separatorIndex - 1];
+        if (left.Text == "this" && ScopeAt(path, offset).IsStatic &&
+            !ContextParents(path, offset).Any(parent => parent.Node is TypeofExpression)) return [];
         if (separator.Kind == TokenKind.DoubleColon)
         {
             if (left.Kind is TokenKind.Greater or TokenKind.GreaterGreater)
@@ -451,11 +454,28 @@ public sealed partial class EditorModel
         // Incomplete access often prevents checking. Recover only unambiguous
         // declaration types; never guess between overloads with different returns.
         if (node is IdentifierExpression { Name: "this" } &&
+            !ContextParents(path, offset).Any(parent => parent.Node is TypeofExpression) &&
+            ContextParents(path, offset).Any(parent => parent.Node is MethodDeclaration { IsStatic: true })) return null;
+        if (node is IdentifierExpression { Name: "this" } &&
             ContextParents(path, offset).FirstOrDefault(parent => parent.Node is ExtensionDeclaration)?.Node is ExtensionDeclaration block)
         {
             var method = ContextParents(path, offset).Select(parent => parent.Node).OfType<MethodDeclaration>().FirstOrDefault();
             var target = method?.IsImmutable == true ? TypeQualifiers.Immutable(block.Target) : block.Target;
             return new PointerTypeExpression(target, false, node.Line, method?.IsReadOnly == true);
+        }
+        if (node is IdentifierExpression { Name: "this" } &&
+            ContextParents(path, offset).FirstOrDefault(parent => IsType(parent.Node)) is { } enclosingType)
+        {
+            TypeExpression? type = null;
+            foreach (var container in Parents(enclosingType).Reverse().Where(parent => IsType(parent.Node)).Append(enclosingType))
+            {
+                var parameters = container.Node switch { ClassDeclaration c => c.GenericParameters, StructDeclaration s => s.GenericParameters, _ => null };
+                var arguments = parameters?.Select(p => (TypeExpression)new NamedTypeExpression(p.Name, null, node.Line)).ToList();
+                type = type == null ? new NamedTypeExpression(Join(Namespace(Parents(container)), SourceName(container.Node)), null, node.Line, arguments)
+                    : new NestedTypeExpression(type, SourceName(container.Node), arguments, node.Line);
+            }
+            var method = ContextParents(path, offset).Select(parent => parent.Node).OfType<MethodDeclaration>().FirstOrDefault();
+            return new PointerTypeExpression(method?.IsImmutable == true ? TypeQualifiers.Immutable(type!) : type!, false, node.Line, method?.IsReadOnly == true);
         }
         if (node is IdentifierExpression identifier) return Visible(path, offset, identifier.Name).FirstOrDefault(s => s.Name == identifier.Name)?.Type;
         if (node is NewExpression creation) return creation.Type;
@@ -477,6 +497,7 @@ public sealed partial class EditorModel
         if (node is MemberAccessExpression member)
         {
             var receiver = ExpressionType(member.Object, path, offset);
+            if (receiver != null && TypeChecker.IsReflectionType(receiver)) return TypeChecker.ReflectionMemberType(member.Member, member.Line);
             string? owner = TypeOwner(receiver, path, offset);
             var source = owner == null ? null : TypeMembers(owner).FirstOrDefault(s => s.Name == member.Member);
             return source == null ? null : ProjectSourceMemberType(source, receiver, path, offset).Type;
@@ -833,6 +854,8 @@ public sealed partial class EditorModel
             if (literal != null)
             {
                 var literalType = literalChecker.GetType(literal.Node);
+                if (TypeChecker.TypeName(literalType) == "<error>" && literal.Node is LiteralExpression { Token.Kind: TokenKind.True or TokenKind.False })
+                    literalType = new NamedTypeExpression("bool", null, literal.Node.Line);
                 if (TypeChecker.TypeName(literalType) != "<error>")
                 {
                     var literalParts = TypeDisplayParts(literalType, path, offset);

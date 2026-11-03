@@ -11,13 +11,16 @@ public sealed partial class EditorModel
         int index = TokenAt(path, offset);
         if (index < 0 || tokens[path][index].Kind is not (TokenKind.Typeof or TokenKind.Reflect or TokenKind.Nameof or TokenKind.Alignof or TokenKind.Sizeof)) return null;
         var token = tokens[path][index];
-        var query = nodes[path].Where(n => n.Span.Start == token.Start &&
+        var queries = nodes[path].Where(n => n.Span.Start == token.Start &&
                 n.Node is TypeofExpression or ReflectExpression or NameofExpression or AlignofExpression or SizeofExpression)
-            .MinBy(n => n.Span.Length);
+            .ToArray();
+        var query = queries.MinBy(n => n.Span.Length);
         if (query == null) return null;
+        bool multipleEnclosingTypes = query.Node is TypeofExpression { Operand: UnaryExpression { Operator: TokenKind.Star, Operand: IdentifierExpression { Name: "this" } } } &&
+            queries.Select(q => Owner(Parents(q))).Distinct(StringComparer.Ordinal).Take(2).Count() > 1;
         var parts = new List<DisplayPart>();
         var details = new List<HoverDetail>();
-        bool known = snapshot.Checker?.TryGetConstValue(query.Node, out _) == true;
+        bool known = !multipleEnclosingTypes && snapshot.Checker?.TryGetConstValue(query.Node, out _) == true;
         ConstValue? value = null;
         if (known) snapshot.Checker!.TryGetConstValue(query.Node, out value);
         if (value is ConstValue.String text)
@@ -61,7 +64,23 @@ public sealed partial class EditorModel
                 else if (reflection.Type is { } valueType)
                     details.Add(new("Type", DisplayType(valueType), TypeDisplayParts(valueType, path, offset)));
             }
-            else details.Add(new("", "Depends on the generic type arguments or is unavailable until this expression is checked."));
+            else if (multipleEnclosingTypes)
+                details.Add(new("", "The enclosing type depends on where this file is included."));
+            else if (query.Node is TypeofExpression typeQuery && ExpressionType(typeQuery.Operand, path, offset) is { } operandType)
+                details.Add(new("Type", DisplayType(operandType), TypeDisplayParts(operandType, path, offset)));
+            else if (query.Node is TypeofExpression { Operand: UnaryExpression { Operator: TokenKind.Star, Operand: IdentifierExpression { Name: "this" } } } &&
+                !Parents(query).Any(parent => IsType(parent.Node) || parent.Node is ExtensionDeclaration))
+                details.Add(new("", "No enclosing type is available for 'this'." +
+                    (Path.GetExtension(path).Equals(".gfh", StringComparison.OrdinalIgnoreCase) ? " Include this file inside a type declaration." : "")));
+            else if (snapshot.Diagnostics.FirstOrDefault(d => d.Severity == diagnostics.DiagnosticSeverity.Error &&
+                d.Span.SourceId == query.Span.SourceId && d.Span.Start >= query.Span.Start &&
+                d.Span.Start < query.Span.Start + query.Span.Length) is { } error)
+                details.Add(new("Error", error.Message));
+            else if (Parents(query).Any(parent => parent.Node is MethodDeclaration { GenericParameters.Count: > 0 } or
+                ClassDeclaration { GenericParameters.Count: > 0 } or StructDeclaration { GenericParameters.Count: > 0 } or ExtensionDeclaration { GenericParameters.Count: > 0 }))
+                details.Add(new("", "Evaluated for each generic specialization."));
+            else if (Parents(query).Any(parent => parent.Node is MethodDeclaration { IsConst: true }))
+                details.Add(new("", "Evaluated when the const method is called."));
         }
         string preview = string.Concat(parts.Select(p => p.Text));
         string markdown = "```gflat\n" + preview + "\n```" + (details.Count == 0 ? "" : "\n\n" + string.Join("  \n", details.Select(d => d.Markdown)));

@@ -31,6 +31,25 @@ public sealed class ReflectionEditorTests
     }
 
     [Fact]
+    public void EnclosingTypeQueryHasHoverInAStaticMethod()
+    {
+        var (model, source, offset) = Analyze("struct Box { public static nuint Size() => type|of(*this).Size; } int main()=>0;");
+        string hover = HoverText(model.Hover(source.Path, offset));
+        Assert.Contains("typeof(*this)", hover);
+        Assert.Contains("**Name:** Box", hover);
+    }
+
+    [Fact]
+    public void SelfTypedMethodHoverShowsTheBoundSignature()
+    {
+        var (model, source, offset) = Analyze("struct Box { public int Value; public [:typeof(*this):] Copy()=>*this; } int main(){ Box value=new(); return value.Co|py().Value; }");
+        string hover = HoverText(model.Hover(source.Path, offset));
+        Assert.Contains("Box", hover);
+        Assert.Contains("Copy()", hover);
+        Assert.DoesNotContain("typeof", hover);
+    }
+
+    [Fact]
     public void ReflectionTypeIsAKeywordAndHasHover()
     {
         var (model, source, offset) = Analyze("const refle|ction info=reflect(int);int main()=>0;");

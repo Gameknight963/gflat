@@ -315,10 +315,14 @@ public partial class TypeChecker
                         finally { _currentClass = previousClass; _currentStruct = previousStruct; }
                         break;
                     }
-                    case InterfaceDeclaration iface when !iface.IsGeneric: Walk(iface.Members, scope); break;
+                    case InterfaceDeclaration iface when !iface.IsGeneric:
+                    {
+                        using var signature = EnterSignatureContext(iface, iface.Name, false);
+                        Walk(iface.Members, scope);
+                        break;
+                    }
                     case MethodDeclaration method when !method.IsGeneric:
-                        method.ReturnType = ResolveAlias(method.ReturnType);
-                        foreach (var p in method.Parameters) p.Type = ResolveAlias(p.Type);
+                        BindMethodSignature(method);
                         RegisterParameterDefaults(method, method.Parameters);
                         break;
                     case OperatorDeclaration op:

@@ -19,6 +19,7 @@
   <Project Path="file-compare/file-compare.gfproj" />
   <Project Path="hello/hello.gfproj" />
   <Project Path="macros/macros.gfproj" />
+  <Project Path="member-includes/member-includes.gfproj" />
   <Project Path="hexdump/hexdump.gfproj" />
   <Project Path="interpolation/interpolation.gfproj" />
   <Project Path="ip-count/ip-count.gfproj" />

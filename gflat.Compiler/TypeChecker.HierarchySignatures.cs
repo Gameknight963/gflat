@@ -64,6 +64,7 @@ public partial class TypeChecker
             _currentNamespacePath = ns;
             _currentClass = owner != null && isClass ? _classes.GetValueOrDefault(owner) : null;
             _currentStruct = owner != null && !isClass ? _structs.GetValueOrDefault(owner) : null;
+            typeQueryOwner = DeclarationTypeQueryOwner(declaration, owner);
             return new NullableAction(Restore);
         }
         catch { Restore(); throw; }

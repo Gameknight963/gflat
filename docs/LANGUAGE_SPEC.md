@@ -1718,6 +1718,38 @@ int main()
 `reflect(Number)` retains the alias declaration, while `reflect(Number).Target`
 describes its underlying type.
 
+### The enclosing type
+
+Inside class, struct, and interface members, `typeof(this)` describes the receiver pointer and
+`typeof(*this)` describes the object type. These queries also work in field and
+method signatures, field initializers, and static methods. In those contexts,
+the compiler supplies the type of a hypothetical unqualified receiver.
+
+```csharp
+struct Node
+{
+    public int Value;
+    public [:typeof(*this):]*? Next;
+    public static [:typeof(this):] Identity([:typeof(this):] value) => value;
+}
+
+int main()
+{
+    Node value = new();
+    return Node::Identity(&value).Value;
+}
+```
+
+- Nested types use the innermost declaration, including its generic arguments
+- Inherited declarations retain their declaring type
+- Interface queries describe the interface itself
+- Instance method bodies keep the actual receiver's readonly or immutable qualification
+
+The hypothetical receiver exists only while checking the operand of `typeof`.
+Ordinary expressions still require an instance to use `this`. See the
+[member includes example](../examples/member-includes/README.md) for reusable
+headers that use the enclosing type in signatures and reflected method bodies.
+
 ### Type queries
 
 | Members | Information |

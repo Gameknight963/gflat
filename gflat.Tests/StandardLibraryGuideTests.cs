@@ -36,12 +36,24 @@ public sealed class StandardLibraryGuideTests
     internal static void CheckProgram(string guide, int index)
     {
         string path = Path.Combine(AppContext.BaseDirectory, "Guides", guide);
-        var example = Programs(File.ReadAllText(path)).ElementAt(index);
+        string document = File.ReadAllText(path);
+        var example = Programs(document).ElementAt(index);
+        var headers = new Dictionary<string, SourceFile>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in Regex.Matches(document,
+            @"(?ms)^`(?<name>[^`\r\n]+\.gfh)`:\s*\r?\n```(?:cpp|csharp)\r?\n(?<code>.*?)^```"))
+        {
+            string header = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, match.Groups["name"].Value));
+            headers.Add(header, new SourceFile(header, match.Groups["code"].Value));
+        }
         // Retain the guide's line numbers in compiler errors. Only complete
         // programs with an entry point are checked; contextual fragments remain
         // separate, and the language specification has its own test harness.
         string code = new string('\n', example.Line - 1) + example.Code;
-        _ = Compiler.Emit(Library.Value.Append(new SourceFile(path, code)), options: new() { NoStdLib = true });
+        _ = Compiler.Emit(Library.Value.Append(new SourceFile(path, code)), options: new()
+        {
+            NoStdLib = true,
+            IncludeLoader = header => headers.GetValueOrDefault(header)
+        });
     }
 
     private static IEnumerable<(string Code, int Line)> Programs(string document)

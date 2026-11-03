@@ -1,0 +1,7 @@
+public void Clear()
+{
+    static foreach (reflection field in typeof(*this).Fields)
+    {
+        (*this).[:field:] = default([:field.Type:]);
+    }
+}

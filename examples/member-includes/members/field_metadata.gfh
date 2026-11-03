@@ -1,0 +1,10 @@
+public static nuint FieldCount() => typeof(*this).Fields.Length;
+
+public static void PrintFields()
+{
+    printf("%s fields:\n", typeof(*this).Name);
+    static foreach (reflection field in typeof(*this).Fields)
+    {
+        printf("  %s: %s\n", field.Name, field.Type.Name);
+    }
+}

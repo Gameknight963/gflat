@@ -1054,7 +1054,7 @@ namespace gflat
         private List<AttributeNode> ParseAttributes()
         {
             List<AttributeNode> attributes = new();
-            while (Check(TokenKind.OpenBracket))
+            while (Check(TokenKind.OpenBracket) && Peek().Kind != TokenKind.Colon)
             {
                 int line = Current.Line;
                 Consume(); // [

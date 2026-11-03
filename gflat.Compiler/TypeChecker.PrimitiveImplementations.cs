@@ -169,6 +169,7 @@ public partial class TypeChecker
     {
         using var context = EnterMethodSignatureContext(definition);
         var map = definition.GenericParameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
+        if (typeQueryOwner != null) typeQueryOwner = new AstCloner(map).CloneType(typeQueryOwner);
         primitiveCallArguments[call] = map;
         primitiveCallResults[call] = ResolveAlias(new AstCloner(map).CloneType(SetPrimitiveConstraints(definition.ReturnType, Array.Empty<TypeExpression>())));
     }

@@ -1,0 +1,9 @@
+public immutable bool Equals([:typeof(*this):] other)
+{
+    static foreach (reflection field in typeof(*this).Fields)
+    {
+        if ((*this).[:field:] != other.[:field:])
+            return false;
+    }
+    return true;
+}

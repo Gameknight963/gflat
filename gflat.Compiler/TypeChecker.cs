@@ -2972,6 +2972,7 @@ namespace gflat
         public void Visit(InterfaceDeclaration node)
         {
             if (node.IsGeneric) return;
+            using var signatureContext = EnterSignatureContext(node, node.Name, false);
             using var sourceContext = SourceContext.Enter(node.Span);
             var methods = node.Members.OfType<MethodDeclaration>().ToArray();
             if (methods.Any(m => m.IsStatic) && methods.Any(m => !m.IsStatic))
@@ -3099,9 +3100,9 @@ namespace gflat
                 }
                 if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
                 PushScope();
-                if (!node.IsStatic && specializedMethodOwners.TryGetValue(node, out var receiver))
+                if (!node.IsStatic && TryGetMethodOwner(node, out string receiverOwner, out _))
                 {
-                    TypeExpression owner = NamedTypeExpression.Resolved(receiver.Owner, node.Line);
+                    TypeExpression owner = NamedTypeExpression.Resolved(receiverOwner, node.Line);
                     if (node.IsImmutable) owner = TypeQualifiers.Immutable(owner);
                     DeclareVariable("this", new PointerTypeExpression(owner, false, node.Line, isReadOnly: node.IsReadOnly), node.Line);
                 }

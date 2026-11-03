@@ -51,6 +51,25 @@ Each root input starts with fresh macro and include-guard state. Included langua
 declarations follow the compiler's ordinary duplicate-definition rules. Use source
 libraries to share language definitions across roots.
 
+### Include members inside a type
+
+A header can use `[:typeof(*this):]` to name the type receiving its declarations:
+
+```cpp
+struct Point
+{
+    public int X;
+    public int Y;
+
+    #include "equality.gfh"
+}
+```
+
+For example, `equality.gfh` can define `Equals` with a parameter of that type and
+compare its fields using `static foreach`. Such a header allows repeated
+inclusion so each receiving type gets its own members. See
+[reusable members with includes](../examples/member-includes/README.md).
+
 ## Define and expand macros
 
 ```cpp

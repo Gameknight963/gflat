@@ -13,14 +13,17 @@ public partial class TypeChecker
         var constants = Save(localConstants);
         var boundaries = Save(_lambdaScopeBoundaries); var statics = Save(_lambdaStaticStack); var returns = Save(_actualReturnTypes);
         var function = _currentFunction; var constructor = _currentConstructor;
+        var queryOwner = typeQueryOwner;
         int loop = _loopDepth; bool defer = _inDefer;
         _currentFunction = null; _currentConstructor = null; _loopDepth = 0; _inDefer = false;
+        typeQueryOwner = null;
 
         return new NullableAction(() => {
             Restore(_scopes, variables); Restore(_localAliases, aliases); Restore(_localEnums, enums);
             Restore(localConstants, constants);
             Restore(_lambdaScopeBoundaries, boundaries); Restore(_lambdaStaticStack, statics); Restore(_actualReturnTypes, returns);
             _currentFunction = function; _currentConstructor = constructor; _loopDepth = loop; _inDefer = defer;
+            typeQueryOwner = queryOwner;
         });
     }
 

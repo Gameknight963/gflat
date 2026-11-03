@@ -6,6 +6,41 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class EditorClassificationConsistencyTests
 {
+    [Fact]
+    public void CompletionIncludesEveryPrimitiveTypeAndDefaultValues()
+    {
+        const string text = "void Use() { }";
+        var (model, source) = Analyze(text);
+        var items = JsonSerializer.SerializeToElement(model.Completion(source.Path, text.IndexOf('}') - 1), Protocol.JsonOptions)
+            .GetProperty("items").EnumerateArray().Select(item => item.GetProperty("label").GetString()).ToArray();
+        foreach (string name in new[] { "byte", "sbyte", "short", "ushort", "extralong", "default" })
+            Assert.Contains(name, items);
+    }
+
+    [Fact]
+    public void DefaultValuesUseOrdinaryKeywords()
+    {
+        const string text = "int Create()=>default; int Explicit()=>default(int);";
+        var (model, source) = Analyze(text);
+        foreach (var token in Lexer.Tokenize(source).Where(t => t.Kind == TokenKind.Default))
+            Assert.Equal("modifier", Classification(model, source, token.Start));
+        Assert.Equal("keyword", EditorModel.VisualStudioTokenTypes[Array.IndexOf(EditorModel.TokenTypes, "modifier")]);
+    }
+
+    [Fact]
+    public void FieldsPropertiesAndConstantsUseDistinctThemeClassifications()
+    {
+        const string text = "struct Item { public int Field; public static const int Limit = 3; public int Property=>Field; } int Use(Item* item){const int local=2;return item.Field+item.Property+Item::Limit+local;}";
+        var (model, source) = Analyze(text);
+        foreach (var (name, expected) in new[] { ("Field", "field"), ("Property", "property"), ("Limit", "constant"), ("local", "constant") })
+        {
+            Assert.Equal(expected, Classification(model, source, text.LastIndexOf(name, StringComparison.Ordinal)));
+            var hover = Assert.IsType<HoverResult>(model.Hover(source.Path, text.LastIndexOf(name, StringComparison.Ordinal),
+                new VisualStudioHover(JsonSerializer.SerializeToElement(new { }))));
+            Assert.Contains(expected + " name", JsonSerializer.Serialize(hover.RawContent));
+        }
+    }
+
     private static (EditorModel Model, SourceFile Source) Analyze(string text)
     {
         var source = new SourceFile("classification.gf", text);
@@ -85,7 +120,7 @@ public sealed class EditorClassificationConsistencyTests
         string text = "struct Task { public bool Done; } void List(" + receiver + " task) { if (task.Done) {} }";
         var (model, source) = Analyze(text);
         int offset = text.LastIndexOf("Done", StringComparison.Ordinal);
-        Assert.Equal("property", Classification(model, source, offset));
+        Assert.Equal("field", Classification(model, source, offset));
         Assert.NotNull(model.Hover(source.Path, offset));
         Assert.NotNull(model.Definition(source.Path, offset));
     }
@@ -106,7 +141,7 @@ public sealed class EditorClassificationConsistencyTests
         var model = new EditorModel(snapshot, files);
         foreach (var token in Lexer.Tokenize(source).Where(token => token.Text is "Done" or "Title"))
         {
-            Assert.Equal("property", Classification(model, source, token.Start));
+            Assert.Equal("field", Classification(model, source, token.Start));
             Assert.NotNull(model.Hover(source.Path, token.Start));
             Assert.NotNull(model.Definition(source.Path, token.Start));
         }

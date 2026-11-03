@@ -539,7 +539,7 @@ public class EditorTests
             column += data[i + 1];
             if (source.Substring(column, data[i + 2]) == "capacity")
             {
-                Assert.Equal("property", EditorModel.TokenTypes[data[i + 3]]);
+                Assert.Equal("field", EditorModel.TokenTypes[data[i + 3]]);
                 fields.Add(column);
             }
         }

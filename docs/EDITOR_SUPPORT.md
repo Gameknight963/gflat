@@ -33,7 +33,6 @@ Hovers show signatures with source type names. Literal hovers show the checked
 type. Visual Studio adds shared symbol icons and clickable source declarations.
 
 - Macro hovers show the definition and the expanded tokens at the invocation
-- Directive hovers explain the directive's purpose
 - Visual Studio uses its preprocessor and C++ macro classifications for highlighting
 
 The optional `Exceptions:` section lists known outgoing exception types. It

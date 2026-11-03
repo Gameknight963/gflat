@@ -9,8 +9,8 @@ namespace gflat.LanguageServer;
 /// <summary>Read-only editor queries over one analyzed set of source snapshots.</summary>
 public sealed partial class EditorModel
 {
-    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter", "macro", "preprocessor"];
-    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name", "cppMacro", "preprocessor keyword"];
+    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter", "macro", "preprocessor", "field", "constant"];
+    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name", "cppMacro", "preprocessor keyword", "field name", "constant name"];
     public static readonly string[] TokenModifiers = ["declaration", "static", "readonly"];
     private sealed record Symbol(string Name, int Kind, string Classification, Syntax Syntax, SourceSpan NameSpan,
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
@@ -245,9 +245,9 @@ public sealed partial class EditorModel
         MethodDeclaration m when m.PropertyName == null => (m.Name, 2, "method", m.ReturnType),
         ExternDeclaration e => (e.Name, 3, "function", e.ReturnType),
         ConstructorDeclaration c => (c.Name.Split("::").Last(), 4, "method", null),
-        FieldDeclaration f => (f.Name, 5, "property", f.Type),
+        FieldDeclaration f => (f.Name, f.IsConst ? 21 : 5, f.IsConst ? "constant" : "field", f.Type),
         PropertyDeclaration p => (p.Name, 10, "property", p.Type),
-        VariableDeclaration v => (v.Name, 6, "variable", v.Type),
+        VariableDeclaration v => (v.Name, v.IsConst ? 21 : 6, v.IsConst ? "constant" : "variable", v.Type),
         Parameter p => (p.Name, 6, "parameter", p.Type),
         EnumMemberDeclaration e => (e.Name, 20, "enumMember", null),
         AliasDeclaration a => (a.Name, 7, "type", a.TargetType),
@@ -786,8 +786,8 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "reflect", "nameof", "var", "alias", "constrained"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension", "alias", "constrained"];
-            foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "reflection", "readonly", "immutable", "managed" }).Distinct())
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "default", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "reflect", "nameof", "var", "alias", "constrained"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension", "alias", "constrained"];
+            foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "byte", "sbyte", "short", "ushort", "int", "uint", "long", "ulong", "extralong", "nint", "nuint", "float", "double", "reflection", "readonly", "immutable", "managed" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)
                 items.Add(new { label = "base", kind = 14, textEdit = new { range, newText = "base" } });
@@ -810,6 +810,7 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         options ??= new();
+        if (MacroAt(path, offset) is { Classification: "preprocessor" }) return null;
         if (MacroHover(path, offset, presentation) is { } macro) return macro;
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
         if (query != null) return query;
@@ -948,7 +949,7 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             if (macroOffsets.Contains(ts[i].Start)) continue;

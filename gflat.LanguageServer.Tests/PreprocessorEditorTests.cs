@@ -73,7 +73,7 @@ public sealed class PreprocessorEditorTests : IDisposable
     }
 
     [Fact]
-    public void NativeMacroHoverShowsExpandedTokensAndDirectiveHelp()
+    public void NativeMacroHoverShowsExpandedTokensWithoutDirectiveHelp()
     {
         const string code = "#define VALUE 7\n#define DOUBLE(x) (x + VALUE)\nint main()=>DOUBLE(VALUE);";
         var source = new SourceFile(Path.Combine(root, "main.gf"), code);
@@ -88,9 +88,7 @@ public sealed class PreprocessorEditorTests : IDisposable
         Assert.NotNull(hover.RawContent);
         if (Environment.GetEnvironmentVariable("GFLAT_HOVER_CAPTURE") is { Length: > 0 } capture)
             File.WriteAllText(capture + ".macro", System.Text.Json.JsonSerializer.Serialize(hover, Protocol.JsonOptions));
-        var directive = Assert.IsType<HoverResult>(model.Hover(source.Path, 2, presentation));
-        Assert.Contains("Defines an object-like", directive.Contents.Value);
-        Assert.NotNull(directive.RawContent);
+        Assert.Null(model.Hover(source.Path, 2, presentation));
     }
 
     [Fact]
@@ -115,6 +113,24 @@ public sealed class PreprocessorEditorTests : IDisposable
         Assert.Contains((2, 12, "macro"), actual);
         Assert.Contains((2, 19, "macro"), actual);
         Assert.Equal("cppMacro", EditorModel.VisualStudioTokenTypes[Array.IndexOf(EditorModel.TokenTypes, "macro")]);
+    }
+
+    [Theory]
+    [InlineData("#define VALUE 7\nint main()=>VALUE;", "define")]
+    [InlineData("#include \"value.gfh\"\nint main()=>VALUE;", "include")]
+    [InlineData("#if 1\nint main()=>0;\n#endif", "if")]
+    [InlineData("#pragma once\nint main()=>0;", "pragma")]
+    public void DirectivesHaveNoLearningHovers(string code, string directive)
+    {
+        Write("app.gfproj", ProjectFileFixture.Xml());
+        Write("value.gfh", "#define VALUE 7");
+        string main = Write("main.gf", code);
+        var documents = new Dictionary<string, OpenDocument>(Workspace.Paths) { [main] = new(main, code, 1) };
+        var model = Workspace.Analyze(root, documents).Models![main];
+        int offset = code.IndexOf(directive, StringComparison.Ordinal);
+        Assert.Null(model.Hover(main, offset));
+        Assert.Null(model.Hover(main, offset, new VisualStudioHover(System.Text.Json.JsonSerializer.SerializeToElement(new { }))));
+        Assert.Null(model.Hover(main, offset - 1));
     }
 
 }

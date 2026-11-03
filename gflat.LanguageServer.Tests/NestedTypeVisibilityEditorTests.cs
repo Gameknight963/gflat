@@ -36,9 +36,9 @@ public sealed class NestedTypeVisibilityEditorTests
         AssertBinding(model,source,text.IndexOf("Node* First",StringComparison.Ordinal),NodeDeclaration(),"Node",kind);
         AssertBinding(model,source,text.IndexOf("State* state",StringComparison.Ordinal),stateDeclaration,"State",kind);
         AssertBinding(model,source,text.IndexOf("outer.secret",StringComparison.Ordinal)+6,
-            text.IndexOf("int secret",StringComparison.Ordinal)+4,"secret","property");
+            text.IndexOf("int secret",StringComparison.Ordinal)+4,"secret","field");
         AssertBinding(model,source,text.IndexOf("inner.own",StringComparison.Ordinal)+6,
-            text.IndexOf("int own",StringComparison.Ordinal)+4,"own","property");
+            text.IndexOf("int own",StringComparison.Ordinal)+4,"own","field");
     }
 
     [Theory]
@@ -66,7 +66,7 @@ public sealed class NestedTypeVisibilityEditorTests
             """;
         var (model,source)=Analyze(text);
         if(receiver)AssertBinding(model,source,text.IndexOf("value.value",StringComparison.Ordinal)+6,
-            text.IndexOf("long value",StringComparison.Ordinal)+5,"value","property");
+            text.IndexOf("long value",StringComparison.Ordinal)+5,"value","field");
         else AssertBinding(model,source,text.IndexOf("sizeof(Word)",StringComparison.Ordinal)+7,
             text.IndexOf("struct Word { public long",StringComparison.Ordinal)+7,"Word","struct");
     }
@@ -82,7 +82,7 @@ public sealed class NestedTypeVisibilityEditorTests
             """;
         var (model,source)=Analyze(text);
         AssertBinding(model,source,text.IndexOf("value.Hidden",StringComparison.Ordinal)+6,
-            text.IndexOf("int Hidden",StringComparison.Ordinal)+4,"Hidden","property");
+            text.IndexOf("int Hidden",StringComparison.Ordinal)+4,"Hidden","field");
     }
 
     [Theory]
@@ -173,7 +173,7 @@ public sealed class NestedTypeVisibilityEditorTests
             """;
         var (model,source)=Analyze(text);
         AssertBinding(model,source,text.IndexOf("=>Word+",StringComparison.Ordinal)+2,
-            text.IndexOf("int Word",StringComparison.Ordinal)+4,"Word","property");
+            text.IndexOf("int Word",StringComparison.Ordinal)+4,"Word","constant");
         AssertBinding(model,source,text.IndexOf("sizeof(Word)",StringComparison.Ordinal)+7,
             text.IndexOf("struct Word",StringComparison.Ordinal)+7,"Word","struct");
     }

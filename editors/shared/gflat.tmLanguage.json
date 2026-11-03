@@ -155,11 +155,11 @@
     },
     {
       "name": "keyword.control.gflat",
-      "match": "\\b(return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|default|defer|throw|try|catch)\\b"
+      "match": "\\b(return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|defer|throw|try|catch)\\b"
     },
     {
       "name": "keyword.other.gflat",
-      "match": "\\b(namespace|using|new|delete|alias|global|operator|sizeof|alignof|typeof|reflect|nameof|managed)\\b"
+      "match": "\\b(namespace|using|new|delete|default|alias|global|operator|sizeof|alignof|typeof|reflect|nameof|managed)\\b"
     },
     {
       "name": "constant.numeric.gflat",

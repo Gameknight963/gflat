@@ -126,7 +126,7 @@ public sealed class MemberReturnOriginEditorTests
         var model=new EditorModel(snapshot,[library,source]);
         Assert.Equal(original,argument.Span);
         int use=source.Text.IndexOf(".Value",StringComparison.Ordinal)+1;
-        AssertBinding(model,source,use,library.Text.IndexOf("K Value",StringComparison.Ordinal)+2,"Value","property",library);
+        AssertBinding(model,source,use,library.Text.IndexOf("K Value",StringComparison.Ordinal)+2,"Value","field",library);
         Assert.Equal(original,argument.Span);
     }
 

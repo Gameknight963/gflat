@@ -126,7 +126,7 @@ public sealed class GenericTypeParameterEditorTests
         var (model, source) = Analyze(text);
         int declaration = text.IndexOf("T;", StringComparison.Ordinal);
         int use = text.LastIndexOf("T;", StringComparison.Ordinal);
-        Assert.Equal("property", Classifications(model, source.Path)[use]);
+        Assert.Equal("field", Classifications(model, source.Path)[use]);
         Assert.Equal(model.Definition(source.Path, declaration), model.Definition(source.Path, use));
         Assert.NotEqual(model.Definition(source.Path, text.IndexOf("<T", StringComparison.Ordinal) + 1), model.Definition(source.Path, use));
     }

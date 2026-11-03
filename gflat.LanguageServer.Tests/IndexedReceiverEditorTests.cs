@@ -37,7 +37,7 @@ public sealed class IndexedReceiverEditorTests
         var (model,source)=Analyze(text);
         int field=text.IndexOf(receiver+".Value",StringComparison.Ordinal)+receiver.Length+1;
         int method=text.IndexOf(receiver+".Frozen",StringComparison.Ordinal)+receiver.Length+1;
-        AssertBinding(model,source,field,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","property");
+        AssertBinding(model,source,field,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","field");
         AssertBinding(model,source,method,text.IndexOf("int Frozen",StringComparison.Ordinal)+4,"Frozen","method");
         var names=CompletionNames(model,source,field);
         Assert.Contains("Value",names);Assert.Contains("Frozen",names);
@@ -59,7 +59,7 @@ public sealed class IndexedReceiverEditorTests
             """;
         var (model,source)=Analyze(text);
         int use=text.IndexOf("].Value",StringComparison.Ordinal)+2;
-        AssertBinding(model,source,use,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","property");
+        AssertBinding(model,source,use,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","field");
         Assert.Contains("Value",CompletionNames(model,source,use));
     }
 
@@ -94,7 +94,7 @@ public sealed class IndexedReceiverEditorTests
         var (model,source)=Analyze(text,library);
         int field=text.IndexOf("].Value",StringComparison.Ordinal)+2;
         int method=text.IndexOf("].Frozen",StringComparison.Ordinal)+2;
-        AssertBinding(model,source,field,definitions.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","property",library);
+        AssertBinding(model,source,field,definitions.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","field",library);
         AssertBinding(model,source,method,definitions.IndexOf("int Frozen",StringComparison.Ordinal)+4,"Frozen","method",library);
         var names=CompletionNames(model,source,field);
         Assert.Contains("Value",names);Assert.Contains("Frozen",names);Assert.DoesNotContain("WrongMember",names);
@@ -113,7 +113,7 @@ public sealed class IndexedReceiverEditorTests
             """;
         var (model,source)=Analyze(text);
         int use=text.IndexOf("].ActualMember",StringComparison.Ordinal)+2;
-        AssertBinding(model,source,use,text.IndexOf("int ActualMember",StringComparison.Ordinal)+4,"ActualMember","property");
+        AssertBinding(model,source,use,text.IndexOf("int ActualMember",StringComparison.Ordinal)+4,"ActualMember","field");
         var names=CompletionNames(model,source,use);
         Assert.Contains("ActualMember",names);Assert.DoesNotContain("WrongMember",names);
     }

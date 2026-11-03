@@ -60,7 +60,7 @@ public sealed class UnconstrainedReceiverEditorTests
         int use=source.Text.LastIndexOf(name,StringComparison.Ordinal);
         int declaration=types.IndexOf(name,StringComparison.Ordinal);
         Assert.NotNull(model.Hover(source.Path,use));
-        Assert.Equal("property",Classifications(model,source).GetValueOrDefault(use));
+        Assert.Equal("field",Classifications(model,source).GetValueOrDefault(use));
         Assert.Equal(new Location(Workspace.FileUri(declarationSource.Path),Workspace.ToRange(declarationSource.Span(declaration,name.Length))),
             Assert.IsType<Location>(model.Definition(source.Path,use)));
     }

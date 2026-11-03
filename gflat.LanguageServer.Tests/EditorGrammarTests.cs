@@ -26,6 +26,8 @@ public class EditorGrammarTests
     [InlineData("#define ANSWER 42", "define", "preprocessor keyword")]
     [InlineData("#define ANSWER 42", "ANSWER", "cppMacro")]
     [InlineData("#include \"file.gfh\"", "include", "preprocessor keyword")]
+    [InlineData("int value = default;", "default", "keyword")]
+    [InlineData("int value = default(int);", "default", "keyword")]
     [InlineData("namespace Console;", "namespace", "keyword")]
     [InlineData("throw new Standard::IOException();", "new", "keyword")]
     [InlineData("throw new Standard::IOException();", "throw", "keyword - control")]

@@ -94,7 +94,7 @@ public sealed class BoundFieldDisplayTests
             column += data[i + 1];
             if (column == position) classification = EditorModel.TokenTypes[data[i + 3]];
         }
-        Assert.Equal("property", classification);
+        Assert.Equal("field", classification);
     }
 
     [Fact]

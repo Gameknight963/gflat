@@ -51,7 +51,7 @@ public sealed class VisualStudioHover
     {
         "class" => "class name", "struct" => "struct name", "interface" => "interface name", "enum" => "enum name",
         "namespace" => "namespace name", "typeParameter" => "type parameter name", "method" or "function" => "method name", "parameter" => "parameter name",
-        "variable" => "local name", "property" => "property name", "enumMember" => "enum member name", "number" => "number",
+        "variable" => "local name", "field" => "field name", "constant" => "constant name", "property" => "property name", "enumMember" => "enum member name", "number" => "number",
         _ => kind
     };
 }

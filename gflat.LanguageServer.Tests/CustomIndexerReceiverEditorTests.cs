@@ -35,7 +35,7 @@ public sealed class CustomIndexerReceiverEditorTests
             """;
         var (model,source)=Analyze(text,library);
         int use=text.IndexOf("].Value",StringComparison.Ordinal)+2;
-        AssertBinding(model,source,use,definitions.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","property",library);
+        AssertBinding(model,source,use,definitions.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","field",library);
         string hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,use),Protocol.JsonOptions)
             .GetProperty("contents").GetProperty("value").GetString()!;
         Assert.Contains("int",hover);
@@ -49,7 +49,7 @@ public sealed class CustomIndexerReceiverEditorTests
         const string text="struct Entry{public int Value;}struct Buffer<T>{public int Marker;public Entry this[int index]=>new();}struct Caller<U>{public int Read(Buffer<int>* data)=>data[0].Marker;}int Trigger(Caller<int>* value)=>0;";
         var (model,source)=Analyze(text);
         int use=text.IndexOf("].Marker",StringComparison.Ordinal)+2;
-        AssertBinding(model,source,use,text.IndexOf("int Marker",StringComparison.Ordinal)+4,"Marker","property");
+        AssertBinding(model,source,use,text.IndexOf("int Marker",StringComparison.Ordinal)+4,"Marker","field");
         var names=CompletionNames(model,source,use);
         Assert.Contains("Marker",names);Assert.DoesNotContain("Value",names);
     }
@@ -68,7 +68,7 @@ public sealed class CustomIndexerReceiverEditorTests
             """;
         var (model,source)=Analyze(text);
         int use=text.IndexOf("].Value",StringComparison.Ordinal)+2;
-        AssertBinding(model,source,use,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","property");
+        AssertBinding(model,source,use,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","field");
         var names=CompletionNames(model,source,use);
         Assert.Contains("Value",names);Assert.Contains("Read",names);
         Assert.Equal(mutableResult,names.Contains("Mutate"));
@@ -90,7 +90,7 @@ public sealed class CustomIndexerReceiverEditorTests
         int use=text.IndexOf("].Value",StringComparison.Ordinal)+2;
         Assert.Null(model.Hover(source.Path,use));
         Assert.Null(model.Definition(source.Path,use));
-        Assert.NotEqual("property",Classifications(model,source).GetValueOrDefault(use));
+        Assert.NotEqual("field",Classifications(model,source).GetValueOrDefault(use));
         Assert.DoesNotContain("Value",CompletionNames(model,source,use));
     }
 
@@ -116,11 +116,11 @@ public sealed class CustomIndexerReceiverEditorTests
             {
                 Assert.Null(model.Hover(source.Path,use));
                 Assert.Null(model.Definition(source.Path,use));
-                Assert.NotEqual("property",Classifications(model,source).GetValueOrDefault(use));
+                Assert.NotEqual("field",Classifications(model,source).GetValueOrDefault(use));
             }
             else
             {
-                AssertBinding(model,source,use,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","property");
+                AssertBinding(model,source,use,text.IndexOf("int Value",StringComparison.Ordinal)+4,"Value","field");
                 Assert.Contains("Value",names);
             }
             Assert.Equal(original,arguments.Select(argument=>argument.Span));

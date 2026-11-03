@@ -50,6 +50,7 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
             await properties.GetEvaluatedPropertyValueAsync("GflatRunWorkingDirectory"),
             Path.GetDirectoryName(project.UnconfiguredProject.FullPath)!);
         await ThreadingService.SwitchToUIThread();
+        settings.Project = project.UnconfiguredProject.Services.HostObject as IVsHierarchy;
         if (serviceProvider.GetService(typeof(SVsShellDebugger)) is IVsDebugger10 debugger)
         {
             debugger.IsIntegratedConsoleEnabled(out bool enabled);

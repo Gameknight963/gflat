@@ -74,7 +74,39 @@ a `.gf` file. The package includes the compiler, language server, MSBuild, and .
 runtime. Install Clang separately. Visual Studio's project system uses the IDE's
 MSBuild.
 
-### Optional SDK-style project setup
+### Windows setup scripts
+
+After installing the VSIX, run the accompanying `setup.ps1` in a normal
+PowerShell window with Visual Studio closed:
+
+```powershell
+.\setup.ps1
+```
+
+It registers `.gfproj` files with Explorer for the current user, then registers
+the MSBuild SDK. The SDK step requests elevation when needed. `uninstall.ps1`
+removes both registrations. The VSIX is installed and removed separately.
+
+| Task | Install | Remove |
+| --- | --- | --- |
+| Both integrations | `setup.ps1` | `uninstall.ps1` |
+| Explorer project association | `install-explorer.ps1` | `uninstall-explorer.ps1` |
+| MSBuild SDK | `install-sdk.ps1` | `uninstall-sdk.ps1` |
+
+All scripts support `-WhatIf` and `-VisualStudioPath`. The setup and SDK install
+scripts also accept `-SdkRoot`. Run setup again after updating the VSIX.
+If a step fails, completed steps remain applied. Rerun the wrapper to retry.
+
+Explorer registration uses `HKCU\Software\Classes` and a separate handler for
+each VS installation. The open command points directly to that installation's
+`devenv.exe`. An existing default application is preserved. Use Windows **Open
+with** to choose a different default. Removal affects the selected installation's
+handler. Pass its former path explicitly when removing registration after VS
+has been uninstalled.
+
+Keep the scripts and their `sdk-paths.ps1` and `explorer-paths.ps1` helpers together.
+
+### SDK-style project registration
 
 For `<Project Sdk="Gflat.Sdk">`, install the VSIX first, then run the accompanying
 script with Visual Studio closed. Right-click **Run with PowerShell**, or run:

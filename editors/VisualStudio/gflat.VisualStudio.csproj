@@ -75,7 +75,7 @@
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="install-sdk.ps1;uninstall-sdk.ps1;sdk-paths.ps1">
+    <Content Include="install-sdk.ps1;uninstall-sdk.ps1;sdk-paths.ps1;install-explorer.ps1;uninstall-explorer.ps1;explorer-paths.ps1;setup.ps1;uninstall.ps1">
       <IncludeInVSIX>true</IncludeInVSIX>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

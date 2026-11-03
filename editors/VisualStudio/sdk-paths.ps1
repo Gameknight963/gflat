@@ -38,7 +38,7 @@ exit `$result
     return $true
 }
 
-function Get-GflatVisualStudio([string]$VisualStudioPath) {
+function Get-GflatVisualStudio([string]$VisualStudioPath, [switch]$AllowMissing) {
     if ($env:OS -ne 'Windows_NT') { throw 'These scripts require Windows Visual Studio.' }
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
     $instances = @()
@@ -53,7 +53,7 @@ function Get-GflatVisualStudio([string]$VisualStudioPath) {
         $instance = $instances | Sort-Object { [version]$_.installationVersion } -Descending | Select-Object -First 1
         if (-not $instance) { throw 'Visual Studio was not found. Pass -VisualStudioPath with its installation directory.' }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $instance.installationPath 'MSBuild/Current/Bin/MSBuild.exe'))) {
+    if (-not $AllowMissing -and -not (Test-Path -LiteralPath (Join-Path $instance.installationPath 'MSBuild/Current/Bin/MSBuild.exe'))) {
         throw "Visual Studio MSBuild was not found under $($instance.installationPath)."
     }
     return $instance

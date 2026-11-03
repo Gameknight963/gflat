@@ -7,7 +7,7 @@ Removes the SDK imports created by install-sdk.ps1 for one Visual Studio.
 param([string]$VisualStudioPath)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'sdk-paths.ps1')
-$instance = Get-GflatVisualStudio $VisualStudioPath
+$instance = Get-GflatVisualStudio $VisualStudioPath -AllowMissing
 $target = Get-GflatSdkTarget $instance.installationPath
 if (-not (Test-Path -LiteralPath $target)) { Write-Output "No script-installed gflat SDK at $target."; return }
 Assert-GflatSdkOwner $target

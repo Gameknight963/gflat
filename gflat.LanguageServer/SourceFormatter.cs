@@ -15,6 +15,17 @@ public static class SourceFormatter
         string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         syntax ??= new AnalysisSnapshot([source], new() { NoStdLib = true }).Nodes;
         var typeSpans = syntax.Where(n => n.Node is TypeExpression && n.Span.Source?.Path == source.Path).Select(n => n.Span).ToArray();
+        var orderedTypes = typeSpans.OrderBy(span => span.Start).ToArray();
+        var typeStarts = orderedTypes.Select(span => span.Start).ToArray();
+        var typeEnds = new int[orderedTypes.Length];
+        for (int i = 0; i < orderedTypes.Length; i++) typeEnds[i] = Math.Max(i == 0 ? 0 : typeEnds[i - 1], orderedTypes[i].Start + orderedTypes[i].Length);
+        bool InSameType(int start, int end)
+        {
+            int i = Array.BinarySearch(typeStarts, start);
+            if (i < 0) i = ~i - 1;
+            else while (i + 1 < typeStarts.Length && typeStarts[i + 1] == start) i++;
+            return i >= 0 && typeEnds[i] > end;
+        }
         var tokens = Lexer.Tokenize(source, new diagnostics.DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
         var directives = new HashSet<int>();
         bool continued = false;
@@ -30,15 +41,13 @@ public static class SourceFormatter
         int braces = 0, parens = 0, interpolation = 0;
         bool usingLine = false;
         Token? previous = null;
+        var lineStarts = new List<int> { 0 };
+        for (int i = 0; i < text.Length; i++) if (text[i] == '\n') lineStarts.Add(i + 1);
         int Offset(Position position)
         {
-            int at = 0;
-            for (int line = 0; line < position.Line; line++)
-            {
-                int next = text.IndexOf('\n', at);
-                if (next < 0) return text.Length;
-                at = next + 1;
-            }
+            if (position.Line < 0 || position.Character < 0) throw new ArgumentException("Formatting positions cannot be negative.");
+            if (position.Line >= lineStarts.Count) return text.Length;
+            int at = lineStarts[position.Line];
             int end = text.IndexOfAny(['\r', '\n'], at);
             if (end < 0) end = text.Length;
             return at + Math.Min(position.Character, end - at);
@@ -89,7 +98,7 @@ public static class SourceFormatter
                         }
                         else
                         {
-                            bool typeGap = typeSpans.Any(span => span.Start <= previous.Start && span.Start + span.Length > token.End);
+                            bool typeGap = InSameType(previous.Start, token.End);
                             replacement = typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
                         }
                         Edit(start, length, replacement);
@@ -115,6 +124,17 @@ public static class SourceFormatter
         }
         if (previous != null && !directives.Contains(previous.Line) && text.AsSpan(previous.End + 1).Trim().IsEmpty)
             Edit(previous.End + 1, text.Length - previous.End - 1, newline);
+        var formatted = new System.Text.StringBuilder(text.Length);
+        int cursor = 0;
+        foreach (var edit in edits.OrderBy(e => Offset(e.Range.Start)))
+        {
+            int start = Offset(edit.Range.Start), end = Offset(edit.Range.End);
+            formatted.Append(text, cursor, start - cursor).Append(edit.NewText);
+            cursor = end;
+        }
+        formatted.Append(text, cursor, text.Length - cursor);
+        var after = Lexer.Tokenize(new SourceFile(source.Path, formatted.ToString()), new diagnostics.DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile);
+        if (!tokens.Select(t => (t.Kind, t.Text)).SequenceEqual(after.Select(t => (t.Kind, t.Text)))) return [];
         return edits.ToArray();
     }
 

@@ -37,6 +37,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     private HoverOptions hoverOptions = new();
     private bool versionedWorkspaceEdits;
     private bool hierarchicalDocumentSymbols;
+    private bool bracesOnNewLine = true;
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
     {
@@ -165,6 +166,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("hoverIcons", out var hoverIcons))
                             hoverPresentation = new VisualStudioHover(hoverIcons);
                         hoverOptions = hoverOptions.Update(options);
+                        UpdateFormattingOptions(options);
                         await Reply(id, new { capabilities = new {
                             positionEncoding = "utf-16",
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
@@ -172,12 +174,18 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true, documentHighlightProvider = true,
                             renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,
                             implementationProvider = true, typeHierarchyProvider = true,
+                            documentFormattingProvider = true, documentRangeFormattingProvider = true,
+                            documentOnTypeFormattingProvider = new { firstTriggerCharacter = "}", moreTriggerCharacter = new[] { ";" } },
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });
                         break;
                     case "workspace/didChangeConfiguration":
-                        if (parameters.TryGetProperty("settings", out var settings)) hoverOptions = hoverOptions.Update(settings);
+                        if (parameters.TryGetProperty("settings", out var settings))
+                        {
+                            hoverOptions = hoverOptions.Update(settings);
+                            UpdateFormattingOptions(settings);
+                        }
                         break;
                     case "initialized": await Schedule(); break;
                     case "shutdown":
@@ -232,6 +240,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                     case "textDocument/completion":
                     case "textDocument/hover":
                     case "textDocument/definition":
+                    case "textDocument/formatting":
+                    case "textDocument/rangeFormatting":
+                    case "textDocument/onTypeFormatting":
                     case "textDocument/implementation":
                     case "textDocument/prepareTypeHierarchy":
                     case "typeHierarchy/supertypes":
@@ -297,6 +308,20 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
             if (latest?.Models?.GetValueOrDefault(path) is not EditorModel model || !documents.TryGetValue(path, out var document))
             { await Reply(query.Id, null); return; }
             int offset = query.Parameters.TryGetProperty("position", out var position) ? Workspace.Offset(document.Text, position) : 0;
+            if (query.Method is "textDocument/formatting" or "textDocument/rangeFormatting" or "textDocument/onTypeFormatting")
+            {
+                var settings = query.Parameters.GetProperty("options");
+                var format = new FormattingOptions(settings.GetProperty("tabSize").GetInt32(), settings.GetProperty("insertSpaces").GetBoolean(),
+                    settings.TryGetProperty("gflat.bracesOnNewLine", out var placement) ? placement.GetBoolean() : bracesOnNewLine);
+                TextRange? selectedRange = query.Parameters.TryGetProperty("range", out var selected) ? JsonSerializer.Deserialize<TextRange>(selected, Protocol.JsonOptions) : null;
+                if (query.Method == "textDocument/onTypeFormatting")
+                {
+                    int line = position.GetProperty("line").GetInt32();
+                    selectedRange = new(new(line, 0), new(line, int.MaxValue));
+                }
+                await Reply(query.Id, model.Format(path, format, selectedRange));
+                return;
+            }
             TextRange? range = query.Parameters.TryGetProperty("range", out var element)
                 ? JsonSerializer.Deserialize<TextRange>(element, Protocol.JsonOptions) : null;
             object? result = query.Method switch
@@ -340,6 +365,14 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         "textDocument/hover" or "textDocument/definition" => 1,
         _ => 2
     };
+
+    private void UpdateFormattingOptions(JsonElement settings)
+    {
+        if (settings.ValueKind != JsonValueKind.Object) return;
+        if (settings.TryGetProperty("gflat", out var nested)) settings = nested;
+        if (settings.TryGetProperty("bracesOnNewLine", out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            bracesOnNewLine = value.GetBoolean();
+    }
 
     private static bool RequiresFullAnalysis(string method)
         => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename" or

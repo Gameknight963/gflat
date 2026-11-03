@@ -27,6 +27,8 @@ public sealed partial class EditorModel
     }
     private readonly AnalysisSnapshot snapshot;
     public bool IsPartialAnalysis => snapshot.BodySources != null;
+    public SourceEdit[] Format(string path, FormattingOptions options, TextRange? range = null)
+        => SourceFormatter.Format(sources[path], options, range, snapshot.Nodes);
     private readonly Dictionary<string, SourceFile> sources;
     private readonly Dictionary<string, Token[]> tokens = new(Workspace.Paths);
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);

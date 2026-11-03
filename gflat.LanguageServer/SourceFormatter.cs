@@ -1,0 +1,133 @@
+using gflat.ast;
+
+namespace gflat.LanguageServer;
+
+public sealed record FormattingOptions(int TabSize = 4, bool InsertSpaces = true, bool BracesOnNewLine = true);
+public sealed record SourceEdit(TextRange Range, string NewText);
+
+public static class SourceFormatter
+{
+    public static SourceEdit[] Format(SourceFile source, FormattingOptions options, TextRange? range = null,
+        IReadOnlyList<AnalysisSnapshot.Syntax>? syntax = null)
+    {
+        if (options.TabSize is < 1 or > 16) throw new ArgumentException("Tab size must be between 1 and 16.");
+        string text = source.Text;
+        string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        syntax ??= new AnalysisSnapshot([source], new() { NoStdLib = true }).Nodes;
+        var typeSpans = syntax.Where(n => n.Node is TypeExpression && n.Span.Source?.Path == source.Path).Select(n => n.Span).ToArray();
+        var tokens = Lexer.Tokenize(source, new diagnostics.DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
+        var directives = new HashSet<int>();
+        bool continued = false;
+        int lineNumber = 1;
+        foreach (string line in text.Split('\n'))
+        {
+            bool directive = continued || line.TrimStart().StartsWith('#');
+            if (directive) directives.Add(lineNumber);
+            continued = directive && line.TrimEnd('\r', ' ', '\t').EndsWith('\\');
+            lineNumber++;
+        }
+        var edits = new List<SourceEdit>();
+        int braces = 0, parens = 0, interpolation = 0;
+        bool usingLine = false;
+        Token? previous = null;
+        int Offset(Position position)
+        {
+            int at = 0;
+            for (int line = 0; line < position.Line; line++)
+            {
+                int next = text.IndexOf('\n', at);
+                if (next < 0) return text.Length;
+                at = next + 1;
+            }
+            int end = text.IndexOfAny(['\r', '\n'], at);
+            if (end < 0) end = text.Length;
+            return at + Math.Min(position.Character, end - at);
+        }
+        int lower = range == null ? 0 : Offset(range.Start), upper = range == null ? text.Length : Offset(range.End);
+        string Indent(int depth) => string.Concat(Enumerable.Repeat(options.InsertSpaces ? new string(' ', options.TabSize) : "\t", Math.Max(0, depth)));
+        void Edit(int start, int length, string replacement)
+        {
+            if (start < lower && start + length >= lower && replacement.Contains('\n') &&
+                !text.AsSpan(lower, start + length - lower).Contains('\n'))
+            {
+                length -= lower - start;
+                start = lower;
+                replacement = replacement[(replacement.LastIndexOf('\n') + 1)..];
+            }
+            if (start < lower || start + length > upper) return;
+            var span = source.Span(start, length);
+            if (text.AsSpan(start, length).SequenceEqual(replacement)) return;
+            edits.Add(new(Workspace.ToRange(span), replacement));
+        }
+        foreach (var token in tokens)
+        {
+            if (token.Kind == TokenKind.InterpolatedStringStart) interpolation++;
+            bool protectedToken = directives.Contains(token.Line) || interpolation > 0;
+            if (!protectedToken)
+            {
+                int start = previous == null ? 0 : previous.End + 1;
+                int length = token.Start - start;
+                if (length >= 0)
+                {
+                    string gap = text.Substring(start, length);
+                    int depth = braces - (token.Kind == TokenKind.CloseBrace ? 1 : 0);
+                    bool wasDirective = previous != null && directives.Contains(previous.Line);
+                    bool hardBreak = previous?.Kind == TokenKind.OpenBrace || token.Kind == TokenKind.CloseBrace ||
+                        previous?.Kind == TokenKind.Semicolon && parens == 0 ||
+                        previous?.Kind == TokenKind.CloseBrace && token.Kind is not (TokenKind.Semicolon or TokenKind.Comma or TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.Dot) ||
+                        token.Kind == TokenKind.OpenBrace && options.BracesOnNewLine;
+                    bool separateUsing = previous?.Kind == TokenKind.Semicolon && usingLine && token.Kind != TokenKind.Using;
+                    if (gap.All(char.IsWhiteSpace))
+                    {
+                        bool lineBreak = hardBreak || wasDirective || gap.Contains('\n') && !(token.Kind == TokenKind.OpenBrace && !options.BracesOnNewLine);
+                        string replacement;
+                        if (previous == null) replacement = Indent(depth);
+                        else if (lineBreak)
+                        {
+                            int count = separateUsing || gap.Count(c => c == '\n') > 1 ? 2 : 1;
+                            replacement = string.Concat(Enumerable.Repeat(newline, count)) + Indent(depth + (parens > 0 && token.Kind != TokenKind.CloseParen ? 1 : 0));
+                        }
+                        else
+                        {
+                            bool typeGap = typeSpans.Any(span => span.Start <= previous.Start && span.Start + span.Length > token.End);
+                            replacement = typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
+                        }
+                        Edit(start, length, replacement);
+                    }
+                    else
+                    {
+                        // Preserve comment text and line structure, adjusting only
+                        // the whitespace between its final newline and this token.
+                        int lastLine = gap.LastIndexOf('\n');
+                        if (lastLine >= 0 && gap.AsSpan(lastLine + 1).Trim().IsEmpty)
+                            Edit(start + lastLine + 1, gap.Length - lastLine - 1, Indent(depth));
+                    }
+                }
+                if (previous?.Kind == TokenKind.Semicolon) usingLine = false;
+                if (token.Kind == TokenKind.Using) usingLine = true;
+                if (token.Kind == TokenKind.OpenBrace) braces++;
+                if (token.Kind == TokenKind.CloseBrace) braces = Math.Max(0, braces - 1);
+                if (token.Kind == TokenKind.OpenParen) parens++;
+                if (token.Kind == TokenKind.CloseParen) parens = Math.Max(0, parens - 1);
+            }
+            if (token.Kind == TokenKind.InterpolatedStringEnd) interpolation--;
+            previous = token;
+        }
+        if (previous != null && !directives.Contains(previous.Line) && text.AsSpan(previous.End + 1).Trim().IsEmpty)
+            Edit(previous.End + 1, text.Length - previous.End - 1, newline);
+        return edits.ToArray();
+    }
+
+    private static string Spacing(Token previous, Token current, string original)
+    {
+        if (previous.Kind == TokenKind.Identifier && current.Kind == TokenKind.StringLiteral && original.Length == 0) return "";
+        if (current.Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.Comma or TokenKind.Semicolon or TokenKind.Dot or TokenKind.DoubleColon ||
+            previous.Kind is TokenKind.OpenParen or TokenKind.OpenBracket or TokenKind.Dot or TokenKind.DoubleColon) return "";
+        if (current.Kind == TokenKind.OpenParen) return previous.Kind is TokenKind.If or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Switch or TokenKind.Catch ? " " : "";
+        if (current.Kind is TokenKind.PlusPlus or TokenKind.MinusMinus || previous.Kind is TokenKind.Bang or TokenKind.Tilde) return "";
+        if (current.Kind is TokenKind.Star or TokenKind.Ampersand or TokenKind.Caret or TokenKind.QuestionMark or TokenKind.Less or TokenKind.Greater or TokenKind.GreaterGreater ||
+            previous.Kind is TokenKind.Star or TokenKind.Ampersand or TokenKind.Caret or TokenKind.QuestionMark or TokenKind.Less or TokenKind.Greater or TokenKind.GreaterGreater)
+            return original;
+        return " ";
+    }
+}

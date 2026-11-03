@@ -16,8 +16,11 @@ public sealed class GflatOptions : DialogPage
     [Description("Show size and alignment when hovering over a type.")]
     public bool ShowTypeLayout { get; set; } = true;
 
+    [Category("Formatting"), DisplayName("Opening braces on a new line"), DefaultValue(true)]
+    public bool BracesOnNewLine { get; set; } = true;
+
     internal event Action? Changed;
-    internal object Snapshot() => new { gflat = new { showKnownExceptions = ShowKnownExceptions, showTypeLayout = ShowTypeLayout } };
+    internal object Snapshot() => new { gflat = new { showKnownExceptions = ShowKnownExceptions, showTypeLayout = ShowTypeLayout, bracesOnNewLine = BracesOnNewLine } };
 
     public override void SaveSettingsToStorage()
     {

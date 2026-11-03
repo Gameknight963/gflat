@@ -413,6 +413,15 @@ Set an executable `.gfproj` as the startup project and use **F5** to debug or
 and Visual Studio's normal build and launch services. Source libraries and LLVM
 IR output configurations cannot launch.
 
+Visual Studio skips MSBuild when the last successful build's inputs and outputs
+are unchanged. The check includes source libraries, included headers, project
+settings, and compiler files. Set `DisableFastUpToDateCheck` to `true` to run
+MSBuild on every build. Native links specified with `NativeLibrary` names run
+MSBuild each time so the linker can resolve the current library.
+
+Custom build steps can declare extra files with `UpToDateCheckInput` and
+`UpToDateCheckOutput` items. Missing declared files trigger a build.
+
 Console applications use Visual Studio's debug console. **Tools > Options >
 Debugging > General > Automatically close the console when debugging stops**
 controls whether the console closes after execution.

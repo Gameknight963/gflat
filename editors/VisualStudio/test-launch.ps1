@@ -52,6 +52,17 @@ try {
     $attributes = @($provider.GetCustomAttributes($false))
     if (-not ($attributes | Where-Object { $_.GetType().Name -eq 'ExportDebuggerAttribute' -and $_.DebuggerName -eq 'GflatLocal' })) { throw 'CPS debugger export is missing' }
     if (-not ($attributes | Where-Object { $_.GetType().Name -eq 'AppliesToAttribute' -and $_.AppliesTo -eq 'Gflat' })) { throw 'Launch export must be scoped to Gflat' }
+    $upToDate = $client.GetType('gflat.VisualStudio.GflatBuildUpToDateCheck', $true)
+    $upToDateAttributes = @($upToDate.GetCustomAttributes($false))
+    if (-not ($upToDate.GetInterfaces() | Where-Object Name -eq 'IBuildUpToDateCheckProvider2') -or
+        -not ($upToDateAttributes | Where-Object { $_.GetType().Name -eq 'ExportAttribute' -and $_.ContractType.Name -eq 'IBuildUpToDateCheckProvider' }) -or
+        -not ($upToDateAttributes | Where-Object { $_.GetType().Name -eq 'AppliesToAttribute' -and $_.AppliesTo -eq 'Gflat' })) {
+        throw 'The IDE must discover the configured project up-to-date check'
+    }
+    $failureTracker = $client.GetType('gflat.VisualStudio.GflatBuildFailureTracker', $true)
+    if (-not ($failureTracker.GetCustomAttributes($false) | Where-Object {
+        $_.GetType().Name -eq 'ExportAttribute' -and $_.ContractType.Name -eq 'IVsLoggerEventProcessor2'
+    })) { throw 'Failed builds must invalidate the up-to-date state through the CPS logger' }
     $launch = $client.GetType('gflat.VisualStudio.GflatLaunch', $true)
     $targets = $client.GetType('gflat.VisualStudio.GflatDebugTargets', $true)
     $targetAttributes = @($targets.GetCustomAttributes($false))

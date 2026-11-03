@@ -81,6 +81,23 @@ public static class GflatDebuggerTest
     public static string Value(object raw, string expression) { return ((EnvDTE.DTE)raw).Debugger.GetExpression(expression, true, 1000).Value; }
     public static void Go(object raw) { ((EnvDTE.DTE)raw).Debugger.Go(false); }
     public static bool CanStart(object raw) { return ((EnvDTE.DTE)raw).Commands.Item("Debug.Start", 0).IsAvailable; }
+    public static void Build(object raw)
+    {
+        var build = ((EnvDTE.DTE)raw).Solution.SolutionBuild;
+        build.Build(true);
+        if (build.LastBuildInfo != 0) throw new Exception("Visual Studio build failed.");
+    }
+    public static void BuildWithExpectedFailure(object raw)
+    {
+        var build = ((EnvDTE.DTE)raw).Solution.SolutionBuild;
+        build.Build(true);
+        if (build.LastBuildInfo == 0) throw new Exception("The failing build was incorrectly skipped.");
+    }
+    public static string BuildOutput(object raw)
+    {
+        var document = ((EnvDTE80.DTE2)raw).ToolWindows.OutputWindow.OutputWindowPanes.Item("Build").TextDocument;
+        return document.StartPoint.CreateEditPoint().GetText(document.EndPoint);
+    }
     public static void Stop(object raw) { ((EnvDTE.DTE)raw).Debugger.Stop(false); }
     public static string Output(object raw)
     {

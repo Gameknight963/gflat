@@ -33,6 +33,7 @@ function Wait-Mode {
 }
 
 $process = $null; $dte = $null; $target = $null
+$consoleProcesses = @{}
 try {
     & $create /Reset "/VSInstance=$instance" "/RootSuffix=$suffix"
     if ($LASTEXITCODE -ne 0) { throw 'Cannot create the experimental profile.' }
@@ -55,12 +56,19 @@ try {
     }
     if (-not $dte) { throw 'Visual Studio automation was unavailable.' }
 
-    foreach ($case in @('Stepping', 'Caught', 'Thrown', 'Rethrown', 'Unhandled')) {
+    foreach ($case in @('RelativeSdk', 'Library', 'Stepping', 'Caught', 'Thrown', 'Rethrown', 'Unhandled')) {
         $directory = Join-Path $root $case
         New-Item -ItemType Directory -Path $directory | Out-Null
-        if ($case -eq 'Stepping') {
-            $source = "int main() {`n int answer = 42;`n return answer;`n}"
-            $line = 3; $noStd = 'true'
+        if ($case -eq 'RelativeSdk') {
+            $source = "int main() => 0;`n"
+            $line = 0; $noStd = 'false'
+        } elseif ($case -eq 'Library') {
+            $source = "struct LibraryItem { public int Value; }`n"
+            $line = 0; $noStd = 'true'
+        } elseif ($case -eq 'Stepping') {
+            [IO.File]::WriteAllText((Join-Path $directory 'options.gfh'), "#define ANSWER 42`n")
+            $source = "#include `"options.gfh`"`nint main() {`n int answer = ANSWER;`n return answer;`n}"
+            $line = 4; $noStd = 'true'
         } else {
             $fail = if ($case -eq 'Rethrown') { 'try { throw new Problem(); } catch (ref Exception error) { throw; }' } else { 'throw new Problem();' }
             $main = if ($case -eq 'Unhandled') { 'Fail(); return 0;' } else { 'try { Fail(); } catch (ref Exception error) {} return 42;' }
@@ -70,8 +78,80 @@ try {
         # Consistent LF; Set-Content's extra CRLF triggers a modal editor dialog.
         [IO.File]::WriteAllText((Join-Path $directory 'Main.gf'), $source)
         $escaped = [Security.SecurityElement]::Escape($sdk)
-        [IO.File]::WriteAllText((Join-Path $directory 'probe.gfproj'), "<Project><Import Project=`"$escaped/Sdk.props`"/><PropertyGroup><NoStdLib>$noStd</NoStdLib></PropertyGroup><Import Project=`"$escaped/Sdk.targets`"/></Project>")
+        $postBuild = if ($case -eq 'Stepping') { '<Target Name="ExpectedPostBuildFailure" AfterTargets="Build" Condition="Exists(''fail.flag'')"><Error Text="Expected post-build failure" /></Target>' } else { '' }
+        $outputType = if ($case -eq 'Library') { 'SourceLibrary' } else { 'Executable' }
+        $projectText = "<Project><Import Project=`"$escaped/Sdk.props`"/><PropertyGroup><NoStdLib>$noStd</NoStdLib><OutputType>$outputType</OutputType></PropertyGroup><Import Project=`"$escaped/Sdk.targets`"/>$postBuild</Project>"
+        if ($case -eq 'RelativeSdk') {
+            $relative = ([Uri]($directory + '/')).MakeRelativeUri([Uri]($sdk + '/')).ToString()
+            $relative = [Security.SecurityElement]::Escape([Uri]::UnescapeDataString($relative).TrimEnd('/'))
+            $projectText = '<Project DefaultTargets="Build"><PropertyGroup><GflatSdkRoot>{0}</GflatSdkRoot></PropertyGroup><Import Project="$(GflatSdkRoot)/build/Gflat.props"/><Import Project="$(GflatSdkRoot)/build/Gflat.targets"/></Project>' -f $relative
+        }
+        [IO.File]::WriteAllText((Join-Path $directory 'probe.gfproj'), $projectText)
         [GflatDebuggerTest]::Open($dte, $directory, (Join-Path $directory 'probe.gfproj'))
+        if ($case -eq 'RelativeSdk') {
+            $statePath = Join-Path $directory 'obj/Debug/probe.up-to-date.xml'
+            if (-not (Test-Path -LiteralPath $statePath)) { throw 'The relative SDK project with Standard did not record its build inputs.' }
+            $stamp = [IO.File]::GetLastWriteTimeUtc($statePath)
+            [GflatDebuggerTest]::Build($dte)
+            [IO.File]::WriteAllText((Join-Path $directory 'unchanged-build.log'), [GflatDebuggerTest]::BuildOutput($dte))
+            if ([IO.File]::GetLastWriteTimeUtc($statePath) -ne $stamp) { throw 'The unchanged relative SDK project ran MSBuild again.' }
+            [IO.File]::AppendAllText((Join-Path $sdk 'Standard/core/Attribute.gf'), "`n// Reference input changed by the isolated IDE test`n")
+            [GflatDebuggerTest]::Build($dte)
+            if ([IO.File]::GetLastWriteTimeUtc($statePath) -eq $stamp) { throw 'The Standard source edit did not invalidate the relative SDK project.' }
+            [GflatDebuggerTest]::Close($dte)
+            Write-Host 'PASS: Relative SDK project skipping and Standard source invalidation'
+            continue
+        }
+        if ($case -eq 'Library') {
+            $statePath = Join-Path $directory 'obj/Debug/probe.up-to-date.xml'
+            if (-not (Test-Path -LiteralPath $statePath)) { throw 'The source library build did not record its successful inputs.' }
+            $stamp = [IO.File]::GetLastWriteTimeUtc($statePath)
+            [GflatDebuggerTest]::Build($dte)
+            if ([IO.File]::GetLastWriteTimeUtc($statePath) -ne $stamp) { throw 'An unchanged source library ran MSBuild again.' }
+            [IO.File]::AppendAllText((Join-Path $directory 'Main.gf'), "`nstruct AddedItem { public int Value; }`n")
+            [GflatDebuggerTest]::Build($dte)
+            if ([IO.File]::GetLastWriteTimeUtc($statePath) -eq $stamp) { throw 'A changed source library was incorrectly skipped.' }
+            [GflatDebuggerTest]::Close($dte)
+            Write-Host 'PASS: Source library skipping and source invalidation'
+            continue
+        }
+        if ($case -eq 'Stepping') {
+            $statePath = Join-Path $directory 'obj/Debug/probe.up-to-date.xml'
+            if (-not (Test-Path -LiteralPath $statePath)) { throw 'The IDE build did not record its successful inputs.' }
+            $stamp = [IO.File]::GetLastWriteTimeUtc($statePath)
+            [GflatDebuggerTest]::Build($dte)
+            [IO.File]::WriteAllText((Join-Path $directory 'unchanged-build.log'), [GflatDebuggerTest]::BuildOutput($dte))
+            if ([IO.File]::GetLastWriteTimeUtc($statePath) -ne $stamp) { throw 'An unchanged IDE project ran MSBuild again.' }
+            Write-Host 'An unchanged IDE project skipped MSBuild.'
+            foreach ($edit in @('Header', 'Source', 'AddedSource', 'RemovedSource')) {
+                switch ($edit) {
+                    'Header' { [IO.File]::WriteAllText((Join-Path $directory 'options.gfh'), "#define ANSWER (40 + 2)`n") }
+                    'Source' { [IO.File]::AppendAllText((Join-Path $directory 'Main.gf'), "`n// Source edit`n") }
+                    'AddedSource' { [IO.File]::WriteAllText((Join-Path $directory 'Extra.gf'), "struct Extra { public int Value; }`n") }
+                    'RemovedSource' { Remove-Item -LiteralPath (Join-Path $directory 'Extra.gf') }
+                }
+                [GflatDebuggerTest]::Build($dte)
+                [IO.File]::WriteAllText((Join-Path $directory "$edit-build.log"), [GflatDebuggerTest]::BuildOutput($dte))
+                $next = [IO.File]::GetLastWriteTimeUtc($statePath)
+                if ($next -eq $stamp) { throw "$edit did not invalidate the IDE build state." }
+                $stamp = $next
+            }
+            Write-Host 'Header changes, source edits, and glob additions/removals rebuilt the IDE project.'
+            [IO.File]::WriteAllText((Join-Path $directory 'fail.flag'), '')
+            [IO.File]::AppendAllText((Join-Path $directory 'Main.gf'), "`n// Exercise the post-build target`n")
+            [GflatDebuggerTest]::BuildWithExpectedFailure($dte)
+            if (-not (Test-Path -LiteralPath (Join-Path $directory '.vs/gflat/probe.gfproj.build.failed'))) {
+                throw 'The failed post-build target did not invalidate the persisted build state.'
+            }
+            [GflatDebuggerTest]::BuildWithExpectedFailure($dte)
+            [IO.File]::WriteAllText((Join-Path $directory 'failed-build.log'), [GflatDebuggerTest]::BuildOutput($dte))
+            Remove-Item -LiteralPath (Join-Path $directory 'fail.flag')
+            [GflatDebuggerTest]::Build($dte)
+            $stamp = [IO.File]::GetLastWriteTimeUtc($statePath)
+            [GflatDebuggerTest]::Build($dte)
+            if ([IO.File]::GetLastWriteTimeUtc($statePath) -ne $stamp) { throw 'The successful recovery build did not restore up-to-date skipping.' }
+            Write-Host 'A failing post-build target rebuilt until it succeeded, then the next build skipped.'
+        }
         $deadline = [DateTime]::UtcNow.AddSeconds(30)
         while (-not [GflatDebuggerTest]::CanStart($dte) -and [DateTime]::UtcNow -lt $deadline) {
             Start-Sleep -Milliseconds 200
@@ -82,6 +162,17 @@ try {
         if ((Wait-Mode $dte) -ne 'dbgBreakMode') { throw "$case source breakpoint did not bind." }
         $target = [Diagnostics.Process]::GetProcessById([GflatDebuggerTest]::ProcessId($dte))
         $null = $target.Handle # Keep the exit code available after process exit.
+        $nativeProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$($target.Id)"
+        $parentProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$($nativeProcess.ParentProcessId)"
+        if ($case -eq 'Stepping' -and $parentProcess.Name -ne 'VsDebugConsole.exe') {
+            throw 'The default debugger profile must use the Visual Studio debug console.'
+        }
+        if ($parentProcess.Name -eq 'VsDebugConsole.exe' -and -not $consoleProcesses.ContainsKey([int]$parentProcess.ProcessId)) {
+            $consoleProcess = [Diagnostics.Process]::GetProcessById($parentProcess.ProcessId)
+            $null = $consoleProcess.Handle
+            $consoleProcesses[[int]$parentProcess.ProcessId] = $consoleProcess
+            Write-Host 'Visual Studio debug console hosts the native process.'
+        }
         if ($case -eq 'Stepping' -and [GflatDebuggerTest]::Value($dte, 'answer') -ne '42') { throw 'Watch did not read the initialized local.' }
         [GflatDebuggerTest]::Configure($dte, ($case -eq 'Thrown' -or $case -eq 'Rethrown'))
         [GflatDebuggerTest]::ClearBreakpoints($dte)
@@ -103,14 +194,28 @@ try {
         }
         if ((Wait-Mode $dte) -ne 'dbgDesignMode') { throw "$case stopped unexpectedly." }
         if (-not $target.WaitForExit(10000)) { throw "$case failed to finish after continuation." }
+        if ($case -eq 'Stepping') {
+            $consoleProcess = $consoleProcesses[[int]$parentProcess.ProcessId]
+            if ($consoleProcess.WaitForExit(1000)) { throw 'The default debug console closed before its close-window prompt.' }
+            Write-Host 'The default debug console stays open after the application exits.'
+        }
         $expectedCode = if ($case -eq 'Unhandled') { 17 } else { 42 }
         if ($target.ExitCode -ne $expectedCode) { throw "$case exited with $($target.ExitCode), expected $expectedCode." }
         $target.Dispose(); $target = $null
+        if ($parentProcess.Name -eq 'VsDebugConsole.exe' -and $consoleProcesses.ContainsKey([int]$parentProcess.ProcessId)) {
+            $consoleProcess = $consoleProcesses[[int]$parentProcess.ProcessId]
+            if (-not $consoleProcess.HasExited) { $consoleProcess.Kill(); $null = $consoleProcess.WaitForExit(5000) }
+            $consoleProcess.Dispose()
+            $consoleProcesses.Remove([int]$parentProcess.ProcessId)
+        }
         [GflatDebuggerTest]::Close($dte)
         Write-Host "PASS: $case"
     }
 } finally {
     if ($target) { try { if (-not $target.HasExited) { $target.Kill() } } finally { $target.Dispose() } }
+    foreach ($consoleProcess in $consoleProcesses.Values) {
+        try { if (-not $consoleProcess.HasExited) { $consoleProcess.Kill() } } finally { $consoleProcess.Dispose() }
+    }
     $workers = if ($process) { @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$($process.Id)" | Where-Object Name -eq 'MSBuild.exe') } else { @() }
     if ($dte) { try { [GflatDebuggerTest]::Quit($dte) } catch { Write-Warning $_ } }
     if ($process -and -not $process.WaitForExit(10000)) { Stop-Process -Id $process.Id -Force }

@@ -59,4 +59,19 @@ foreach ($kind in @('app', 'library')) {
         if ($LASTEXITCODE -ne 0) { throw 'Packaged library template failed to check outside Visual Studio' }
     }
 }
+$relativeDirectory = Join-Path $PackageDirectory 'relative-sdk'
+New-Item -ItemType Directory -Path $relativeDirectory | Out-Null
+$relativeProject = Join-Path $relativeDirectory 'relative.gfproj'
+@'
+<Project DefaultTargets="Build">
+  <PropertyGroup><GflatSdkRoot>../Sdk</GflatSdkRoot></PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
+</Project>
+'@ | Set-Content -LiteralPath $relativeProject -Encoding utf8
+[IO.File]::WriteAllText((Join-Path $relativeDirectory 'Main.gf'), 'int main() => 0;')
+dotnet msbuild $relativeProject -t:Build -p:BuildingInsideVisualStudio=true -p:GflatEmitIR=true "-p:GflatCompilerPath=$compiler" -nologo -v:minimal
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $relativeDirectory 'obj/Debug/relative.up-to-date.xml'))) {
+    throw 'The relative SDK project must record its successful IDE build with a Standard reference'
+}
 Write-Host 'Native project template discovery, bundled SDK evaluation, and generated App/Library projects passed.'

@@ -18,6 +18,7 @@
   <ItemGroup>
     <Compile Include="../gflat.Projects/NativeLinkInputs.cs" Link="NativeLinkInputs.cs" />
     <Compile Include="../gflat.Projects/PreprocessorInputs.cs" Link="PreprocessorInputs.cs" />
+    <Compile Include="../gflat.Projects/BuildUpToDateState.cs" Link="BuildUpToDateState.cs" />
     <Reference Include="System.Xml.Linq" Condition="'$(TargetFramework)' == 'net472'" />
   </ItemGroup>
 </Project>

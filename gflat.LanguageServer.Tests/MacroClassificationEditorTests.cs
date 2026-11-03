@@ -43,6 +43,21 @@ public sealed class MacroClassificationEditorTests
         => hover.GetProperty("Elements")[0].GetProperty("Elements")[0].GetProperty("Runs").EnumerateArray().ToArray();
 
     [Fact]
+    public void VisualStudioLeavesMacroNumbersToTheLexicalClassifier()
+    {
+        const string code = "#define a 0;\nint main()=>a";
+        var (model, _, source) = Analyze(code);
+        var tokens = JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path, visualStudio: true), Protocol.JsonOptions)
+            .GetProperty("data").EnumerateArray().Select(value => value.GetInt32()).ToArray();
+        Assert.DoesNotContain(Enumerable.Range(0, tokens.Length / 5), i => EditorModel.TokenTypes[tokens[i * 5 + 3]] == "number");
+        Assert.Contains(Enumerable.Range(0, tokens.Length / 5), i => EditorModel.TokenTypes[tokens[i * 5 + 3]] == "macro");
+        Assert.Equal("number", Classifications(model, source)[code.IndexOf('0')]);
+        var number = Assert.Single(DeclarationRuns(Hover(model, source, code.IndexOf("a 0", StringComparison.Ordinal))),
+            run => run.GetProperty("Text").GetString() == "0");
+        Assert.Equal("number", number.GetProperty("ClassificationTypeName").GetString());
+    }
+
+    [Fact]
     public void NumericDefinitionsAndExpansionsRetainTheSourceClassification()
     {
         const string code = "#define VERSION 12\nint main()=>VERSION;";

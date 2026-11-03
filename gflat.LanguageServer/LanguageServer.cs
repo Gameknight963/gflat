@@ -298,7 +298,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                     query.Parameters.GetProperty("context").GetProperty("includeDeclaration").GetBoolean()),
                 "textDocument/documentSymbol" => model.DocumentSymbols(path, hierarchicalDocumentSymbols),
                 "textDocument/signatureHelp" => model.SignatureHelp(path, offset, tokenTypes == EditorModel.VisualStudioTokenTypes),
-                _ => model.SemanticTokens(path, range)
+                _ => model.SemanticTokens(path, range, tokenTypes == EditorModel.VisualStudioTokenTypes)
             };
             await Reply(query.Id, result);
         }

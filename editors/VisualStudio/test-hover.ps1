@@ -50,6 +50,10 @@ $resolver = [ResolveEventHandler] {
 }
 [AppDomain]::CurrentDomain.add_AssemblyResolve($resolver)
 try {
+    $lspClient = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.LanguageServer.Client.Implementation'])
+    $semanticTagger = $lspClient.GetType('Microsoft.VisualStudio.LanguageServer.Client.SemanticTokensTaggerBase', $true)
+    $semanticMapping = $semanticTagger.GetMethod('ClassificationTypeNameForTokenType', [Reflection.BindingFlags]'NonPublic, Static')
+    if ($semanticMapping.Invoke($null, [object[]]@('number')) -ne 'literal') { throw 'Review numeric semantic fallback for this Visual Studio version' }
     $client = [Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $PackageDirectory 'gflat.VisualStudio.dll')))
     if ($client.GetType('gflat.VisualStudio.GflatSignatureHelpStyle')) { throw 'Signature appearance category override must be removed' }
     $themeType = $client.GetType('gflat.VisualStudio.GflatThemeColors', $true)

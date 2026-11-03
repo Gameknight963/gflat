@@ -58,6 +58,7 @@ namespace gflat.PackageTests
                 new[] { "keyword.other.gflat", "keyword" },
                 new[] { "entity.name.function.preprocessor.gflat", "cppMacro" },
                 new[] { "keyword.control.directive.gflat", "preprocessor keyword" },
+                new[] { "constant.numeric.gflat", "number" },
                 new[] { "comment.line.double-slash.gflat", "comment" },
                 new[] { "comment.block.gflat", "comment" }
             }) {

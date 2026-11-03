@@ -952,7 +952,7 @@ public sealed partial class EditorModel
             _vs_colorizedLabel = visualStudio ? VisualStudioHover.Text(Signature(s, navigable: true)) : null
         }).ToArray(), activeSignature = active, activeParameter = call.Commas };
     }
-    public object SemanticTokens(string path, TextRange? range = null)
+    public object SemanticTokens(string path, TextRange? range = null, bool visualStudio = false)
     {
         var data = new List<int>();
         var classified = new List<(SourceSpan Span, int Kind, int Modifiers)>();
@@ -996,6 +996,9 @@ public sealed partial class EditorModel
         classified.AddRange(macroTokens);
         foreach (var item in classified.OrderBy(t => t.Span.Start))
         {
+            // VS maps the LSP number token to generic "literal", which masks
+            // TextMate's native "number" classification. Keep its lexical color.
+            if (visualStudio && item.Kind >= 0 && TokenTypes[item.Kind] == "number") continue;
             int line = item.Span.Line - 1, column = item.Span.Column - 1;
             if (item.Kind < 0 || range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
             data.AddRange([line - previousLine, line == previousLine ? column - previousColumn : column, item.Span.Length, item.Kind, item.Modifiers]);

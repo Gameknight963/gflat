@@ -80,6 +80,7 @@ public static class GflatDebuggerTest
     public static int ProcessId(object raw) { return ((EnvDTE.DTE)raw).Debugger.CurrentProcess.ProcessID; }
     public static string Value(object raw, string expression) { return ((EnvDTE.DTE)raw).Debugger.GetExpression(expression, true, 1000).Value; }
     public static void Go(object raw) { ((EnvDTE.DTE)raw).Debugger.Go(false); }
+    public static bool CanStart(object raw) { return ((EnvDTE.DTE)raw).Commands.Item("Debug.Start", 0).IsAvailable; }
     public static void Stop(object raw) { ((EnvDTE.DTE)raw).Debugger.Stop(false); }
     public static string Output(object raw)
     {

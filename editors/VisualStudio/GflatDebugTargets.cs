@@ -33,6 +33,7 @@ internal sealed class GflatDebugTargets : ChainedProjectValueDataSourceBase<IRea
     internal static IEnumValue Target(string projectPath) => new PageEnumValue(new EnumValue
     {
         Name = "Project",
+        IsDefault = true,
         DisplayName = Path.GetFileNameWithoutExtension(projectPath).Replace("&", "&&")
     });
 

@@ -61,11 +61,26 @@ try {
     foreach ($name in @('Example', 'Renamed project', 'A&B')) {
         $target = $makeTarget.Invoke($null, [object[]]@("C:\projects\$name.gfproj"))
         if ($target.Name -ne 'Project' -or $target.DisplayName -ne $name.Replace('&', '&&')) { throw 'Debug target must display the project name and escape menu mnemonics' }
+        if (-not $target.IsDefault) { throw 'The project debug target must be selectable before a user preference is saved' }
     }
     $debugRule = [xml](Get-Content -Raw -LiteralPath (Join-Path $PackageDirectory 'Sdk/build/Rules/GflatLocal.xaml'))
     if ($debugRule.Rule.DynamicEnumProperty.EnumProvider -ne 'GflatDebugTargetProvider' -or
         $debugRule.Rule.DynamicEnumProperty.Name -ne 'GflatDebugTarget' -or
         $debugRule.Rule.'Rule.Metadata'.String.'#text' -ne 'GflatDebugTarget') { throw 'Debugger dropdown must use the project target provider' }
+    $generalRule = [xml](Get-Content -Raw -LiteralPath (Join-Path $PackageDirectory 'Sdk/build/Rules/DebuggerGeneral.xaml'))
+    if ($generalRule.Rule.'Rule.DataSource'.DataSource.SourceOfDefaultValue -ne 'AfterContext') {
+        throw 'Debugger selection must read project defaults before a user preference is saved'
+    }
+    Add-Type -AssemblyName System.Xaml
+    foreach ($schema in @('General', 'GflatLocal', 'DebuggerGeneral')) {
+        $rule = [System.Xaml.XamlServices]::Load((Join-Path $PackageDirectory "Sdk/build/Rules/$schema.xaml"))
+        if (-not $rule.Name) { throw "Packaged property rule $schema has no name" }
+        if ($schema -eq 'GflatLocal' -and ($rule.PageTemplate -ne 'debugger' -or
+            $rule.Metadata['DebugTargetDropdownEnum'] -ne 'GflatDebugTarget' -or
+            -not ($rule.Properties | Where-Object Name -eq 'GflatDebugTarget'))) {
+            throw 'The loaded debugger rule must expose the project launch target'
+        }
+    }
     $flags = [Reflection.BindingFlags]'Static, NonPublic'
     $canLaunch = $launch.GetMethod('CanLaunch', $flags)
     $create = $launch.GetMethod('CreateSettings', $flags)

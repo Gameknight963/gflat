@@ -72,6 +72,11 @@ try {
         $escaped = [Security.SecurityElement]::Escape($sdk)
         [IO.File]::WriteAllText((Join-Path $directory 'probe.gfproj'), "<Project><Import Project=`"$escaped/Sdk.props`"/><PropertyGroup><NoStdLib>$noStd</NoStdLib></PropertyGroup><Import Project=`"$escaped/Sdk.targets`"/></Project>")
         [GflatDebuggerTest]::Open($dte, $directory, (Join-Path $directory 'probe.gfproj'))
+        $deadline = [DateTime]::UtcNow.AddSeconds(30)
+        while (-not [GflatDebuggerTest]::CanStart($dte) -and [DateTime]::UtcNow -lt $deadline) {
+            Start-Sleep -Milliseconds 200
+        }
+        if (-not [GflatDebuggerTest]::CanStart($dte)) { throw "$case startup project has no available debug target." }
         [GflatDebuggerTest]::Breakpoint($dte, (Join-Path $directory 'Main.gf'), $line)
         [GflatDebuggerTest]::Go($dte)
         if ((Wait-Mode $dte) -ne 'dbgBreakMode') { throw "$case source breakpoint did not bind." }

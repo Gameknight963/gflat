@@ -6,8 +6,8 @@
   <Rule.Metadata>
     <sys:String x:Key="DebugTargetDropdownEnum">GflatDebugTarget</sys:String>
   </Rule.Metadata>
-  <DynamicEnumProperty Name="GflatDebugTarget" EnumProvider="GflatDebugTargetProvider" Default="Project" Visible="false" />
   <Rule.DataSource><DataSource Persistence="UserFileWithXamlDefaults" HasConfigurationCondition="true" /></Rule.DataSource>
+  <DynamicEnumProperty Name="GflatDebugTarget" EnumProvider="GflatDebugTargetProvider" Default="Project" Visible="false" />
   <StringProperty Name="GflatRunArguments" DisplayName="Command arguments"
                   Description="Arguments passed to the executable. Quote arguments containing spaces." />
   <StringProperty Name="GflatRunWorkingDirectory" DisplayName="Working directory" Default="$(MSBuildProjectDirectory)"

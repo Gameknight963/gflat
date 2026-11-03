@@ -26,6 +26,7 @@
          assemblies. Use the installed debugger for this build step only. -->
     <ItemGroup>
       <CreatePkgDefReferencedAssemblies Include="$(VSInstallRoot)/Common7/IDE/Microsoft.VisualStudio.Debugger.Engine.dll" />
+      <CreatePkgDefReferencedAssemblies Include="$(MSBuildBinPath)/Microsoft.Build.Framework.dll" />
     </ItemGroup>
   </Target>
   <ItemGroup>
@@ -60,6 +61,7 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="GflatBuildProperties.cs" />
     <Compile Include="GflatLaunchProvider.cs" />
+    <Compile Include="GflatDebugTargets.cs" />
     <Compile Include="GflatExceptionDebugging.cs" />
     <Compile Include="GflatExceptionReport.cs" />
     <VsdConfigXmlFiles Include="gflat.vsdconfigxml" />

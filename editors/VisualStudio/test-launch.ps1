@@ -17,6 +17,7 @@ foreach ($folder in @('CommonExtensions/Microsoft/Project', 'PrivateAssemblies',
     }
 }
 $assemblies['netstandard'] = Join-Path $ide 'Remote Debugger/x64/netstandard.dll'
+$assemblies['Microsoft.Build.Framework'] = [IO.Path]::GetFullPath((Join-Path $ide '../../MSBuild/Current/Bin/Microsoft.Build.Framework.dll'))
 $resolver = [ResolveEventHandler] {
     param($sender, $eventArgs)
     $name = ([Reflection.AssemblyName]$eventArgs.Name).Name
@@ -35,6 +36,19 @@ try {
     if (-not ($attributes | Where-Object { $_.GetType().Name -eq 'ExportDebuggerAttribute' -and $_.DebuggerName -eq 'GflatLocal' })) { throw 'CPS debugger export is missing' }
     if (-not ($attributes | Where-Object { $_.GetType().Name -eq 'AppliesToAttribute' -and $_.AppliesTo -eq 'Gflat' })) { throw 'Launch export must be scoped to Gflat' }
     $launch = $client.GetType('gflat.VisualStudio.GflatLaunch', $true)
+    $targets = $client.GetType('gflat.VisualStudio.GflatDebugTargets', $true)
+    $targetAttributes = @($targets.GetCustomAttributes($false))
+    if (-not ($targetAttributes | Where-Object { $_.GetType().Name -eq 'ExportAttribute' -and $_.ContractType.Name -eq 'IDynamicDebugTargetsGenerator' })) { throw 'Dynamic debug target export is missing' }
+    if (-not ($targetAttributes | Where-Object { $_.GetType().Name -eq 'ExportMetadataAttribute' -and $_.Name -eq 'Name' -and $_.Value -eq 'GflatDebugTargetProvider' })) { throw 'Dynamic debug target metadata is missing' }
+    $makeTarget = $targets.GetMethod('Target', [Reflection.BindingFlags]'Static, NonPublic')
+    foreach ($name in @('Example', 'Renamed project', 'A&B')) {
+        $target = $makeTarget.Invoke($null, [object[]]@("C:\projects\$name.gfproj"))
+        if ($target.Name -ne 'Project' -or $target.DisplayName -ne $name.Replace('&', '&&')) { throw 'Debug target must display the project name and escape menu mnemonics' }
+    }
+    $debugRule = [xml](Get-Content -Raw -LiteralPath (Join-Path $PackageDirectory 'Sdk/build/Rules/GflatLocal.xaml'))
+    if ($debugRule.Rule.DynamicEnumProperty.EnumProvider -ne 'GflatDebugTargetProvider' -or
+        $debugRule.Rule.DynamicEnumProperty.Name -ne 'GflatDebugTarget' -or
+        $debugRule.Rule.'Rule.Metadata'.String.'#text' -ne 'GflatDebugTarget') { throw 'Debugger dropdown must use the project target provider' }
     $flags = [Reflection.BindingFlags]'Static, NonPublic'
     $canLaunch = $launch.GetMethod('CanLaunch', $flags)
     $create = $launch.GetMethod('CreateSettings', $flags)

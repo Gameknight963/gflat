@@ -61,6 +61,10 @@ namespace gflat
                         depth += _tokens[i].Kind == TokenKind.OpenBrace ? 1 : _tokens[i].Kind == TokenKind.CloseBrace ? -1 : 0;
                     while (!Check(TokenKind.EndOfFile))
                     {
+                        // An unfinished call on the preceding line must not eat
+                        // a later local declaration while looking for a semicolon.
+                        if (statement && _pos > start && depth <= 0 && Current.Line > _tokens[start].Line &&
+                            IsTypeStart() && IsVariableDeclaration(out _)) break;
                         if (depth <= 0 && Check(TokenKind.CloseBrace)) { if (!statement) Consume(); break; }
                         if (_pos > start && depth <= 0 && Current.Line > _tokens[start].Line &&
                             Current.Kind is TokenKind.Namespace or TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Extern or TokenKind.Public or TokenKind.Private) break;
@@ -1067,6 +1071,7 @@ namespace gflat
                     while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
                     {
                         args.Add(ParseExpression());
+                        if (_recoverErrors && Current.Line > args[^1].Line && IsTypeStart() && IsVariableDeclaration(out _)) break;
                         if (!Check(TokenKind.CloseParen))
                             Expect(TokenKind.Comma);
                     }
@@ -1920,6 +1925,7 @@ namespace gflat
                     while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
                     {
                         args.Add(ParseExpression());
+                        if (_recoverErrors && Current.Line > args[^1].Line && IsTypeStart() && IsVariableDeclaration(out _)) break;
                         if (!Check(TokenKind.CloseParen))
                             Expect(TokenKind.Comma);
                     }
@@ -1972,6 +1978,7 @@ namespace gflat
                     while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
                     {
                         args.Add(ParseExpression());
+                        if (_recoverErrors && Current.Line > args[^1].Line && IsTypeStart() && IsVariableDeclaration(out _)) break;
                         if (!Check(TokenKind.CloseParen))
                             Expect(TokenKind.Comma);
                     }

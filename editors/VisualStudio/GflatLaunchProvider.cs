@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.ProjectSystem;
 using Microsoft.VisualStudio.ProjectSystem.Debug;
 using Microsoft.VisualStudio.ProjectSystem.VS.Debug;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace gflat.VisualStudio;
 
@@ -15,9 +17,15 @@ namespace gflat.VisualStudio;
 internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
 {
     private readonly ConfiguredProject project;
+    private readonly IServiceProvider serviceProvider;
 
     [ImportingConstructor]
-    public GflatLaunchProvider(ConfiguredProject project) : base(project) { this.project = project; }
+    public GflatLaunchProvider(ConfiguredProject project,
+        [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider) : base(project)
+    {
+        this.project = project;
+        this.serviceProvider = serviceProvider;
+    }
 
     public override async Task<bool> CanLaunchAsync(DebugLaunchOptions launchOptions)
     {
@@ -41,6 +49,12 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
             await properties.GetEvaluatedPropertyValueAsync("GflatRunArguments"),
             await properties.GetEvaluatedPropertyValueAsync("GflatRunWorkingDirectory"),
             Path.GetDirectoryName(project.UnconfiguredProject.FullPath)!);
+        await ThreadingService.SwitchToUIThread();
+        if (serviceProvider.GetService(typeof(SVsShellDebugger)) is IVsDebugger10 debugger)
+        {
+            debugger.IsIntegratedConsoleEnabled(out bool enabled);
+            GflatLaunch.ConfigureConsole(settings, enabled);
+        }
         return new IDebugLaunchSettings[] { settings };
     }
 }
@@ -48,6 +62,11 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
 internal static class GflatLaunch
 {
     internal const string SchemaName = "GflatLocal";
+
+    internal static void ConfigureConsole(DebugLaunchSettings settings, bool enabled)
+    {
+        if (enabled) settings.LaunchOptions |= DebugLaunchOptions.IntegratedConsole;
+    }
 
     internal static bool CanLaunch(DebugLaunchOptions options, string kind, string emitIr) =>
         string.Equals(kind, "Executable", StringComparison.OrdinalIgnoreCase) &&

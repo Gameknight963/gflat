@@ -413,6 +413,10 @@ Set an executable `.gfproj` as the startup project and use **F5** to debug or
 and Visual Studio's normal build and launch services. Source libraries and LLVM
 IR output configurations cannot launch.
 
+Console applications use Visual Studio's debug console. **Tools > Options >
+Debugging > General > Automatically close the console when debugging stops**
+controls whether the console closes after execution.
+
 The **G♭ application** launch page provides command arguments and a working
 directory, which defaults to the project directory. Relative working directories
 are resolved from that directory. These settings are stored per configuration in

@@ -109,6 +109,19 @@ try {
     if ($settings.LaunchDebugEngineGuid -ne $nativeEngine) { throw 'Launch must select the SDK native engine' }
     $debugSettings = $create.Invoke($null, [object[]]@($debug, 'Executable', '', 'app.exe', '', '', $scratch))
     if (($debugSettings.LaunchOptions -band $noDebug) -ne 0 -or $debugSettings.LaunchDebugEngineGuid -ne $nativeEngine) { throw 'F5 must launch the native debugger' }
+    $console = $launch.GetMethod('ConfigureConsole', $flags)
+    $integratedConsole = [Enum]::Parse($optionsType, 'IntegratedConsole')
+    foreach ($options in @($debug, $noDebug)) {
+        foreach ($enabled in @($false, $true)) {
+            $consoleSettings = $create.Invoke($null, [object[]]@($options, 'Executable', '', 'app.exe', $arguments, '', $scratch))
+            $console.Invoke($null, [object[]]@($consoleSettings, $enabled)) | Out-Null
+            if ((($consoleSettings.LaunchOptions -band $integratedConsole) -ne 0) -ne $enabled -or
+                ($consoleSettings.LaunchOptions -band $noDebug) -ne ($options -band $noDebug) -or
+                $consoleSettings.Executable -ne (Join-Path $scratch 'app.exe') -or $consoleSettings.Arguments -ne $arguments) {
+                throw 'F5 and Ctrl+F5 must honor the VS console preference and preserve the native launch'
+            }
+        }
+    }
     $workingDirectory = Join-Path $scratch 'work'
     New-Item -ItemType Directory -Path $workingDirectory | Out-Null
     $relative = $create.Invoke($null, [object[]]@($noDebug, 'Executable', '', 'app.exe', '', 'work', $scratch))

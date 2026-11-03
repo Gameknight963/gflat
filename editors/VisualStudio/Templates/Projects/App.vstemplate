@@ -8,7 +8,7 @@
     <CreateNewFolder>true</CreateNewFolder>
     <ProvideDefaultName>true</ProvideDefaultName>
     <SortOrder>10</SortOrder>
-    <LanguageTag>gflat</LanguageTag>
+    <LanguageTag>G&#x266D;</LanguageTag>
     <PlatformTag>Windows</PlatformTag>
     <PlatformTag>Linux</PlatformTag>
     <ProjectTypeTag>Console</ProjectTypeTag>

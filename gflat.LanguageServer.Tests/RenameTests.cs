@@ -62,10 +62,10 @@ public sealed class RenameTests
     }
 
     [Fact]
-    public void MemberNamesCannotBeRenamed()
+    public void MemberNamesCanBeRenamed()
     {
         var (model, source, offset) = Analyze("struct S { public int |value; }");
-        Assert.Null(model.PrepareRename(source.Path, offset));
+        Assert.NotNull(model.PrepareRename(source.Path, offset));
     }
 
     [Fact]

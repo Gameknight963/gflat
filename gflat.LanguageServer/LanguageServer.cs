@@ -171,6 +171,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             completionProvider = new { triggerCharacters = new[] { ".", ":" } },
                             hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true, documentHighlightProvider = true,
                             renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,
+                            implementationProvider = true, typeHierarchyProvider = true,
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });
@@ -231,6 +232,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                     case "textDocument/completion":
                     case "textDocument/hover":
                     case "textDocument/definition":
+                    case "textDocument/implementation":
+                    case "textDocument/prepareTypeHierarchy":
+                    case "typeHierarchy/supertypes":
+                    case "typeHierarchy/subtypes":
                     case "textDocument/references":
                     case "textDocument/documentHighlight":
                     case "textDocument/prepareRename":
@@ -279,6 +284,15 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 await Reply(query.Id, symbols);
                 return;
             }
+            if (query.Method is "typeHierarchy/supertypes" or "typeHierarchy/subtypes")
+            {
+                var data = query.Parameters.GetProperty("item").GetProperty("data");
+                string hierarchyPath = data.GetProperty("path").GetString()!;
+                int hierarchyOffset = data.GetProperty("offset").GetInt32();
+                await Reply(query.Id, latest?.Models?.GetValueOrDefault(hierarchyPath)?.TypeHierarchy(hierarchyPath, hierarchyOffset,
+                    query.Method == "typeHierarchy/subtypes") ?? []);
+                return;
+            }
             string path = Workspace.FilePath(query.Parameters.GetProperty("textDocument").GetProperty("uri").GetString()!);
             if (latest?.Models?.GetValueOrDefault(path) is not EditorModel model || !documents.TryGetValue(path, out var document))
             { await Reply(query.Id, null); return; }
@@ -290,6 +304,8 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 "textDocument/completion" => model.Completion(path, offset),
                 "textDocument/hover" => model.Hover(path, offset, hoverPresentation, hoverOptions),
                 "textDocument/definition" => model.Definition(path, offset),
+                "textDocument/implementation" => model.Implementations(path, offset),
+                "textDocument/prepareTypeHierarchy" => model.PrepareTypeHierarchy(path, offset),
                 "textDocument/documentHighlight" => model.DocumentHighlights(path, offset),
                 "textDocument/prepareRename" => model.PrepareRename(path, offset),
                 "textDocument/rename" => RenameWorkspaceEdit(model, path, offset,
@@ -313,7 +329,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
             return new { changes = groups.ToDictionary(group => Workspace.FileUri(group.Key),
                 group => group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()) };
         return new { documentChanges = groups.Select(group => new {
-            textDocument = new { uri = Workspace.FileUri(group.Key), version = documents[group.Key].Version },
+            textDocument = new { uri = Workspace.FileUri(group.Key), version = documents.GetValueOrDefault(group.Key)?.Version },
             edits = group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()
         }).ToArray() };
     }
@@ -326,7 +342,8 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     };
 
     private static bool RequiresFullAnalysis(string method)
-        => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename";
+        => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename" or
+            "textDocument/implementation" or "textDocument/prepareTypeHierarchy" or "typeHierarchy/supertypes" or "typeHierarchy/subtypes";
 
     private async Task Schedule(bool invalidateProjects = false)
     {

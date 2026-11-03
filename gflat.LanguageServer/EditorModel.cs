@@ -919,6 +919,7 @@ public sealed partial class EditorModel
     }
     public object? Definition(string path, int offset)
     {
+        if (OverriddenMember(path, offset) is { } overridden) return NavigationLocation(overridden);
         if (MacroAt(path, offset) is { Declaration.Source: { } file } macro && !file.Path.StartsWith('<'))
             return new Location(Workspace.FileUri(file.Path), Workspace.ToRange(macro.Declaration));
         int index = TokenAt(path, offset);

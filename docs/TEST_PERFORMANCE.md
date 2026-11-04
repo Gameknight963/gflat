@@ -91,6 +91,11 @@ For individual method-check events, also set `GFLAT_PROFILE_DETAIL=1`. These
 tracing adds overhead, so use ordinary stage tracing for build-time comparisons.
 Specialization can nest method checks, so method durations can overlap.
 
+Set `GFLAT_PROFILE_ALLOCATIONS=1` to include `allocatedBytes` in each event.
+This counts managed allocations across the process during that stage, including
+concurrent work. Nested allocation totals overlap. The count measures allocation
+volume rather than retained memory.
+
 Summarize traces and TRX results:
 
 ```powershell

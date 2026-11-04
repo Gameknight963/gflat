@@ -15,6 +15,7 @@ public static class PipelineTimings
 
     public static bool Enabled => !string.IsNullOrWhiteSpace(DirectoryPath);
     public static bool Detailed { get; } = Enabled && Environment.GetEnvironmentVariable("GFLAT_PROFILE_DETAIL") == "1";
+    private static bool Allocations { get; } = Enabled && Environment.GetEnvironmentVariable("GFLAT_PROFILE_ALLOCATIONS") == "1";
     public static string? TestName
     {
         get => Context.Value ?? Environment.GetEnvironmentVariable("GFLAT_PROFILE_TEST");
@@ -27,13 +28,15 @@ public static class PipelineTimings
     private sealed class Measurement(string stage, string? detail, string? test) : IDisposable
     {
         private readonly long start = Stopwatch.GetTimestamp();
+        private readonly long startAllocated = Allocations ? GC.GetTotalAllocatedBytes() : 0;
         private bool disposed;
         public void Dispose()
         {
             if (disposed) return;
             disposed = true;
             double milliseconds = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
-            string json = JsonSerializer.Serialize(new { stage, detail, test, milliseconds, pass = Pass, process = Environment.ProcessId });
+            long? allocatedBytes = Allocations ? GC.GetTotalAllocatedBytes() - startAllocated : null;
+            string json = JsonSerializer.Serialize(new { stage, detail, test, milliseconds, allocatedBytes, pass = Pass, process = Environment.ProcessId });
             lock (Gate)
             {
                 if (writer == null)

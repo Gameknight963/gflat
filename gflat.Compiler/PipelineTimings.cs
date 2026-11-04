@@ -14,6 +14,7 @@ public static class PipelineTimings
     private static int pending;
 
     public static bool Enabled => !string.IsNullOrWhiteSpace(DirectoryPath);
+    public static bool Detailed { get; } = Enabled && Environment.GetEnvironmentVariable("GFLAT_PROFILE_DETAIL") == "1";
     public static string? TestName
     {
         get => Context.Value ?? Environment.GetEnvironmentVariable("GFLAT_PROFILE_TEST");

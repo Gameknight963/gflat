@@ -277,6 +277,7 @@ public partial class TypeChecker
 
     private void ResolveDeclarationSignatures(CompilationUnit unit)
     {
+        using var timing = PipelineTimings.Measure("check.bind-signatures");
         var previous = _currentNamespace;
         try
         {

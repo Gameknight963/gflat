@@ -74,11 +74,22 @@ The stages measure:
 | `syntax.parse` | Parsing |
 | `frontend.parse-and-prelude` | Compiler input parsing and automatic library loading |
 | `frontend.check` | Symbol preparation, checking, and semantic passes |
+| `check.declarations`, `check.symbols` | Declaration expansion and symbol collection |
+| `check.signatures`, `check.bind-signatures`, `check.overloads` | Signature binding, specialization, and overload preparation |
+| `check.hierarchy`, `check.extensions` | Inheritance, alias contracts, and extension registration |
+| `check.bodies` | Declaration body checking |
+| `check.attributes` | Attribute evaluation and final declaration validation |
+| `check.control-flow`, `check.definite-assignment` | Return paths and variable initialization |
 | `emit.ir` | LLVM module emission |
 | `native.compile-link` | Native toolchain preparation, compilation, and linking |
 | `process.clang` | Time waiting for Clang processes, including native runtime builds |
 | `process.execute` | Time waiting for other tools and generated programs |
 | `test` | Test method execution, including theory cases |
+
+For individual method-check events, also set `GFLAT_PROFILE_DETAIL=1`. These
+`check.method` events identify the namespace and method in `detail`. Detailed
+tracing adds overhead, so use ordinary stage tracing for build-time comparisons.
+Specialization can nest method checks, so method durations can overlap.
 
 Summarize traces and TRX results:
 

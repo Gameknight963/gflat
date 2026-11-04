@@ -52,6 +52,7 @@ public partial class TypeChecker
 
     private void PrepareOverloads(CompilationUnit unit, AstNode? specialization = null, bool resolveSignatures = true)
     {
+        using var timing = PipelineTimings.Measure("check.overloads", specialization?.GetType().Name ?? "compilation");
         var groups = new Dictionary<string, List<MethodDeclaration>>();
         var ownerNames = new HashSet<string>();
         if (specialization != null) Walk([specialization], "");

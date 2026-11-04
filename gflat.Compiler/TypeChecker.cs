@@ -2096,78 +2096,101 @@ namespace gflat
             _cancellationToken.ThrowIfCancellationRequested();
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
-            ExpandExtensionBlocks(node);
-            BindQualifiedDeclarations(node);
-            _cancellationToken.ThrowIfCancellationRequested();
-            SelectAliasBindings(node);
-            ExpandProperties(node);
-            _cancellationToken.ThrowIfCancellationRequested();
-
-            CheckDeclarationConflicts(node);
-            QualifyTypeDeclarations(node);
-            ExpandPrimitiveImplementations(node);
-            _cancellationToken.ThrowIfCancellationRequested();
-
-            // Pass 1: Symbol collection
-            SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration,
-                _recoverErrors ? AnalyzeSafely : null, DisplayName);
-            collectionPass.Execute(node);
-            ResolveFunctionReplacements(node);
-            collectionPass.Execute(node);
-            PrepareOverloads(node, resolveSignatures: false);
-
-            ResolveDeclaredBaseTypes(node);
-            // Signature resolution can specialize generic bodies. Their exception
-            // and constraint checks need the class inheritance edges already bound.
-            new HierarchyResolutionPass(_symbols).ResolveBaseTypes();
-            RegisterPrimitiveImplementations();
-            ResolveDeclarationSignatures(node);
-            PrepareOverloads(node);
-            ValidateExplicitConversionDeclarations();
-            ValidateAllocatorPair();
-            ValidateUnhandledExceptionHook();
-            RegisterStaticStorage(node);
-
-            // Pass 2: Hierarchy resolution
-            HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
-            hierarchyPass.Execute();
-            ValidateCollectedInlineLayouts();
-            ValidateAliasContracts();
-
-            // Resolve literal operators before checking uses, including forward references.
-            RegisterStringLiteralOperators(node);
-            RegisterExtensions(node);
-
-            // Pass 3: Body type checking
-            _currentNamespace = _globalScope;
-            for (int i = 0; i < node.Members.Count; i++)
+            using (PipelineTimings.Measure("check.declarations"))
             {
-                CheckSpecialization(node.Members[i], node.Members[i]);
+                ExpandExtensionBlocks(node);
+                BindQualifiedDeclarations(node);
+                _cancellationToken.ThrowIfCancellationRequested();
+                SelectAliasBindings(node);
+                ExpandProperties(node);
+                _cancellationToken.ThrowIfCancellationRequested();
+
+                CheckDeclarationConflicts(node);
+                QualifyTypeDeclarations(node);
+                ExpandPrimitiveImplementations(node);
+                _cancellationToken.ThrowIfCancellationRequested();
             }
 
-            foreach (NamespaceDeclaration ns in node.Namespaces)
+            // Pass 1: Symbol collection
+            using (PipelineTimings.Measure("check.symbols"))
             {
-                ns.Accept(this);
+                SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration,
+                    _recoverErrors ? AnalyzeSafely : null, DisplayName);
+                collectionPass.Execute(node);
+                ResolveFunctionReplacements(node);
+                collectionPass.Execute(node);
+                PrepareOverloads(node, resolveSignatures: false);
+            }
+
+            using (PipelineTimings.Measure("check.signatures"))
+            {
+                ResolveDeclaredBaseTypes(node);
+                // Signature resolution can specialize generic bodies. Their exception
+                // and constraint checks need the class inheritance edges already bound.
+                new HierarchyResolutionPass(_symbols).ResolveBaseTypes();
+                RegisterPrimitiveImplementations();
+                ResolveDeclarationSignatures(node);
+                PrepareOverloads(node);
+                ValidateExplicitConversionDeclarations();
+                ValidateAllocatorPair();
+                ValidateUnhandledExceptionHook();
+                RegisterStaticStorage(node);
+            }
+
+            // Pass 2: Hierarchy resolution
+            using (PipelineTimings.Measure("check.hierarchy"))
+            {
+                HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
+                hierarchyPass.Execute();
+                ValidateCollectedInlineLayouts();
+                ValidateAliasContracts();
+            }
+
+            // Resolve literal operators before checking uses, including forward references.
+            using (PipelineTimings.Measure("check.extensions"))
+            {
+                RegisterStringLiteralOperators(node);
+                RegisterExtensions(node);
+            }
+
+            // Pass 3: Body type checking
+            using (PipelineTimings.Measure("check.bodies"))
+            {
+                _currentNamespace = _globalScope;
+                for (int i = 0; i < node.Members.Count; i++)
+                {
+                    CheckSpecialization(node.Members[i], node.Members[i]);
+                }
+
+                foreach (NamespaceDeclaration ns in node.Namespaces)
+                {
+                    ns.Accept(this);
+                }
             }
 
             // Attribute constructors run after all declaration bodies have been checked.
-            foreach (NamespaceDeclaration ns in node.Namespaces) CheckDeclarationAttributes(ns);
-            for (int i = 0; i < node.Members.Count; i++) CheckDeclarationAttributes(node.Members[i]);
-            // Attribute evaluation has its own safety checks. Preserve those
-            // diagnostics before reporting unavailable runtime storage forms.
-            ValidateStaticStorage();
-            AnalyzeSafely(ValidateFunctionValueSelections);
-            ValidateTargetTypedCreations();
+            using (PipelineTimings.Measure("check.attributes"))
+            {
+                foreach (NamespaceDeclaration ns in node.Namespaces) CheckDeclarationAttributes(ns);
+                for (int i = 0; i < node.Members.Count; i++) CheckDeclarationAttributes(node.Members[i]);
+                // Attribute evaluation has its own safety checks. Preserve those
+                // diagnostics before reporting unavailable runtime storage forms.
+                ValidateStaticStorage();
+                AnalyzeSafely(ValidateFunctionValueSelections);
+                ValidateTargetTypedCreations();
+            }
 
             if (_recoverErrors && _diagnostics.HasErrors) return;
 
             // Pass 4: Control flow & Return path analysis
             ControlFlowPass controlFlowPass = new ControlFlowPass(this, _constEvaluator, _diagnostics);
-            controlFlowPass.Execute(node);
+            using (PipelineTimings.Measure("check.control-flow"))
+                controlFlowPass.Execute(node);
 
             // Pass 5: Definite assignment analysis
             DefiniteAssignmentPass definiteAssignmentPass = new DefiniteAssignmentPass(this, controlFlowPass);
-            definiteAssignmentPass.Execute(node);
+            using (PipelineTimings.Measure("check.definite-assignment"))
+                definiteAssignmentPass.Execute(node);
 
             if (_diagnostics.HasErrors)
             {
@@ -3071,6 +3094,8 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
+            using var bodyTiming = PipelineTimings.Detailed
+                ? PipelineTimings.Measure("check.method", GetFunctionNamespace(node) + "::" + node.Name) : null;
             _cancellationToken.ThrowIfCancellationRequested();
             using var exceptionScope = IsolateExceptionHandlers();
             using var nullableScope = IsolateNullableFlow();

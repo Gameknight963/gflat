@@ -998,7 +998,8 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool reinterpret = ts[i].Text == "reinterpret" && i > 0 && ts[i - 1].Kind == TokenKind.Dot;
+            bool modifier = reinterpret || accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             if (MacroCovers(ts[i].Start)) continue;

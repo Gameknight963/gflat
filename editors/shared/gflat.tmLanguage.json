@@ -168,6 +168,10 @@
     },
     {
       "name": "keyword.other.gflat",
+      "match": "(?<=\\.)[ \\t]*\\breinterpret\\b"
+    },
+    {
+      "name": "keyword.other.gflat",
       "match": "\\b(namespace|using|new|delete|default|alias|global|operator|sizeof|alignof|typeof|reflect|nameof|managed)\\b"
     },
     {

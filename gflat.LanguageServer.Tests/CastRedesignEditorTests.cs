@@ -6,6 +6,33 @@ namespace gflat.LanguageServer.Tests;
 // Source identities must survive compiler-only intrinsic/conversion lowering.
 public sealed class CastRedesignEditorTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReinterpretUsesOrdinaryKeywordClassification(bool visualStudio)
+    {
+        const string text = "int main(){nuint storage=16; nuint alignment=8; if ((storage).reinterpret<nuint>() % alignment != 0) return 1; int reinterpret=0; return reinterpret;}";
+        var source = new SourceFile(Path.GetFullPath("reinterpret-keyword.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true, NoBuiltins = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, item => item.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        var data = JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path, visualStudio: visualStudio), Protocol.JsonOptions)
+            .GetProperty("data").EnumerateArray().Select(item => item.GetInt32()).ToArray();
+        var kinds = new Dictionary<int, int>();
+        int column = 0;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            Assert.Equal(0, data[i]);
+            column += data[i + 1];
+            kinds[column] = data[i + 3];
+        }
+        int intrinsic = text.IndexOf("reinterpret", StringComparison.Ordinal);
+        int local = text.LastIndexOf("reinterpret", StringComparison.Ordinal);
+        Assert.Equal("modifier", EditorModel.TokenTypes[kinds[intrinsic]]);
+        Assert.Equal("keyword", EditorModel.VisualStudioTokenTypes[kinds[intrinsic]]);
+        Assert.Equal("variable", EditorModel.TokenTypes[kinds[local]]);
+    }
+
     [Fact]
     public void InferredLocalTypeComesFromReinterpretResult()
     {

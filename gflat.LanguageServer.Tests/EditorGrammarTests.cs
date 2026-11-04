@@ -26,6 +26,8 @@ public class EditorGrammarTests
     [InlineData("#define ANSWER 42", "define", "preprocessor keyword")]
     [InlineData("#define ANSWER 42", "ANSWER", "cppMacro")]
     [InlineData("#include \"file.gfh\"", "include", "preprocessor keyword")]
+    [InlineData("if ((storage).reinterpret<nuint>() % alignment != 0)", "reinterpret", "keyword")]
+    [InlineData("bits. reinterpret<float>()", "reinterpret", "keyword")]
     [InlineData("int value = default;", "default", "keyword")]
     [InlineData("int value = default(int);", "default", "keyword")]
     [InlineData("namespace Console;", "namespace", "keyword")]

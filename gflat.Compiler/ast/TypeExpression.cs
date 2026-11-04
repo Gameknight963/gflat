@@ -17,32 +17,39 @@ namespace gflat.ast
         internal IReadOnlyList<TypeExpression> InterfaceConstraints { get; private set; } = Array.Empty<TypeExpression>();
         internal NamedTypeExpression? GenericUse { get; private set; }
         internal GenericParameterContractView? GenericParameterView { get; private set; }
+        public TypeExpression ShallowCopy() => (TypeExpression)MemberwiseClone();
+
         internal TypeExpression WithGenericParameterView(GenericParameterContractView? view)
         {
+            if (ReferenceEquals(GenericParameterView, view)) return this;
             var copy = (TypeExpression)MemberwiseClone();
             copy.GenericParameterView = view;
             return copy;
         }
         internal TypeExpression WithGenericUse(NamedTypeExpression use)
         {
+            if (ReferenceEquals(GenericUse, use)) return this;
             var copy = (TypeExpression)MemberwiseClone();
             copy.GenericUse = use;
             return copy;
         }
         internal TypeExpression WithInterfaceConstraints(IReadOnlyList<TypeExpression> constraints)
         {
+            if (ReferenceEquals(InterfaceConstraints, constraints)) return this;
             var copy = (TypeExpression)MemberwiseClone();
             copy.InterfaceConstraints = constraints;
             return copy;
         }
         public TypeExpression WithReadOnlyValue(bool value)
         {
+            if (IsReadOnlyValue == (value || IsImmutableValue)) return this;
             var copy = (TypeExpression)MemberwiseClone();
             copy.IsReadOnlyValue = value || copy.IsImmutableValue;
             return copy;
         }
         public TypeExpression WithImmutableValue(bool value)
         {
+            if (IsImmutableValue == value) return this;
             var copy = (TypeExpression)MemberwiseClone();
             copy.IsImmutableValue = value;
             if (value) copy.IsReadOnlyValue = true;
@@ -50,6 +57,7 @@ namespace gflat.ast
         }
         public TypeExpression WithoutValueProtection()
         {
+            if (!IsReadOnlyValue && !IsImmutableValue) return this;
             var copy = (TypeExpression)MemberwiseClone();
             copy.IsReadOnlyValue = false;
             copy.IsImmutableValue = false;

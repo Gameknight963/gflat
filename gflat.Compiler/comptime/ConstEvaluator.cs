@@ -40,6 +40,33 @@ namespace gflat.comptime
         public bool TryEvaluate(AstNode node, out ConstValue? result, out string? failureReason)
             => TryEvaluate(node, null, out result, out failureReason);
 
+        internal bool TryEvaluateCondition(AstNode node, out bool value)
+        {
+            value = false;
+            // A runtime value on the first evaluated path cannot produce a
+            // constant. Stop before entering the exception-based interpreter.
+            // Other expressions still use the full evaluator, including const
+            // calls, reflection, short circuiting, and their diagnostics.
+            if (HasRuntimePrefix(node)) return false;
+            if (!TryEvaluate(node, out var result, out _) || result is not ConstValue.Boolean boolean) return false;
+            value = boolean.Value;
+            return true;
+        }
+
+        private bool HasRuntimePrefix(AstNode node)
+        {
+            switch (node)
+            {
+                case IdentifierExpression identifier:
+                    return !_context.TryGetConstValue(node, out _) && !_context.TryGetConstValueByName(identifier.Name, out _);
+                case BinaryExpression binary: return HasRuntimePrefix(binary.Left);
+                case UnaryExpression unary when unary.Operator is TokenKind.Bang or TokenKind.Plus or TokenKind.Minus or TokenKind.Tilde:
+                    return HasRuntimePrefix(unary.Operand);
+                case CastExpression cast: return HasRuntimePrefix(cast.Operand);
+                default: return false;
+            }
+        }
+
         public bool TryEvaluate(AstNode node, TypeExpression? target, out ConstValue? result, out string? failureReason)
         {
             // Resolving a type during evaluation may require another constant

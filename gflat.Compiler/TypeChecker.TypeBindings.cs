@@ -22,6 +22,16 @@ public partial class TypeChecker
             forward?.Invoke(source);
             return source;
         }
+        // A published nominal identity has already passed lexical lookup. Keep
+        // specialization/layout validation without opening another publication.
+        if (source is NamedTypeExpression { IsResolvedNominal: true })
+        {
+            CheckPublishedTypeBinding(source, source.Line);
+            var resolved = CanonicalizeBoundScalarProtection(source);
+            RecordSourceTypeBinding(source, resolved);
+            forward?.Invoke(resolved);
+            return resolved;
+        }
         return ResolveAliasScoped(source, forward);
     }
 

@@ -19,6 +19,9 @@ namespace gflat.semantics
             public bool IsFullyAssigned;
             public HashSet<string> AssignedFields = new();
             public TypeChecker.StructInfo? StructInfo;
+            // Snapshots own their dictionaries/stacks. Writable detaches a
+            // shared record before changing its assignment or field state.
+            internal bool Shared;
 
             public VariableAssignment Clone()
             {
@@ -47,8 +50,18 @@ namespace gflat.semantics
 
         private void RecordExceptionalState()
         {
+            int depth = _exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth;
+            bool hasCleanup = false;
+            if (!_checkingCleanup)
+                for (int i = depth; i < _cleanupScopes.Count; i++)
+                    if (_cleanupScopes[i].Count > 0) { hasCleanup = true; break; }
+            if (!hasCleanup)
+            {
+                foreach (var states in _exceptionStates) states.Add(CloneState(_state));
+                return;
+            }
             var normal = CloneState(_state);
-            CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
+            CheckCleanups(depth);
             foreach (var states in _exceptionStates) states.Add(CloneState(_state));
             _state = normal;
         }
@@ -61,7 +74,7 @@ namespace gflat.semantics
 
         private void ConsumeLocal(string name)
         {
-            if (Lookup(name) is not VariableAssignment value) return;
+            if (Writable(name) is not VariableAssignment value) return;
             value.IsFullyAssigned = false;
             value.AssignedFields.Clear();
         }
@@ -429,9 +442,20 @@ namespace gflat.semantics
             return null;
         }
 
+        private VariableAssignment? Writable(string name)
+        {
+            if (!_state.TryGetValue(name, out var stack) || stack.Count == 0) return null;
+            var value = stack.Peek();
+            if (!value.Shared) return value;
+            stack.Pop();
+            var copy = value.Clone();
+            stack.Push(copy);
+            return copy;
+        }
+
         private void MarkFullyAssigned(string name)
         {
-            VariableAssignment? va = Lookup(name);
+            VariableAssignment? va = Writable(name);
             if (va != null)
             {
                 va.IsFullyAssigned = true;
@@ -447,15 +471,16 @@ namespace gflat.semantics
 
         private Dictionary<string, Stack<VariableAssignment>> CloneState(Dictionary<string, Stack<VariableAssignment>> source)
         {
-            Dictionary<string, Stack<VariableAssignment>> clone = new();
+            Dictionary<string, Stack<VariableAssignment>> clone = new(source.Count);
             foreach (KeyValuePair<string, Stack<VariableAssignment>> kv in source)
             {
                 VariableAssignment[] items = kv.Value.ToArray();
                 Array.Reverse(items);
-                Stack<VariableAssignment> newStack = new Stack<VariableAssignment>();
+                Stack<VariableAssignment> newStack = new Stack<VariableAssignment>(items.Length);
                 for (int i = 0; i < items.Length; i++)
                 {
-                    newStack.Push(items[i].Clone());
+                    items[i].Shared = true;
+                    newStack.Push(items[i]);
                 }
                 clone[kv.Key] = newStack;
             }
@@ -482,6 +507,13 @@ namespace gflat.semantics
                     {
                         VariableAssignment aVar = itemsA[i];
                         VariableAssignment bVar = itemsB[i];
+
+                        if (ReferenceEquals(aVar, bVar))
+                        {
+                            aVar.Shared = true;
+                            mergedStack.Push(aVar);
+                            continue;
+                        }
 
                         VariableAssignment merged = new VariableAssignment
                         {
@@ -1051,7 +1083,7 @@ namespace gflat.semantics
                 {
                     if (member.Object is IdentifierExpression targetId)
                     {
-                        VariableAssignment? va = Lookup(targetId.Name);
+                        VariableAssignment? va = Writable(targetId.Name);
                         if (va != null)
                         {
                             TypeExpression resolvedTarget = _typeChecker.ResolveAlias(va.Type);

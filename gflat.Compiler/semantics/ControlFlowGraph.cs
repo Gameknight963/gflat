@@ -51,8 +51,9 @@ public sealed class ControlFlowGraph
                 case WhileStatement loop:
                     var test = new Block(loop.Condition);
                     var bodyEntry = Build(loop.Body, test, next, test, throwTarget);
-                    if (constantCondition(loop.Condition) != false) test.Successors.Add(bodyEntry);
-                    if (constantCondition(loop.Condition) != true) test.Successors.Add(next);
+                    bool? whileCondition = constantCondition(loop.Condition);
+                    if (whileCondition != false) test.Successors.Add(bodyEntry);
+                    if (whileCondition != true) test.Successors.Add(next);
                     return test;
                 case ForStatement loop:
                     var condition = new Block(loop.Condition);

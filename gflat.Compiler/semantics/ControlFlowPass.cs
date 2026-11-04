@@ -13,12 +13,17 @@ namespace gflat.semantics
         private readonly ConstEvaluator _constEvaluator;
         private readonly DiagnosticBag _diagnostics;
         private readonly Dictionary<AstNode, ControlFlowGraph> _graphs = new();
+        private readonly Dictionary<AstNode, bool?> _conditions = new();
+        private readonly Dictionary<AstNode, Exits> _exits = new();
+        private readonly HashSet<AstNode> _diagnosed = new();
+
+        [Flags]
+        private enum Exits { None = 0, Normal = 1, Return = 2, Throw = 4, Break = 8, Continue = 16 }
 
         public ControlFlowGraph Graph(AstNode statement)
         {
             if (!_graphs.TryGetValue(statement, out var graph))
-                _graphs[statement] = graph = new ControlFlowGraph(statement, expression =>
-                    IsConstantTrue(expression) ? true : IsConstantFalse(expression) ? false : null);
+                _graphs[statement] = graph = new ControlFlowGraph(statement, ConstantCondition);
             return graph;
         }
 
@@ -131,8 +136,73 @@ namespace gflat.semantics
 
         public bool StatementTerminates(AstNode stmt)
         {
-            if (!_graphs.ContainsKey(stmt)) DiagnoseTermination(stmt);
-            return !Graph(stmt).FallsThrough;
+            if (_diagnosed.Add(stmt)) DiagnoseTermination(stmt);
+            return (StatementExits(stmt) & Exits.Normal) == 0;
+        }
+
+        // Each summary describes the statement on its own. A parent consumes
+        // break/continue exits at its loop boundary and composes normal exits.
+        private Exits StatementExits(AstNode statement)
+        {
+            if (_exits.TryGetValue(statement, out var cached)) return cached;
+            Exits result;
+            switch (statement)
+            {
+                case ReturnStatement: result = Exits.Return; break;
+                case ThrowStatement: result = Exits.Throw; break;
+                case BreakStatement: result = Exits.Break; break;
+                case ContinueStatement: result = Exits.Continue; break;
+                case BlockStatement block:
+                    result = Exits.Normal;
+                    foreach (var child in block.Statements)
+                    {
+                        var childExits = StatementExits(child);
+                        result = Sequence(result, childExits);
+                    }
+                    break;
+                case IfStatement branch:
+                    var then = StatementExits(branch.Then);
+                    var otherwise = branch.Else == null ? Exits.Normal : StatementExits(branch.Else);
+                    result = ConstantCondition(branch.Condition) switch { true => then, false => otherwise, _ => then | otherwise };
+                    break;
+                case WhileStatement loop:
+                    result = LoopExits(loop.Body, ConstantCondition(loop.Condition));
+                    break;
+                case ForStatement loop:
+                    result = LoopExits(loop.Body, loop.Condition == null ? true : ConstantCondition(loop.Condition), loop.Increment);
+                    if (loop.Initializer != null) result = Sequence(StatementExits(loop.Initializer), result);
+                    break;
+                case ForeachStatement loop:
+                    result = Exits.Normal | (StatementExits(loop.Body) & (Exits.Return | Exits.Throw));
+                    break;
+                case TryStatement guarded:
+                    // Match the graph's conservative call-exception edge and
+                    // the possibility that none of the typed catches matches.
+                    result = Exits.Throw | (StatementExits(guarded.TryBlock) & ~Exits.Throw);
+                    foreach (var clause in guarded.CatchClauses) result |= StatementExits(clause.Body);
+                    break;
+                default: result = Exits.Normal; break;
+            }
+            _exits[statement] = result;
+            return result;
+        }
+
+        private static Exits Sequence(Exits first, Exits next) =>
+            (first & ~Exits.Normal) | ((first & Exits.Normal) != 0 ? next : Exits.None);
+
+        private Exits LoopExits(AstNode body, bool? condition, AstNode? increment = null)
+        {
+            var exits = StatementExits(body);
+            if (condition == false) return Exits.Normal;
+            var result = exits & (Exits.Return | Exits.Throw);
+            if ((exits & Exits.Break) != 0 || condition == null) result |= Exits.Normal;
+            if (increment != null && (exits & (Exits.Normal | Exits.Continue)) != 0)
+            {
+                var step = StatementExits(increment);
+                result |= step & (Exits.Return | Exits.Throw);
+                if ((step & Exits.Break) != 0) result |= Exits.Normal;
+            }
+            return result;
         }
 
         private bool DiagnoseTermination(AstNode stmt)
@@ -320,45 +390,19 @@ namespace gflat.semantics
         }
 
         private bool IsConstantTrue(AstNode expr)
-        {
-            if (expr is LiteralExpression lit)
-            {
-                if (lit.Token.Kind == TokenKind.True)
-                {
-                    return true;
-                }
-            }
-
-            if (_constEvaluator.TryEvaluate(expr, out ConstValue? val, out _))
-            {
-                if (val is ConstValue.Boolean bVal)
-                {
-                    return bVal.Value;
-                }
-            }
-
-            return false;
-        }
+            => ConstantCondition(expr) == true;
 
         private bool IsConstantFalse(AstNode expr)
+            => ConstantCondition(expr) == false;
+
+        private bool? ConstantCondition(AstNode expr)
         {
-            if (expr is LiteralExpression lit)
-            {
-                if (lit.Token.Kind == TokenKind.False)
-                {
-                    return true;
-                }
-            }
-
-            if (_constEvaluator.TryEvaluate(expr, out ConstValue? val, out _))
-            {
-                if (val is ConstValue.Boolean bVal)
-                {
-                    return !bVal.Value;
-                }
-            }
-
-            return false;
+            if (_conditions.TryGetValue(expr, out var cached)) return cached;
+            bool? result = expr is LiteralExpression literal && literal.Token.Kind is TokenKind.True or TokenKind.False
+                ? literal.Token.Kind == TokenKind.True
+                : _constEvaluator.TryEvaluateCondition(expr, out var value) ? value : null;
+            _conditions.Add(expr, result);
+            return result;
         }
     }
 }

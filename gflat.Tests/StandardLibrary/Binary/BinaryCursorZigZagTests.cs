@@ -171,7 +171,7 @@ public sealed class BinaryCursorZigZagTests
                 bool c=writer.TryWriteZigZagInt32(small);bool d=writer.TryWriteZigZagInt64(big);
                 return a==VarInt::Status::Done&&b==VarInt::Status::Done&&c&&d;
             }
-            """);
+            """,native:false);
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$Allocate","gflat$Memory$Free","@malloc","@free"})
             Assert.DoesNotContain(forbidden,ir);
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Convert\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
@@ -202,12 +202,12 @@ public sealed class BinaryCursorZigZagTests
         int allocations=0;
         namespace Memory{public void*? Allocate(nuint count){allocations++;return null;}public void Free(void* value)nothrow{}}
         """;
-    private static string Emit(string program)
+    private static string Emit(string program,bool native=true)
     {
         string[] names=["Binary/BinaryPrimitives.gf","IO/IByteReader.gf", "Binary/BinaryBufferReader.gf","Binary/BinaryBufferWriter.gf","Memory/bytes.gf","Binary/VarInt.gf","Binary/binary_buffer_var_int.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("signed-cursor.gf",program));
-        return Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
+        return Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=native});
     }
     private static async Task WithDirectory(Action<string> action)
     {

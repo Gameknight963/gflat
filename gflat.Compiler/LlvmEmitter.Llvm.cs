@@ -11,6 +11,18 @@ public partial class LlvmEmitter
     private readonly StringBuilder llvmFunctions = new();
     private readonly Dictionary<string, string> llvmExternalDeclarations = new();
 
+    private void ValidateLlvmModules()
+    {
+        LlvmEmitter? validator = null;
+        foreach (var (call, info) in _typeChecker.CheckedLlvmCalls)
+        {
+            if (info.Entry == null) continue;
+            validator ??= new LlvmEmitter(_typeChecker);
+            validator.PrepareLlvmModule(info.Ir, info.Entry, "gflat$validation$",
+                validator.EmitType(info.Result), info.Arguments.Select(validator.EmitType).ToArray(), call, out _);
+        }
+    }
+
     private bool TryEmitLlvmCall(CallExpression node)
     {
         if (_typeChecker.GetLlvmCall(node) is not { } info) return false;

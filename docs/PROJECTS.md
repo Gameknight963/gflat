@@ -535,18 +535,22 @@ startup and linker settings.
 
 ### Unused functions and data
 
-Executable builds give G♭ function definitions other than `main` internal LLVM
-linkage, allowing LLVM to remove unused definitions. Native compilation also places
-functions and data in separate sections and asks the linker to discard unreferenced sections,
-including at optimization level 0. Native callbacks, virtual/interface tables,
-static initialization and cleanup retain the functions they reference.
+Executable builds emit reachable function bodies after type checking and
+compile-time evaluation. The compiler follows calls, function addresses,
+virtual/interface tables, runtime descriptors, static initialization, and cleanup.
+It removes unreferenced generated globals and declarations before invoking Clang.
+A reached inline LLVM module is retained as a whole, including its references.
+
+Generated functions other than `main` have internal LLVM linkage. Native
+compilation also places functions and data in separate sections and asks the
+linker to discard unreferenced sections at every optimization level.
 
 `--emit-ir` preserves externally linkable function definitions for callers in
 other native object files and custom entry points. The compiler API likewise
 preserves those definitions by default. Use
 `CompilationOptions { InternalizeFunctions = true }` for a complete executable
 whose G♭ functions are only called through that compilation or passed pointers.
-This controls native linkage independently of G♭ `public`/`private` access.
+This enables executable trimming and controls native linkage independently of G♭ `public`/`private` access.
 
 ### 128-bit integer helpers
 

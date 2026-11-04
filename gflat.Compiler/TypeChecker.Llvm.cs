@@ -10,6 +10,7 @@ public partial class TypeChecker
     public sealed record LlvmCallInfo(string Ir, string? Entry, TypeExpression Result, IReadOnlyList<TypeExpression> Arguments, int SourceArguments);
     private readonly Dictionary<CallExpression, LlvmCallInfo> llvmCalls = new();
     public LlvmCallInfo? GetLlvmCall(CallExpression call) => llvmCalls.GetValueOrDefault(call);
+    internal IEnumerable<KeyValuePair<CallExpression, LlvmCallInfo>> CheckedLlvmCalls => llvmCalls;
 
     private bool TryCheckLlvmCall(CallExpression node)
     {

@@ -178,9 +178,9 @@ public sealed class Base32Tests
                 for(nuint i=0;i<4;i++)if(output[i]!='?')return 11;
                 return 0;
             }
-            """,optimization);
+            """,optimization,requireAllEntries:true);
 
-    private static async Task Run(string program,int optimization)
+    private static async Task Run(string program,int optimization,bool requireAllEntries=false)
     {
         SourceFile[] files=[new("Base32.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core/Encoding/Base32.gf"))),new("main.gf",program)];
         string ir=Compiler.Emit(files,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
@@ -188,7 +188,8 @@ public sealed class Base32Tests
         foreach(string name in new[]{"TryGetEncodedLength","TryEncode","TryGetDecodedLength","TryDecode"})
         {
             Match definition=Regex.Match(ir,@"(?m)^define [^\r\n]*@[^\r\n]*"+name+@"[^\r\n]*\{");
-            Assert.True(definition.Success,$"Missing Base32 {name} definition");Assert.Contains("nounwind",definition.Value);
+            if(requireAllEntries)Assert.True(definition.Success,$"Missing Base32 {name} definition");
+            if(definition.Success)Assert.Contains("nounwind",definition.Value);
         }
         string directory=Path.Combine(Path.GetTempPath(),"gflat-base32-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         try

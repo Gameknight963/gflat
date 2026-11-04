@@ -97,7 +97,7 @@ public sealed class BigIntegerConversionTests
             bool Convert(immutable(BigInteger)* value,ref long signedValue,ref ulong unsignedValue)nothrow{
                 bool first=value.TryToLong(ref signedValue);bool second=value.TryToULong(ref unsignedValue);return first&&second;
             }
-            """),options:new(){InternalizeFunctions=true});
+            """));
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Convert\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
         Assert.NotEmpty(body);Assert.DoesNotContain("invoke",body);
         foreach(string name in new[]{"TryToLong","TryToULong"})

@@ -622,10 +622,11 @@ public partial class LlvmEmitter : IVisitor
 
     public string GetOutput()
     {
-        string body = OrderedGlobals() + "\n" + llvmFunctions + "\n" + _lambdaFunctions + "\n" + _output;
-        return "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
+        string body = OrderedGlobals() + "\n" + (_internalizeFunctions ? "" : llvmFunctions.ToString()) + "\n" + _lambdaFunctions + "\n" + _output;
+        string module = "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
             "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" +
             PlainArrayCopyDeclaration + NativeDeclarations + body + DebugMetadata();
+        return _internalizeFunctions ? TrimModule(module) : module;
     }
 
     private enum EmitMode { RValue, LValue }
@@ -1109,6 +1110,8 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(CompilationUnit node)
     {
         using var timing = PipelineTimings.Measure("emit.ir");
+        if (_internalizeFunctions) ValidateLlvmModules();
+        _registerFunctions = _internalizeFunctions;
         EmitPrimitiveInterfaceTables();
         _currentNamespacePath = "";
         foreach (AstNode member in node.Members)
@@ -1120,6 +1123,8 @@ public partial class LlvmEmitter : IVisitor
         EmitStaticStorage();
         EmitIsInstanceHelper();
         EmitExceptionDestroyHelper();
+        _registerFunctions = false;
+        if (_internalizeFunctions) EmitReachableFunctions();
     }
 
     public void Visit(UsingDirective node) { }
@@ -1306,6 +1311,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitClassMethod(string className, MethodDeclaration node)
     {
         if (node.IsGeneric || _typeChecker.IsCompileTimeOnly(node)) return;
+        if (DeferFunction(GetMethodMangledName(className, node, _currentNamespacePath, isClass: true), () => EmitClassMethod(className, node))) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1399,6 +1405,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassConstructor(string className, ConstructorDeclaration node)
     {
+        if (DeferFunction(GetConstructorMangledName(className, node, _currentNamespacePath), () => EmitClassConstructor(className, node))) return;
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -1524,6 +1531,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassDefaultConstructor(string className)
     {
+        if (DeferFunction(GetConstructorMangledName(className, null, _currentNamespacePath), () => EmitClassDefaultConstructor(className))) return;
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -1586,6 +1594,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassDestructor(string className, DestructorDeclaration? node)
     {
+        if (DeferFunction((_currentNamespacePath.Length == 0 ? $"gflat${className}$dtor" : $"gflat${_currentNamespacePath}${className}$dtor"), () => EmitClassDestructor(className, node))) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1804,6 +1813,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructOperator(string structName, OperatorDeclaration node)
     {
+        if (DeferFunction(GetOperatorMangledName(structName, node), () => EmitStructOperator(structName, node))) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1851,6 +1861,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
         if (node.IsGeneric || _typeChecker.IsCompileTimeOnly(node)) return;
+        if (DeferFunction(GetMethodMangledName(structName, node, _currentNamespacePath, isClass: false), () => EmitStructMethod(structName, node))) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1955,6 +1966,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructConstructor(string structName, ConstructorDeclaration node)
     {
+        if (DeferFunction(GetConstructorMangledName(structName, node, _currentNamespacePath), () => EmitStructConstructor(structName, node))) return;
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -2014,6 +2026,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructDefaultConstructor(string structName)
     {
+        if (DeferFunction(GetConstructorMangledName(structName, null, _currentNamespacePath), () => EmitStructDefaultConstructor(structName))) return;
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -2044,6 +2057,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructDestructor(string structName, DestructorDeclaration? node)
     {
+        if (DeferFunction((_currentNamespacePath.Length == 0 ? $"gflat${structName}$dtor" : $"gflat${_currentNamespacePath}${structName}$dtor"), () => EmitStructDestructor(structName, node))) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -2196,6 +2210,8 @@ public partial class LlvmEmitter : IVisitor
             name = $"gflat${_currentNamespacePath}${node.Name}" + _typeChecker.GetOverloadSuffix(node);
         else
             name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
+
+        if (DeferFunction(name, () => Visit(node))) return;
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>
             $"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}"));
@@ -4664,6 +4680,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitExceptionDestroyHelper()
     {
         if (_typeChecker.GetClassByIdentity("Exception") == null || _typeChecker.GetMemoryFunction("Free") == null) return;
+        if (DeferFunction("gflat_destroy_exception", EmitExceptionDestroyHelper)) return;
         _tempCounter = 0;
         BeginFunction("void", "gflat_destroy_exception", "%Exception* %exception", exceptionBoundary: true);
         Emit("    %vt_slot = getelementptr %Exception, %Exception* %exception, i32 0, i32 0");
@@ -4695,6 +4712,11 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitIsInstanceHelper()
     {
+        if (DeferFunction("gflat_is_instance", EmitIsInstanceHelper))
+        {
+            _deferredFunctions["gflat_get_parent_vtable"] = _deferredFunctions["gflat_is_instance"];
+            return;
+        }
         _tempCounter = 0;
         BeginFunction("i8**", "gflat_get_parent_vtable", "i8** %vt");
         int idx = 0;

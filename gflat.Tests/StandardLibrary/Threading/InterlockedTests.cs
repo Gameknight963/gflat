@@ -38,7 +38,7 @@ public sealed class InterlockedTests
                 if(Interlocked::Add(ref wide,-9223372036854775807l-1l)!=0l||Interlocked::Read(ref wide)!=0l)return 21;
                 if(readOnlyWide!=-5000000000l)return 22;return 0;
             }
-            """);
+            """,expectedMethods:12);
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 
@@ -90,7 +90,7 @@ public sealed class InterlockedTests
                     }
                     return 0;
                 }
-                """);
+                """,expectedMethods:8);
             string llvm = Path.Combine(directory, "main.ll"), fixture = Path.Combine(directory, "threads.cpp"), executable = Path.Combine(directory, "main.exe");
             File.WriteAllText(llvm, ir);File.WriteAllText(fixture, ThreadRunner);
             var arguments = new List<string> { "--driver-mode=g++", "-std=c++17", "-O" + optimization, "-fexceptions", fixture, llvm, "-o", executable };
@@ -109,7 +109,7 @@ public sealed class InterlockedTests
         await TestDirectoryCleanup.DeleteAsync(directory);
     }
 
-    private static string Emit(string program)
+    private static string Emit(string program,int expectedMethods)
     {
         string path = Path.Combine(AppContext.BaseDirectory, "Standard/core/Threading/Interlocked.gf");
         string ir = Compiler.Emit([new SourceFile(path, File.ReadAllText(path)), new SourceFile("interlocked.gf", program)],
@@ -118,7 +118,7 @@ public sealed class InterlockedTests
             Assert.DoesNotContain(forbidden, ir);
         string[] methods = ir.Split('\n').Where(line => line.StartsWith("define ", StringComparison.Ordinal)
             && line.Contains("$Interlocked$", StringComparison.Ordinal)).ToArray();
-        Assert.Equal(12, methods.Length);Assert.All(methods, line => Assert.Contains("nounwind", line));
+        Assert.Equal(expectedMethods, methods.Length);Assert.All(methods, line => Assert.Contains("nounwind", line));
         foreach (string operation in new[] { "load atomic i32", "load atomic i64", "atomicrmw xchg i32*", "atomicrmw xchg i64*",
             "atomicrmw add i32*", "atomicrmw add i64*", "cmpxchg i32*", "cmpxchg i64*" })
             Assert.Contains(operation, ir);

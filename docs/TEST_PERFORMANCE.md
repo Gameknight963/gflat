@@ -80,7 +80,9 @@ The stages measure:
 | `check.bodies` | Declaration body checking |
 | `check.attributes` | Attribute evaluation and final declaration validation |
 | `check.control-flow`, `check.definite-assignment` | Return paths and variable initialization |
-| `emit.ir` | LLVM module emission |
+| `emit.ir` | LLVM module emission, including reachable function bodies |
+| `emit.reachable-functions` | Executable function reachability and deferred body emission |
+| `emit.trim-module` | Removal of unreferenced generated globals and declarations |
 | `native.compile-link` | Native toolchain preparation, compilation, and linking |
 | `native.runtime-build` | Compilation of a runtime helper on a cache miss |
 | `process.clang` | Time waiting for Clang processes, including native runtime builds |

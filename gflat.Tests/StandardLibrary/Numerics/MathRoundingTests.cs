@@ -61,7 +61,9 @@ public sealed class MathRoundingTests
             };
             string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
             var functions = Regex.Matches(ir, @"(?ms)^define [^\r\n]*\$Math\$(Truncate|Floor|Ceiling|Round)\$[^\r\n]*\{\r?\n.*?^\}");
-            Assert.Equal(8, functions.Count);
+            Assert.Equal(4, functions.Count);
+            foreach (Match function in functions)
+                Assert.StartsWith("define internal " + scalar + " ", function.Value);
             foreach (string method in new[] { "Truncate", "Floor", "Ceiling", "Round" })
                 Assert.Matches(@"call " + scalar + @" @[^\r\n ]*\$Math\$" + method + @"\$", ir);
             foreach (Match function in functions)

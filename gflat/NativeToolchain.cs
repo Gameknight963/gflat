@@ -183,12 +183,13 @@ public static class NativeToolchain
             args.Add("--rtlib=compiler-rt");
         if (exceptions || stdio)
         {
+            var driverIdentity = NativeRuntimeCache.IdentifyDriver(compiler);
             // Keep the selected LLVM version, including names such as clang-18.
             args.Add(exceptions ? "--driver-mode=g++" : "--driver-mode=gcc");
-            if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes));
+            if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes, driverIdentity));
             // With EH, compile the C bridge against the same matched C++ host
             // toolset. Its language remains C even though its host profile is shared.
-            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler, cppHost: exceptions));
+            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler, cppHost: exceptions, driverIdentity));
             args.AddRange(NativeRuntime.HostArguments(requireCppHeaders: exceptions));
         }
         AddNativeLibraries(args, linkInputs);

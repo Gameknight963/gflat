@@ -82,6 +82,7 @@ The stages measure:
 | `check.control-flow`, `check.definite-assignment` | Return paths and variable initialization |
 | `emit.ir` | LLVM module emission |
 | `native.compile-link` | Native toolchain preparation, compilation, and linking |
+| `native.runtime-build` | Compilation of a runtime helper on a cache miss |
 | `process.clang` | Time waiting for Clang processes, including native runtime builds |
 | `process.execute` | Time waiting for other tools and generated programs |
 | `test` | Test method execution, including theory cases |

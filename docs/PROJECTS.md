@@ -214,14 +214,31 @@ Library cleaning removes only intermediate files. Executable cleaning removes th
 configured `TargetPath` and `GflatIROutput`, after checking that neither overlaps
 sources, project files, or imports anywhere in the reference graph.
 
-Visual Studio and direct MSBuild builds still compile every time unless the
-caller supplies the complete evaluated import graph in `GflatProjectInputs`.
-The CLI supplies that graph automatically. A custom compiler command remains
+Visual Studio skips MSBuild for unchanged projects using their recorded input
+graphs. When MSBuild runs, target-level compilation caching requires the complete
+evaluated import graph in `GflatProjectInputs`. The CLI supplies that graph
+automatically. A custom compiler command remains
 uncached unless it declares its dependencies as `GflatCompilerInputs` items.
 Native caching also requires an existing driver executable. Names supplied through
 `--clang` or `GFLAT_CLANG` resolve through PATH. A bare project `GflatClang` value
 that does not identify an existing file remains uncached. This uses MSBuild timestamp checks,
 so changing file contents while preserving their timestamps is not detected.
+
+### Native runtime object cache
+
+Native builds reuse compiled exception and standard-I/O helper objects across
+compiler processes. The cache identifies the compiler binary, runtime source,
+compilation arguments, and include-related environment settings. It checks the
+recorded headers by size and modification time before reusing an object.
+Changing a runtime source, compiler, toolchain selection, or exception reserve
+selects a new entry. A changed header rebuilds the object.
+
+The default location is `%LOCALAPPDATA%\gflat\Cache\native-runtime\v1` on
+Windows and `~/.cache/gflat/native-runtime/v1` on Linux. Linux honors
+`XDG_CACHE_HOME`. Set `GFLAT_RUNTIME_CACHE_DIRECTORY` to choose another directory.
+`gflat clean` leaves this shared cache in place. Removing the cache causes the
+next native build to regenerate the helper objects. If the cache is unavailable,
+the compiler builds temporary helper objects for that invocation.
 
 ### Exception reserve
 

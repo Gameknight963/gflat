@@ -123,6 +123,12 @@ public partial class TypeChecker
             return true;
         }
         if (target.Declaration is not MethodDeclaration declaration) return false;
+        if (member is "Parameters" or "ParameterTypes" or "ParameterCount" or "ReturnType")
+        {
+            BindMethodSignature(declaration);
+            using var signature = EnterMethodSignatureContext(declaration);
+            RegisterParameterDefaults(declaration, declaration.Parameters);
+        }
         if (member == "Parameters")
             value = new ConstValue.Array(declaration.Parameters.Select((parameter, index) => {
                 string identity = ReflectedDeclarationIdentity(parameter) + ":" + parameter.Name;

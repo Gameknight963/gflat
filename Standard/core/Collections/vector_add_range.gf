@@ -53,7 +53,7 @@ public void AddRange<T>(ref Vector<T> target, Span<immutable(T)> source)
     for (nuint i = 0; i < length; i++) target.Add(source[i]);
 }
 
-extension<T> Vector<T>
+extension Vector<T>
 {
     public void AddRange(Span<immutable(T)> source)
     => Standard::Collections::AddRange<T>(ref *this, source);

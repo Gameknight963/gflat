@@ -7,7 +7,7 @@ namespace Standard::Queries;
 public Vector<T> ToVector<T, S, E>(Enumerable<T, S, E> source)
 => source.ToVector();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public Vector<T> ToVector()
     {

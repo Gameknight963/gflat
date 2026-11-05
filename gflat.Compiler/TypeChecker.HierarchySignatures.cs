@@ -7,6 +7,7 @@ public partial class TypeChecker
     private void BindConstructorSignature(ConstructorDeclaration constructor, string owner, bool isClass)
     {
         using var context = EnterSignatureContext(constructor, owner, isClass);
+        ExpandParameterLists(constructor, constructor.Parameters);
         foreach (var parameter in constructor.Parameters)
             parameter.Type = ResolveAlias(parameter.Type);
     }
@@ -14,6 +15,7 @@ public partial class TypeChecker
     private void BindOperatorSignature(OperatorDeclaration declaration, StructInfo owner)
     {
         using var context = EnterSignatureContext(declaration, owner.Name, false);
+        ExpandParameterLists(declaration, declaration.Parameters);
         declaration.ReturnType = ResolveAlias(declaration.ReturnType);
         foreach (var parameter in declaration.Parameters)
             parameter.Type = ResolveAlias(parameter.Type);
@@ -27,6 +29,7 @@ public partial class TypeChecker
         if (method.ReturnType is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } result && IsPrimitive(result.Name) &&
             method.Parameters.All(p => p.Type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } type && IsPrimitive(type.Name))) return;
         using var context = EnterMethodSignatureContext(method);
+        ExpandParameterLists(method, method.Parameters);
         method.ReturnType = ResolveAlias(method.ReturnType);
         foreach (var parameter in method.Parameters)
             parameter.Type = ResolveAlias(parameter.Type);

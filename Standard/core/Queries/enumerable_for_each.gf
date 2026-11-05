@@ -5,7 +5,7 @@ namespace Standard::Queries;
 public void ForEach<T, S, E>(Enumerable<T, S, E> source, void(T)* action)
 => source.ForEach(action);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public void ForEach(void(T)* action)
     {

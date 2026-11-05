@@ -87,6 +87,7 @@ public partial class TypeChecker
             foreach (var ctor in owner.Constructors)
             {
                 using var context = EnterSignatureContext(ctor, owner.Owner, owner.IsClass);
+                ExpandParameterLists(ctor, ctor.Parameters);
                 AnalyzeSafely(() =>
                 {
                     string key = (ctor.IsMove ? "$move$" : "") + OverloadKey(ctor.Parameters);

@@ -8,7 +8,7 @@ public bool Contains<T, S, E>(Enumerable<T, S, E> source, immutable(T)* key,
     bool(immutable(T)*, immutable(T)*)* equal)
 => source.Contains(key, equal);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool Contains(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
     {
@@ -25,7 +25,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool Contains<T : IEquatable<T>, S, E>(Enumerable<T, S, E> source, immutable(T)* key)
     => source.Contains(key);
 
-extension<T : IEquatable<T>, S, E> Enumerable<T, S, E>
+extension Enumerable<T : IEquatable<T>, S, E>
 {
     public bool Contains(immutable(T)* key)
     => this.Contains( key, EqualityComparer<T>::Equals);

@@ -20,6 +20,32 @@ public partial class TypeChecker
             {
                 if (members[index] is NamespaceDeclaration ns) { Expand(ns.Members); continue; }
                 if (members[index] is not ExtensionDeclaration block) continue;
+                if (block.InferGenericParameters)
+                {
+                    var constraints = block.GenericParameters.ToDictionary(parameter => parameter.Name);
+                    block.GenericParameters.Clear();
+                    var names = new HashSet<string>();
+                    foreach (var argument in ReceiverArguments(block.Target)) Infer(argument);
+                    void Infer(TypeExpression type)
+                    {
+                        if (type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named &&
+                            !IsPrimitive(named.Name) && named.Name != "reflection" &&
+                            names.Add(named.Name))
+                            block.GenericParameters.Add(constraints.GetValueOrDefault(named.Name) ?? new GenericParameter(named.Name, null, named.Line));
+                        foreach (var child in ReceiverArguments(type)) Infer(child);
+                        if (type is PointerTypeExpression pointer) Infer(pointer.Inner);
+                        if (type is ArrayTypeExpression array) Infer(array.ElementType);
+                        if (type is ManagedTypeExpression managed) Infer(managed.Inner);
+                        if (type is ReferenceTypeExpression reference) Infer(reference.Inner);
+                        if (type is FunctionPointerTypeExpression function)
+                        {
+                            Infer(function.ReturnType);
+                            foreach (var parameter in function.ParameterTypes) Infer(parameter);
+                        }
+                    }
+                    if (constraints.Keys.Any(name => !names.Contains(name)))
+                        throw new TypeCheckException("An extension constraint requires a type parameter", block.Target.Span);
+                }
                 var methods = new List<AstNode>();
                 foreach (var method in block.Members.Cast<MethodDeclaration>())
                 {
@@ -47,6 +73,12 @@ public partial class TypeChecker
             }
         }
     }
+
+    private static IEnumerable<TypeExpression> ReceiverArguments(TypeExpression type) => type switch {
+        NamedTypeExpression named => named.TypeArguments,
+        NestedTypeExpression nested => ReceiverArguments(nested.Parent).Concat(nested.TypeArguments),
+        _ => []
+    };
 
     private TypeExpression ExtensionObjectPointer(TypeExpression type, bool readOnly)
     {

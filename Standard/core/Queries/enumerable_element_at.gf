@@ -3,7 +3,7 @@ namespace Standard::Queries;
 public T ElementAt<T, S, E>(Enumerable<T, S, E> source, nuint index)
 => source.ElementAt(index);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T ElementAt(nuint index)
     {
@@ -21,7 +21,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool TryElementAt<T, S, E>(Enumerable<T, S, E> source, nuint index, ref T result)
 => source.TryElementAt(index, ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryElementAt(nuint index, ref T result)
     {

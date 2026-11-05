@@ -79,7 +79,7 @@ public partial class TypeChecker
 
     public void Visit(SpliceExpression node)
     {
-        var reflection = RequireReflection(node.Reflection);
+        var reflection = argumentSpliceValues.GetValueOrDefault(node) ?? RequireReflection(node.Reflection);
         if (TryBindReflectedFunctionValue(node, node, reflection)) return;
         AstNode resolved;
         if (node.Receiver != null && reflection.Kind is not ("Field" or "Method" or "OverloadGroup"))

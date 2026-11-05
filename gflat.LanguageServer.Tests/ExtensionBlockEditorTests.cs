@@ -5,10 +5,13 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ExtensionBlockEditorTests
 {
-    [Fact]
-    public void GenericBlockBindingsKeepSourceParametersAndNavigation()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GenericBlockBindingsKeepSourceParametersAndNavigation(bool receiverParameters)
     {
-        const string text = "struct Box<T>{public T Value;} extension<T> Box<T>{public T Echo(T item)=>item; public U Other<U>(U item)=>item;} int Main(){Box<int> box=new();return box.Echo(42)+box.Other<int>(1);}";
+        string text = "struct Box<T>{public T Value;} extension<T> Box<T>{public T Echo(T item)=>item; public U Other<U>(U item)=>item;} int Main(){Box<int> box=new();return box.Echo(42)+box.Other<int>(1);}";
+        if (receiverParameters) text = text.Replace("extension<T> Box<T>", "extension Box<T>");
         var (model, source) = Analyze(text);
         int use = text.LastIndexOf("Echo(", StringComparison.Ordinal);
         string hover = Json(model.Hover(source.Path, use)).GetProperty("contents").GetProperty("value").GetString()!;
@@ -26,10 +29,13 @@ public sealed class ExtensionBlockEditorTests
         Assert.DoesNotContain(completion, item => item.GetProperty("label").GetString()!.Contains('$'));
     }
 
-    [Fact]
-    public void BlockTypeParameterHasItsOwnSourceScopeAndClassification()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BlockTypeParameterHasItsOwnSourceScopeAndClassification(bool receiverParameters)
     {
-        const string text = "struct Box<T>{public T Value;} extension<U> Box<U>{public U Echo(U item)=>item;} int Main()=>0;";
+        string text = "struct Box<T>{public T Value;} extension<U> Box<U>{public U Echo(U item)=>item;} int Main()=>0;";
+        if (receiverParameters) text = text.Replace("extension<U> Box<U>", "extension Box<U>");
         var (model, source) = Analyze(text);
         int declaration = text.IndexOf("<U>", StringComparison.Ordinal) + 1;
         int use = text.IndexOf("U Echo", StringComparison.Ordinal);

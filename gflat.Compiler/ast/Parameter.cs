@@ -11,6 +11,7 @@ namespace gflat.ast
         public bool IsConst { get; }
         public AstNode? DefaultValue { get; }
         public bool IsExtensionReceiver { get; set; }
+        public bool IsListSplice { get; set; }
 
         public Parameter(string name, TypeExpression type, int line, bool isConst = false, AstNode? defaultValue = null) : base(line)
         {

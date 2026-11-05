@@ -6,6 +6,7 @@ public sealed class ExtensionDeclaration(TypeExpression target, List<GenericPara
 {
     public TypeExpression Target { get; } = target;
     public List<GenericParameter> GenericParameters { get; } = genericParameters;
+    public bool InferGenericParameters { get; set; }
     public List<AstNode> Members { get; } = members;
     public override void Accept(IVisitor visitor) => visitor.Visit(this);
 }

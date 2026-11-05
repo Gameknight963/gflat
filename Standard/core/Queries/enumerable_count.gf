@@ -5,7 +5,7 @@ namespace Standard::Queries;
 public nuint Count<T, S, E>(Enumerable<T, S, E> source)
 => source.Count();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public nuint Count()
     {
@@ -23,7 +23,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public nuint Count<T, S, E>(Enumerable<T, S, E> source, bool(T)* predicate)
 => source.Count(predicate);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public nuint Count(bool(T)* predicate)
     {

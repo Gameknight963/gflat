@@ -1050,6 +1050,8 @@ namespace gflat
             if (isReceiver) throw new TypeCheckException("The this parameter modifier was removed; use an extension block with a borrowed instance receiver", Current.Span);
             bool isConst = Match(TokenKind.Const);
             TypeExpression paramType = ParseParameterType();
+            if (!isConst && paramType is SpliceTypeExpression && (Check(TokenKind.Comma) || Check(TokenKind.CloseParen)))
+                return new Parameter("", paramType, line) { IsListSplice = true };
             string paramName = Expect(TokenKind.Identifier).Text;
             AstNode? defaultValue = Match(TokenKind.Equals) ? ParseExpression() : null;
             return new Parameter(paramName, paramType, line, isConst, defaultValue) { IsExtensionReceiver = isReceiver };
@@ -1320,7 +1322,7 @@ namespace gflat
                     Consume(); // <
                     while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.OpenBrace)))
                     {
-                        typeArgs.Add(ParseTypeExpression());
+                        typeArgs.Add(ParseTypeArgument());
                         if (_recoverErrors && Check(TokenKind.OpenBrace)) break;
                         if (!Check(TokenKind.Greater))
                             Expect(TokenKind.Comma);
@@ -1353,7 +1355,7 @@ namespace gflat
                     Consume();
                     while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.OpenBrace)))
                     {
-                        memberTypeArgs.Add(ParseTypeExpression());
+                        memberTypeArgs.Add(ParseTypeArgument());
                         if (_recoverErrors && Check(TokenKind.OpenBrace)) break;
                         if (!Check(TokenKind.Greater))
                             Expect(TokenKind.Comma);

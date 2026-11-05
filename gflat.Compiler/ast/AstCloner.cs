@@ -161,7 +161,7 @@ namespace gflat.ast
         }
 
         private Parameter CloneParameter(Parameter p) => new(p.Name, CloneType(p.Type), p.Line, p.IsConst,
-            p.DefaultValue == null ? null : CloneNode(p.DefaultValue)) { Span = p.Span, IsExtensionReceiver = p.IsExtensionReceiver };
+            p.DefaultValue == null ? null : CloneNode(p.DefaultValue)) { Span = p.Span, IsExtensionReceiver = p.IsExtensionReceiver, IsListSplice = p.IsListSplice };
 
         private TypeExpression CloneTypeLocated(TypeExpression type)
         {

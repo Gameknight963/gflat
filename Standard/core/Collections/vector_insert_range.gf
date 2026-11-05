@@ -21,7 +21,7 @@ public void InsertRange<T>(ref Vector<T> target, nuint index, Span<immutable(T)>
     Standard::Collections::Rotate<T>(target.AsSpan().Slice(index), originalCount - index);
 }
 
-extension<T> Vector<T>
+extension Vector<T>
 {
     public void InsertRange(nuint index, Span<immutable(T)> source)
     => Standard::Collections::InsertRange<T>(ref *this, index, source);

@@ -6,7 +6,7 @@ public bool SequenceEqual<T, LS, LE, RS, RE>(Enumerable<T, LS, LE> left,
     Enumerable<T, RS, RE> right, bool(immutable(T)*, immutable(T)*)* equal)
 => left.SequenceEqual<RS, RE>(right, equal);
 
-extension<T, LS, LE> Enumerable<T, LS, LE>
+extension Enumerable<T, LS, LE>
 {
     public bool SequenceEqual<RS, RE>(Enumerable<T, RS, RE> right, bool(immutable(T)*, immutable(T)*)* equal)
     {
@@ -29,7 +29,7 @@ public bool SequenceEqual<T : IEquatable<T>, LS, LE, RS, RE>(Enumerable<T, LS, L
     Enumerable<T, RS, RE> right)
     => left.SequenceEqual<RS, RE>(right);
 
-extension<T : IEquatable<T>, LS, LE> Enumerable<T, LS, LE>
+extension Enumerable<T : IEquatable<T>, LS, LE>
 {
     public bool SequenceEqual<RS, RE>(Enumerable<T, RS, RE> right)
     => this.SequenceEqual<RS, RE>( move right, EqualityComparer<T>::Equals);

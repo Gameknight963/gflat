@@ -6,7 +6,7 @@ namespace Standard::Queries;
 public HashSet<T> ToHashSet<T : IHashable, S, E>(Enumerable<T, S, E> source)
 => source.ToHashSet();
 
-extension<T : IHashable, S, E> Enumerable<T, S, E>
+extension Enumerable<T : IHashable, S, E>
 {
     public HashSet<T> ToHashSet()
     {

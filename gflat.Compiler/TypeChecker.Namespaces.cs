@@ -327,15 +327,18 @@ public partial class TypeChecker
                         RegisterParameterDefaults(method, method.Parameters);
                         break;
                     case OperatorDeclaration op:
+                        ExpandParameterLists(op, op.Parameters);
                         op.ReturnType = ResolveAlias(op.ReturnType);
                         foreach (var p in op.Parameters) p.Type = ResolveAlias(p.Type);
                         RegisterParameterDefaults(op, op.Parameters);
                         break;
                     case ConstructorDeclaration ctor:
+                        ExpandParameterLists(ctor, ctor.Parameters);
                         foreach (var p in ctor.Parameters) p.Type = ResolveAlias(p.Type);
                         RegisterParameterDefaults(ctor, ctor.Parameters);
                         break;
                     case ExternDeclaration external:
+                        ExpandParameterLists(external, external.Parameters);
                         external.ReturnType = ResolveAlias(external.ReturnType);
                         foreach (var p in external.Parameters) p.Type = ResolveAlias(p.Type);
                         RegisterParameterDefaults(external, external.Parameters);

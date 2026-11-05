@@ -6,7 +6,7 @@ namespace Standard::Memory;
 public void CopyTo<T>(Span<immutable(T)> source, Span<T> destination)
 => source.CopyTo(destination);
 
-extension<T> Span<immutable(T)>
+extension Span<immutable(T)>
 {
     public immutable void CopyTo(Span<T> destination)
     {
@@ -34,7 +34,7 @@ extension<T> Span<immutable(T)>
 public bool TryCopyTo<T>(Span<immutable(T)> source, Span<T> destination)
 => source.TryCopyTo(destination);
 
-extension<T> Span<immutable(T)>
+extension Span<immutable(T)>
 {
     public immutable bool TryCopyTo(Span<T> destination)
     {

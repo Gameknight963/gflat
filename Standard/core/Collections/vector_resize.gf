@@ -11,7 +11,7 @@ public void Resize<T>(ref Vector<T> target, nuint count)
     catch { target.Truncate(originalCount); throw; }
 }
 
-extension<T> Vector<T>
+extension Vector<T>
 {
     public void Resize(nuint count)
     => Standard::Collections::Resize<T>(ref *this, count);
@@ -28,7 +28,7 @@ public void Resize<T>(ref Vector<T> target, nuint count, T fill)
     while (target.Count < count) target.Add(fill);
 }
 
-extension<T> Vector<T>
+extension Vector<T>
 {
     public void Resize(nuint count, T fill)
     => Standard::Collections::Resize<T>(ref *this, count, move fill);

@@ -15,7 +15,7 @@ private long CheckedSumAdd(long total, long value)
 public long Sum<T, S, E>(Enumerable<T, S, E> source)
 => source.Sum();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public long Sum()
     {

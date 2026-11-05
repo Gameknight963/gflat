@@ -4,7 +4,7 @@ public Enumerable<T, TakeLastSource<T, S, E>, TakeLastSource<T, S, E>::Enumerato
     TakeLast<T, S, E>(Enumerable<T, S, E> source, nuint count)
     => source.TakeLast(count);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public Enumerable<T, TakeLastSource<T, S, E>, TakeLastSource<T, S, E>::Enumerator> TakeLast(nuint count)
     => new Enumerable<T, TakeLastSource<T, S, E>, TakeLastSource<T, S, E>::Enumerator>(

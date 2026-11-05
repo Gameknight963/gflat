@@ -5,7 +5,7 @@ namespace Standard::Queries;
 public T First<T, S, E>(Enumerable<T, S, E> source)
 => source.First();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T First()
     {
@@ -18,7 +18,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T Last<T, S, E>(Enumerable<T, S, E> source)
 => source.Last();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T Last()
     {
@@ -35,7 +35,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T Single<T, S, E>(Enumerable<T, S, E> source)
 => source.Single();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T Single()
     {
@@ -51,7 +51,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool TryFirst<T, S, E>(Enumerable<T, S, E> source, ref T result)
 => source.TryFirst(ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryFirst(ref T result)
     {
@@ -66,7 +66,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool TryLast<T, S, E>(Enumerable<T, S, E> source, ref T result)
 => source.TryLast(ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryLast(ref T result)
     {
@@ -84,7 +84,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool TrySingle<T, S, E>(Enumerable<T, S, E> source, ref T result)
 => source.TrySingle(ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TrySingle(ref T result)
     {

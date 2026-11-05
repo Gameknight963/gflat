@@ -7,7 +7,7 @@ public T MinBy<T, K, S, E>(Enumerable<T, S, E> source, K(T)* selector,
     int(immutable(K)*, immutable(K)*)* compare)
 => source.MinBy<K>(selector, compare);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T MinBy<K>(K(T)* selector, int(immutable(K)*, immutable(K)*)* compare)
     {
@@ -32,7 +32,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T MinBy<T, K : IComparable<K>, S, E>(Enumerable<T, S, E> source, K(T)* selector)
     => source.MinBy<K>(selector);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T MinBy<K : IComparable<K>>(K(T)* selector)
     => this.MinBy<K>( selector, Comparer<K>::Compare);
@@ -42,7 +42,7 @@ public T MaxBy<T, K, S, E>(Enumerable<T, S, E> source, K(T)* selector,
     int(immutable(K)*, immutable(K)*)* compare)
 => source.MaxBy<K>(selector, compare);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T MaxBy<K>(K(T)* selector, int(immutable(K)*, immutable(K)*)* compare)
     {
@@ -67,7 +67,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T MaxBy<T, K : IComparable<K>, S, E>(Enumerable<T, S, E> source, K(T)* selector)
     => source.MaxBy<K>(selector);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T MaxBy<K : IComparable<K>>(K(T)* selector)
     => this.MaxBy<K>( selector, Comparer<K>::Compare);
@@ -79,7 +79,7 @@ public bool TryMinBy<T, K, S, E>(Enumerable<T, S, E> source, K(T)* selector,
     int(immutable(K)*, immutable(K)*)* compare, ref T result)
 => source.TryMinBy<K>(selector, compare, ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryMinBy<K>(K(T)* selector, int(immutable(K)*, immutable(K)*)* compare, ref T result)
     {
@@ -106,7 +106,7 @@ public bool TryMinBy<T, K : IComparable<K>, S, E>(Enumerable<T, S, E> source,
     K(T)* selector, ref T result)
     => source.TryMinBy<K>(selector, ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryMinBy<K : IComparable<K>>(K(T)* selector, ref T result)
     => this.TryMinBy<K>( selector, Comparer<K>::Compare, ref result);
@@ -117,7 +117,7 @@ public bool TryMaxBy<T, K, S, E>(Enumerable<T, S, E> source, K(T)* selector,
     int(immutable(K)*, immutable(K)*)* compare, ref T result)
 => source.TryMaxBy<K>(selector, compare, ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryMaxBy<K>(K(T)* selector, int(immutable(K)*, immutable(K)*)* compare, ref T result)
     {
@@ -144,7 +144,7 @@ public bool TryMaxBy<T, K : IComparable<K>, S, E>(Enumerable<T, S, E> source,
     K(T)* selector, ref T result)
     => source.TryMaxBy<K>(selector, ref result);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool TryMaxBy<K : IComparable<K>>(K(T)* selector, ref T result)
     => this.TryMaxBy<K>( selector, Comparer<K>::Compare, ref result);

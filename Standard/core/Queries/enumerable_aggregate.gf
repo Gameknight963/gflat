@@ -5,7 +5,7 @@ namespace Standard::Queries;
 public U Aggregate<T, U, S, E>(Enumerable<T, S, E> source, U seed, U(U, T)* accumulate)
 => source.Aggregate<U>(seed, accumulate);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public U Aggregate<U>(U seed, U(U, T)* accumulate)
     {
@@ -18,7 +18,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T Aggregate<T, S, E>(Enumerable<T, S, E> source, T(T, T)* accumulate)
 => source.Aggregate(accumulate);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T Aggregate(T(T, T)* accumulate)
     {

@@ -6,7 +6,7 @@ namespace Standard::Queries;
 public HashMap<K, nuint> CountBy<T, K : IHashable, S, E>(Enumerable<T, S, E> source, K(T)* selector)
 => source.CountBy<K>(selector);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public HashMap<K, nuint> CountBy<K : IHashable>(K(T)* selector)
     {

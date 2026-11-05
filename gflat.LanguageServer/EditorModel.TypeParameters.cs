@@ -28,6 +28,18 @@ public sealed partial class EditorModel
                 _ => null
             };
             if (parameters == null || parameters.Count == 0 || owner.NameSpan.Source is not { } source) continue;
+            if (owner.Syntax.Node is ExtensionDeclaration { InferGenericParameters: true } extension)
+            {
+                var names = ReceiverNames(extension.Target, true).ToArray();
+                foreach (var parameter in parameters)
+                {
+                    var name = names.FirstOrDefault(node => node.Name == parameter.Name && node.Namespace == null && node.TypeArguments.Count == 0);
+                    if (name?.NameSpan.Source == null) continue;
+                    symbols.Add(new(parameter.Name, 25, "typeParameter", owner.Syntax, name.NameSpan,
+                        owner.Namespace, owner.Owner, owner.Syntax, null, false, TokenKind.Public) { IsTypeParameter = true, TypeConstraint = parameter.Constraint });
+                }
+                continue;
+            }
             var ts = tokens[source.Path];
             int cursor = Array.FindIndex(ts, token => token.Start >= owner.NameSpan.Start + owner.NameSpan.Length);
             if (cursor < 0 || ts[cursor].Kind != TokenKind.Less) continue;
@@ -49,6 +61,32 @@ public sealed partial class EditorModel
                     if (depth == 1 && ts[cursor].Kind == TokenKind.Comma) { cursor++; break; }
                 }
             }
+        }
+    }
+
+    private static IEnumerable<NamedTypeExpression> ReceiverNames(TypeExpression type, bool root = false)
+    {
+        if (type is NamedTypeExpression named)
+        {
+            if (!root) yield return named;
+            foreach (var argument in named.TypeArguments)
+            foreach (var child in ReceiverNames(argument)) yield return child;
+        }
+        else if (type is NestedTypeExpression nested)
+        {
+            foreach (var child in ReceiverNames(nested.Parent, true)) yield return child;
+            foreach (var argument in nested.TypeArguments)
+            foreach (var child in ReceiverNames(argument)) yield return child;
+        }
+        else
+        {
+            IEnumerable<TypeExpression> children = type switch {
+                PointerTypeExpression pointer => [pointer.Inner], ManagedTypeExpression managed => [managed.Inner],
+                ReferenceTypeExpression reference => [reference.Inner], ArrayTypeExpression array => [array.ElementType],
+                FunctionPointerTypeExpression function => new[] { function.ReturnType }.Concat(function.ParameterTypes), _ => []
+            };
+            foreach (var child in children)
+            foreach (var name in ReceiverNames(child)) yield return name;
         }
     }
 }

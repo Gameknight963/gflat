@@ -5,7 +5,7 @@ namespace Standard::Memory;
 public void Fill<T>(Span<T> destination, T value)
 => destination.Fill(value);
 
-extension<T> Span<T>
+extension Span<T>
 {
     public readonly void Fill(T value)
     {

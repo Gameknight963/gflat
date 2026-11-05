@@ -6,10 +6,10 @@
 using Standard::Text;
 using Standard::Memory;
 
-extension Span<immutable(String)> {
+extension Span<immutable(Standard::Text::String)> {
     public readonly String Join(readonly(char)* separator);
 }
-extension Span<immutable(String)> {
+extension Span<immutable(Standard::Text::String)> {
     public readonly String Join(readonly(char)* separator, nuint separatorCount);
 }
 ```

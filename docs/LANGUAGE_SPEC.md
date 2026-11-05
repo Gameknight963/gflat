@@ -448,12 +448,22 @@ non-callable members allow extension lookup. Applicable overloads use normal
 argument ranking, without separate value-versus-reference receiver tiers.
 
 Receiver type parameters belong to the block. Additional method parameters
-belong to the method. For example, `extension<T> Box<T>` can contain
+belong to the method. For example, `extension Box<T>` can contain
 `public U Map<U>(U(T)* selector)`. A call infers T from the Box and may specify
 only U as `box.Map<long>(selector)`. Constraints and declaration-scope imports
 follow the existing generic rules. Extension declarations add no object metadata
 or dynamic dispatch. They do not add properties, operators, bound method groups,
 or static type calls such as `int.Parse()`.
+
+In a receiver pattern, bare identifiers in type arguments declare block type
+parameters. This is independent of other declarations with the same name.
+Primitive types and qualified type names are concrete arguments, as in
+`extension Box<int>` or `extension Box<global::Entry>`. Repeated parameters
+describe matching arguments, as in `extension Pair<T, T>`.
+Write constraints at the parameter's first occurrence:
+`extension HashSet<T : IHashable>`. The explicit form `extension<T> Box<T>`
+also remains available, including for a receiver that is itself a parameter,
+such as `extension<T : IFormattable> T`.
 
 ## Function overloads
 
@@ -1865,6 +1875,37 @@ lists the individual declarations. Methods expose `ReturnType`, `Parameters`,
 Call a reflected method with `[:method:](arguments)` or
 `receiver.[:method:](arguments)`. Overload selection uses the captured declarations
 and the supplied arguments. Instance calls retain virtual dispatch.
+
+### Parameter and argument lists
+
+A parameter-list splice inserts declarations from a constant array of parameter
+reflections. Each declaration introduces a parameter in the destination callable:
+
+```csharp
+int Add(int left, int right) => left + right;
+
+int Forward([:reflect(Add).Parameters:])
+    => Add([:reflect(Add).Parameters:]);
+
+int main() => Forward(20, 22);
+```
+
+Parameter splices preserve names, types, `const` and `ref` modes, and defaults.
+Defaults retain their declaration's bindings. Ordinary parameters can appear
+before and after a splice. An empty array inserts zero parameters. Duplicate
+names, invalid optional-parameter ordering, and circular signatures are errors.
+
+In an argument list, a splice expands an array of reflections into arguments.
+Reflections of parameters copied into the current callable refer to its new
+bindings. Its own `reflect(Forward).Parameters` can also be used for forwarding.
+Other local and parameter reflections retain their ordinary declaration scope.
+Ref parameters produce `ref` arguments. Value arguments follow ordinary copying
+rules. `move [:parameters:]` explicitly moves each value argument and requires
+every element to support moving. Ref parameters cannot be forwarded with `move`.
+
+The reflected method must identify one overload. Types used by generated
+parameters must be bound in the destination. Signature splices do not introduce
+generic parameters from the reflected method.
 
 
 ## Inline LLVM

@@ -5,7 +5,7 @@ namespace Standard::Queries;
 public bool Any<T, S, E>(Enumerable<T, S, E> source)
 => source.Any();
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool Any()
     {
@@ -17,7 +17,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool Any<T, S, E>(Enumerable<T, S, E> source, bool(T)* predicate)
 => source.Any(predicate);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool Any(bool(T)* predicate)
     {
@@ -30,7 +30,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public bool All<T, S, E>(Enumerable<T, S, E> source, bool(T)* predicate)
 => source.All(predicate);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public bool All(bool(T)* predicate)
     {

@@ -6,7 +6,7 @@ namespace Standard::Text;
 public String Join(Span<immutable(String)> values, readonly(char)* separator, nuint separatorCount)
 => values.Join(separator, separatorCount);
 
-extension Span<immutable(String)>
+extension Span<immutable(Standard::Text::String)>
 {
     public immutable String Join(readonly(char)* separator, nuint separatorCount)
     {
@@ -38,7 +38,7 @@ extension Span<immutable(String)>
 public String Join(Span<immutable(String)> values, readonly(char)* separator)
 => values.Join(separator);
 
-extension Span<immutable(String)>
+extension Span<immutable(Standard::Text::String)>
 {
     public immutable String Join(readonly(char)* separator)
     {

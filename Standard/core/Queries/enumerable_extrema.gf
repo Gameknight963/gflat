@@ -6,7 +6,7 @@ public T Min<T, S, E>(Enumerable<T, S, E> source,
     int(immutable(T)*, immutable(T)*)* compare)
 => source.Min(compare);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T Min(int(immutable(T)*, immutable(T)*)* compare)
     {
@@ -25,7 +25,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T Min<T : IComparable<T>, S, E>(Enumerable<T, S, E> source)
     => source.Min();
 
-extension<T : IComparable<T>, S, E> Enumerable<T, S, E>
+extension Enumerable<T : IComparable<T>, S, E>
 {
     public T Min()
     => this.Min( Comparer<T>::Compare);
@@ -35,7 +35,7 @@ public T Max<T, S, E>(Enumerable<T, S, E> source,
     int(immutable(T)*, immutable(T)*)* compare)
 => source.Max(compare);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public T Max(int(immutable(T)*, immutable(T)*)* compare)
     {
@@ -54,7 +54,7 @@ extension<T, S, E> Enumerable<T, S, E>
 public T Max<T : IComparable<T>, S, E>(Enumerable<T, S, E> source)
     => source.Max();
 
-extension<T : IComparable<T>, S, E> Enumerable<T, S, E>
+extension Enumerable<T : IComparable<T>, S, E>
 {
     public T Max()
     => this.Max( Comparer<T>::Compare);

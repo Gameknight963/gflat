@@ -3211,6 +3211,7 @@ namespace gflat
 
                 if (node.BaseArguments != null)
                 {
+                    ExpandArgumentLists(node.BaseArguments);
                     if (_currentClass == null || _currentClass.BaseClass == null)
                     {
                         throw new TypeCheckException($"Cannot call base constructor because '{DisplayName(ownerName)}' does not inherit from a base class", node.Line);
@@ -4561,6 +4562,7 @@ namespace gflat
         {
             if (precheckedForeachCalls.Remove(node)) return;
             using var sourceContext = SourceContext.Enter(node.Span);
+            ExpandArgumentLists(node.Arguments);
             if (TryCheckReinterpretCall(node)) return;
             using var nullableCall = NullableCall();
             if (TryCheckReflectedMethodCall(node)) return;
@@ -5319,6 +5321,7 @@ namespace gflat
         {
             using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
+            ExpandArgumentLists(node.Arguments);
             if (IsUnboundCreation(node))
             {
                 pendingCreations.Add(node);
@@ -6229,6 +6232,7 @@ namespace gflat
 
         public void Visit(LambdaExpression node)
         {
+            ExpandParameterLists(node, node.Parameters);
             if (node.Parameters.Any(p => p.IsExtensionReceiver))
                 throw new TypeCheckException("Extension receivers are allowed only on namespace functions", node.Span);
             if (node.Parameters.FirstOrDefault(p => p.IsConst) is { } constantParameter)

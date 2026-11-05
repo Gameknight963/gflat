@@ -75,7 +75,7 @@ public struct SpanChunks<T> : IEnumerable<Span<T>, SpanChunks<T>::Enumerator>
 public SpanChunks<T> Chunks<T>(Span<T> source, nuint size)
     => source.Chunks(size);
 
-extension<T> Span<T>
+extension Span<T>
 {
     public readonly SpanChunks<T> Chunks(nuint size)
     => new SpanChunks<T>((*this).Data, (*this).Length, size);

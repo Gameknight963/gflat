@@ -6,7 +6,7 @@ namespace Standard::Queries;
 public HashMap<K, Vector<T>> ToLookup<T, K : IHashable, S, E>(Enumerable<T, S, E> source, K(T)* keySelector)
 => source.ToLookup<K>(keySelector);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public HashMap<K, Vector<T>> ToLookup<K : IHashable>(K(T)* keySelector)
     {
@@ -33,7 +33,7 @@ public HashMap<K, Vector<V>> ToLookup<T, K : IHashable, V, S, E>(Enumerable<T, S
     K(T)* keySelector, V(T)* valueSelector)
 => source.ToLookup<K, V>(keySelector, valueSelector);
 
-extension<T, S, E> Enumerable<T, S, E>
+extension Enumerable<T, S, E>
 {
     public HashMap<K, Vector<V>> ToLookup<K : IHashable, V>(K(T)* keySelector, V(T)* valueSelector)
     {

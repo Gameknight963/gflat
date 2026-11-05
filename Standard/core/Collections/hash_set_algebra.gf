@@ -13,7 +13,7 @@ public void UnionWith<T : IHashable>(ref HashSet<T> target, immutable(HashSet<T>
     }
 }
 
-extension<T : IHashable> HashSet<T>
+extension HashSet<T : IHashable>
 {
     public void UnionWith(immutable(HashSet<T>)* other)
     => Standard::Collections::UnionWith<T>(ref *this, other);
@@ -31,7 +31,7 @@ public void SymmetricExceptWith<T : IHashable>(ref HashSet<T> target, immutable(
     }
 }
 
-extension<T : IHashable> HashSet<T>
+extension HashSet<T : IHashable>
 {
     public void SymmetricExceptWith(immutable(HashSet<T>)* other)
     => Standard::Collections::SymmetricExceptWith<T>(ref *this, other);

@@ -72,6 +72,7 @@ The stages measure:
 | --- | --- |
 | `syntax.lex` | Tokenization |
 | `syntax.parse` | Parsing |
+| `syntax.clone` | Copying cached parser templates into independent syntax trees |
 | `frontend.parse-and-prelude` | Compiler input parsing and automatic library loading |
 | `frontend.check` | Symbol preparation, checking, and semantic passes |
 | `check.declarations`, `check.symbols` | Declaration expansion and symbol collection |
@@ -80,6 +81,12 @@ The stages measure:
 | `check.bodies` | Declaration body checking |
 | `check.attributes` | Attribute evaluation and final declaration validation |
 | `check.control-flow`, `check.definite-assignment` | Return paths and variable initialization |
+| `editor.workspace` | Project discovery, source loading, and editor analysis |
+| `editor.workspace.read-sources` | Reading the current source text |
+| `editor.snapshot` | Parsing, checking, and capturing an editor snapshot |
+| `editor.syntax.capture` | Capturing source syntax before checking rewrites it |
+| `editor.index` | Building editor symbols and query indexes |
+| `editor.index.*` | Individual indexing phases |
 | `emit.ir` | LLVM module emission, including reachable function bodies |
 | `emit.reachable-functions` | Executable function reachability and deferred body emission |
 | `emit.trim-module` | Removal of unreferenced generated globals and declarations |

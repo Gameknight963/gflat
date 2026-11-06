@@ -54,6 +54,7 @@ public sealed partial class EditorModel
     private readonly Dictionary<(string Path, int End), Syntax[]> callsByCalleeEnd = [];
     private readonly HashSet<Token> typePositionTokens = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<Token> receiverKeywordTokens = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<Token> declarationKeywordTokens = new(ReferenceEqualityComparer.Instance);
 
     public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files, CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? headerContexts = null)
@@ -103,13 +104,31 @@ public sealed partial class EditorModel
             }
             foreach (var syntax in nodes[file.Path])
             {
+                var fileTokens = tokens[file.Path];
+                if (syntax.Node is NewExpression { PlacementKeywordSpan.Length: > 0 } creation)
+                {
+                    int placement = TokenStartIndex(fileTokens, creation.PlacementKeywordSpan.Start);
+                    if (placement < fileTokens.Length && fileTokens[placement].Start == creation.PlacementKeywordSpan.Start)
+                        declarationKeywordTokens.Add(fileTokens[placement]);
+                }
+                if (syntax.Node is PropertyDeclaration propertyDeclaration)
+                {
+                    void Accessor(MethodDeclaration? accessor, string name)
+                    {
+                        if (accessor == null) return;
+                        int index = TokenStartIndex(fileTokens, accessor.Span.Start);
+                        while (index < fileTokens.Length && fileTokens[index].Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal) index++;
+                        if (index < fileTokens.Length && fileTokens[index].Text == name) declarationKeywordTokens.Add(fileTokens[index]);
+                    }
+                    Accessor(propertyDeclaration.Getter, "get");
+                    Accessor(propertyDeclaration.Setter, "set");
+                }
                 int start = syntax.Node switch {
                     Parameter { IsExtensionReceiver: true } => syntax.Span.Start,
                     PropertyDeclaration { Name: "$index" } property => property.Type.Span.Start + property.Type.Span.Length,
                     _ => -1
                 };
                 if (start < 0) continue;
-                var fileTokens = tokens[file.Path];
                 int index = TokenStartIndex(fileTokens, start);
                 if (index < fileTokens.Length && fileTokens[index].Text == "this" &&
                     (syntax.Node is not Parameter || fileTokens[index].Start == start)) receiverKeywordTokens.Add(fileTokens[index]);
@@ -1096,14 +1115,6 @@ public sealed partial class EditorModel
         }
         int previousLine = 0, previousColumn = 0;
         var ts = tokens[path];
-        var placementKeywords = nodes[path].Select(n => n.Node).OfType<NewExpression>()
-            .Where(n => n.PlacementKeywordSpan.Length > 0).Select(n => n.PlacementKeywordSpan.Start).ToHashSet();
-        var accessors = nodes[path].Select(n => n.Node).OfType<PropertyDeclaration>()
-            .SelectMany(p => new[] { (p.Getter, "get"), (p.Setter, "set") })
-            .Where(a => a.Item1 != null)
-            .Select(a => ts.SkipWhile(t => t.Start < a.Item1!.Span.Start)
-                .SkipWhile(t => t.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal)
-                .FirstOrDefault() is { } t && t.Text == a.Item2 ? t.Start : -1).ToHashSet();
         for (int i = 0; i < ts.Length; i++)
         {
             var span = ts[i].Span;
@@ -1116,7 +1127,7 @@ public sealed partial class EditorModel
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
             bool reinterpret = ts[i].Text == "reinterpret" && i > 0 && ts[i - 1].Kind == TokenKind.Dot &&
                 Resolve(path, i)?.Syntax.Node is not (FieldDeclaration or PropertyDeclaration);
-            bool modifier = reinterpret || accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool modifier = reinterpret || declarationKeywordTokens.Contains(ts[i]) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || IsValueModelKeyword(path, ts[i]);
             bool reflectionMember = reflectionMemberTokens.Contains(ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             if (MacroCovers(ts[i].Start)) continue;

@@ -229,7 +229,8 @@ public static class Workspace
         }
         int relativeEnd = text.AsSpan(start).IndexOfAny('\r', '\n');
         int end = relativeEnd < 0 ? text.Length : start + relativeEnd;
-        if (character > end - start) throw new ArgumentException("Edit character is outside the line");
-        return start + character; // .NET string indices and LSP's default positions are UTF-16.
+        // LSP positions past the last character refer to the line end.
+        // .NET string indices and LSP's default positions are UTF-16.
+        return start + Math.Min(character, end - start);
     }
 }

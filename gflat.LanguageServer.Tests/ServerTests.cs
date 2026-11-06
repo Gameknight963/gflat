@@ -745,14 +745,31 @@ public sealed partial class ServerTests
             Assert.Equal(new TextRange(new(point.Line, point.Character), new(point.Line, point.Character)),
                 Workspace.ToRange(source.Span(point.Offset)));
         }
-        Assert.Throws<ArgumentException>(() => Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 0, character = 4 })));
-        Assert.Throws<ArgumentException>(() => Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 2, character = 1 })));
+        Assert.Equal(3, Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 0, character = 4 })));
+        Assert.Equal(text.Length, Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 2, character = 1 })));
         var changes = JsonSerializer.SerializeToElement(new[] {
             new { range = new { start = new { line = 1, character = 0 }, end = new { line = 1, character = 1 } }, text = "X" },
             new { range = new { start = new { line = 2, character = 0 }, end = new { line = 2, character = 0 } }, text = "Z" }
         });
         Assert.Equal("abc" + first + "Xe" + second + "Z", Workspace.ApplyChanges(text, changes));
         Assert.Equal(text, source.Text);
+    }
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public void OversizedCharacterPositionsClampToLineEnds(string newline)
+    {
+        string text = "a\U0001F600" + newline + "next";
+        Assert.Equal(3, Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 0, character = int.MaxValue })));
+        Assert.Equal(text.Length, Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 1, character = int.MaxValue })));
+        var changes = JsonSerializer.SerializeToElement(new[] {
+            new { range = new { start = new { line = 0, character = 3 }, end = new { line = 0, character = int.MaxValue } }, text = "!" }
+        });
+        Assert.Equal("a\U0001F600!" + newline + "next", Workspace.ApplyChanges(text, changes));
+        Assert.Throws<ArgumentException>(() => Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = -1, character = 0 })));
+        Assert.Throws<ArgumentException>(() => Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 0, character = -1 })));
     }
 
     [Theory]

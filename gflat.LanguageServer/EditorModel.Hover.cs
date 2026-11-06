@@ -23,14 +23,14 @@ public sealed partial class EditorModel
         var types = SymbolsNamed(simpleName).Where(s => !s.IsTypeParameter && (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration));
         if (!name.Contains("::", StringComparison.Ordinal) && context?.NameSpan.Source is { } declaringSource)
         {
-            var visible = Visible(declaringSource.Path, context.NameSpan.Start).FirstOrDefault(s =>
+            var visible = Visible(declaringSource.Path, context.NameSpan.Start, name).FirstOrDefault(s =>
                 (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration) && s.Name == name);
             if (visible != null) return visible;
         }
         var exact = types.FirstOrDefault(s => s.Scope == null && s.Qualified == name);
         if (exact != null) return exact;
         if (context?.NameSpan.Source is { } source)
-            return Visible(source.Path, context.NameSpan.Start).FirstOrDefault(s => (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration) && s.Name == name);
+            return Visible(source.Path, context.NameSpan.Start, name).FirstOrDefault(s => (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration) && s.Name == name);
         return null;
     }
 
@@ -391,8 +391,7 @@ public sealed partial class EditorModel
     // Use the request location: imports at the declaration can differ from the caller's.
     private string ShortType(string text, string? path, int offset, Dictionary<int, Symbol>? shortened = null)
     {
-        if (path == null) return text;
-        var visible = Visible(path, offset).Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration).ToArray();
+        if (path == null || !text.Contains("::", StringComparison.Ordinal)) return text;
         var typeParameters = ContextParents(path, offset).SelectMany(n => n.Node switch
         {
             MethodDeclaration m => m.GenericParameters.Select(p => p.Name),
@@ -409,7 +408,8 @@ public sealed partial class EditorModel
             // A bare primitive spelling denotes the built-in type, even when
             // an imported declaration has the same source name.
             if (TypeChecker.IsPrimitive(simple)) return match.Value;
-            var matches = visible.Where(s => s.Name == simple).DistinctBy(s => s.Qualified).ToArray();
+            var matches = Visible(path, offset, simple).Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration)
+                .DistinctBy(s => s.Qualified).ToArray();
             if (typeParameters.Contains(simple) || matches.Length != 1 || matches[0].Qualified != match.Value) return match.Value;
             shortened?.Add(match.Index + delta, matches[0]);
             delta += simple.Length - match.Length;
@@ -470,7 +470,7 @@ public sealed partial class EditorModel
             while (first >= 2 && lexed[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
             var target = token.Kind == TokenKind.Identifier ? TypeSymbol(string.Concat(lexed[first..(i + 1)].Select(t => t.Text)), context) : null;
             if (target == null && token.Kind == TokenKind.Identifier)
-                target = Visible(path, offset).FirstOrDefault(s => (s.IsTypeParameter || IsType(s.Syntax.Node)) && s.Name == token.Text);
+                target = Visible(path, offset, token.Text).FirstOrDefault(s => (s.IsTypeParameter || IsType(s.Syntax.Node)) && s.Name == token.Text);
             parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Managed ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
             cursor = token.End + 1;
         }

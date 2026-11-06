@@ -5,6 +5,18 @@ namespace gflat.LanguageServer.Tests;
 public sealed class LanguageConstructHoverTests
 {
     [Theory]
+    [InlineData("class")]
+    [InlineData("return")]
+    [InlineData("while")]
+    public void UnresolvedEscapedNamesAreNotExplainedAsLanguageKeywords(string name)
+    {
+        string code = "int Read() => @" + name + ";";
+        var source = new SourceFile(Path.GetFullPath("escaped-learning-hover.gf"), code);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true, NoBuiltins = true }), [source]);
+        Assert.Null(model.Hover(source.Path, code.IndexOf('@') + 1, options: new(ShowLanguageConstructs: true)));
+    }
+
+    [Theory]
     [InlineData("struct Sample { public int Value; }", "struct", "value type")]
     [InlineData("#define NUMBER 42\nint main() => NUMBER;", "define", "macro")]
     [InlineData("void F() { if (true) return; }", "if", "condition is true")]

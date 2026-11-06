@@ -8,6 +8,7 @@ public sealed partial class EditorModel
         if (index < 0) return null;
         var token = tokens[path][index];
         var directive = MacroAt(path, offset) is { Classification: "preprocessor" } found ? found : null;
+        if (directive == null && token.Kind == TokenKind.Identifier && token.Start > 0 && sources[path].Text[token.Start - 1] == '@') return null;
         var span = directive?.Span ?? token.Span;
         string word = sources[path].Text.Substring(span.Start, span.Length).Trim();
         string key = word.TrimStart('#');

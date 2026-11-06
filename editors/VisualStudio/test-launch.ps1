@@ -19,8 +19,10 @@ $ide = if ($VisualStudioDirectory) {
 if (-not $ide) { Write-Host 'CPS launch SDK check unavailable: full IDE not installed.'; return }
 $assemblies = @{}
 $assemblyCandidates = @{}
-foreach ($folder in @('CommonExtensions/Microsoft/Project', 'PrivateAssemblies', 'PublicAssemblies', '.', '../../MSBuild/Current/Bin')) {
-    foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $ide $folder) -Filter '*.dll' -File)) {
+foreach ($folder in @('CommonExtensions/Microsoft/Project', 'PrivateAssemblies', 'PublicAssemblies', '.', '../../MSBuild/Current/Bin', '../../MSBuild/Current/Bin/amd64')) {
+    $candidateDirectory = Join-Path $ide $folder
+    if (-not (Test-Path -LiteralPath $candidateDirectory -PathType Container)) { continue }
+    foreach ($file in (Get-ChildItem -LiteralPath $candidateDirectory -Filter '*.dll' -File)) {
         if (-not $assemblies.ContainsKey($file.BaseName)) { $assemblies[$file.BaseName] = $file.FullName }
         $assemblyCandidates[$file.BaseName] = @($assemblyCandidates[$file.BaseName]) + $file.FullName
     }

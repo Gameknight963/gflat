@@ -139,7 +139,9 @@ try {
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     & (Join-Path $repoRoot 'build/test-bundled-msbuild.ps1') -ToolchainDirectory (Join-Path $extracted 'Sdk') -CompilerDirectory (Join-Path $extracted 'Compiler')
     & (Join-Path $PSScriptRoot 'test-project-templates.ps1') -PackageDirectory $extracted
-    & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
+    # Keep installed CPS/MSBuild dependencies in a fresh desktop CLR load context.
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged CPS launch validation failed' }
     & (Join-Path $PSScriptRoot 'test-console-probe.ps1')
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.c'))) { throw 'VSIX is missing the native stdio bridge source' }

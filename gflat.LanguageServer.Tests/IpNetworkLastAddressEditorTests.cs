@@ -10,7 +10,7 @@ public sealed class IpNetworkLastAddressEditorTests
     public void ImmutableNumericEndpointUsesItsIpAddressPropertyTypeAndActualSource()
     {
         const string text="using Standard; using Standard::Net;IpAddress Observe(immutable(IpNetwork)* network)nothrow=>network.LastAddress;";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Net.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="IpNetwork.gf");var source=new SourceFile(Path.GetFullPath("ip-network-endpoint-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var access=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==source.Id).Select(node=>node.Node).OfType<MemberAccessExpression>());

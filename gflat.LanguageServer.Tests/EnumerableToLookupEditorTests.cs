@@ -9,8 +9,7 @@ public sealed class EnumerableToLookupEditorTests
     public void BothGroupMaterializersInferNestedResultTypesAndSelectTheCorrectDeclaration()
     {
         const string text="using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;int Key(int value)=>value%2;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,Vector<int>> originals=values.AsEnumerable().ToLookup(Key);HashMap<int,Vector<long>> squares=values.AsEnumerable().ToLookup(Key,Square);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Queries.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_to_lookup.gf");
         var source=new SourceFile(Path.GetFullPath("to-lookup-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

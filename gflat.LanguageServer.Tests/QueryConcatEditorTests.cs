@@ -19,8 +19,7 @@ public sealed class QueryConcatEditorTests
                 if (cursor.MoveNext()) { int value = cursor.Current; }
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Queries.ToList();
         var source = new SourceFile(Path.GetFullPath("query-concat-editor.gf"), text);
         files.Add(source);
         SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_concat.gf");

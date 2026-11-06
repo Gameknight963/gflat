@@ -20,8 +20,7 @@ public sealed class QueryIndexedWhereEditorTests
                 if (cursor.MoveNext()) { int result = cursor.Current; }
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Queries.ToList();
         var source = new SourceFile(Path.GetFullPath("query-indexed-where-editor.gf"), text);
         files.Add(source);
         SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_indexed_where.gf");

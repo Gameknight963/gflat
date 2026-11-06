@@ -9,8 +9,7 @@ public sealed class VersionEditorTests
     public void NumericVersionNavigationAndOptionalConstructionUseTheValueDeclaration()
     {
         const string text = "using Standard;void Probe(){Version original=Version::Parse(\"1.2\",3);Version extended=new(1,2,0);int major=original.Major;int order=original.CompareTo(&extended);}";
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Types.ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "Version.gf");
         var source = new SourceFile(Path.GetFullPath("version-editor.gf"), text);
         files.Add(source);

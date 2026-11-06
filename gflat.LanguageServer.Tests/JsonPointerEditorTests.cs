@@ -52,8 +52,7 @@ public sealed class JsonPointerEditorTests
 
     private static (EditorModel Model,SourceFile Source,SourceFile[] Files) Analyze()
     {
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Json.ToList();
         var source=new SourceFile(Path.GetFullPath("json-pointer-editor.gf"),Program);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);

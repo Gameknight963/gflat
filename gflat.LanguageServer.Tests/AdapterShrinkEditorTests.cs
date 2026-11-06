@@ -22,8 +22,7 @@ public sealed class AdapterShrinkEditorTests
                 queue.ShrinkToFit();
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Collections.ToList();
         var source = new SourceFile(Path.GetFullPath("adapter-shrink-editor.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

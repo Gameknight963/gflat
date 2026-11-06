@@ -9,8 +9,8 @@ public sealed class EnumerableCountByEditorTests
     public void PrimitiveAndOwningKeysInferAndNavigateTheCountBySelector()
     {
         const string text = "using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;int Key(int value)=>value%3;String Text(int value)=>value.ToString();void Probe(){int[3] data=[4,2,1];Span<int> values=new(data,3);HashMap<int,nuint> numbers=values.AsEnumerable().CountBy(Key);HashMap<String,nuint> words=values.AsEnumerable().CountBy(Text);}";
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Combine(StandardTestSources.Queries,
+            StandardTestSources.Load("core/Text/primitive_string.gf")).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "enumerable_count_by.gf");
         var source = new SourceFile(Path.GetFullPath("count-by-editor.gf"), text);
         files.Add(source);

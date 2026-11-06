@@ -9,7 +9,7 @@ public sealed class MemoryAlignmentEditorTests
     public void IntegerAlignmentFunctionsExposeConcreteSignaturesAndTheirActualDeclarations()
     {
         const string text="void Probe(){nuint up=Memory::AlignUp(13,8);nuint down=Memory::AlignDown(13,8);bool aligned=Memory::IsAligned(16,8);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Memory.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="alignment.gf");var source=new SourceFile(Path.GetFullPath("memory-alignment-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);var model=new EditorModel(snapshot,files);
         foreach(var row in new[]{(Name:"AlignUp",Return:"nuint"),(Name:"AlignDown",Return:"nuint"),(Name:"IsAligned",Return:"bool")}){

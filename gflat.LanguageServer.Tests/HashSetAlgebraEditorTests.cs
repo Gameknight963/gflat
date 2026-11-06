@@ -8,8 +8,7 @@ public sealed class HashSetAlgebraEditorTests
     [Fact]
     public void ActualSetAlgebraCallsResolveHoverAndNavigateToLibraryDefinitions()
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var sources=StandardTestSources.Collections.ToList();
         string text="""
             using Standard; using Standard::Collections;
             int main(){HashSet<int> target=new();HashSet<int> source=new();

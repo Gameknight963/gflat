@@ -16,7 +16,7 @@ internal static class StandardTestSources
     public static IEnumerable<SourceFile> Load(params string[] files)
         => files.Distinct(StringComparer.Ordinal).Select(relative => snapshots.GetOrAdd(relative, static name =>
         {
-            string path = Path.Combine(sourceRoot, name);
+            string path = Path.GetFullPath(Path.Combine(sourceRoot, name));
             return new SourceFile(path, File.ReadAllText(path));
         }));
 

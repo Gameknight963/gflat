@@ -9,8 +9,7 @@ public sealed class ToStringExtensionEditorTests
     public void PrimitiveBorrowedAndInstanceConversionsNavigateToTheirSelectedDeclarations()
     {
         const string text = "using Standard; using Standard::Text;struct Label:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\"label\",5);}}String Borrow<T:IFormattable>(ref immutable(T) borrowed)=>borrowed.ToString();void Probe(){immutable(int) number=42;String first=number.ToString();Label label=new();String second=label.ToString();String original=s\"x\";String third=original.ToString();String fourth=Borrow(ref original);}";
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Text.ToList();
         var source = new SourceFile(Path.GetFullPath("to-string-editor.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

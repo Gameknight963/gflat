@@ -25,8 +25,7 @@ public sealed class DefaultArrangementEditorTests
                 PreviousPermutation(values, Compare);
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Collections.ToList();
         var source = new SourceFile(Path.GetFullPath("default-arrangement-editor.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

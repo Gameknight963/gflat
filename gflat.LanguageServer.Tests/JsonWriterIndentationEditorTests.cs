@@ -8,8 +8,7 @@ public sealed class JsonWriterIndentationEditorTests
     [Fact]
     public void ActualConstructorSignatureShowsTheOptionalIndentationFlag()
     {
-        var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var sources=StandardTestSources.Json.ToList();
         string text="""
             using Standard; using Standard::Text; using Standard::Json;int main(){String text=new();JsonWriter compact=new(&text);
                 JsonWriter pretty=new JsonWriter(&text,true);return 0;}

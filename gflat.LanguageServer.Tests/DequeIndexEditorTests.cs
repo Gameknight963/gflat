@@ -9,8 +9,7 @@ public sealed class DequeIndexEditorTests
     public void IndexedMutationsHaveClosedElementTypesAndNavigateToTheirPublicDeclarations()
     {
         const string text="using Standard; using Standard::Collections;void Probe(){Deque<int> values=new();values.AddLast(1);values.Insert(0,2);int removed=values.RemoveAt(1);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Collections.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="Deque.gf");
         var source=new SourceFile(Path.GetFullPath("deque-index-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

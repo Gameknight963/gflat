@@ -9,8 +9,7 @@ public sealed class TimeSpanTotalsEditorTests
     public void AllApproximateTotalsNavigateActualImmutableNoThrowDoubleProperties()
     {
         const string text = "using Standard; using Standard::Time;void Observe(immutable(TimeSpan)* value){double a=value.TotalMilliseconds;double b=value.TotalMinutes;double c=value.TotalHours;double d=value.TotalDays;}";
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Time.ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "TimeSpan.gf");
         var source = new SourceFile(Path.GetFullPath("time-span-totals-editor.gf"), text);
         files.Add(source);

@@ -9,8 +9,7 @@ public sealed class EnumerableExtremaByEditorTests
     public void ProjectedExtremaInferKeysAndNavigateBothOverloads()
     {
         const string text = "using Standard; using Standard::Memory; using Standard::Queries;int Key(int value)=>value%3;int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}void Probe(){int[3] data=[4,2,1];Span<int> values=new(data,3);int low=values.AsEnumerable().MinBy(Key);int high=values.AsEnumerable().MaxBy(Key,Compare);}";
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Queries.ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "enumerable_extrema_by.gf");
         var source = new SourceFile(Path.GetFullPath("extrema-by-editor.gf"), text);
         files.Add(source);

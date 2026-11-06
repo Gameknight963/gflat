@@ -13,8 +13,7 @@ public sealed class NthElementEditorTests
             int Compare(readonly(int)* a,readonly(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             void Observe(){int[3] data=[3,1,2];Span<int> values=new(data,3);NthElement<int>(values,1,Compare);}
             """;
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Collections.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="nth_element.gf");
         var source=new SourceFile(Path.GetFullPath("nth-element-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

@@ -17,8 +17,7 @@ public sealed class FileExtraLongEditorTests
                 FileBinary::WriteExtraLongBigEndian(stream, second);
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.IO.ToList();
         var source = new SourceFile(Path.GetFullPath("file-extra-long-editor.gf"), text);
         files.Add(source);
         SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "FileBinary.gf");

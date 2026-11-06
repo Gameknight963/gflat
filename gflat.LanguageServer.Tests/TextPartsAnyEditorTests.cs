@@ -14,8 +14,7 @@ public sealed class TextPartsAnyEditorTests
     {
         string text="using Standard; using Standard::Text; using Standard::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
             +"TextPartsAny counted=text.SplitAny(separators,false);TextPartsAny terminated=text.SplitAny(\",;\",false);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Text.ToList();
         var source=new SourceFile(Path.GetFullPath("text-parts-any-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);

@@ -9,8 +9,7 @@ public sealed class FindLastIndexEditorTests
     public void BorrowedPredicateSearchHasItsActualDeclarationAndVisibleArguments()
     {
         const string text="using Standard; using Standard::Memory; using Standard::Collections;bool Match(immutable(int)* value)=>*value%2==0;void Probe(){int[3] data=[1,2,3];Span<int> values=new(data,3);nuint at=FindLastIndex<int>(values.AsImmutable(),Match);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Collections.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="span_algorithms.gf");
         var source=new SourceFile(Path.GetFullPath("find-last-index-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

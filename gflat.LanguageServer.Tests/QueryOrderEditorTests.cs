@@ -47,8 +47,7 @@ public sealed class QueryOrderEditorTests
 
     private static (EditorModel Model,SourceFile Source,List<SourceFile> Files) Analyze(string text)
     {
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files=StandardTestSources.Queries.ToList();
         var source=new SourceFile(Path.GetFullPath("query-order-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);

@@ -6,6 +6,32 @@ namespace gflat.LanguageServer.Tests;
 public sealed class CodeActionTests
 {
     [Theory]
+    [InlineData("\n", false)]
+    [InlineData("\r\n", false)]
+    [InlineData("\r", false)]
+    [InlineData("\n", true)]
+    [InlineData("\r\n", true)]
+    [InlineData("\r", true)]
+    public void GeneratedEditsUseTheDocumentsLineEnding(string newline, bool constructor)
+    {
+        string text = constructor
+            ? "struct Item { private int value; }" + newline
+            : "namespace Library { public struct Item {} }" + newline + "Item F() => default;" + newline;
+        var source = new SourceFile(Path.GetFullPath("code-action-lines.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        int offset = text.IndexOf(constructor ? "Item" : "Item F", StringComparison.Ordinal);
+        var action = Assert.Single(model.CodeActions(source.Path, Workspace.ToRange(source.Span(offset))),
+            action => action.Title == (constructor ? "Generate constructor" : "Add using Library"));
+        foreach (var edit in action.Edit!.Changes[Workspace.FileUri(source.Path)])
+        {
+            Assert.Contains(newline, edit.NewText);
+            string withoutLineEndings = edit.NewText.Replace(newline, "", StringComparison.Ordinal);
+            Assert.DoesNotContain('\r', withoutLineEndings);
+            Assert.DoesNotContain('\n', withoutLineEndings);
+        }
+    }
+
+    [Theory]
     [InlineData("interface I { int Read(int value); } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("interface I { int @class(int @while); } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("class @class {} interface I { @class* Read(@class* value); } struct Item : I { }", "Item :", "Implement I")]

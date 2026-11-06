@@ -2,6 +2,9 @@ namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
+    private static string PreferredNewline(string text) => text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" :
+        text.Contains('\r') && !text.Contains('\n') ? "\r" : "\n";
+
     private static int LineStart(string text, int offset) => offset == 0 ? 0 :
         Math.Max(text.LastIndexOf('\r', offset - 1), text.LastIndexOf('\n', offset - 1)) + 1;
 

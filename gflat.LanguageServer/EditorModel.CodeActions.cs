@@ -69,7 +69,7 @@ public sealed partial class EditorModel
                 s.Syntax.Node is not NamespaceDeclaration && Accessible(s, path, offset)).Select(s => s.Namespace).Distinct())
             {
                 if ((snapshot.Imports.GetValueOrDefault(source.Id) ?? []).Contains(ns)) continue;
-                string newline = source.Text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+                string newline = PreferredNewline(source.Text);
                 actions.Add(Action("Add using " + ns, "quickfix", path, new SourceEdit(new(new(0, 0), new(0, 0)), "using " + ns + ";" + newline + (imports.Count == 0 ? newline : ""))));
             }
         }
@@ -82,7 +82,7 @@ public sealed partial class EditorModel
                 t.Start < owner.Syntax.Span.Start + owner.Syntax.Span.Length);
             if (close != null)
             {
-                string newline = source.Text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+                string newline = PreferredNewline(source.Text);
                 string stub = "throw new Exception(\"Not implemented\");";
                 string indent = new(' ', 4 * (Parents(owner.Syntax).Count(p => p.Node is ClassDeclaration or StructDeclaration or NamespaceDeclaration) + 1));
                 string MethodStub(Symbol member)

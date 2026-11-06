@@ -437,6 +437,7 @@ public class EditorTests
     [InlineData("int main() { \"unfinished|")]
     [InlineData("int main() { 'unfinished|")]
     [InlineData("int main() { \"unfinished\\|")]
+    [InlineData("int main() { \"unfinished\\\n|")]
     public void CompletionDoesNotOfferCodeInsideCommentsOrStrings(string text)
     {
         var (model, path, offset, _) = Analyze(text);

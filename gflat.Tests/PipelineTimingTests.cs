@@ -42,7 +42,13 @@ public sealed class PipelineTimingTests
             Assert.Contains(events, item => item.GetProperty("stage").GetString() == "frontend.check");
             var body = Assert.Single(events, item => item.GetProperty("stage").GetString() == "check.bodies");
             Assert.True(body.GetProperty("milliseconds").GetDouble() >= 0);
-            if (allocations) Assert.True(body.GetProperty("allocatedBytes").GetInt64() > 0);
+            if (allocations)
+            {
+                // The process-wide counter is approximate. A tiny phase can
+                // report zero while other phases record positive allocations.
+                Assert.True(body.GetProperty("allocatedBytes").GetInt64() >= 0, body.GetRawText());
+                Assert.Contains(events, item => item.GetProperty("allocatedBytes").GetInt64() > 0);
+            }
             else Assert.Equal(JsonValueKind.Null, body.GetProperty("allocatedBytes").ValueKind);
             Assert.DoesNotContain(events, item => item.GetProperty("stage").GetString() == "check.method");
         }

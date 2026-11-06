@@ -108,6 +108,7 @@ Set `GFLAT_PROFILE_ALLOCATIONS=1` to include `allocatedBytes` in each event.
 This counts managed allocations across the process during that stage, including
 concurrent work. Nested allocation totals overlap. The count measures allocation
 volume rather than retained memory.
+The process-wide counter is approximate, so small stages can report zero bytes.
 
 Editor query timings exclude protocol serialization and Visual Studio UI work.
 They include queries that reuse a previously checked snapshot while a new

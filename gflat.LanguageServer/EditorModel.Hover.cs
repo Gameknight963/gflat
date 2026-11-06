@@ -182,7 +182,13 @@ public sealed partial class EditorModel
                 {
                     if (i > 0) Add(", ", "punctuation");
                     if (symbol.GenericBindings?.TryGetValue(generics[i].Name, out var binding) == true) Type(binding);
-                    else Add(generics[i].Name, "typeParameter");
+                    else
+                    {
+                        var parameter = TypeSymbol(generics[i].Name, symbol);
+                        string parameterName = parameter?.IsTypeParameter == true ? CompletionSpelling(parameter) :
+                            Lexer.GetKeyword(generics[i].Name) != TokenKind.Identifier ? "@" + generics[i].Name : generics[i].Name;
+                        Add(parameterName, "typeParameter", navigable ? SymbolLocation(parameter) : null);
+                    }
                 }
                 Add(">", "punctuation");
             }

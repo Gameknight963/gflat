@@ -5,6 +5,19 @@ namespace gflat.LanguageServer.Tests;
 public sealed class EscapedIdentifierEditorTests
 {
     [Theory]
+    [InlineData("@class Echo<@class>(@class value) => value; int Use() => Echo<int>(42);", "@class Echo<@class>(@class value)")]
+    [InlineData("#define VALUE 7\n@VALUE Echo<@VALUE>(@VALUE value) => value; int Use() => Echo<int>(42);", "@VALUE Echo<@VALUE>(@VALUE value)")]
+    public void GenericDeclarationHoversPreserveTypeParameterEscapes(string text, string expected)
+    {
+        var source = new SourceFile(Path.GetFullPath("escaped-generic-declaration.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == gflat.diagnostics.DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.IndexOf("Echo", StringComparison.Ordinal)), Protocol.JsonOptions);
+        Assert.Contains(expected, hover.GetProperty("contents").GetProperty("value").GetString());
+    }
+
+    [Theory]
     [InlineData("namespace Names { public class @int {} } void Use(Names::@int* value) {}", "Names::@int* value")]
     [InlineData("namespace Names { public class @readonly<T> {} } void Use(Names::@readonly<int>* value) {}", "Names::@readonly<int>* value")]
     [InlineData("using Names;\n\nnamespace Names { public class @int {} } void Use(Names::@int* value) {}", "Names::@int* value")]

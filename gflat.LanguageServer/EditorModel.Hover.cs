@@ -132,7 +132,7 @@ public sealed partial class EditorModel
                     ? symbol.Owner[(ns.Length + 2)..] : symbol.Owner;
                 TypeText(owner);
                 Add(symbol.Static ? "::" : ".", "punctuation");
-                Add(symbol.Name, symbol.Classification, navigable ? SymbolLocation(symbol) : null);
+                Add(CompletionSpelling(symbol), symbol.Classification, navigable ? SymbolLocation(symbol) : null);
             }
             else
             {
@@ -141,7 +141,9 @@ public sealed partial class EditorModel
                 {
                     if (i > 0) Add("::", "punctuation");
                     var target = navigable ? (i == names.Length - 1 ? symbol : TypeSymbol(string.Join("::", names.Take(i + 1)), symbol)) : null;
-                    Add(names[i], i == names.Length - 1 ? symbol.Classification : target?.Classification ?? "namespace", SymbolLocation(target));
+                    string spelling = i == names.Length - 1 ? CompletionSpelling(symbol) :
+                        Lexer.GetKeyword(names[i]) != TokenKind.Identifier ? "@" + names[i] : names[i];
+                    Add(spelling, i == names.Length - 1 ? symbol.Classification : target?.Classification ?? "namespace", SymbolLocation(target));
                 }
             }
             var generics = symbol.Syntax.Node switch { MethodDeclaration m => m.GenericParameters, ClassDeclaration c => c.GenericParameters, StructDeclaration s => s.GenericParameters, InterfaceDeclaration i => i.GenericParameters, _ => null };

@@ -5,6 +5,19 @@ namespace gflat.LanguageServer.Tests;
 public sealed class EscapedIdentifierEditorTests
 {
     [Theory]
+    [InlineData("int @class;", "int @class")]
+    [InlineData("void @while() {}", "void @while()")]
+    [InlineData("alias @alias = int;", "alias @alias = int")]
+    [InlineData("class @class {}", "class @class")]
+    public void HoverPreservesEscapedDeclarationNames(string text, string expected)
+    {
+        var source = new SourceFile(Path.GetFullPath("escaped-hover.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.IndexOf('@') + 1), Protocol.JsonOptions);
+        Assert.Contains(expected, hover.GetProperty("contents").GetProperty("value").GetString());
+    }
+
+    [Theory]
     [InlineData("class @class {}", "@class*", "class")]
     [InlineData("alias @alias = int;", "@alias", "alias")]
     public void NavigationSelectsTheEscapedNameRatherThanItsDeclarationKeyword(string declaration, string type, string name)

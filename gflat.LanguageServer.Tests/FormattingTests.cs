@@ -6,6 +6,24 @@ namespace gflat.LanguageServer.Tests;
 public sealed class FormattingTests
 {
     [Theory]
+    [InlineData("int F(int a,int b){return a*b;}", "a * b")]
+    [InlineData("int F(int a,int b){return a&b;}", "a & b")]
+    [InlineData("int F(int a,int b){return a^b;}", "a ^ b")]
+    [InlineData("int F(int a,int b){return a>>b;}", "a >> b")]
+    [InlineData("bool F(int a,int b)=>a<b;", "a < b")]
+    [InlineData("bool F(int a,int b)=>a>b;", "a > b")]
+    [InlineData("int F(int a,int b){return a* -b;}", "a * -b")]
+    [InlineData("int* F(int* p)=>p;", "int* F(int* p)")]
+    [InlineData("T Id<T>(T value)=>value; int F()=>Id<int>(1);", "Id<int>(1)")]
+    public void BinaryOperatorSpacingPreservesPointerAndGenericSyntax(string text, string expected)
+    {
+        var source = new SourceFile(Path.GetFullPath("format-binary.gf"), text);
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Contains(expected, actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
+    [Theory]
     [InlineData("int F(int value){return -value;}", "return -value;")]
     [InlineData("int F(int value){return -  value;}", "return -value;")]
     [InlineData("int F(int value){return - -value;}", "return - -value;")]

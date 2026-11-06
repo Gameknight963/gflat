@@ -29,7 +29,9 @@ public static class SourceFormatter
         var tokens = Lexer.Tokenize(source, new diagnostics.DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
         var tokenStarts = tokens.Select(token => token.Start).ToArray();
         var unaryMinus = new HashSet<int>();
+        var binaryOperators = new HashSet<int>();
         foreach (var node in syntax)
+        {
             if (node.Node is UnaryExpression { IsPrefix: true, Operator: TokenKind.Minus } unary &&
                 unary.Operand.Span.Source?.Path == source.Path)
             {
@@ -37,6 +39,19 @@ public static class SourceFormatter
                 index = index < 0 ? ~index - 1 : index - 1;
                 if (index >= 0 && tokens[index].Kind == TokenKind.Minus) unaryMinus.Add(tokens[index].Start);
             }
+            if (node.Node is BinaryExpression binary && binary.Left.Span.Source?.Path == source.Path &&
+                binary.Right.Span.Source?.Path == source.Path)
+            {
+                int index = Array.BinarySearch(tokenStarts, binary.Left.Span.Start + binary.Left.Span.Length);
+                if (index < 0) index = ~index;
+                for (; index < tokens.Length && tokens[index].Start < binary.Right.Span.Start; index++)
+                    if (tokens[index].Kind == binary.Operator)
+                    {
+                        binaryOperators.Add(tokens[index].Start);
+                        break;
+                    }
+            }
+        }
         var directives = new HashSet<int>();
         bool continued = false;
         int lineNumber = 1;
@@ -116,6 +131,7 @@ public static class SourceFormatter
                             bool typeGap = InSameType(previous.Start, token.End);
                             replacement = unaryMinus.Contains(previous.Start)
                                 ? token.Kind is TokenKind.Minus or TokenKind.MinusMinus ? " " : ""
+                                : binaryOperators.Contains(previous.Start) || binaryOperators.Contains(token.Start) ? " "
                                 : typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
                         }
                         Edit(start, length, replacement);

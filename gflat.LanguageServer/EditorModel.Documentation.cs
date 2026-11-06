@@ -61,7 +61,6 @@ public sealed partial class EditorModel
     private static DocumentationComment? ReadDocumentation(SourceFile source, int gapStart, int declarationStart)
     {
         string text = source.Text;
-        static int LineStart(string text, int at) => at == 0 ? 0 : text.LastIndexOf('\n', at - 1) + 1;
         int declarationLine = LineStart(text, declarationStart);
         if (!text.AsSpan(declarationLine, declarationStart - declarationLine).Trim().IsEmpty) return null;
         var lines = new Dictionary<int, (string Text, int Start)>();
@@ -73,8 +72,8 @@ public sealed partial class EditorModel
             if (at + 1 >= declarationStart || text[at] != '/') return null;
             if (text[at + 1] == '/')
             {
-                int end = text.IndexOf('\n', at);
-                if (end < 0 || end > declarationStart) end = declarationStart;
+                int relativeEnd = text.AsSpan(at).IndexOfAny('\r', '\n');
+                int end = relativeEnd < 0 ? declarationStart : Math.Min(at + relativeEnd, declarationStart);
                 int line = LineStart(text, at);
                 if (at + 2 < end && text[at + 2] == '/' && (at + 3 == end || text[at + 3] != '/') &&
                     text.AsSpan(line, at - line).Trim().IsEmpty)
@@ -96,7 +95,7 @@ public sealed partial class EditorModel
         var content = new List<(string Text, int Start)>();
         for (int line = declarationLine; line > gapStart;)
         {
-            line = LineStart(text, line - 1);
+            line = PreviousLineStart(text, line);
             if (!lines.TryGetValue(line, out var body)) break;
             content.Add(body);
         }

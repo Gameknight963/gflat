@@ -35,7 +35,7 @@ public sealed partial class EditorModel
     private object? IncludeCompletion(string path, int offset)
     {
         string text = sources[path].Text;
-        int start = offset == 0 ? 0 : text.LastIndexOf('\n', offset - 1) + 1;
+        int start = LineStart(text, offset);
         string prefix = text[start..offset];
         var match = System.Text.RegularExpressions.Regex.Match(prefix, "^\\s*#\\s*include\\s*[\"<]([^\">]*)$");
         if (!match.Success) return null;

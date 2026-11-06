@@ -33,8 +33,11 @@ public sealed class HeaderEditorTests
         }
     }
 
-    [Fact]
-    public void IncludeCompletionListsFoldersAndFilesAndReplacesOnlyTheFilename()
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public void IncludeCompletionListsFoldersAndFilesAndReplacesOnlyTheFilename(string newline)
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat-include-completion-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -42,7 +45,7 @@ public sealed class HeaderEditorTests
         {
             Directory.CreateDirectory(Path.Combine(directory, "headers"));
             File.WriteAllText(Path.Combine(directory, "headers", "value.gfh"), "");
-            var source = new SourceFile(Path.Combine(directory, "main.gf"), "#include \"headers/va\"");
+            var source = new SourceFile(Path.Combine(directory, "main.gf"), "// preceding line" + newline + "#include \"headers/va\"");
             var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
             var model = new EditorModel(snapshot, [source]);
             var completion = JsonSerializer.SerializeToElement(model.Completion(source.Path, source.Text.LastIndexOf('"')), Protocol.JsonOptions);

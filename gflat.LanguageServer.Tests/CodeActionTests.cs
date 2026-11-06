@@ -28,6 +28,9 @@ public sealed class CodeActionTests
     [InlineData("struct @class { private int value; }", "@class", "Generate constructor")]
     [InlineData("namespace Library { public struct Item {} } Item F() => default;", "Item F", "Add using Library")]
     [InlineData("using Library;\n\nnamespace Library { public struct Item {} } int F() => 0;", "int F", "Remove unused using Library")]
+    [InlineData("#define FLAG 1\nusing Library;\nnamespace Library { public struct Item {} } int F() => 0;", "int F", "Remove unused using Library")]
+    [InlineData("#define FLAG 1\r\nusing Library;\r\nnamespace Library { public struct Item {} } int F() => 0;", "int F", "Remove unused using Library")]
+    [InlineData("#define FLAG 1\rusing Library;\rnamespace Library { public struct Item {} } int F() => 0;", "int F", "Remove unused using Library")]
     public void ApplyingQuickFixProducesValidSource(string code, string marker, string title)
     {
         var source = new SourceFile(Path.GetFullPath("code-action.gf"), code);

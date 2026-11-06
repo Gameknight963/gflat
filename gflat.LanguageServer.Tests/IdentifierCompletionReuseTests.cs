@@ -56,4 +56,17 @@ public sealed class IdentifierCompletionReuseTests
 
     private static string[] Labels(JsonElement completion) => completion.GetProperty("items").EnumerateArray()
         .Select(item => item.GetProperty("label").GetString()!).Order(StringComparer.Ordinal).ToArray();
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public void EarlierDirectiveDoesNotPreventOrdinaryExpressionReuse(string newline)
+    {
+        string before = "#define FLAG 1" + newline + "int Read(){int local=1;return lo;}";
+        var (source, model) = Model(before);
+        string changed = before.Replace("return lo;", "return loc;", StringComparison.Ordinal);
+        int offset = changed.IndexOf("loc;", StringComparison.Ordinal) + 3;
+        Assert.True(model.TryReuseIdentifierCompletion(source.Path, changed, offset, out _));
+    }
 }

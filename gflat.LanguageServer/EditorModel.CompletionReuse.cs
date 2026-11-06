@@ -44,14 +44,14 @@ public sealed partial class EditorModel
 
     private static bool InDirectiveLine(string text, int offset)
     {
-        int start = offset == 0 ? 0 : text.LastIndexOf('\n', offset - 1) + 1;
+        int start = LineStart(text, offset);
         while (true)
         {
             var prefix = text.AsSpan(start, offset - start).TrimStart();
             if (!prefix.IsEmpty && prefix[0] == '#') return true;
             if (start == 0) return false;
             int previousEnd = start - 1;
-            int previousStart = previousEnd == 0 ? 0 : text.LastIndexOf('\n', previousEnd - 1) + 1;
+            int previousStart = PreviousLineStart(text, start);
             var previous = text.AsSpan(previousStart, previousEnd - previousStart).TrimEnd();
             if (previous.IsEmpty || previous[^1] != '\\') return false;
             start = previousStart;

@@ -9,6 +9,7 @@ public sealed class DeclarationDocumentationTests
     [Theory]
     [InlineData("\n")]
     [InlineData("\r\n")]
+    [InlineData("\r")]
     public void ProseSummaryAppearsInPortableRichAndCompletion(string newline)
     {
         string library = string.Join(newline, ["/// First paragraph", "///", "/// Second paragraph with [literal] <tags> and `ticks`", "public int Read(int value) => value;"]);

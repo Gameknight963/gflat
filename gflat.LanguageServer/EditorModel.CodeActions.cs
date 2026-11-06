@@ -31,7 +31,7 @@ public sealed partial class EditorModel
         for (int i = 0; i < fileTokens.Length; i++)
             if (fileTokens[i].Kind == TokenKind.Using)
             {
-                int lineStart = source.Text.LastIndexOf('\n', Math.Max(0, fileTokens[i].Start - 1)) + 1;
+                int lineStart = LineStart(source.Text, fileTokens[i].Start);
                 if (source.Text.AsSpan(lineStart, fileTokens[i].Start - lineStart).Contains('#')) continue;
                 int end = i + 1;
                 while (end < fileTokens.Length && fileTokens[end].Kind is TokenKind.Identifier or TokenKind.DoubleColon) end++;

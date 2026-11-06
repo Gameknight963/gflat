@@ -17,7 +17,8 @@ public sealed class Compilation
     private readonly Dictionary<SourceId, IReadOnlyList<Token>> sourceTokens = new();
 
     public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false, CompilationOptions? options = null,
-        CancellationToken cancellationToken = default, SourceTokenCache? tokenCache = null, bool captureTokens = false)
+        CancellationToken cancellationToken = default, SourceTokenCache? tokenCache = null, bool captureTokens = false,
+        SourceSyntaxCache? syntaxCache = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var captured = new List<SourceFile>();
@@ -53,7 +54,8 @@ public sealed class Compilation
         {
             cancellationToken.ThrowIfCancellationRequested();
             List<Token> tokens;
-            if (Preprocessor.IsNeeded(source, preprocessingOptions))
+            bool preprocessed = Preprocessor.IsNeeded(source, preprocessingOptions);
+            if (preprocessed)
             {
                 var preprocessor = new Preprocessor(preprocessingOptions, diagnostics, cancellationToken);
                 try { tokens = preprocessor.Process(source).Tokens; }
@@ -75,7 +77,9 @@ public sealed class Compilation
                 if (captureTokens) sourceTokens[source.Id] = tokens.AsReadOnly();
             }
             cancellationToken.ThrowIfCancellationRequested();
-            var tree = Parser.Parse(tokens, diagnostics, recoverErrors);
+            var tree = syntaxCache != null && !preprocessed
+                ? syntaxCache.Parse(source, tokens, diagnostics, recoverErrors, cancellationToken)
+                : Parser.Parse(tokens, diagnostics, recoverErrors);
             tree.Span = source.Span(0, source.Text.Length);
             cancellationToken.ThrowIfCancellationRequested();
             return tree;

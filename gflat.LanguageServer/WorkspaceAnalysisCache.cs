@@ -9,6 +9,7 @@ internal sealed class WorkspaceAnalysisCache
 
     private readonly List<Entry> entries = new();
     private readonly SourceTokenCache tokenCache = new();
+    private readonly SourceSyntaxCache syntaxCache = new();
 
     public (AnalysisSnapshot Snapshot, EditorModel Model) Get(IReadOnlyList<SourceFile> sources, CompilationOptions? options,
         CancellationToken cancellationToken = default, IReadOnlySet<SourceId>? bodySources = null)
@@ -30,7 +31,7 @@ internal sealed class WorkspaceAnalysisCache
                 return (entry.Snapshot, entry.Model);
             }
         }
-        var snapshot = new AnalysisSnapshot(sources, options, cancellationToken, bodySources, tokenCache);
+        var snapshot = new AnalysisSnapshot(sources, options, cancellationToken, bodySources, tokenCache, syntaxCache: syntaxCache);
         var model = new EditorModel(snapshot, sources, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         // Automatic sources are read again because Compilation loads them itself.

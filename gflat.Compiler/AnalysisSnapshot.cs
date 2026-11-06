@@ -27,7 +27,8 @@ public sealed class AnalysisSnapshot
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> Children = new();
 
     public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null, CancellationToken cancellationToken = default,
-        IReadOnlySet<SourceId>? bodySources = null, SourceTokenCache? tokenCache = null, bool checkTypes = true)
+        IReadOnlySet<SourceId>? bodySources = null, SourceTokenCache? tokenCache = null, bool checkTypes = true,
+        SourceSyntaxCache? syntaxCache = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Options = options ?? new();
@@ -41,7 +42,7 @@ public sealed class AnalysisSnapshot
         Imports = new Dictionary<SourceId, string[]>();
         try
         {
-            var compilation = new Compilation(RootSources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken, tokenCache: tokenCache, captureTokens: true);
+            var compilation = new Compilation(RootSources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken, tokenCache: tokenCache, captureTokens: true, syntaxCache: syntaxCache);
             SourceTokens = compilation.SourceTokens;
             Sources = compilation.Sources;
             PreprocessorDependencies = compilation.PreprocessorDependencies;

@@ -4,6 +4,38 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class EscapedIdentifierEditorTests
 {
+    [Theory]
+    [InlineData("class @class {} @class* value;", "class", "class")]
+    [InlineData("int Read(){int @while=0; return @while;}", "while", "variable")]
+    public void SemanticClassificationIncludesTheIdentifierEscape(string text, string name, string kind)
+    {
+        var source = new SourceFile(Path.GetFullPath("escaped-colors.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var data = JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path), Protocol.JsonOptions)
+            .GetProperty("data").EnumerateArray().Select(item => item.GetInt32()).ToArray();
+        var tokens = new Dictionary<int, (int Length, string Kind, int Modifiers)>();
+        int column = 0;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            Assert.Equal(0, data[i]);
+            column += data[i + 1];
+            tokens[column] = (data[i + 2], EditorModel.TokenTypes[data[i + 3]], data[i + 4]);
+        }
+        int first = text.IndexOf('@');
+        foreach (int at in Enumerable.Range(0, text.Length).Where(index => text[index] == '@'))
+        {
+            Assert.True(tokens.TryGetValue(at, out var token), $"Missing escaped identifier at {at}");
+            Assert.Equal(name.Length + 1, token.Length);
+            Assert.Equal(kind, token.Kind);
+        }
+        Assert.NotEqual(0, tokens[first].Modifiers & 1);
+        var range = new TextRange(new(0, first), new(0, first + 1));
+        var ranged = JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path, range), Protocol.JsonOptions).GetProperty("data");
+        Assert.Equal(5, ranged.GetArrayLength());
+        Assert.Equal(first, ranged[1].GetInt32());
+        Assert.Equal(name.Length + 1, ranged[2].GetInt32());
+    }
+
     [Fact]
     public void SignatureHelpParameterLabelsMatchEscapedNamesInTheSignature()
     {

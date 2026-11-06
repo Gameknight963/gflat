@@ -1080,6 +1080,8 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             var span = ts[i].Span;
+            if (ts[i].Kind == TokenKind.Identifier && span.Source is { } source && span.Start > 0 && source.Text[span.Start - 1] == '@')
+                span = source.Span(span.Start - 1, span.Length + 1);
             int line = span.Line - 1, column = span.Column - 1;
             // Resolve only the requested visible range. A viewport request must
             // not bind every identifier in the rest of a large file first.
@@ -1094,7 +1096,7 @@ public sealed partial class EditorModel
             if (symbol == null && !control && !modifier && !reflectionMember) continue;
             int kind = modifier ? Array.IndexOf(TokenTypes, "modifier") : control ? Array.IndexOf(TokenTypes, "keyword") : reflectionMember ? Array.IndexOf(TokenTypes, "property") : Array.IndexOf(TokenTypes, symbol!.Classification);
             if (kind < 0) continue;
-            int modifiers = symbol?.NameSpan.Source?.Path == path && symbol.NameSpan.Start == span.Start ? 1 : 0;
+            int modifiers = symbol?.NameSpan.Source?.Path == path && symbol.NameSpan.Start == ts[i].Start ? 1 : 0;
             if (symbol?.Static == true) modifiers |= 2;
             if (symbol?.Syntax.Node is FieldDeclaration { IsReadOnly: true } or FieldDeclaration { IsConst: true } or VariableDeclaration { IsConst: true }) modifiers |= 4;
             classified.Add((span, kind, modifiers));

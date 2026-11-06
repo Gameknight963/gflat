@@ -32,7 +32,7 @@ public sealed class AnalysisSnapshot
         cancellationToken.ThrowIfCancellationRequested();
         Options = options ?? new();
         RootSources = sources.ToArray();
-        bodySources = bodySources?.ToFrozenSet();
+        bodySources = bodySources?.ToFrozenSet(SourceIdPathComparer.Instance);
         BodySources = bodySources;
         var diagnostics = new DiagnosticBag();
         var nodes = new List<Syntax>();

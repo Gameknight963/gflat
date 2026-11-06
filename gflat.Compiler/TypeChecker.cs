@@ -29,7 +29,7 @@ namespace gflat
         {
             cancellationToken.ThrowIfCancellationRequested();
             _cancellationToken = cancellationToken;
-            editorBodySources = bodySources == null ? null : new HashSet<SourceId>(bodySources);
+            editorBodySources = bodySources == null ? null : new HashSet<SourceId>(bodySources, SourceIdPathComparer.Instance);
             _recoverErrors = recoverErrors;
             _diagnostics = diagnostics ?? new DiagnosticBag();
             _constEvaluator = new ConstEvaluator(this);

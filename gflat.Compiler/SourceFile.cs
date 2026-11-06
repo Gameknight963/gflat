@@ -2,6 +2,17 @@ namespace gflat;
 
 public readonly record struct SourceId(string Path);
 
+// Editor body selection follows file-system path semantics. SourceId itself
+// retains exact spelling for source maps and synthetic compilation inputs.
+internal sealed class SourceIdPathComparer : IEqualityComparer<SourceId>
+{
+    internal static readonly SourceIdPathComparer Instance = new();
+    private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    private static string Normalize(string path) => OperatingSystem.IsWindows() ? path.Replace('/', '\\') : path;
+    public bool Equals(SourceId left, SourceId right) => Paths.Equals(Normalize(left.Path), Normalize(right.Path));
+    public int GetHashCode(SourceId source) => Paths.GetHashCode(Normalize(source.Path));
+}
+
 /// <summary>An immutable source snapshot; text need not have been saved to disk.</summary>
 public sealed class SourceFile
 {

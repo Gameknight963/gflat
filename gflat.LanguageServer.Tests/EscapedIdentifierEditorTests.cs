@@ -58,17 +58,31 @@ public sealed class EscapedIdentifierEditorTests
         Assert.Equal(name.Length + 1, ranged[2].GetInt32());
     }
 
-    [Fact]
-    public void SignatureHelpParameterLabelsMatchEscapedNamesInTheSignature()
+    [Theory]
+    [InlineData("void Call(int @class) {} void Use() { Call(1); }", "int @class")]
+    [InlineData("#define VALUE 7\nclass @VALUE {} void Call(@VALUE* value) {} void Use(@VALUE* value) { Call(value); }", "@VALUE* value")]
+    [InlineData("namespace Names { public class @readonly<T> {} } void Call(Names::@readonly<int>* value) {} void Use(Names::@readonly<int>* value) { Call(value); }", "Names::@readonly<int>* value")]
+    public void SignatureHelpParameterLabelsMatchEscapedNamesInTheSignature(string text, string expected)
     {
-        const string text = "void Call(int @class) {} void Use() { Call(1); }";
         var source = new SourceFile(Path.GetFullPath("escaped-signature-help.gf"), text);
         var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
         var help = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, text.LastIndexOf("Call(", StringComparison.Ordinal) + 5), Protocol.JsonOptions);
         var signature = help.GetProperty("signatures")[0];
         string parameter = signature.GetProperty("parameters")[0].GetProperty("label").GetString()!;
-        Assert.Equal("int @class", parameter);
+        Assert.Equal(expected, parameter);
         Assert.Contains(parameter, signature.GetProperty("label").GetString());
+    }
+
+    [Fact]
+    public void SpecializedSignatureHelpRetainsAnEscapedParameterName()
+    {
+        const string text = "#define VALUE 7\nstruct Box<T> { public T Read(T @VALUE) => @VALUE; } void Use(Box<int>* box) { box.Read(1); }";
+        var source = new SourceFile(Path.GetFullPath("specialized-escaped-parameter.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var help = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, text.LastIndexOf("Read(", StringComparison.Ordinal) + 5), Protocol.JsonOptions);
+        var signature = help.GetProperty("signatures")[0];
+        Assert.Equal("int @VALUE", signature.GetProperty("parameters")[0].GetProperty("label").GetString());
+        Assert.Contains("int @VALUE", signature.GetProperty("label").GetString());
     }
 
     [Theory]

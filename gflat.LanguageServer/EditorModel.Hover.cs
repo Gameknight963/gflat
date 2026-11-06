@@ -36,7 +36,16 @@ public sealed partial class EditorModel
         ? null : new(Workspace.FileUri(source.Path), Workspace.ToRange(symbol.NameSpan));
 
     private string DisplayType(TypeExpression type) => snapshot.Checker?.DisplayTypeName(type) ?? TypeChecker.TypeName(type).Replace(".", "::");
+    private string SourceTypeSpelling(TypeExpression type, Symbol context)
+    {
+        string text = DisplayType(type);
+        if (TypeChecker.IsPrimitive(text)) return text;
+        var parts = new List<DisplayPart>();
+        AddTypeDisplayParts(parts, text, context, sourceSpelling: true);
+        return string.Concat(parts.Select(part => part.Text));
+    }
     private string Detail(Symbol symbol) => string.Concat(Signature(symbol).Select(p => p.Text));
+    private readonly HashSet<string> escapedTypeDisplayNames = new(StringComparer.Ordinal);
 
     private static TypeExpression ArrayDisplayShape(TypeExpression declared, TypeExpression actual)
     {
@@ -45,6 +54,77 @@ public sealed partial class EditorModel
         return new ArrayTypeExpression(ArrayDisplayShape(syntax.ElementType, checkedArray.ElementType),
             checkedArray.Size ?? syntax.Size, syntax.Line, syntax.SizeExpression) { Span = syntax.Span }
             .WithQualifiersFrom(syntax);
+    }
+
+    private void AddTypeDisplayParts(List<DisplayPart> parts, string text, Symbol context, bool navigable = false,
+        Symbol? finalType = null, IReadOnlyDictionary<int, Symbol>? shortened = null, bool sourceSpelling = false)
+    {
+        void Add(string value, string kind = "text", Location? target = null) { if (value.Length > 0) parts.Add(new(kind, value, Target: target)); }
+        var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
+        int finalTypeName = -1;
+        if (finalType != null)
+        {
+            int depth = 0;
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                if (tokens[i].Kind == TokenKind.Less) depth++;
+                else if (tokens[i].Kind == TokenKind.Greater) depth--;
+                else if (tokens[i].Kind == TokenKind.GreaterGreater) depth -= 2;
+                else if (depth == 0 && tokens[i].Kind == TokenKind.Identifier) finalTypeName = i;
+            }
+        }
+        int cursor = 0;
+        bool inSplice = false;
+        for (int i = 0; i < tokens.Length; i++)
+        {
+            var token = tokens[i];
+            if (token.Kind == TokenKind.OpenBracket && i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.Colon) inSplice = true;
+            Add(text[cursor..token.Start]);
+            string kind = (TypeChecker.IsPrimitive(token.Text) || token.Text == "ref") ? "keyword" : token.Kind == TokenKind.Identifier
+                ? i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon ? "namespace" : "type"
+                : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
+            Location? target = null;
+            string spelling = text[token.Start..(token.End + 1)];
+            bool qualifiedName = i > 0 && tokens[i - 1].Kind == TokenKind.DoubleColon;
+            bool shortenedName = shortened?.ContainsKey(token.Start) == true;
+            bool escapedTypeKeyword = token.Kind != TokenKind.Identifier && char.IsLetter(token.Text.FirstOrDefault()) &&
+                (qualifiedName || shortenedName ||
+                    !TypeChecker.IsPrimitive(token.Text) && token.Kind != TokenKind.Ref &&
+                    !(i + 1 < tokens.Length &&
+                        (token.Kind is TokenKind.Readonly or TokenKind.Immutable && tokens[i + 1].Kind == TokenKind.OpenParen ||
+                         token.Kind == TokenKind.Managed && tokens[i + 1].Kind == TokenKind.Less)));
+            if (inSplice && token.Kind == TokenKind.Identifier)
+                kind = token.Text == "this" ? "keyword" : i > 0 && tokens[i - 1].Kind == TokenKind.Dot ? "property" : "variable";
+            bool sourceEscape = !navigable && !sourceSpelling && token.Kind == TokenKind.Identifier && escapedTypeDisplayNames.Contains(token.Text);
+            if (!inSplice && ((navigable || sourceSpelling || sourceEscape) && token.Kind == TokenKind.Identifier || escapedTypeKeyword))
+            {
+                int first = i;
+                while (first >= 2 && tokens[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
+                string name = string.Concat(tokens[first..(i + 1)].Select(t => t.Text));
+                // Only names actually shortened at this caller location
+                // use its proven unique declaration. Untouched aliases and
+                // generic parameters retain their declaring-source identity.
+                var declaration = shortened?.GetValueOrDefault(token.Start) ?? TypeSymbol(name, context);
+                target = navigable ? SymbolLocation(declaration) : null;
+                if (declaration != null)
+                {
+                    kind = declaration.Classification;
+                    spelling = CompletionSpelling(declaration);
+                }
+            }
+            // `>::Nested` is not an ordinary qualified-name token chain.
+            // Its checked source symbol is already known; do not recover it
+            // from the display spelling or mistake a generic argument for it.
+            if (navigable && i == finalTypeName && finalType != null)
+            {
+                kind = finalType.Classification;
+                target = SymbolLocation(finalType);
+            }
+            Add(spelling, kind, target);
+            if (token.Kind == TokenKind.CloseBracket && i > 0 && tokens[i - 1].Kind == TokenKind.Colon) inSplice = false;
+            cursor = token.End + 1;
+        }
+        Add(text[cursor..]);
     }
 
     private DisplayPart[] Signature(Symbol symbol, bool navigable = false, string? hoverPath = null, int hoverOffset = 0)
@@ -61,71 +141,7 @@ public sealed partial class EditorModel
             TypeText(text, finalType, shortened);
         }
         void TypeText(string text, Symbol? finalType = null, IReadOnlyDictionary<int, Symbol>? shortened = null)
-        {
-            var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
-            int finalTypeName = -1;
-            if (finalType != null)
-            {
-                int depth = 0;
-                for (int i = 0; i < tokens.Length; i++)
-                {
-                    if (tokens[i].Kind == TokenKind.Less) depth++;
-                    else if (tokens[i].Kind == TokenKind.Greater) depth--;
-                    else if (tokens[i].Kind == TokenKind.GreaterGreater) depth -= 2;
-                    else if (depth == 0 && tokens[i].Kind == TokenKind.Identifier) finalTypeName = i;
-                }
-            }
-            int cursor = 0;
-            bool inSplice = false;
-            for (int i = 0; i < tokens.Length; i++)
-            {
-                var token = tokens[i];
-                if (token.Kind == TokenKind.OpenBracket && i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.Colon) inSplice = true;
-                Add(text[cursor..token.Start]);
-                string kind = (TypeChecker.IsPrimitive(token.Text) || token.Text == "ref") ? "keyword" : token.Kind == TokenKind.Identifier
-                    ? i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon ? "namespace" : "type"
-                    : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
-                Location? target = null;
-                string spelling = text[token.Start..(token.End + 1)];
-                bool qualifiedName = i > 0 && tokens[i - 1].Kind == TokenKind.DoubleColon;
-                bool shortenedName = shortened?.ContainsKey(token.Start) == true;
-                bool escapedTypeKeyword = token.Kind != TokenKind.Identifier && char.IsLetter(token.Text.FirstOrDefault()) &&
-                    (qualifiedName || shortenedName ||
-                        !TypeChecker.IsPrimitive(token.Text) && token.Kind != TokenKind.Ref &&
-                        !(token.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Managed &&
-                            i + 1 < tokens.Length && tokens[i + 1].Kind is TokenKind.OpenParen or TokenKind.Less));
-                if (inSplice && token.Kind == TokenKind.Identifier)
-                    kind = token.Text == "this" ? "keyword" : i > 0 && tokens[i - 1].Kind == TokenKind.Dot ? "property" : "variable";
-                if (!inSplice && (navigable && token.Kind == TokenKind.Identifier || escapedTypeKeyword))
-                {
-                    int first = i;
-                    while (first >= 2 && tokens[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
-                    string name = string.Concat(tokens[first..(i + 1)].Select(t => t.Text));
-                    // Only names actually shortened at this caller location
-                    // use its proven unique declaration. Untouched aliases and
-                    // generic parameters retain their declaring-source identity.
-                    var declaration = shortened?.GetValueOrDefault(token.Start) ?? TypeSymbol(name, symbol);
-                    target = navigable ? SymbolLocation(declaration) : null;
-                    if (declaration != null)
-                    {
-                        kind = declaration.Classification;
-                        if (escapedTypeKeyword) spelling = CompletionSpelling(declaration);
-                    }
-                }
-                // `>::Nested` is not an ordinary qualified-name token chain.
-                // Its checked source symbol is already known; do not recover it
-                // from the display spelling or mistake a generic argument for it.
-                if (navigable && i == finalTypeName && finalType != null)
-                {
-                    kind = finalType.Classification;
-                    target = SymbolLocation(finalType);
-                }
-                Add(spelling, kind, target);
-                if (token.Kind == TokenKind.CloseBracket && i > 0 && tokens[i - 1].Kind == TokenKind.Colon) inSplice = false;
-                cursor = token.End + 1;
-            }
-            Add(text[cursor..]);
-        }
+            => AddTypeDisplayParts(parts, text, symbol, navigable, finalType, shortened);
         void Name()
         {
             // A nested type use retains its checked enclosing specialization.

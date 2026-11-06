@@ -169,8 +169,12 @@ public sealed partial class EditorModel
         using (PipelineTimings.Measure("editor.index.generic-parameters")) RegisterTypeParameters();
         foreach (var group in symbols.GroupBy(symbol => symbol.Name)) symbolsByName.Add(group.Key, group.ToArray());
         foreach (var symbol in symbols)
+        {
             if (symbol.NameSpan.Source?.Path is { } path)
                 declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
+            if ((symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration) && HasSourceIdentifierEscape(symbol))
+                escapedTypeDisplayNames.Add(symbol.Name);
+        }
         declarationIndexTiming?.Dispose();
         using (PipelineTimings.Measure("editor.index.type-names")) IndexSourceTypeNames();
         cancellationToken.ThrowIfCancellationRequested();
@@ -184,11 +188,25 @@ public sealed partial class EditorModel
         using (PipelineTimings.Measure("editor.index.documentation")) IndexDocumentation();
     }
 
-    private string ParameterText(Parameter p)
+    private string ParameterText(Parameter p, Symbol context)
     {
-        string name = declarations.GetValueOrDefault(p) is { } symbol ? CompletionSpelling(symbol) :
+        var symbol = declarations.GetValueOrDefault(p);
+        if (symbol == null)
+        {
+            var sourceParameters = context.Syntax.Node switch
+            {
+                MethodDeclaration method => method.Parameters,
+                ConstructorDeclaration constructor => constructor.Parameters,
+                ExternDeclaration external => external.Parameters,
+                OperatorDeclaration op => op.Parameters,
+                _ => null
+            };
+            if (sourceParameters?.FirstOrDefault(parameter => parameter.Name == p.Name) is { } original)
+                symbol = declarations.GetValueOrDefault(original);
+        }
+        string name = symbol != null ? CompletionSpelling(symbol) :
             Lexer.GetKeyword(p.Name) != TokenKind.Identifier ? "@" + p.Name : p.Name;
-        return $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {name}" +
+        return $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{SourceTypeSpelling(p.Type, context)} {name}" +
             (p.DefaultValue == null ? "" : " = " + ParameterDefaultText(p));
     }
     private static string Join(string left, string right) => left.Length == 0 ? right : left + "::" + right;
@@ -834,13 +852,14 @@ public sealed partial class EditorModel
 
     public object Completion(string path, int offset) => Completion(path, offset, null);
 
-    private static string CompletionSpelling(Symbol symbol, bool escapedPrefix = false)
+    private static bool HasSourceIdentifierEscape(Symbol symbol)
     {
         var span = symbol.NameSpan;
-        bool declaredEscaped = span.Length > 0 && span.Source is { } source && span.Start > 0 &&
+        return span.Length > 0 && span.Source is { } source && span.Start > 0 &&
             span.Start <= source.Text.Length && source.Text[span.Start - 1] == '@';
-        return escapedPrefix || declaredEscaped || Lexer.GetKeyword(symbol.Name) != TokenKind.Identifier ? "@" + symbol.Name : symbol.Name;
     }
+    private static string CompletionSpelling(Symbol symbol, bool escapedPrefix = false)
+        => escapedPrefix || HasSourceIdentifierEscape(symbol) || Lexer.GetKeyword(symbol.Name) != TokenKind.Identifier ? "@" + symbol.Name : symbol.Name;
 
     private object Completion(string path, int offset, TextRange? replacementRange)
     {
@@ -1051,7 +1070,7 @@ public sealed partial class EditorModel
         return new { signatures = candidates.Select(s => new {
             label = Detail(s),
             documentation = Documentation(s) is { } summary ? new Markup("plaintext", summary) : null,
-            parameters = s.Parameters!.Select(p => new { label = ParameterText(p), documentation = ParameterDocumentation(s, p.Name) is { } description ? new Markup("plaintext", description) : null }).ToArray(),
+            parameters = s.Parameters!.Select(p => new { label = ParameterText(p, s), documentation = ParameterDocumentation(s, p.Name) is { } description ? new Markup("plaintext", description) : null }).ToArray(),
             _vs_colorizedLabel = visualStudio ? VisualStudioHover.Text(Signature(s, navigable: true)) : null
         }).ToArray(), activeSignature = active, activeParameter = call.Commas };
     }

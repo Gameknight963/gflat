@@ -89,10 +89,10 @@ public sealed partial class EditorModel
                 {
                     var method = (MethodDeclaration)member.Syntax.Node;
                     string generics = method.GenericParameters.Count == 0 ? "" : "<" + string.Join(", ", method.GenericParameters.Select(p => p.Name +
-                        (p.Constraint == null ? "" : " : " + DisplayType(p.Constraint)))) + ">";
+                        (p.Constraint == null ? "" : " : " + SourceTypeSpelling(p.Constraint, member)))) + ">";
                     string signature = "public " + (method.IsStatic ? "static " : "") + (method.IsImmutable ? "immutable " : method.IsReadOnly ? "readonly " : "") +
-                        (method.IsRefReturn ? "ref " : "") + DisplayType(member.BoundType ?? method.ReturnType) + " " + CompletionSpelling(member) + generics + "(" +
-                        string.Join(", ", (member.Parameters ?? []).Select(ParameterText)) + ")" + (method.IsNoThrow ? " nothrow" : "");
+                        (method.IsRefReturn ? "ref " : "") + SourceTypeSpelling(member.BoundType ?? method.ReturnType, member) + " " + CompletionSpelling(member) + generics + "(" +
+                        string.Join(", ", (member.Parameters ?? []).Select(parameter => ParameterText(parameter, member))) + ")" + (method.IsNoThrow ? " nothrow" : "");
                     return indent + signature + newline + indent + "{" + newline + indent + "    " + stub + newline + indent + "}";
                 }
                 foreach (var contract in AncestorTypes(owner).Where(s => s.Syntax.Node is InterfaceDeclaration))
@@ -104,7 +104,7 @@ public sealed partial class EditorModel
                     string MemberStub(Symbol member)
                     {
                         if (member.Syntax.Node is not PropertyDeclaration property) return MethodStub(member);
-                        var result = new StringBuilder(indent + "public " + (property.IsRef ? "ref " : "") + DisplayType(member.BoundType ?? property.Type) + " " + CompletionSpelling(member) + newline + indent + "{" + newline);
+                        var result = new StringBuilder(indent + "public " + (property.IsRef ? "ref " : "") + SourceTypeSpelling(member.BoundType ?? property.Type, member) + " " + CompletionSpelling(member) + newline + indent + "{" + newline);
                         foreach (var accessor in new[] { ("get", property.Getter), ("set", property.Setter) })
                             if (accessor.Item2 is { } method)
                                 result.Append(indent + "    " + (method.IsImmutable ? "immutable " : method.IsReadOnly ? "readonly " : "") + accessor.Item1 +
@@ -119,7 +119,7 @@ public sealed partial class EditorModel
                 if (fields.Length > 0 && !symbols.Any(s => s.Owner == owner.Qualified && s.Syntax.Node is ConstructorDeclaration &&
                     s.Parameters?.Select(p => DisplayType(p.Type)).SequenceEqual(fields.Select(f => DisplayType(f.Type!))) == true))
                 {
-                    string generated = newline + indent + "public " + CompletionSpelling(owner) + "(" + string.Join(", ", fields.Select(f => DisplayType(f.Type!) + " " + CompletionSpelling(f))) + ")" +
+                    string generated = newline + indent + "public " + CompletionSpelling(owner) + "(" + string.Join(", ", fields.Select(f => SourceTypeSpelling(f.Type!, f) + " " + CompletionSpelling(f))) + ")" +
                         newline + indent + "{" + newline + string.Join(newline, fields.Select(f => indent + "    this." + CompletionSpelling(f) + " = move " + CompletionSpelling(f) + ";")) +
                         newline + indent + "}" + newline;
                     actions.Add(Action("Generate constructor", "refactor.rewrite", path, new SourceEdit(Workspace.ToRange(source.Span(close.Start, 0)), generated)));

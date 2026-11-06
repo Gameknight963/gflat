@@ -8,7 +8,10 @@ namespace gflat;
 public sealed class SourceSyntaxCache
 {
     private sealed record Entry(SourceFile Source, bool RecoverErrors, CompilationUnit Tree, Diagnostic[] Diagnostics,
-        LinkedListNode<string> Recency);
+        LinkedListNode<string> Recency)
+    {
+        public int CloneSize;
+    }
     private readonly Dictionary<string, Entry> entries = new(StringComparer.Ordinal);
     private readonly LinkedList<string> recency = new();
     private readonly object gate = new();
@@ -46,7 +49,12 @@ public sealed class SourceSyntaxCache
             }
         }
         CompilationUnit result;
-        try { result = new SyntaxTreeCloner(cancellationToken).Clone(entry.Tree); }
+        try
+        {
+            var cloner = new SyntaxTreeCloner(cancellationToken, Volatile.Read(ref entry.CloneSize));
+            result = cloner.Clone(entry.Tree);
+            Volatile.Write(ref entry.CloneSize, cloner.ObjectCount);
+        }
         catch (NotSupportedException)
         {
             // New syntax storage shapes must never result in shared mutable data.

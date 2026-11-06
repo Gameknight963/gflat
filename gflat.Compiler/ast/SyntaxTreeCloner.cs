@@ -6,14 +6,15 @@ namespace gflat.ast;
 
 // Copies pristine parser output without applying specialization or binding.
 // Unlike AstCloner, this preserves every syntax field and graph relationship.
-internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken)
+internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int capacity = 0)
 {
     private static readonly Func<object, object> ShallowCopy =
         (Func<object, object>)typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
             .CreateDelegate(typeof(Func<object, object>));
     private static readonly ConcurrentDictionary<Type, FieldInfo[]> Fields = new();
-    private readonly Dictionary<object, object> copies = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<object, object> copies = new(capacity, ReferenceEqualityComparer.Instance);
     private int copied;
+    internal int ObjectCount => copies.Count;
 
     internal CompilationUnit Clone(CompilationUnit tree)
     {

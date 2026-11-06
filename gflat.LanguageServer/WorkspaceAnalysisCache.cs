@@ -16,6 +16,12 @@ internal sealed class WorkspaceAnalysisCache
     {
         cancellationToken.ThrowIfCancellationRequested();
         options ??= new();
+        // Retain the inputs used for this analysis even when the caller updates
+        // its configuration collections before requesting another snapshot.
+        options = options with {
+            IncludeDirectories = options.IncludeDirectories.ToArray(),
+            Defines = options.Defines.Count == 0 ? EmptyDefines : new Dictionary<string, string>(options.Defines, StringComparer.Ordinal)
+        };
         SourceFile[]? automatic = ReadAutomaticSources(options);
         for (int index = entries.Count - 1; index >= 0; index--)
         {

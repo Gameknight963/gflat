@@ -4,6 +4,44 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class WorkspaceAnalysisReuseTests : IDisposable
 {
+    [Fact]
+    public void MutatingMacroOptionsDoesNotReuseThePreviousAnalysis()
+    {
+        var source = new SourceFile(Path.GetFullPath("mutable-cache-defines.gf"), "int Read()=>VALUE;");
+        var defines = new Dictionary<string, string> { ["VALUE"] = "1" };
+        var options = new CompilationOptions { NoStdLib = true, Defines = defines, IncludeLoader = path => path == source.Path ? source : null };
+        var cache = new WorkspaceAnalysisCache();
+        var first = cache.Get([source], options);
+        Assert.Empty(first.Snapshot.Diagnostics);
+        Assert.Same(first.Snapshot, cache.Get([source], options).Snapshot);
+        defines["VALUE"] = "missing";
+        var changed = cache.Get([source], options);
+        Assert.NotSame(first.Snapshot, changed.Snapshot);
+        Assert.Contains(changed.Snapshot.Diagnostics, diagnostic => diagnostic.Message.Contains("missing", StringComparison.Ordinal));
+        Assert.Equal("1", first.Snapshot.Options.Defines["VALUE"]);
+        Assert.Same(changed.Snapshot, cache.Get([source], options).Snapshot);
+    }
+
+    [Fact]
+    public void MutatingIncludeDirectoriesDoesNotReuseThePreviousHeader()
+    {
+        string firstHeader = Write("first/value.gfh", "int Read()=>1;");
+        string secondHeader = Write("second/value.gfh", "int Read()=>missing;");
+        var source = new SourceFile(Path.Combine(root, "main.gf"), "#include <value.gfh>\nint main()=>Read();");
+        var directories = new List<string> { Path.GetDirectoryName(firstHeader)! };
+        var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = directories, IncludeLoader = path => path == source.Path ? source : null };
+        var cache = new WorkspaceAnalysisCache();
+        var first = cache.Get([source], options);
+        Assert.Empty(first.Snapshot.Diagnostics);
+        Assert.Same(first.Snapshot, cache.Get([source], options).Snapshot);
+        directories[0] = Path.GetDirectoryName(secondHeader)!;
+        var changed = cache.Get([source], options);
+        Assert.NotSame(first.Snapshot, changed.Snapshot);
+        Assert.Contains(changed.Snapshot.Diagnostics, diagnostic => diagnostic.Message.Contains("missing", StringComparison.Ordinal));
+        Assert.Equal(Path.GetDirectoryName(firstHeader), first.Snapshot.Options.IncludeDirectories[0]);
+        Assert.Same(changed.Snapshot, cache.Get([source], options).Snapshot);
+    }
+
     private readonly string root = Path.Combine(Path.GetTempPath(), "gflat_analysis_reuse_" + Guid.NewGuid().ToString("N"));
 
     private string Write(string relative, string text)

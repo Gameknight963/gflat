@@ -88,9 +88,10 @@ public sealed partial class EditorModel
             Location? target = null;
             string spelling = text[token.Start..(token.End + 1)];
             bool qualifiedName = i > 0 && tokens[i - 1].Kind == TokenKind.DoubleColon;
+            bool qualifier = i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon;
             bool shortenedName = shortened?.ContainsKey(token.Start) == true;
             bool escapedTypeKeyword = token.Kind != TokenKind.Identifier && char.IsLetter(token.Text.FirstOrDefault()) &&
-                (qualifiedName || shortenedName ||
+                (qualifiedName || qualifier || shortenedName ||
                     !TypeChecker.IsPrimitive(token.Text) && token.Kind != TokenKind.Ref &&
                     !(i + 1 < tokens.Length &&
                         (token.Kind is TokenKind.Readonly or TokenKind.Immutable && tokens[i + 1].Kind == TokenKind.OpenParen ||
@@ -107,6 +108,9 @@ public sealed partial class EditorModel
                 // use its proven unique declaration. Untouched aliases and
                 // generic parameters retain their declaring-source identity.
                 var declaration = shortened?.GetValueOrDefault(token.Start) ?? TypeSymbol(name, context);
+                if (declaration == null && qualifier)
+                    declaration = SymbolsNamed(token.Text).FirstOrDefault(symbol => symbol.Syntax.Node is NamespaceDeclaration &&
+                        (symbol.Qualified == name || symbol.Qualified == Join(context.Namespace, name)));
                 target = navigable ? SymbolLocation(declaration) : null;
                 if (declaration != null)
                 {

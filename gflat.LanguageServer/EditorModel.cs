@@ -191,7 +191,7 @@ public sealed partial class EditorModel
         {
             if (symbol.NameSpan.Source?.Path is { } path)
                 declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
-            if ((symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration) && HasSourceIdentifierEscape(symbol))
+            if ((symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration or NamespaceDeclaration) && HasSourceIdentifierEscape(symbol))
                 escapedTypeDisplayNames.Add(symbol.Name);
         }
         declarationIndexTiming?.Dispose();

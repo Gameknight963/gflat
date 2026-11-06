@@ -5,6 +5,25 @@ namespace gflat.LanguageServer.Tests;
 public sealed class EscapedIdentifierEditorTests
 {
     [Theory]
+    [InlineData("namespace @namespace { public class Item {} } void Use(@namespace::Item* value) {}", "@namespace::Item* value", "@namespace")]
+    [InlineData("namespace @int { public class Item {} } void Use(@int::Item* value) {}", "@int::Item* value", "@int")]
+    [InlineData("#define VALUE 7\nnamespace @VALUE { public class Item {} } void Use(@VALUE::Item* value) {}", "@VALUE::Item* value", "@VALUE")]
+    public void EscapedNamespaceQualifiersKeepTheirSourceSpellingAndColor(string text, string expected, string name)
+    {
+        var source = new SourceFile(Path.GetFullPath("escaped-namespace-hover.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == gflat.diagnostics.DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        int offset = text.LastIndexOf("value", StringComparison.Ordinal);
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, offset), Protocol.JsonOptions);
+        Assert.Contains(expected, hover.GetProperty("contents").GetProperty("value").GetString());
+        var rich = JsonSerializer.SerializeToElement(model.Hover(source.Path, offset,
+            new VisualStudioHover(JsonSerializer.SerializeToElement(new { }))), Protocol.JsonOptions);
+        var runs = rich.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements")[0].GetProperty("Runs").EnumerateArray();
+        Assert.Contains(runs, run => run.GetProperty("Text").GetString() == name && run.GetProperty("ClassificationTypeName").GetString() == "namespace name");
+    }
+
+    [Theory]
     [InlineData("@class Echo<@class>(@class value) => value; int Use() => Echo<int>(42);", "@class Echo<@class>(@class value)")]
     [InlineData("#define VALUE 7\n@VALUE Echo<@VALUE>(@VALUE value) => value; int Use() => Echo<int>(42);", "@VALUE Echo<@VALUE>(@VALUE value)")]
     public void GenericDeclarationHoversPreserveTypeParameterEscapes(string text, string expected)

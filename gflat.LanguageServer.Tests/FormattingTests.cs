@@ -6,6 +6,24 @@ namespace gflat.LanguageServer.Tests;
 public sealed class FormattingTests
 {
     [Theory]
+    [InlineData("int F(int* p){return * p;}", "return *p;")]
+    [InlineData("int* F(ref int value){return & value;}", "return &value;")]
+    [InlineData("int F(int value){return ++ value;}", "return ++value;")]
+    [InlineData("int F(int value){return -- value;}", "return --value;")]
+    [InlineData("int F(int value){value ++;return value;}", "value++;")]
+    [InlineData("int F(int** p){return * * p;}", "return **p;")]
+    [InlineData("int** F(ref int value){return & & value;}", "return & &value;")]
+    [InlineData("int* F(int*? p){return p !;}", "return p!;")]
+    [InlineData("int F(int*? p){return p ! [0];}", "return p![0];")]
+    public void UnaryOperatorsStayAttachedWithoutMergingDistinctTokens(string text, string expected)
+    {
+        var source = new SourceFile(Path.GetFullPath("format-prefix.gf"), text);
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Contains(expected, actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
+    [Theory]
     [InlineData("int F(int a,int b){return a*b;}", "a * b")]
     [InlineData("int F(int a,int b){return a&b;}", "a & b")]
     [InlineData("int F(int a,int b){return a^b;}", "a ^ b")]

@@ -28,16 +28,18 @@ public static class SourceFormatter
         }
         var tokens = Lexer.Tokenize(source, new diagnostics.DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
         var tokenStarts = tokens.Select(token => token.Start).ToArray();
-        var unaryMinus = new HashSet<int>();
+        var prefixOperators = new HashSet<int>();
+        var postfixOperators = new HashSet<int>();
         var binaryOperators = new HashSet<int>();
         foreach (var node in syntax)
         {
-            if (node.Node is UnaryExpression { IsPrefix: true, Operator: TokenKind.Minus } unary &&
+            if (node.Node is UnaryExpression { IsPrefix: true } unary &&
+                unary.Operator is TokenKind.Minus or TokenKind.Star or TokenKind.Ampersand or TokenKind.Bang or TokenKind.Tilde or TokenKind.PlusPlus or TokenKind.MinusMinus &&
                 unary.Operand.Span.Source?.Path == source.Path)
             {
                 int index = Array.BinarySearch(tokenStarts, unary.Operand.Span.Start);
                 index = index < 0 ? ~index - 1 : index - 1;
-                if (index >= 0 && tokens[index].Kind == TokenKind.Minus) unaryMinus.Add(tokens[index].Start);
+                if (index >= 0 && tokens[index].Kind == unary.Operator) prefixOperators.Add(tokens[index].Start);
             }
             if (node.Node is BinaryExpression binary && binary.Left.Span.Source?.Path == source.Path &&
                 binary.Right.Span.Source?.Path == source.Path)
@@ -50,6 +52,12 @@ public static class SourceFormatter
                         binaryOperators.Add(tokens[index].Start);
                         break;
                     }
+            }
+            if (node.Node is UnaryExpression { IsPrefix: false } postfix && postfix.Operand.Span.Source?.Path == source.Path)
+            {
+                int index = Array.BinarySearch(tokenStarts, postfix.Operand.Span.Start + postfix.Operand.Span.Length);
+                if (index < 0) index = ~index;
+                if (index < tokens.Length && tokens[index].Kind == postfix.Operator) postfixOperators.Add(tokens[index].Start);
             }
         }
         var directives = new HashSet<int>();
@@ -129,10 +137,17 @@ public static class SourceFormatter
                         else
                         {
                             bool typeGap = InSameType(previous.Start, token.End);
-                            replacement = unaryMinus.Contains(previous.Start)
-                                ? token.Kind is TokenKind.Minus or TokenKind.MinusMinus ? " " : ""
-                                : binaryOperators.Contains(previous.Start) || binaryOperators.Contains(token.Start) ? " "
-                                : typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
+                            if (prefixOperators.Contains(previous.Start))
+                            {
+                                bool merges = previous.Kind == TokenKind.Minus && token.Kind is TokenKind.Minus or TokenKind.MinusMinus ||
+                                    previous.Kind == TokenKind.Ampersand && token.Kind is TokenKind.Ampersand or TokenKind.AmpersandAmpersand;
+                                replacement = merges ? " " : "";
+                            }
+                            else if (prefixOperators.Contains(token.Start))
+                                replacement = previous.Kind is TokenKind.OpenParen or TokenKind.OpenBracket or TokenKind.Dot or TokenKind.DoubleColon ? "" : " ";
+                            else if (postfixOperators.Contains(token.Start)) replacement = "";
+                            else if (binaryOperators.Contains(previous.Start) || binaryOperators.Contains(token.Start)) replacement = " ";
+                            else replacement = typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
                         }
                         Edit(start, length, replacement);
                     }

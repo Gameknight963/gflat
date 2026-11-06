@@ -343,6 +343,20 @@ public class EditorGrammarTests
         Assert.Equal(expected, Regex.IsMatch(line, pattern));
     }
 
+    [Theory]
+    [InlineData("struct Item\n{", "}", true)]
+    [InlineData("struct Item\n{", "\n}", false)]
+    [InlineData("struct Item\n{\n", "}", false)]
+    [InlineData("struct Item\n{", "    }", true)]
+    public void BracePairEnterRuleOnlyInsertsAnOutdentForASameLineCloser(string before, string after, bool expected)
+    {
+        using var config = JsonDocument.Parse(File.ReadAllText(Asset("gflat-language-configuration.json")));
+        var rule = config.RootElement.GetProperty("onEnterRules")[0];
+        bool matches = Regex.IsMatch(before.Split('\n')[^1], rule.GetProperty("beforeText").GetString()!) &&
+            Regex.IsMatch(after, rule.GetProperty("afterText").GetString()!);
+        Assert.Equal(expected, matches);
+    }
+
     [Fact]
     public void PairsExcludeCommentsAndStringsAndDoNotCloseComparisonOperators()
     {

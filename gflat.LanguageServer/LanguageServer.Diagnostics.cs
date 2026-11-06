@@ -7,7 +7,11 @@ public sealed partial class LanguageServer
 
     private async Task PublishDiagnostics(Analysis analysis)
     {
-        foreach (string path in published.Keys.Union(analysis.Diagnostics.Keys, Workspace.Paths).ToArray())
+        // A focused pass may update only the documents whose bodies were checked.
+        // Keep diagnostics from unopened files until a full pass replaces them.
+        var paths = analysis.IsPartial ? analysis.CompletedDiagnosticPaths ?? [] :
+            published.Keys.Union(analysis.Diagnostics.Keys, Workspace.Paths).ToArray();
+        foreach (string path in paths)
         {
             documents.TryGetValue(path, out var document);
             var diagnostics = analysis.Diagnostics.GetValueOrDefault(path) ?? [];

@@ -844,7 +844,7 @@ public sealed partial class EditorModel
             return new HoverResult(new("markdown", "```gflat\n" + Detail(documented.Symbol) + "\n```"), Workspace.ToRange(documented.Span),
                 presentation?.Render(signature, [], Glyph(documented.Symbol)));
         }
-        if (MacroAt(path, offset) is { Classification: "preprocessor" }) return null;
+        if (MacroAt(path, offset) is { Classification: "preprocessor" }) return options.ShowLanguageConstructs ? LanguageConstructHover(path, offset, presentation) : null;
         if (MacroHover(path, offset, presentation) is { } macro) return macro;
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
         if (query != null) return query;
@@ -898,7 +898,7 @@ public sealed partial class EditorModel
             return new HoverResult(new("markdown", "```gflat\n" + name + "\n```\n\n" + string.Join("  \n", layout.Select(d => d.Markdown))),
                 Workspace.ToRange(tokens[path][index].Span), presentation?.Render([new("keyword", name)], layout, "struct.public"));
         }
-        if (symbol == null) return null;
+        if (symbol == null) return options.ShowLanguageConstructs ? LanguageConstructHover(path, offset, presentation) : null;
         var parts = Signature(symbol, navigable: true, hoverPath: path, hoverOffset: offset);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = options.ShowTypeLayout && !symbol.IsTypeParameter ? LayoutDetails(symbol) : [];

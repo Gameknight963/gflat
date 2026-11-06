@@ -30,6 +30,36 @@ namespace gflat.PackageTests
         private static T Interface<T>(Func<IMethodCallMessage, object> call)
         { return (T)new Proxy(typeof(T), call).GetTransparentProxy(); }
 
+        public static void RunLibraryProtection(Assembly assembly)
+        {
+            var listener = assembly.GetType("gflat.VisualStudio.GflatLibraryProtection", true);
+            bool created = false, applied = false, disposed = false;
+            var snapshot = Interface<Microsoft.VisualStudio.Text.ITextSnapshot>(m => m.MethodName == "get_Length" ? (object)42 : null);
+            var region = Interface<Microsoft.VisualStudio.Text.IReadOnlyRegion>(m => null);
+            var edit = Interface<Microsoft.VisualStudio.Text.IReadOnlyRegionEdit>(m => {
+                if (m.MethodName == "CreateReadOnlyRegion") {
+                    var span = (Microsoft.VisualStudio.Text.Span)m.Args[0];
+                    if (span.Start != 0 || span.Length != 42 ||
+                        (Microsoft.VisualStudio.Text.SpanTrackingMode)m.Args[1] != Microsoft.VisualStudio.Text.SpanTrackingMode.EdgeInclusive ||
+                        (Microsoft.VisualStudio.Text.EdgeInsertionMode)m.Args[2] != Microsoft.VisualStudio.Text.EdgeInsertionMode.Deny)
+                        throw new Exception("Library protection must include the whole buffer and both insertion edges");
+                    created = true;
+                    return region;
+                }
+                if (m.MethodName == "Apply") { applied = true; return snapshot; }
+                if (m.MethodName == "Dispose") { disposed = true; return null; }
+                throw new Exception("Unexpected read-only region edit operation: " + m.MethodName);
+            });
+            var buffer = Interface<Microsoft.VisualStudio.Text.ITextBuffer>(m =>
+                m.MethodName == "get_CurrentSnapshot" ? (object)snapshot :
+                m.MethodName == "CreateReadOnlyRegionEdit" ? edit : null);
+            var result = listener.GetMethod("Protect", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { buffer });
+            if (!created || !applied || !disposed || !Object.ReferenceEquals(result, region))
+                throw new Exception("Library protection did not commit its read-only region");
+            if (!typeof(Microsoft.VisualStudio.Text.Editor.IWpfTextViewCreationListener).IsAssignableFrom(listener))
+                throw new Exception("Library protection must be registered as a view creation listener");
+        }
+
         public static void RunTextMateTheme(Assembly assembly, string grammarPath)
         {
             var grammarInterface = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.Parser.IGrammar", true);

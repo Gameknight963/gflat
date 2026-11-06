@@ -93,7 +93,7 @@ public sealed partial class EditorModel
         if (snapshot.Checker is not { } checker || ReflectionReceiver(path, index - 1, insertedSeparator) is not { } receiver) return null;
         checker.TryGetConstValue(receiver, out var constant);
         var value = constant as ConstValue.Reflection;
-        var names = new List<string> { "Name", "QualifiedName", "Kind", "IsType" };
+        var names = new List<string> { "Name", "QualifiedName", "Kind", "IsType", "Attributes" };
         if (value == null || value.Type != null) names.Add("Type");
         if (value?.DeclaringType != null) names.Add("DeclaringType");
         if (value?.Declaration is FieldDeclaration field)
@@ -101,6 +101,8 @@ public sealed partial class EditorModel
             names.AddRange(["IsStatic", "IsConst", "Accessibility", "IsPublic", "IsPrivate"]);
             if (value.DeclaringType != null && !field.IsStatic && !field.IsConst) names.Add("Offset");
         }
+        if (value?.Kind == "Attribute") names.Add("Value");
+        if (value?.Declaration is PropertyDeclaration) names.AddRange(["HasGetter", "HasSetter", "IsRef", "IsStatic", "Accessibility", "IsPublic", "IsPrivate"]);
         if (value?.Declaration is AliasDeclaration) names.AddRange(["Target", "IsConstrained", "Constraints"]);
         if (value?.Declaration is VariableDeclaration) names.Add("IsConst");
         if (value?.Overloads != null) names.Add("Overloads");
@@ -110,7 +112,7 @@ public sealed partial class EditorModel
             names.AddRange(["HasLayout", "Size", "Alignment", "IsReadOnly", "IsImmutable", "IsPointer", "IsManaged",
                 "IsNullable", "HasDestructor", "HasFixedLength", "HasElementType", "IsStruct", "IsClass", "IsInterface",
                 "IsEnum", "IsPrimitive", "IsArray", "IsReference", "IsFunctionPointer", "IsFunctionSignature",
-                "Fields", "StaticFields", "Methods", "Bases"]);
+                "Fields", "StaticFields", "Properties", "StaticProperties", "Methods", "Bases"]);
             if (value == null || value.Type is PointerTypeExpression or ManagedTypeExpression or ArrayTypeExpression or ReferenceTypeExpression)
                 names.Add("ElementType");
             if (value?.Type is ArrayTypeExpression { Size: not null }) names.Add("Length");

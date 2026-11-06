@@ -27,7 +27,7 @@ public sealed class AnalysisSnapshot
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> Children = new();
 
     public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null, CancellationToken cancellationToken = default,
-        IReadOnlySet<SourceId>? bodySources = null, SourceTokenCache? tokenCache = null)
+        IReadOnlySet<SourceId>? bodySources = null, SourceTokenCache? tokenCache = null, bool checkTypes = true)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Options = options ?? new();
@@ -71,8 +71,11 @@ public sealed class AnalysisSnapshot
                 _ => false
             };
             cancellationToken.ThrowIfCancellationRequested();
-            Checker = new TypeChecker(diagnostics, recoverErrors: true, cancellationToken: cancellationToken, bodySources: bodySources);
-            compilation.Unit.Accept(Checker);
+            if (checkTypes)
+            {
+                Checker = new TypeChecker(diagnostics, recoverErrors: true, cancellationToken: cancellationToken, bodySources: bodySources);
+                compilation.Unit.Accept(Checker);
+            }
             cancellationToken.ThrowIfCancellationRequested();
         }
         catch (TypeCheckException error)

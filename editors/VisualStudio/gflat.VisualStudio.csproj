@@ -62,6 +62,8 @@
     <Compile Include="HoverConnection.cs" />
     <Compile Include="HoverContent.cs" />
     <Compile Include="GflatQuickInfo.cs" />
+    <Compile Include="GflatLibraryProtection.cs" />
+    <Compile Include="PackagedLibraryPaths.cs" />
     <Compile Include="GflatThemeColors.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="GflatBuildProperties.cs" />

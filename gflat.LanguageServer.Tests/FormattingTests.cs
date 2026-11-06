@@ -5,6 +5,16 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class FormattingTests
 {
+    [Fact]
+    public void SyntaxOnlySnapshotsRetainFormattingNodesWithoutRunningTheTypeChecker()
+    {
+        var source = new SourceFile(Path.GetFullPath("syntax-format.gf"), "Missing<int>* Read(){return absent;}");
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true }, checkTypes: false);
+        Assert.Null(snapshot.Checker);
+        Assert.Contains(snapshot.Nodes, node => node.Node is ast.PointerTypeExpression);
+        Assert.Empty(snapshot.Diagnostics);
+    }
+
     private static string Apply(SourceFile source, SourceEdit[] edits)
     {
         string text = source.Text;
@@ -15,6 +25,24 @@ public sealed class FormattingTests
             text = text.Remove(start, end - start).Insert(start, edit.NewText);
         }
         return text;
+    }
+
+    [Fact]
+    public void IndexersStayAttachedWhenFormattingStatements()
+    {
+        var source = new SourceFile(Path.GetFullPath("format-indexer.gf"), "int F(){return map [&s\"One\"];} ");
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Contains("map[&s\"One\"]", actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
+    [Fact]
+    public void ArrayLiteralsKeepTheirLeadingSpaceAndFollowingIndexersStayAttached()
+    {
+        var source = new SourceFile(Path.GetFullPath("format-array-literal.gf"), "int F(){int[2] values=[3,4];return [1,2] [0];}");
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Contains("values = [3, 4];", actual);
+        Assert.Contains("return [1, 2][0];", actual);
     }
 
     [Fact]

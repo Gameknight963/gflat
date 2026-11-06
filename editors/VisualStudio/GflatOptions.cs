@@ -16,11 +16,15 @@ public sealed class GflatOptions : DialogPage
     [Description("Show size and alignment when hovering over a type.")]
     public bool ShowTypeLayout { get; set; } = true;
 
+    [Category("Quick Info"), DisplayName("Show language construct explanations"), DefaultValue(false)]
+    [Description("Show brief explanations when hovering over language keywords and preprocessor directives.")]
+    public bool ShowLanguageConstructs { get; set; }
+
     [Category("Formatting"), DisplayName("Opening braces on a new line"), DefaultValue(true)]
     public bool BracesOnNewLine { get; set; } = true;
 
     internal event Action? Changed;
-    internal object Snapshot() => new { gflat = new { showKnownExceptions = ShowKnownExceptions, showTypeLayout = ShowTypeLayout, bracesOnNewLine = BracesOnNewLine } };
+    internal object Snapshot() => new { gflat = new { showKnownExceptions = ShowKnownExceptions, showTypeLayout = ShowTypeLayout, showLanguageConstructs = ShowLanguageConstructs, bracesOnNewLine = BracesOnNewLine } };
 
     public override void SaveSettingsToStorage()
     {

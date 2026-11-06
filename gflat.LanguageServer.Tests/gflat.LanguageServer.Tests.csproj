@@ -21,6 +21,7 @@
              Link="EditorFixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
     <Compile Include="../gflat.Tests/ProjectFileFixture.cs" Link="ProjectFileFixture.cs" />
+    <Compile Include="../editors/VisualStudio/PackagedLibraryPaths.cs" Link="PackagedLibraryPaths.cs" />
     <ProjectReference Include="../gflat.LanguageServer/gflat.LanguageServer.csproj" />
   </ItemGroup>
 </Project>

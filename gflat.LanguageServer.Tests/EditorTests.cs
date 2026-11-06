@@ -65,12 +65,12 @@ public class EditorTests
     {
         string path = Path.GetFullPath("private-extern.gf");
         string other = Path.GetFullPath("caller.gf");
-        string text = "namespace detail { private extern int abs(int value); } int F() => detail::abs(-42);";
+        string text = "namespace detail { private extern \"C\" int abs(int value); } int F() => detail::abs(-42);";
         var files = new SourceFile[] { new(path, text), new(other, "using detail; int F2() { return 0; }") };
         var model = new EditorModel(new AnalysisSnapshot(files), files);
         int use = text.LastIndexOf("abs", StringComparison.Ordinal);
         var hover = Json(model.Hover(path, use));
-        Assert.Contains("private extern int", hover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("private extern \"C\" int", hover.GetProperty("contents").GetProperty("value").GetString());
         Assert.NotNull(model.Definition(path, use));
         int body = files[1].Text.IndexOf("return", StringComparison.Ordinal);
         Assert.DoesNotContain("abs", Labels(model.Completion(other, body)));
@@ -260,7 +260,7 @@ public class EditorTests
     [Fact]
     public void SignatureHelpClassifiesMemoryFreeWhileTyping()
     {
-        var (model, path, offset, _) = Analyze("namespace Memory { public weak void Free(void* ptr) nothrow {} } void Use() { Memory::Free(|");
+        var (model, path, offset, _) = Analyze("namespace Memory { public weak void Free(void* ptr) nothrow {} } void Use() { Memory::Free(| namespace __gflat_runtime { public void Free(void* storage) nothrow => global::Memory::Free(storage); }");
         var help = Json(model.SignatureHelp(path, offset, visualStudio: true));
         var signature = help.GetProperty("signatures")[0];
         Assert.Equal("public weak void Memory::Free(void* ptr) nothrow", signature.GetProperty("label").GetString());

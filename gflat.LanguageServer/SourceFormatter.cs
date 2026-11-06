@@ -13,7 +13,7 @@ public static class SourceFormatter
         if (options.TabSize is < 1 or > 16) throw new ArgumentException("Tab size must be between 1 and 16.");
         string text = source.Text;
         string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        syntax ??= new AnalysisSnapshot([source], new() { NoStdLib = true }).Nodes;
+        syntax ??= new AnalysisSnapshot([source], new() { NoStdLib = true }, checkTypes: false).Nodes;
         var typeSpans = syntax.Where(n => n.Node is TypeExpression && n.Span.Source?.Path == source.Path).Select(n => n.Span).ToArray();
         var orderedTypes = typeSpans.OrderBy(span => span.Start).ToArray();
         var typeStarts = orderedTypes.Select(span => span.Start).ToArray();
@@ -141,6 +141,8 @@ public static class SourceFormatter
     private static string Spacing(Token previous, Token current, string original)
     {
         if (previous.Kind == TokenKind.Identifier && current.Kind == TokenKind.StringLiteral && original.Length == 0) return "";
+        if (current.Kind == TokenKind.OpenBracket && previous.Kind is TokenKind.Identifier or
+            TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.Bang or TokenKind.StringLiteral or TokenKind.InterpolatedStringEnd) return "";
         if (current.Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.Comma or TokenKind.Semicolon or TokenKind.Dot or TokenKind.DoubleColon ||
             previous.Kind is TokenKind.OpenParen or TokenKind.OpenBracket or TokenKind.Dot or TokenKind.DoubleColon) return "";
         if (current.Kind == TokenKind.OpenParen) return previous.Kind is TokenKind.If or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Switch or TokenKind.Catch ? " " : "";

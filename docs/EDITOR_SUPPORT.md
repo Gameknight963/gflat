@@ -328,3 +328,12 @@ Other LSP clients can supply `gflat.showKnownExceptions` and `gflat.showTypeLayo
 as nested initialization options (`{"gflat":{"showKnownExceptions":true}}`) or
 in `workspace/didChangeConfiguration`'s `settings` object. Colors continue to use
 Visual Studio's existing theme classifications.
+
+### Optional keyword explanations
+
+Visual Studio's Quick Info settings include **Show language construct explanations**.
+It is off by default. Other clients can set `gflat.showLanguageConstructs` to `true`.
+This enables brief keyword and directive explanations while preserving symbol hovers.
+
+Bundled library files opened from the installed extension are read-only in Visual
+Studio. Source libraries in your project remain editable.

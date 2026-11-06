@@ -1,4 +1,4 @@
-#requires -PSEdition Desktop
+﻿#requires -PSEdition Desktop
 param(
     [ValidateSet('Prepare', 'Validate')][string]$Mode,
     [Parameter(Mandatory)][string]$PackageDirectory,
@@ -68,6 +68,7 @@ try {
         )
     }
     [gflat.PackageTests.ThemeColorCheck]::Run($themeType)
+    [gflat.PackageTests.ThemeColorCheck]::RunLibraryProtection($client)
     $textMate = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.TextMate.Core'])
     [gflat.PackageTests.ThemeColorCheck]::RunTextMateTheme($textMate, (Join-Path $PackageDirectory 'Grammars/gflat.tmLanguage.json'))
     Write-Host 'Installed Visual Studio TextMate loader selected the packaged theme and its native classification mappings.'

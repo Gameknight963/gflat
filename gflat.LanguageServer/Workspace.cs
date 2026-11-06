@@ -11,7 +11,7 @@ public sealed record Location(string Uri, TextRange Range);
 public sealed record RelatedInformation(Location Location, string Message);
 public sealed record EditorDiagnostic(TextRange Range, int Severity, string Code, string Source, string Message,
     RelatedInformation[]? RelatedInformation = null);
-public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null, string[]? ProjectDiscoveryDirectories = null, bool IsPartial = false);
+public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null, string[]? ProjectDiscoveryDirectories = null, bool IsPartial = false, string[]? CompletedDiagnosticPaths = null);
 
 public static class Workspace
 {
@@ -64,8 +64,14 @@ public static class Workspace
                         result.Graph.Projects.Any(p => p.IncludesFile(path) && Paths.Equals(ProjectWorkspace.FindProject(path), p.FilePath)))).Distinct(Paths).ToArray();
                     configured.UnionWith(files);
                     watched.UnionWith(files);
-                    Check(files, new() { NoStdLib = true, IncludeDirectories = result.Graph.PreprocessorInputs.Directories,
-                        Defines = result.Graph.PreprocessorInputs.Defines });
+                    var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = result.Graph.PreprocessorInputs.Directories,
+                        Defines = result.Graph.PreprocessorInputs.Defines };
+                    Check(files, options);
+                    // Excluded open files still use the surrounding project's references.
+                    // Their diagnostics and models belong only to the excluded document.
+                    foreach (var excluded in documents.Values.Where(open => open.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase) &&
+                        Paths.Equals(ProjectWorkspace.FindProject(open.Path), project) && !files.Contains(open.Path, Paths)))
+                        Check(files.Append(excluded.Path), options, excluded.Path);
                 }
                 else configured.Add(document.Path);
             }
@@ -101,7 +107,8 @@ public static class Workspace
         }
         foreach (var document in documents.Values)
             if (!configured.Contains(document.Path) && document.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)) Check([document.Path]);
-        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models, discoveryDirectories.ToArray(), models.Values.Any(model => model.IsPartialAnalysis));
+        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models, discoveryDirectories.ToArray(), models.Values.Any(model => model.IsPartialAnalysis),
+            bodyPaths?.Where(path => models.ContainsKey(path)).ToArray());
 
         void WatchDiscovery(string path)
         {
@@ -113,7 +120,7 @@ public static class Workspace
             }
         }
 
-        void Check(IEnumerable<string> paths, CompilationOptions? options = null)
+        void Check(IEnumerable<string> paths, CompilationOptions? options = null, string? documentOnly = null)
         {
             var snapshots = new List<SourceFile>();
             bool unreadable = false;
@@ -143,7 +150,7 @@ public static class Workspace
                 foreach (var source in snapshots.Concat(analysis.Sources))
                 {
                     if (source.Path.StartsWith('<')) continue;
-                    models[source.Path] = model;
+                    if (documentOnly == null || Paths.Equals(source.Path, documentOnly)) models[source.Path] = model;
                     configured.Add(source.Path);
                 }
                 foreach (var diagnostic in analysis.Diagnostics)
@@ -151,12 +158,14 @@ public static class Workspace
                     string path = diagnostic.FilePath ?? snapshots[0].Path;
                     // Synthetic source failures are visible on a real document, never as invalid file URIs.
                     if (path.StartsWith('<')) path = snapshots[0].Path;
+                    if (documentOnly != null && !Paths.Equals(path, documentOnly)) continue;
                     output.TryAdd(path, new());
                     output[path].Add(Convert(diagnostic));
                 }
                 foreach (var issue in model.DocumentationIssues.Where(i => i.Span.Source != null && !i.Span.Source.Path.StartsWith('<')))
                 {
                     string path = issue.Span.Source!.Path;
+                    if (documentOnly != null && !Paths.Equals(path, documentOnly)) continue;
                     output.TryAdd(path, new());
                     output[path].Add(new(ToRange(issue.Span), 2, "GFLS0003", "gflat", issue.Message));
                 }
@@ -164,7 +173,7 @@ public static class Workspace
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception error)
             {
-                output[snapshots[0].Path].Add(Problem("GFLS0002", "Compiler analysis failed: " + error.Message));
+                output[documentOnly ?? snapshots[0].Path].Add(Problem("GFLS0002", "Compiler analysis failed: " + error.Message));
             }
         }
     }

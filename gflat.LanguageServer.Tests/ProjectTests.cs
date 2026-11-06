@@ -16,6 +16,25 @@ public sealed class ProjectTests : IDisposable
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 
     [Fact]
+    public void ExcludedOpenFileKeepsProjectReferenceContextWithoutJoiningTheBuild()
+    {
+        string project = Write("app/app.gfproj", ProjectFileFixture.Xml(content: """
+            <ItemGroup><Compile Remove="scratch.gf" /><None Include="scratch.gf" />
+            <ProjectReference Include="../library/library.gfproj" /></ItemGroup>
+            """));
+        Write("library/library.gfproj", ProjectFileFixture.Xml("SourceLibrary"));
+        Write("library/map.gf", "namespace Collections { public struct HashMap<K, V> {} }");
+        string main = Write("app/main.gf", "int main() => 0;");
+        string scratch = Write("app/scratch.gf", "using Collections;\n\nclass CoolClass { public CoolClass(HashMap<int, int> map) {} }");
+        var open = new Dictionary<string, OpenDocument>(Workspace.Paths) { [scratch] = new(scratch, File.ReadAllText(scratch), 1) };
+        var result = Workspace.Analyze(root, open);
+        Assert.Empty(result.Diagnostics[scratch]);
+        Assert.Empty(result.Diagnostics[main]);
+        Assert.True(result.Models!.ContainsKey(scratch));
+        Assert.DoesNotContain(scratch, new ProjectWorkspace().Load(project).Graph!.Sources);
+    }
+
+    [Fact]
     public void EditorUsesItsDocumentedDebugDefaultsEvenWhenTheProjectSelectsRelease()
     {
         string project = Write("app.gfproj", ProjectFileFixture.Xml(content: """

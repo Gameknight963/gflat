@@ -185,7 +185,11 @@ public sealed partial class EditorModel
             // readonly receiver remains a separate modifier above.
             if (field.IsReadOnly && !field.Type.IsReadOnlyValue) Keyword("readonly");
         }
-        else if (symbol.Syntax.Node is ExternDeclaration) Keyword("extern");
+        else if (symbol.Syntax.Node is ExternDeclaration external)
+        {
+            Keyword("extern");
+            if (external.IsCLinkage) { Add("\"C\"", "string"); Add(" "); }
+        }
         else if (symbol.Syntax.Node is VariableDeclaration { IsConst: true } or Parameter { IsConst: true }) Keyword("const");
         else if (symbol.Syntax.Node is PropertyDeclaration && symbol.Static) Keyword("static");
 

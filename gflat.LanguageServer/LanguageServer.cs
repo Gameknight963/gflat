@@ -9,7 +9,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     private abstract record Event;
     private sealed record Message(byte[] Body) : Event;
     private sealed record Finished(long Generation, Analysis Result, IReadOnlyDictionary<string, OpenDocument> Documents, long ProjectRevision) : Event;
-    private sealed record Changed(string Path) : Event;
+    private sealed record Changed(string Path, bool Force = false) : Event;
     private sealed record InputEnded(Exception? Error) : Event;
     private readonly Channel<Event> events = Channel.CreateUnbounded<Event>(new() { SingleReader = true });
     private readonly Dictionary<string, OpenDocument> documents = new(Workspace.Paths);
@@ -18,6 +18,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     private readonly HashSet<string> projectDiscoveryDirectories = new(Workspace.Paths);
     private readonly ProjectWorkspace projects = new();
     private readonly List<FileSystemWatcher> watchers = new();
+    private HashSet<string> watcherInputs = new(Workspace.Paths);
+    private Dictionary<string, bool> watcherDirectoryInputs = new(Workspace.Paths);
+    private volatile bool watchersNeedRefresh;
     private readonly SemaphoreSlim analysisGate = new(1, 1);
     private CancellationTokenSource? pending;
     private long generation;
@@ -30,6 +33,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     private long analyzedGeneration = -1;
     private long fullyAnalyzedGeneration = -1;
     private TaskCompletionSource<bool>? interactiveRequested;
+    private TaskCompletionSource<bool>? fullAnalysisRequested;
     private sealed record EditorRequest(JsonElement Id, string Method, JsonElement Parameters, long Generation);
     private readonly List<EditorRequest> editorRequests = [];
     private string[] tokenTypes = EditorModel.TokenTypes;
@@ -62,7 +66,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         if (exit != null) return exit.Value;
                         break;
                     case Changed changed when !shutdown:
-                        if (watchedPaths.Contains(changed.Path) ||
+                        if (changed.Force || watchedPaths.Contains(changed.Path) ||
                             ProjectWorkspace.IsProjectDiscoveryChange(changed.Path, projectDiscoveryDirectories) ||
                             projectDirectories.Any(dir => changed.Path.StartsWith(dir + Path.DirectorySeparatorChar, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) ||
                             root != null && Workspace.Paths.Equals(changed.Path, Path.Combine(root, Workspace.ConfigurationName)))
@@ -91,7 +95,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             editorRequests.Remove(query);
                             await AnswerEditor(query);
                         }
-                        if (!result.Result.IsPartial) await PublishDiagnostics(result.Result);
+                        await PublishDiagnostics(result.Result);
                         break;
                 }
             }
@@ -281,12 +285,14 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         if (hasId)
                         {
                             var query = new EditorRequest(id.Clone(), method, parameters.Clone(), generation);
-                            if (method == "textDocument/completion" && analyzedGeneration != generation && TryReuseMemberCompletion(query, out var reused)) await Reply(query.Id, reused);
+                            if (IsFormattingRequest(method)) await AnswerEditor(query);
+                            else if (method == "textDocument/completion" && analyzedGeneration != generation && TryReuseMemberCompletion(query, out var reused)) await Reply(query.Id, reused);
                             else if (analyzedGeneration == generation && (!RequiresFullAnalysis(method) || fullyAnalyzedGeneration == generation)) await AnswerEditor(query);
                             else
                             {
                                 editorRequests.Add(query);
                                 interactiveRequested?.TrySetResult(true);
+                                if (RequiresFullAnalysis(method)) fullAnalysisRequested?.TrySetResult(true);
                             }
                         }
                         break;
@@ -381,10 +387,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 return;
             }
             string path = Workspace.FilePath(query.Parameters.GetProperty("textDocument").GetProperty("uri").GetString()!);
-            if (latest?.Models?.GetValueOrDefault(path) is not EditorModel model || !documents.TryGetValue(path, out var document))
+            if (!documents.TryGetValue(path, out var document))
             { await Reply(query.Id, null); return; }
             int offset = query.Parameters.TryGetProperty("position", out var position) ? Workspace.Offset(document.Text, position) : 0;
-            if (query.Method is "textDocument/formatting" or "textDocument/rangeFormatting" or "textDocument/onTypeFormatting")
+            if (IsFormattingRequest(query.Method))
             {
                 var settings = query.Parameters.GetProperty("options");
                 var format = new FormattingOptions(settings.GetProperty("tabSize").GetInt32(), settings.GetProperty("insertSpaces").GetBoolean(),
@@ -395,9 +401,11 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                     int line = position.GetProperty("line").GetInt32();
                     selectedRange = new(new(line, 0), new(line, int.MaxValue));
                 }
-                await Reply(query.Id, model.Format(path, format, selectedRange));
+                await Reply(query.Id, SourceFormatter.Format(new SourceFile(path, document.Text), format, selectedRange));
                 return;
             }
+            if (latest?.Models?.GetValueOrDefault(path) is not EditorModel model)
+            { await Reply(query.Id, null); return; }
             TextRange? range = query.Parameters.TryGetProperty("range", out var element)
                 ? JsonSerializer.Deserialize<TextRange>(element, Protocol.JsonOptions) : null;
             object? result = query.Method switch
@@ -453,6 +461,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
             bracesOnNewLine = value.GetBoolean();
     }
 
+    private static bool IsFormattingRequest(string method)
+        => method is "textDocument/formatting" or "textDocument/rangeFormatting" or "textDocument/onTypeFormatting";
+
     private static bool RequiresFullAnalysis(string method)
         => method is "textDocument/references" or "textDocument/rename" or "textDocument/prepareRename" or
             "textDocument/implementation" or "textDocument/prepareTypeHierarchy" or "typeHierarchy/supertypes" or "typeHierarchy/subtypes" or "textDocument/codeAction" or "workspace/executeCommand";
@@ -467,7 +478,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         CancellationToken cancellation = pending.Token;
         long revision = ++generation;
         var requested = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fullRequested = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         interactiveRequested = requested;
+        fullAnalysisRequested = fullRequested;
         foreach (var query in editorRequests) await Error(query.Id, -32801, "Document changed");
         editorRequests.Clear();
         string? workspaceRoot = root;
@@ -489,7 +502,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             new HashSet<string>(snapshot.Keys, Workspace.Paths));
                         if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, focused, snapshot, requestedProjectRevision));
                         if (!focused.IsPartial) return;
-                        await Task.Delay(500, cancellation);
+                        // Requests needing unopened bodies bypass the idle timer.
+                        // Completion and hover use the focused result without forcing a full check.
+                        await Task.WhenAny(Task.Delay(500, cancellation), fullRequested.Task);
+                        cancellation.ThrowIfCancellationRequested();
                     }
                     var result = Workspace.Analyze(workspaceRoot, snapshot, projects, cancellation);
                     if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, result, snapshot, requestedProjectRevision));
@@ -506,16 +522,24 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
 
     private void UpdateWatchers()
     {
+        var directories = watchedPaths.Select(Path.GetDirectoryName).OfType<string>()
+            .Concat(projectDirectories).Concat(projectDiscoveryDirectories).Distinct(Workspace.Paths)
+            .Where(Directory.Exists).ToDictionary(directory => directory, projectDirectories.Contains, Workspace.Paths);
+        if (!watchersNeedRefresh && watcherInputs.SetEquals(watchedPaths) && directories.Count == watcherDirectoryInputs.Count &&
+            directories.All(pair => watcherDirectoryInputs.TryGetValue(pair.Key, out bool recursive) && recursive == pair.Value)) return;
+        watchersNeedRefresh = false;
         foreach (var watcher in watchers) watcher.Dispose();
         watchers.Clear();
         var explicitPaths = new HashSet<string>(watchedPaths, Workspace.Paths);
+        watcherInputs = explicitPaths;
+        watcherDirectoryInputs = directories;
         // Watch only source/config directories, never recursively scan or watch build output trees.
-        foreach (string directory in watchedPaths.Select(Path.GetDirectoryName).OfType<string>().Concat(projectDirectories).Concat(projectDiscoveryDirectories).Distinct(Workspace.Paths))
+        foreach (var entry in directories)
         {
-            if (!Directory.Exists(directory)) continue;
+            string directory = entry.Key;
             try
             {
-                var watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = projectDirectories.Contains(directory), NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
+                var watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = entry.Value, NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
                 void ChangedPath(string path)
                 {
                     if (explicitPaths.Contains(path) || !Path.GetRelativePath(directory, path).Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
@@ -525,11 +549,15 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 watcher.Created += (_, e) => ChangedPath(e.FullPath);
                 watcher.Deleted += (_, e) => ChangedPath(e.FullPath);
                 watcher.Renamed += (_, e) => { ChangedPath(e.OldFullPath); ChangedPath(e.FullPath); };
-                watcher.Error += (_, _) => events.Writer.TryWrite(new Changed(Path.Combine(root!, Workspace.ConfigurationName)));
+                watcher.Error += (_, _) =>
+                {
+                    watchersNeedRefresh = true;
+                    events.Writer.TryWrite(new Changed(directory, Force: true));
+                };
                 watcher.EnableRaisingEvents = true;
                 watchers.Add(watcher);
             }
-            catch (IOException error) { log.WriteLine(error.Message); }
+            catch (IOException error) { watchersNeedRefresh = true; log.WriteLine(error.Message); }
         }
     }
 }

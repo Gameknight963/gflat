@@ -5,6 +5,44 @@ namespace gflat.LanguageServer.Tests;
 public sealed partial class ServerTests
 {
     [Fact]
+    public async Task GeneratedFileNotificationsDoNotCancelPendingCompletion()
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        await session.Open("main.gf", "int Answer() => 42;");
+        await session.Diagnostics("main.gf", 1);
+        string changed = "int Answer() { int local = 42; return local; }\n" + string.Join("\n",
+            Enumerable.Range(0, 400).Select(index => $"struct Item{index} {{ public int Value; }}"));
+        await session.Change("main.gf", changed, 2);
+        await session.Send(new { jsonrpc = "2.0", id = 1410, method = "textDocument/completion", @params = new {
+            textDocument = new { uri = session.Uri("main.gf") }, position = new { line = 0, character = 37 } } });
+        await session.Notify("workspace/didChangeWatchedFiles", new { changes = new[] {
+            new { uri = session.Uri("obj/generated.gf"), type = 2 } } });
+        var reply = await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 1410);
+        Assert.False(reply.TryGetProperty("error", out _), reply.ToString());
+        Assert.Contains(reply.GetProperty("result").GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "local");
+        await session.Stop();
+    }
+
+    [Fact]
+    public async Task ExplicitSourceUnderGeneratedDirectoryStillUpdatesDiagnostics()
+    {
+        await using var session = new Session();
+        Directory.CreateDirectory(session.File("obj"));
+        System.IO.File.WriteAllText(session.File(Workspace.ConfigurationName), """{"sources":["main.gf","obj/generated.gf"]}""");
+        System.IO.File.WriteAllText(session.File("obj/generated.gf"), "int Generated() => missing;");
+        await session.Initialize();
+        await session.Open("main.gf", "int main() => Generated();");
+        await session.Diagnostics("obj/generated.gf");
+        System.IO.File.WriteAllText(session.File("obj/generated.gf"), "int Generated() => 42;");
+        await session.Notify("workspace/didChangeWatchedFiles", new { changes = new[] {
+            new { uri = session.Uri("obj/generated.gf"), type = 2 } } });
+        var response = await session.Diagnostics("obj/generated.gf");
+        Assert.Empty(response.GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Fact]
     public async Task CompletionRepliesPrecedeDiagnosticsAndUnchangedSaveDoesNotRepublishThem()
     {
         await using var session = new Session();

@@ -252,7 +252,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         await Schedule();
                         break;
                     case "workspace/didChangeWatchedFiles":
-                        await Schedule(invalidateProjects: true); break;
+                        if (!parameters.TryGetProperty("changes", out var changes) || changes.EnumerateArray().Any(change =>
+                            !IgnoreGeneratedChange(Workspace.FilePath(change.GetProperty("uri").GetString()!))))
+                            await Schedule(invalidateProjects: true);
+                        break;
                     case "$/cancelRequest":
                         if (parameters.TryGetProperty("id", out var canceled))
                         {
@@ -452,6 +455,9 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         "textDocument/hover" or "textDocument/definition" => 1,
         _ => 2
     };
+
+    private bool IgnoreGeneratedChange(string path) => !watchedPaths.Contains(path) &&
+        path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory);
 
     private void UpdateFormattingOptions(JsonElement settings)
     {

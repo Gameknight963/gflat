@@ -87,6 +87,9 @@ The stages measure:
 | `editor.syntax.capture` | Capturing source syntax before checking rewrites it |
 | `editor.index` | Building editor symbols and query indexes |
 | `editor.index.*` | Individual indexing phases |
+| `editor.query.completion`, `editor.query.hover`, `editor.query.signature-help` | Editor query execution against an analyzed snapshot |
+| `editor.query.definition` | Declaration navigation lookup |
+| `editor.query.semantic-tokens` | Highlight classification, with `full` or `range` in `detail` |
 | `emit.ir` | LLVM module emission, including reachable function bodies |
 | `emit.reachable-functions` | Executable function reachability and deferred body emission |
 | `emit.trim-module` | Removal of unreferenced generated globals and declarations |
@@ -105,6 +108,10 @@ Set `GFLAT_PROFILE_ALLOCATIONS=1` to include `allocatedBytes` in each event.
 This counts managed allocations across the process during that stage, including
 concurrent work. Nested allocation totals overlap. The count measures allocation
 volume rather than retained memory.
+
+Editor query timings exclude protocol serialization and Visual Studio UI work.
+They include queries that reuse a previously checked snapshot while a new
+analysis is pending.
 
 Summarize traces and TRX results:
 

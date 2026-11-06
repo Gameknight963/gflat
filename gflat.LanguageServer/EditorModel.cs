@@ -888,6 +888,7 @@ public sealed partial class EditorModel
 
     private object Completion(string path, int offset, TextRange? replacementRange)
     {
+        using var queryTiming = PipelineTimings.Measure("editor.query.completion");
         if (IncludeCompletion(path, offset) is { } include) return include;
         var ts = tokens[path];
         if (InCommentOrLiteral(path, offset)) return new { isIncomplete = false, items = Array.Empty<object>() };
@@ -965,6 +966,7 @@ public sealed partial class EditorModel
     }
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
+        using var queryTiming = PipelineTimings.Measure("editor.query.hover");
         options ??= new();
         if (DocumentationReferenceAt(path, offset) is { } documented)
         {
@@ -1065,6 +1067,7 @@ public sealed partial class EditorModel
     }
     public object? Definition(string path, int offset)
     {
+        using var queryTiming = PipelineTimings.Measure("editor.query.definition");
         if (DocumentationReferenceAt(path, offset) is { } documentation) return NavigationLocation(documentation.Symbol);
         if (OverriddenMember(path, offset) is { } overridden) return NavigationLocation(overridden);
         if (MacroAt(path, offset) is { Declaration.Source: { } file } macro && !file.Path.StartsWith('<'))
@@ -1075,6 +1078,7 @@ public sealed partial class EditorModel
     }
     public object? SignatureHelp(string path, int offset, bool visualStudio = false)
     {
+        using var queryTiming = PipelineTimings.Measure("editor.query.signature-help");
         var ts = tokens[path];
         var stack = new Stack<(int Index, int Commas)>();
         for (int i = 0; i < ts.Length && ts[i].Start < offset; i++)
@@ -1103,6 +1107,7 @@ public sealed partial class EditorModel
     }
     public object SemanticTokens(string path, TextRange? range = null, bool visualStudio = false)
     {
+        using var queryTiming = PipelineTimings.Measure("editor.query.semantic-tokens", range == null ? "full" : "range");
         var data = new List<int>();
         var classified = new List<(SourceSpan Span, int Kind, int Modifiers)>();
         var macroTokens = MacroSourceClassifications(path);

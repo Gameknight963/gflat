@@ -45,21 +45,33 @@ public sealed partial class EditorModel
         {
             if (ts[colon].Kind == TokenKind.Less) depth++;
             else if (ts[colon].Kind == TokenKind.Greater) depth--;
+            else if (ts[colon].Kind == TokenKind.GreaterGreater) depth -= 2;
             else if (ts[colon].Kind == TokenKind.Colon && depth == 0) break;
         }
         if (colon == index) return new(false, _ => true);
 
         var used = new HashSet<string>(StringComparer.Ordinal);
         int segment = colon + 1;
+        depth = 0;
         for (int i = segment; i < index; i++)
-            if (ts[i].Kind == TokenKind.Comma)
+        {
+            if (ts[i].Kind == TokenKind.Less) depth++;
+            else if (ts[i].Kind == TokenKind.Greater) depth--;
+            else if (ts[i].Kind == TokenKind.GreaterGreater) depth -= 2;
+            else if (ts[i].Kind == TokenKind.Comma && depth == 0)
             {
                 used.Add(string.Concat(ts[segment..i].Select(t => t.Text)));
                 segment = i + 1;
             }
+        }
+        var usedDefinitions = used.Select(name =>
+        {
+            int generic = name.IndexOf('<');
+            return generic >= 0 ? name[..generic] : name;
+        }).ToHashSet(StringComparer.Ordinal);
         var visible = Visible(path, ts[declaration].Start).ToArray();
-        bool alreadyHasBase = visible.Any(s => s.Syntax.Node is ClassDeclaration && (used.Contains(s.Name) || used.Contains(s.Qualified))) ||
-            symbols.Any(s => s.Syntax.Node is ClassDeclaration && used.Contains(s.Qualified));
+        bool alreadyHasBase = visible.Any(s => s.Syntax.Node is ClassDeclaration && (usedDefinitions.Contains(s.Name) || usedDefinitions.Contains(s.Qualified))) ||
+            symbols.Any(s => s.Syntax.Node is ClassDeclaration && usedDefinitions.Contains(s.Qualified));
         var self = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == ts[declaration + 1].Start);
         return new(true, s => s.Syntax.Node is NamespaceDeclaration ||
             (s.Syntax.Node is InterfaceDeclaration || ts[declaration].Kind == TokenKind.Class && !alreadyHasBase && s.Syntax.Node is ClassDeclaration { IsStatic: false }) &&

@@ -332,6 +332,23 @@ public class EditorTests
     }
 
     [Fact]
+    public void InheritanceCompletionRecognizesAnAlreadyListedGenericBase()
+    {
+        var (model, path, offset, _) = Analyze("class Base<T> {} class Other {} interface I {} class Child : Base<int>, | {}");
+        var labels = Labels(model.Completion(path, offset));
+        Assert.Contains("I", labels);
+        Assert.DoesNotContain("Base", labels);
+        Assert.DoesNotContain("Other", labels);
+    }
+
+    [Fact]
+    public void InheritanceCompletionDoesNotMistakeAGenericInterfaceArgumentForABase()
+    {
+        var (model, path, offset, _) = Analyze("class Base {} class Other {} interface I<T, U, V> {} class Child : I<int, Other, int>, | {}");
+        Assert.Contains("Base", Labels(model.Completion(path, offset)));
+    }
+
+    [Fact]
     public void QualifiedInheritanceFiltersNamespaceMembers()
     {
         var (model, path, offset, _) = Analyze("namespace Lib { public interface I {} public struct Value {} public int Helper() => 1; } struct Child : Lib::| {}");

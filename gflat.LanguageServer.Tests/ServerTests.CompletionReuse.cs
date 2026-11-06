@@ -5,6 +5,26 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed partial class ServerTests
 {
+    [Fact]
+    public async Task LocalPrefixCompletionUsesCurrentEditRangesWhileAnalysisIsPending()
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        await session.Open("main.gf", "void Read(){int local=42; }");
+        await session.Diagnostics("main.gf", 1);
+        const string changed = "void Read(){int local=42; loc}";
+        await session.Change("main.gf", changed, 2);
+        int offset = changed.IndexOf("loc}", StringComparison.Ordinal) + 3;
+        await session.Send(new { jsonrpc = "2.0", id = 1510, method = "textDocument/completion", @params = new {
+            textDocument = new { uri = session.Uri("main.gf") }, position = new { line = 0, character = offset } } });
+        var reply = await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 1510);
+        Assert.False(reply.TryGetProperty("error", out _), reply.ToString());
+        var local = Assert.Single(reply.GetProperty("result").GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "local");
+        Assert.Equal(offset - 3, local.GetProperty("textEdit").GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+        Assert.Equal(offset, local.GetProperty("textEdit").GetProperty("range").GetProperty("end").GetProperty("character").GetInt32());
+        await session.Stop();
+    }
+
     private const string ReuseMain = """
         struct OldValue { public int OldMember; }
         struct NewValue { public int NewMember; }

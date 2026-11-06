@@ -286,7 +286,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         {
                             var query = new EditorRequest(id.Clone(), method, parameters.Clone(), generation);
                             if (IsFormattingRequest(method)) await AnswerEditor(query);
-                            else if (method == "textDocument/completion" && analyzedGeneration != generation && TryReuseMemberCompletion(query, out var reused)) await Reply(query.Id, reused);
+                            else if (method == "textDocument/completion" && analyzedGeneration != generation && TryReuseCompletion(query, out var reused)) await Reply(query.Id, reused);
                             else if (analyzedGeneration == generation && (!RequiresFullAnalysis(method) || fullyAnalyzedGeneration == generation)) await AnswerEditor(query);
                             else
                             {

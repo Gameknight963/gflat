@@ -30,6 +30,7 @@ public sealed class AnalysisSnapshot
         IReadOnlySet<SourceId>? bodySources = null, SourceTokenCache? tokenCache = null, bool checkTypes = true,
         SourceSyntaxCache? syntaxCache = null)
     {
+        using var timing = PipelineTimings.Measure("editor.snapshot");
         cancellationToken.ThrowIfCancellationRequested();
         Options = options ?? new();
         RootSources = sources.ToArray();
@@ -48,7 +49,7 @@ public sealed class AnalysisSnapshot
             PreprocessorDependencies = compilation.PreprocessorDependencies;
             MacroSymbols = compilation.MacroSymbols;
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
-            Capture(compilation.Unit, null);
+            using (PipelineTimings.Measure("editor.syntax.capture")) Capture(compilation.Unit, null);
             var aliases = nodes.Select(n => n.Node).OfType<AliasDeclaration>().Select(a => a.Name).ToHashSet();
             var cloner = new AstCloner(new());
             foreach (var entry in nodes)

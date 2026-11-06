@@ -17,6 +17,7 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken)
 
     internal CompilationUnit Clone(CompilationUnit tree)
     {
+        using var timing = PipelineTimings.Measure("syntax.clone");
         cancellationToken.ThrowIfCancellationRequested();
         var result = (CompilationUnit)Copy(tree);
         cancellationToken.ThrowIfCancellationRequested();

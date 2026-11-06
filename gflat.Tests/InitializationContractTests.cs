@@ -29,10 +29,62 @@ public class InitializationContractTests
     [InlineData("defer p = q;")]
     [InlineData("while (true) { p = q; break; }")]
     [InlineData("if (b) { p = q; return; } p = q;")]
+    [InlineData("(*this).p = q;")]
     public void EveryCompletingPathInitializesFields(string body)
         => Assert.Equal(42, CompilerTestHelper.Run(
             "struct S { public int* p; public S(int* q, bool b) { " + body +
             " } } int main() { int n = 42; S s = new S(&n, true); return *s.p; }").ExitCode);
+
+    [Theory]
+    [InlineData("int n = *(*this).p; (*this).p = q;")]
+    [InlineData("(*this).p = (*this).p;")]
+    [InlineData("if (b) (*this).p = q;")]
+    public void ExplicitInstanceDereferenceStillRequiresInitialization(string body)
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check(
+            "struct S { int* p; public S(int* q, bool b) { " + body + " } }"));
+
+    [Theory]
+    [InlineData("struct")]
+    [InlineData("class")]
+    public void ExplicitInstanceFieldReadDoesNotReadOtherUninitializedFields(string kind)
+        => Assert.Equal(42, CompilerTestHelper.Run(
+            kind + " S { public int* p; public int* other; public S(int* q) { " +
+            "(*this).p = q; int n = *(*this).p; (*this).other = q; } } " +
+            "int main(){int n=42; S s=new S(&n);return *s.other;}").ExitCode);
+
+    [Fact]
+    public void ExplicitInstanceValueCannotEscapeBeforeAllFieldsAreInitialized()
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check(
+            "struct S { int* p; public S(int* q) { S copy = *this; (*this).p=q; } }"));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ExplicitInstanceOwningFieldIsCleanedWhenConstructionThrows(int optimization)
+        => Assert.Equal(1, CompilerTestHelper.Run("""
+            struct Resource
+            {
+                int* count;
+                public Resource(int* target) { count = target; }
+                ~Resource() { (*count)++; }
+            }
+            struct Owner
+            {
+                Resource resource;
+                public Owner(int* count)
+                {
+                    (*this).resource = new Resource(count);
+                    throw new Exception();
+                }
+            }
+            int main()
+            {
+                int count = 0;
+                try { Owner owner = new Owner(&count); }
+                catch (Exception* error) {}
+                return count;
+            }
+            """, optimizationLevel: optimization).ExitCode);
 
     [Fact]
     public void CaughtThrowInitializesFieldsOnTheCompletingPath()

@@ -873,7 +873,7 @@ namespace gflat.semantics
                     }
                 }
 
-                if (member.Object is not IdentifierExpression { Name: "this" }) CheckValue(member.Object);
+                if (member.Object is not IdentifierExpression { Name: "this" } && ConstructorFieldPath(member.Object) != "") CheckValue(member.Object);
             }
             else if (expr is AssignmentExpression assign)
             {
@@ -1021,6 +1021,7 @@ namespace gflat.semantics
         private void CheckAssignmentAddress(AstNode target)
         {
             if (_typeChecker.GetPropertyRead(target) != null) { CheckExpression(target); return; }
+            if (ConstructorFieldPath(target) == "") return;
             if (target is IdentifierExpression or NamespaceAccessExpression) return;
             if (target is MemberAccessExpression member)
             {

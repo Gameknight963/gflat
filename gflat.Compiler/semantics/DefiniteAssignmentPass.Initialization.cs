@@ -76,6 +76,8 @@ public partial class DefiniteAssignmentPass
     private string? ConstructorFieldPath(AstNode node)
     {
         if (!_inConstructor) return null;
+        if (node is UnaryExpression { Operator: TokenKind.Star, Operand: IdentifierExpression { Name: "this" } })
+            return "";
         if (node is IdentifierExpression id)
             return id.Name == "this" ? "" : Lookup(id.Name) == null ? id.Name : null;
         if (node is MemberAccessExpression member && ConstructorFieldPath(member.Object) is string parent)

@@ -50,12 +50,14 @@ public sealed partial class EditorModel
     public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files, CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? headerContexts = null)
     {
+        using var indexTiming = PipelineTimings.Measure("editor.index");
         cancellationToken.ThrowIfCancellationRequested();
         this.snapshot = snapshot;
         headerSelections = headerContexts ?? new Dictionary<string, string>(Workspace.Paths);
         activeNodes = snapshot.Nodes.Where(n => n.Span.Source?.Path is not { } path || !headerSelections.TryGetValue(path, out string? selected) ||
             InclusionContext(n, path)?.Id == selected).ToArray();
-        IndexScopeEnvironments();
+        using (PipelineTimings.Measure("editor.index.scopes")) IndexScopeEnvironments();
+        var sourceIndexTiming = PipelineTimings.Measure("editor.index.sources");
         var allFiles = files.Concat(snapshot.Sources).Concat(activeNodes.Select(n => n.Span.Source).OfType<SourceFile>())
             .DistinctBy(s => s.Path, Workspace.Paths).ToArray();
         sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
@@ -91,6 +93,8 @@ public sealed partial class EditorModel
                     typePositionTokens.Add(fileTokens[index]);
             }
         }
+        sourceIndexTiming?.Dispose();
+        var declarationIndexTiming = PipelineTimings.Measure("editor.index.declarations");
         foreach (var entry in activeNodes)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -140,21 +144,22 @@ public sealed partial class EditorModel
                 sourceCallableDeclarations.TryAdd((entry.Node.GetType(), entry.Span), symbol);
             declarations.TryAdd(entry.Node, symbol);
         }
-        RegisterTypeParameters();
+        using (PipelineTimings.Measure("editor.index.generic-parameters")) RegisterTypeParameters();
         foreach (var group in symbols.GroupBy(symbol => symbol.Name)) symbolsByName.Add(group.Key, group.ToArray());
         foreach (var symbol in symbols)
             if (symbol.NameSpan.Source?.Path is { } path)
                 declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
-        IndexSourceTypeNames();
+        declarationIndexTiming?.Dispose();
+        using (PipelineTimings.Measure("editor.index.type-names")) IndexSourceTypeNames();
         cancellationToken.ThrowIfCancellationRequested();
-        IndexTypeArgumentSeparators();
-        IndexBoundCallables();
+        using (PipelineTimings.Measure("editor.index.type-arguments")) IndexTypeArgumentSeparators();
+        using (PipelineTimings.Measure("editor.index.callables")) IndexBoundCallables();
         cancellationToken.ThrowIfCancellationRequested();
-        IndexBoundProperties();
-        IndexBoundFields();
+        using (PipelineTimings.Measure("editor.index.properties")) IndexBoundProperties();
+        using (PipelineTimings.Measure("editor.index.fields")) IndexBoundFields();
         cancellationToken.ThrowIfCancellationRequested();
-        IndexSpliceReferences();
-        IndexDocumentation();
+        using (PipelineTimings.Measure("editor.index.splices")) IndexSpliceReferences();
+        using (PipelineTimings.Measure("editor.index.documentation")) IndexDocumentation();
     }
 
     private string ParameterText(Parameter p) => $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +

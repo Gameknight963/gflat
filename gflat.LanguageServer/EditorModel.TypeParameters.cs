@@ -12,7 +12,8 @@ public sealed partial class EditorModel
         // own a lexical scope covering the receiver and all member bodies.
         var blockScopes = activeNodes.Where(node => node.Node is ExtensionDeclaration && node.Span.Source != null)
             .Select(node => {
-                var marker = tokens[node.Span.Source!.Path].First(token => token.Start >= node.Span.Start);
+                var fileTokens = tokens[node.Span.Source!.Path];
+                var marker = fileTokens[TokenStartIndex(fileTokens, node.Span.Start)];
                 return new Symbol("extension", 0, "keyword", node, marker.Span,
                     Namespace(Parents(node)), null, node, null, false, TokenKind.Public);
             });
@@ -41,8 +42,8 @@ public sealed partial class EditorModel
                 continue;
             }
             var ts = tokens[source.Path];
-            int cursor = Array.FindIndex(ts, token => token.Start >= owner.NameSpan.Start + owner.NameSpan.Length);
-            if (cursor < 0 || ts[cursor].Kind != TokenKind.Less) continue;
+            int cursor = TokenStartIndex(ts, owner.NameSpan.Start + owner.NameSpan.Length);
+            if (cursor == ts.Length || ts[cursor].Kind != TokenKind.Less) continue;
             cursor++;
             foreach (var parameter in parameters)
             {

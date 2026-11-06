@@ -14,6 +14,7 @@ public sealed class ProjectWorkspace
     public (ProjectGraph? Graph, ProjectException? Error, string[] Paths) Load(string file)
     {
         if (cache.TryGetValue(file, out var found)) return found;
+        using var evaluationTiming = PipelineTimings.Measure("editor.workspace.evaluate-project");
         var attempted = new HashSet<string>(Workspace.Paths) { file };
         try
         {

@@ -28,6 +28,7 @@ public static class Workspace
     public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents, ProjectWorkspace? projects = null,
         CancellationToken cancellationToken = default, IReadOnlySet<string>? bodyPaths = null)
     {
+        using var analysisTiming = PipelineTimings.Measure("editor.workspace");
         cancellationToken.ThrowIfCancellationRequested();
         var output = new Dictionary<string, List<EditorDiagnostic>>(Paths);
         var models = new Dictionary<string, EditorModel>(Paths);
@@ -124,6 +125,7 @@ public static class Workspace
         {
             var snapshots = new List<SourceFile>();
             bool unreadable = false;
+            using (PipelineTimings.Measure("editor.workspace.read-sources"))
             foreach (string path in paths)
             {
                 cancellationToken.ThrowIfCancellationRequested();

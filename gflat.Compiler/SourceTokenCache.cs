@@ -2,7 +2,7 @@ using gflat.diagnostics;
 
 namespace gflat;
 
-// Editor sessions can share lexical snapshots. Parsing always creates a new AST.
+// Editor sessions can share lexical snapshots. Each analysis uses a private AST.
 public sealed class SourceTokenCache
 {
     private sealed record Entry(SourceFile Source, List<Token> Tokens, Diagnostic[] Diagnostics);

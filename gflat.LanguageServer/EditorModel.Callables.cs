@@ -141,7 +141,7 @@ public sealed partial class EditorModel
     private Symbol[] BoundCallableFamily(Symbol source, Symbol selected, MethodDeclaration target, string path, int offset)
     {
         IEnumerable<MethodDeclaration> ownerMethods = [];
-        if (snapshot.Checker is { } checker && checker.TryGetMethodOwner(target, out var owner, out _))
+        if (snapshot.Checker is { } checker && TryMethodOwner(target, out var owner))
             ownerMethods = checker.GetClassByIdentity(owner)?.AllMethods ?? checker.GetStructByIdentity(owner)?.AllMethods ?? [];
         var closedOwners = ownerMethods.Select(method => (Method: method, Source: SourceCallable(method)))
             .Where(pair => pair.Source != null).ToArray();
@@ -195,7 +195,7 @@ public sealed partial class EditorModel
         var bindings = new Dictionary<string, TypeExpression>();
         string? owner = source.Owner;
         string? identity = interfaceOwner;
-        if (identity != null || checker.TryGetMethodOwner(target, out identity, out _))
+        if (identity != null || TryMethodOwner(target, out identity))
         {
             owner = checker.DisplayName(identity);
             BindDisplayOwnerArguments(source, identity, bindings, definition.GenericParameters.Select(parameter => parameter.Name).ToHashSet());

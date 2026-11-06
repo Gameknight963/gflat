@@ -26,6 +26,13 @@ public sealed partial class EditorModel
         public IReadOnlyList<Parameter>? Parameters => IsTypeParameter ? null : BoundParameters ?? (Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null });
     }
     private readonly AnalysisSnapshot snapshot;
+    private readonly IReadOnlyDictionary<MethodDeclaration, (string Owner, bool IsClass)> methodOwners;
+    private bool TryMethodOwner(MethodDeclaration method, out string owner)
+    {
+        if (methodOwners.TryGetValue(method, out var entry)) { owner = entry.Owner; return true; }
+        owner = "";
+        return false;
+    }
     public bool IsPartialAnalysis => snapshot.BodySources != null;
     public SourceEdit[] Format(string path, FormattingOptions options, TextRange? range = null)
         => SourceFormatter.Format(sources[path], options, range, activeNodes);
@@ -53,6 +60,7 @@ public sealed partial class EditorModel
         using var indexTiming = PipelineTimings.Measure("editor.index");
         cancellationToken.ThrowIfCancellationRequested();
         this.snapshot = snapshot;
+        methodOwners = snapshot.Checker?.CaptureMethodOwners() ?? new Dictionary<MethodDeclaration, (string, bool)>();
         headerSelections = headerContexts ?? new Dictionary<string, string>(Workspace.Paths);
         activeNodes = snapshot.Nodes.Where(n => n.Span.Source?.Path is not { } path || !headerSelections.TryGetValue(path, out string? selected) ||
             InclusionContext(n, path)?.Id == selected).ToArray();
@@ -112,8 +120,8 @@ public sealed partial class EditorModel
                 : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
             string? owner = Owner(parents);
             if (owner == null && entry.Node is MethodDeclaration qualified && snapshot.Checker != null &&
-                snapshot.Checker.TryGetMethodOwner(qualified, out string methodOwner, out _))
-                owner = snapshot.Checker.DisplayTypeName(new NamedTypeExpression(methodOwner, null, qualified.Line));
+                methodOwners.TryGetValue(qualified, out var methodOwner))
+                owner = snapshot.Checker.DisplayTypeName(new NamedTypeExpression(methodOwner.Owner, null, qualified.Line));
             if (entry.Node is NamespaceDeclaration declaration && declaration.Name.Contains("::"))
             {
                 foreach (string part in declaration.Name.Split("::"))

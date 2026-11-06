@@ -6,6 +6,19 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<MethodDeclaration, (string Owner, bool IsClass)> specializedMethodOwners = new();
+    // Editor consumers build this after checking. Keep it separate from live
+    // lookup because specialization can still add owners during compilation.
+    public IReadOnlyDictionary<MethodDeclaration, (string Owner, bool IsClass)> CaptureMethodOwners()
+    {
+        var result = new Dictionary<MethodDeclaration, (string Owner, bool IsClass)>(specializedMethodOwners,
+            ReferenceEqualityComparer.Instance);
+        foreach (ClassInfo info in _classes.Values)
+            foreach (var method in info.AllMethods) result.TryAdd(method, (info.Name, true));
+        foreach (StructInfo info in _structs.Values)
+            foreach (var method in info.AllMethods) result.TryAdd(method, (info.Name, false));
+        return result;
+    }
+
     public bool TryGetMethodOwner(MethodDeclaration method, out string owner, out bool isClass)
     {
         if (specializedMethodOwners.TryGetValue(method, out var specialized))

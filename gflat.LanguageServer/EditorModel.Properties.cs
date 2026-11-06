@@ -34,7 +34,7 @@ public sealed partial class EditorModel
             if (token == null || TypeChecker.TypeName(actual) == "<error>") continue;
             string? owner = source.Owner;
             TypeExpression display = actual;
-            if (checker.TryGetMethodOwner(target, out string identity, out _))
+            if (TryMethodOwner(target, out string identity))
             {
                 owner = checker.DisplayName(identity);
                 var members = checker.GetTypeDeclaration(identity) switch { ClassDeclaration cls => cls.Members, StructDeclaration str => str.Members, InterfaceDeclaration iface => iface.Members, _ => null };

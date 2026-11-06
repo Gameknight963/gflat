@@ -4,6 +4,19 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class EscapedIdentifierEditorTests
 {
+    [Fact]
+    public void SignatureHelpParameterLabelsMatchEscapedNamesInTheSignature()
+    {
+        const string text = "void Call(int @class) {} void Use() { Call(1); }";
+        var source = new SourceFile(Path.GetFullPath("escaped-signature-help.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var help = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, text.LastIndexOf("Call(", StringComparison.Ordinal) + 5), Protocol.JsonOptions);
+        var signature = help.GetProperty("signatures")[0];
+        string parameter = signature.GetProperty("parameters")[0].GetProperty("label").GetString()!;
+        Assert.Equal("int @class", parameter);
+        Assert.Contains(parameter, signature.GetProperty("label").GetString());
+    }
+
     [Theory]
     [InlineData("int @class;", "int @class")]
     [InlineData("void @while() {}", "void @while()")]

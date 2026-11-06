@@ -184,8 +184,13 @@ public sealed partial class EditorModel
         using (PipelineTimings.Measure("editor.index.documentation")) IndexDocumentation();
     }
 
-    private string ParameterText(Parameter p) => $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +
-        (p.DefaultValue == null ? "" : " = " + ParameterDefaultText(p));
+    private string ParameterText(Parameter p)
+    {
+        string name = declarations.GetValueOrDefault(p) is { } symbol ? CompletionSpelling(symbol) :
+            Lexer.GetKeyword(p.Name) != TokenKind.Identifier ? "@" + p.Name : p.Name;
+        return $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {name}" +
+            (p.DefaultValue == null ? "" : " = " + ParameterDefaultText(p));
+    }
     private static string Join(string left, string right) => left.Length == 0 ? right : left + "::" + right;
     private static IEnumerable<Syntax> Parents(Syntax node) { for (var p = node.Parent; p != null; p = p.Parent) yield return p; }
     private void IndexScopeEnvironments()

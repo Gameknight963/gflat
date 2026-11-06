@@ -8,7 +8,10 @@ struct ConcatSource<T, LeftSource, LeftIterator, RightSource, RightIterator>
     private RightSource right;
 
     public ConcatSource(LeftSource first, RightSource second)
-    { left = move first; right = move second; }
+    {
+        left = move first;
+        right = move second;
+    }
 
     public ConcatSource<T, LeftSource, LeftIterator, RightSource, RightIterator>::Enumerator GetEnumerator()
     {
@@ -29,22 +32,29 @@ struct ConcatSource<T, LeftSource, LeftIterator, RightSource, RightIterator>
 
         public Enumerator(LeftIterator first, RightIterator second)
         {
-            left = move first; right = move second;
-            phase = Left; valid = false;
+            left = move first;
+            right = move second;
+            phase = Left;
+            valid = false;
         }
 
         public bool MoveNext()
         {
             byte active = phase;
-            phase = Finished; valid = false;
+            phase = Finished;
+            valid = false;
             if (active == Finished) return false;
             if (active == Left && left.MoveNext())
             {
-                phase = Left; valid = true; return true;
+                phase = Left;
+                valid = true;
+                return true;
             }
             if (right.MoveNext())
             {
-                phase = Right; valid = true; return true;
+                phase = Right;
+                valid = true;
+                return true;
             }
             return false;
         }

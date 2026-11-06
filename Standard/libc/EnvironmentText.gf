@@ -17,7 +17,11 @@ public static class EnvironmentText
     public static bool TryGetVariable(readonly(char)* name, ref String output)
     {
         readonly(char)*? value = Environment::GetVariable(name);
-        if (value == null) { output.Clear(); return false; }
+        if (value == null)
+        {
+            output.Clear();
+            return false;
+        }
         String copy = String::From(value!);
         output = move copy;
         return true;

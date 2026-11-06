@@ -180,7 +180,7 @@ public struct JsonWriter
 
     // Uses bytes before the first zero as the property name, then validates and quotes them.
     public void WritePropertyName(readonly(char)* text)
-        { this.WritePropertyName(text, CStringLength(text)); }
+        => this.WritePropertyName(text, CStringLength(text));
 
     // Writes counted UTF-8 as a JSON string, escaping embedded zeros.
     // Keep input separate from destination storage. Invalid text is retryable.

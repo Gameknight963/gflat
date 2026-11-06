@@ -9,8 +9,7 @@ public sealed class DateTimeOffsetEditorTests
     public void CivilOffsetConstructionParsingAndConversionExposeTheirActualValueSignatures()
     {
         const string text="using Standard; using Standard::Time;void Probe(){DateTime wall=DateTime::Parse(\"2024-06-01T12:30:00\");TimeSpan offset=TimeSpan::FromHours(2l);DateTimeOffset first=new DateTimeOffset(wall,offset);DateTimeOffset parsed=DateTimeOffset::Parse(\"2024-06-01T12:30:00+02:00\");DateTimeOffset changed=first.ToOffset(TimeSpan::FromTicks(0l));DateTime utc=parsed.UtcDateTime;TimeSpan saved=parsed.Offset;}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Time.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="DateTimeOffset.gf");
         var source=new SourceFile(Path.GetFullPath("date-time-offset-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

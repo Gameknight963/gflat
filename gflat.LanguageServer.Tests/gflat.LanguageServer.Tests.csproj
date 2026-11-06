@@ -20,6 +20,8 @@
     <Content Include="../Standard/core/IHashable.gf;../Standard/core/IEquatable.gf;../Standard/core/IComparable.gf;../Standard/core/Hashing/primitive_hashing.gf;../Standard/core/IStringConvertable.gf;../Standard/core/Collections/HashMap.gf;../Standard/core/Collections/HashSet.gf;../Standard/core/Collections/Queue.gf;../Standard/core/Collections/Stack.gf;../Standard/core/Collections/Vector.gf;../Standard/core/Memory/Span.gf;../Standard/core/Collections/IEnumerable.gf;../Standard/core/Queries/Enumerable.gf"
              Link="EditorFixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
+    <Using Include="gflat.Tests" />
+    <Compile Include="../gflat.Tests/StandardTestSources.cs" Link="StandardTestSources.cs" />
     <Compile Include="../gflat.Tests/ProjectFileFixture.cs" Link="ProjectFileFixture.cs" />
     <Compile Include="../editors/VisualStudio/PackagedLibraryPaths.cs" Link="PackagedLibraryPaths.cs" />
     <ProjectReference Include="../gflat.LanguageServer/gflat.LanguageServer.csproj" />

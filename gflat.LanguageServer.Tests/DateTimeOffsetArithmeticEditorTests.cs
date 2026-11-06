@@ -9,8 +9,7 @@ public sealed class DateTimeOffsetArithmeticEditorTests
     public void DurationArithmeticUsesTheActualDeclarationsAndQualifiedValueSignatures()
     {
         const string text="using Standard; using Standard::Time;void Probe(){DateTimeOffset first=DateTimeOffset::Parse(\"2024-06-01T12:30:00+02:00\");TimeSpan span=TimeSpan::FromMinutes(1l);DateTimeOffset later=first.Add(span);DateTimeOffset earlier=later.Subtract(span);TimeSpan elapsed=later.Difference(first);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Time.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="DateTimeOffset.gf");
         var source=new SourceFile(Path.GetFullPath("date-time-offset-arithmetic-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

@@ -10,8 +10,7 @@ public sealed class BigIntegerTryFormatEditorTests
     public void ImmutableReceiverExposesNoThrowTryFormatWithItsConcreteOutputSignatureAndDefinition()
     {
         const string text="using Standard; using Standard::Numerics;void Probe(){BigInteger value=new BigInteger(123l);immutable(BigInteger)* view=&value;char[32] output;nuint written=0;bool success=view.TryFormat(output,32,ref written);}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Numerics.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="BigInteger.gf");
         var source=new SourceFile(Path.GetFullPath("big-integer-try-format-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

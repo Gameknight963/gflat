@@ -14,8 +14,7 @@ public sealed class BigIntegerModPowEditorTests
                 BigInteger result = value.ModPow(exponent, modulus);
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Numerics.ToList();
         SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "BigInteger.gf");
         var source = new SourceFile(Path.GetFullPath("bigint-modpow-editor.gf"), text);
         files.Add(source);

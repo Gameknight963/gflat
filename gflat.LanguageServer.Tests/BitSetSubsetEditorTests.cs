@@ -15,8 +15,7 @@ public sealed class BitSetSubsetEditorTests
                 bool superset = enabled.IsSupersetOf(required);
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Collections.ToList();
         var source = new SourceFile(Path.GetFullPath("bitset-subset-editor.gf"),text);
         files.Add(source);
         var library = files.Single(file => Path.GetFileName(file.Path)=="BitSet.gf");

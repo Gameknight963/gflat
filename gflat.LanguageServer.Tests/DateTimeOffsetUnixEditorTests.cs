@@ -9,8 +9,7 @@ public sealed class DateTimeOffsetUnixEditorTests
     public void UnixFactoriesAndObserversNavigateTheirActualSignatures()
     {
         const string text="using Standard; using Standard::Time;void Probe(){DateTimeOffset sec=DateTimeOffset::FromUnixTimeSeconds(0l);DateTimeOffset milli=DateTimeOffset::FromUnixTimeMilliseconds(-1l);long seconds=sec.ToUnixTimeSeconds();long milliseconds=milli.ToUnixTimeMilliseconds();}";
-        var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Time.ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="DateTimeOffset.gf");
         var source=new SourceFile(Path.GetFullPath("date-time-offset-unix-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

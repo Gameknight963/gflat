@@ -5,6 +5,10 @@ namespace gflat.Tests;
 internal static class StandardTestSources
 {
     private static readonly ConcurrentDictionary<string, SourceFile> snapshots = new(StringComparer.Ordinal);
+    // The editor harness keeps its complete library separate from the automatic
+    // compiler prelude copied through project references.
+    private static readonly string sourceRoot = Path.Combine(AppContext.BaseDirectory,
+        Directory.Exists(Path.Combine(AppContext.BaseDirectory, "StandardLibrary")) ? "StandardLibrary" : "Standard");
 
     public static IEnumerable<SourceFile> Combine(params IEnumerable<SourceFile>[] sets)
         => sets.SelectMany(set => set).DistinctBy(source => source.Id);
@@ -12,7 +16,7 @@ internal static class StandardTestSources
     public static IEnumerable<SourceFile> Load(params string[] files)
         => files.Distinct(StringComparer.Ordinal).Select(relative => snapshots.GetOrAdd(relative, static name =>
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "Standard", name);
+            string path = Path.Combine(sourceRoot, name);
             return new SourceFile(path, File.ReadAllText(path));
         }));
 

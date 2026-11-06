@@ -67,22 +67,28 @@ public sealed class SourceFile
 // Scoped diagnostic context only. Each asynchronous compilation has its own context.
 internal static class SourceContext
 {
-    private static readonly AsyncLocal<SourceSpan?> current = new();
-    public static SourceSpan? Current => current.Value;
-    public static SourceSpan ForLine(int line) => current.Value is { Source: not null } span
+    // Immutable frames retain AsyncLocal isolation across child tasks and let
+    // nested scopes restore the original reference without boxing the span.
+    internal sealed class Frame(SourceSpan span)
+    {
+        public SourceSpan Span { get; } = span;
+    }
+    private static readonly AsyncLocal<Frame?> current = new();
+    public static SourceSpan? Current => current.Value?.Span;
+    public static SourceSpan ForLine(int line) => current.Value?.Span is { Source: not null } span
         ? (span.Line == line || line == 0 ? span : span.Source.LineSpan(line))
         : new(0, 0, line, 0);
     public static Scope Enter(SourceSpan span)
     {
         var previous = current.Value;
-        if (span.Source != null && previous != span) current.Value = span;
+        if (span.Source != null && previous?.Span != span) current.Value = new Frame(span);
         return new Scope(previous);
     }
-    public readonly struct Scope(SourceSpan? previous) : IDisposable
+    public readonly struct Scope(Frame? previous) : IDisposable
     {
         public void Dispose()
         {
-            if (current.Value != previous) current.Value = previous;
+            if (!ReferenceEquals(current.Value, previous)) current.Value = previous;
         }
     }
 }

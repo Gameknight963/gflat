@@ -2121,6 +2121,7 @@ namespace gflat
                 ResolveFunctionReplacements(node);
                 collectionPass.Execute(node);
                 PrepareOverloads(node, resolveSignatures: false);
+                IndexNamespaceMethods(node);
             }
 
             using (PipelineTimings.Measure("check.signatures"))

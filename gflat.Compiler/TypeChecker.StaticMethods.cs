@@ -6,6 +6,19 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<MethodDeclaration, (string Owner, bool IsClass)> specializedMethodOwners = new();
+    private readonly HashSet<MethodDeclaration> namespaceMethodDeclarations = new(ReferenceEqualityComparer.Instance);
+
+    private void IndexNamespaceMethods(CompilationUnit unit)
+    {
+        Walk(unit.Members);
+        foreach (var declaration in unit.Namespaces) Walk(declaration.Members);
+        void Walk(IEnumerable<AstNode> members)
+        {
+            foreach (var member in members)
+                if (member is MethodDeclaration method) namespaceMethodDeclarations.Add(method);
+                else if (member is NamespaceDeclaration declaration) Walk(declaration.Members);
+        }
+    }
     // Editor consumers build this after checking. Keep it separate from live
     // lookup because specialization can still add owners during compilation.
     public IReadOnlyDictionary<MethodDeclaration, (string Owner, bool IsClass)> CaptureMethodOwners()
@@ -21,8 +34,14 @@ public partial class TypeChecker
 
     public bool TryGetMethodOwner(MethodDeclaration method, out string owner, out bool isClass)
     {
+        using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("check.method-owner", method.Name) : null;
         if (specializedMethodOwners.TryGetValue(method, out var specialized))
         { owner = specialized.Owner; isClass = specialized.IsClass; return true; }
+        // Qualified members have already been moved into their owners before
+        // collection. Source namespace functions cannot gain a class owner.
+        // Explicit specialization ownership above still takes precedence.
+        if (namespaceMethodDeclarations.Contains(method))
+        { owner = ""; isClass = false; return false; }
         foreach (ClassInfo info in _classes.Values)
             if (info.AllMethods.Contains(method)) { owner = info.Name; isClass = true; return true; }
         foreach (StructInfo info in _structs.Values)

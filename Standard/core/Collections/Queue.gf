@@ -31,7 +31,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     {
         if (requested == 0)
         {
-            if (data != null) global::Memory::Free((void*)data);
+            if (data != null) global::Memory::Free(data!);
             data = null; capacity = 0; head = 0;
             return;
         }
@@ -49,7 +49,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
             source++;
             if (source == capacity) source = 0;
         }
-        if (data != null) global::Memory::Free((void*)data);
+        if (data != null) global::Memory::Free(data!);
         data = replacement;
         capacity = requested;
         head = 0;
@@ -147,7 +147,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     ~Queue()
     {
         this.Clear();
-        if (data != null) global::Memory::Free((void*)data);
+        if (data != null) global::Memory::Free(data!);
     }
 
     public struct Enumerator

@@ -73,7 +73,7 @@ public class StaticStorageTests
     public void GlobalOwningValuesAreDestroyedInReverseOrder()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Owner {
                 int id;
                 public Owner(int value) { id = value; }
@@ -127,8 +127,8 @@ public class StaticStorageTests
     public void ExplicitExitAlsoDestroysStaticValues()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
-            extern void exit(int code);
+            extern "C" int putchar(int c);
+            extern "C" void exit(int code);
             struct Owner { public Owner() {} ~Owner() { putchar(65); } }
             Owner owner = new Owner();
             int main() { exit(0); return 1; }
@@ -141,7 +141,7 @@ public class StaticStorageTests
     public void FailingInitializerDestroysOnlyCompletedGlobals()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Owner {
                 int id;
                 public Owner(int n) { id = n; if (n == 66) throw new Exception("failed", 9); }

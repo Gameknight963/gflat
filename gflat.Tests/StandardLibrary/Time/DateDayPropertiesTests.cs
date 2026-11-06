@@ -15,7 +15,7 @@ public sealed class DateDayPropertiesTests
         const int cycleDays=146097;
         int lastYearStart=new DateOnly(9999,1,1).DayNumber;
         string source=$$"""
-            using Standard; using Standard::Time;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Time;extern "C" int printf(readonly(char)* format,...);
             void Emit(int first,int count){
                 for(int day=first;day<first+count;day++){
                     Date value=Date::FromDayNumber(day);immutable(Date)* view=&value;

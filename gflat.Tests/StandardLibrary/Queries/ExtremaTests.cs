@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Queries;
 public sealed class ExtremaTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}

@@ -7,7 +7,7 @@ namespace gflat;
 public partial class LlvmEmitter : IVisitor
 {
     private bool IsEntryPoint(MethodDeclaration method) => _typeChecker.IsEntryPoint(method);
-    private string RuntimeMemorySymbol(string name) => "gflat$Memory$" + name +
+    private string RuntimeMemorySymbol(string name) => "gflat$__gflat_runtime$" + name +
         (_typeChecker.GetMemoryFunction(name) is { } method ? _typeChecker.GetOverloadSuffix(method) : "");
     private readonly TypeChecker _typeChecker;
     private readonly bool _internalizeFunctions;
@@ -2140,17 +2140,25 @@ public partial class LlvmEmitter : IVisitor
         _ => false
     };
 
+    private string ExternSymbol(ExternDeclaration node)
+    {
+        if (node.IsCLinkage) return node.Name;
+        string scope = (_typeChecker.DeclarationNamespace(node) ?? "").Replace("::", "$");
+        return "gflat$" + (scope.Length == 0 ? "" : scope + "$") + node.Name;
+    }
+
     public void Visit(ExternDeclaration node)
     {
         _externNames.Add(node.Name);
+        string symbol = ExternSymbol(node);
         string returnType = EmitAbiReturnType(node.ReturnType);
         string parameters = string.Join(", ", node.Parameters.Select(p => EmitAbiParamType(p.Type)));
         if (node.IsVariadic)
             parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
-        string declaration = $"declare {returnType} @{node.Name}({parameters})" + (node.IsNoThrow ? " nounwind" : "");
-        if (_nativeExternDeclarations.TryGetValue(node.Name, out string? existing))
+        string declaration = $"declare {returnType} @{symbol}({parameters})" + (node.IsNoThrow ? " nounwind" : "");
+        if (_nativeExternDeclarations.TryGetValue(symbol, out string? existing))
         {
-            var previous = _nativeExternDefinitions.GetValueOrDefault(node.Name);
+            var previous = _nativeExternDefinitions.GetValueOrDefault(symbol);
             if (previous != null && previous.IsNoThrow != node.IsNoThrow)
                 throw new gflat.CompileExceptions.TypeCheckException($"External symbol '{node.Name}' has conflicting nothrow contracts", node.Span);
             if (existing != declaration || previous != null &&
@@ -2159,8 +2167,8 @@ public partial class LlvmEmitter : IVisitor
                 throw new gflat.CompileExceptions.TypeCheckException($"External symbol '{node.Name}' has incompatible native signatures", node.Span);
             return;
         }
-        _nativeExternDeclarations[node.Name] = declaration;
-        _nativeExternDefinitions[node.Name] = node;
+        _nativeExternDeclarations[symbol] = declaration;
+        _nativeExternDefinitions[symbol] = node;
         EmitGlobal(declaration);
     }
 
@@ -2978,7 +2986,7 @@ public partial class LlvmEmitter : IVisitor
         AstNode? fnTarget = _typeChecker.GetFunctionAddressTarget(node);
         if (fnTarget is ExternDeclaration ext)
         {
-            Push($"@{ext.Name}");
+            Push($"@{ExternSymbol(ext)}");
             return true;
         }
         if (fnTarget is MethodDeclaration method)
@@ -3351,7 +3359,7 @@ public partial class LlvmEmitter : IVisitor
                 EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}", handleUnwind: false);
             }
 
-            // gflat$Memory$Free is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
+            // The runtime ABI deallocator is a source definition.
             _externNames.Add(RuntimeMemorySymbol("Free"));
 
             string castPtr;
@@ -3724,7 +3732,7 @@ public partial class LlvmEmitter : IVisitor
 
             if (target is ExternDeclaration ext)
             {
-                funcName = ext.Name;
+                funcName = ExternSymbol(ext);
             }
             else if (target is MethodDeclaration method)
             {
@@ -4078,7 +4086,7 @@ public partial class LlvmEmitter : IVisitor
         {
             bool adopting = _typeChecker.GetManagedAllocation(node) != null;
             string allocator = RuntimeMemorySymbol("Allocate");
-            // gflat$Memory$Allocate is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
+            // The runtime ABI allocator is a source definition, so no external declaration is needed.
             _ = _externNames.Add(allocator);
 
             string sizePtr = NewTemp();
@@ -4486,7 +4494,7 @@ public partial class LlvmEmitter : IVisitor
             rawPointer.Inner is not ArrayTypeExpression)
             EmitManagedReferences(rawPointer.Inner, ptrVal, false);
 
-        // gflat$Memory$Free is defined in user code (or Standard/libc/Memory/allocation.gf), no declare needed
+        // The runtime ABI deallocator is a source definition.
         _externNames.Add(RuntimeMemorySymbol("Free"));
 
         string castPtr;
@@ -4548,7 +4556,10 @@ public partial class LlvmEmitter : IVisitor
         string val = Pop();
         TypeExpression srcType = _typeChecker.GetType(node.Operand);
         string castVal = EmitCast(val, srcType, dstType);
-        if (_typeChecker.ResolveAlias(dstType) is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false })
+        // Pointer-to-pointer casts preserve the source's established nullability.
+        // This also preserves the explicitly unchecked meaning of postfix '!'.
+        if (_typeChecker.ResolveAlias(srcType) is not (PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression) &&
+            (_typeChecker.ResolveAlias(dstType) is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false }))
             GuardNonNull(castVal, EmitType(dstType));
         PushManaged(node, castVal);
     }

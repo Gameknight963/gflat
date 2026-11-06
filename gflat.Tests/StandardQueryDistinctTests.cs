@@ -17,7 +17,7 @@ public sealed class StandardQueryDistinctTests
     }
 
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failAt=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){
@@ -141,9 +141,9 @@ public sealed class StandardQueryDistinctTests
                     foreach(int value in values)fixture.Write(value);foreach(int value in expected)fixture.Write(value);
                 }
             Run(Allocator+"""
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);
                 bool Keep(int value)=>value%2==0;int Project(int value)=>value%17;
                 int main(){
                     void* stream=fopen("PATH","rb");int[4] header;int[128] values;int[128] expected;

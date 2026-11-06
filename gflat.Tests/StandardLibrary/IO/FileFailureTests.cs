@@ -66,8 +66,8 @@ public sealed class FileFailureTests
             File.WriteAllText(path, new string('x', 9000));
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
-                extern void*? malloc(nuint size);
-                extern void free(void* data);
+                extern "C" void*? malloc(nuint size);
+                extern "C" void free(void* data);
                 static class State { public static void*? First; public static int Released; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) {
@@ -128,8 +128,8 @@ public sealed class FileFailureTests
             File.WriteAllText(path, new string('x', 300) + "\nnext\n");
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
-                extern void*? malloc(nuint size);
-                extern void free(void* data);
+                extern "C" void*? malloc(nuint size);
+                extern "C" void free(void* data);
                 static class State { public static bool Fail; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) {

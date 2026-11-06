@@ -33,7 +33,8 @@ public sealed class RuntimeTypeDescriptionTests
                 immutable(TypeInfo)* type = Describe<Node>();
                 if (type != saved || type != Describe<NodeAlias>() || type.Kind != TypeKind::Struct) return 1;
                 if (!TextEquals(type.Name, "Node") || !type.HasLayout || type.Size != (nuint)sizeof(Node) || type.Alignment != (nuint)alignof(Node)) return 2;
-                if (type.FieldCount != 3 || type.Fields == null) return 3;
+                if (type.FieldCount != 4 || type.Fields == null) return 3;
+                if (!type.Fields![3].IsPrivate || type.Fields![3].Type != Describe<int>()) return 12;
                 if (!TextEquals(type.Fields![0].Name, "Id") || type.Fields![0].Type != Describe<int>() || !type.Fields![0].IsPublic) return 4;
                 if (!TextEquals(type.Fields![1].Name, "Tag") || type.Fields![1].Type != Describe<byte>() || !type.Fields![1].IsPrivate) return 5;
                 if (!TextEquals(type.Fields![2].Name, "Next") || type.Fields![2].Type != Describe<Node*?>()) return 6;

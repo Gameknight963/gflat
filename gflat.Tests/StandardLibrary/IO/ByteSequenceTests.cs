@@ -53,8 +53,8 @@ public sealed class ByteSequenceTests
         {
             namespace Native
             {
-                private extern void*? malloc(nuint count);
-                private extern void free(void* storage);
+                private extern "C" void*? malloc(nuint count);
+                private extern "C" void free(void* storage);
             }
             public replace void*? Allocate(nuint count)
             {

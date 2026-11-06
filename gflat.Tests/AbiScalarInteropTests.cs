@@ -40,7 +40,7 @@ public sealed class AbiScalarInteropTests
     public void DefinitionsExternsAndDirectIndirectCallsUseTheSameScalarAbi(string type, string llvm)
     {
         string ir = Compiler.Emit($$"""
-            extern {{type}} Native({{type}} value);
+            extern "C" {{type}} Native({{type}} value);
             {{type}} Identity({{type}} value)=>value;
             {{type}} Forward({{type}} value)=>Native(value);
             {{type}} Invoke({{type}}({{type}})* callback,{{type}} value)=>callback(value);
@@ -59,7 +59,7 @@ public sealed class AbiScalarInteropTests
     [Fact]
     public void ReferenceAndPointerParametersHaveNoPointeeExtensionAttribute()
     {
-        string ir = Compiler.Emit("extern void Native(ref bool value,bool* pointer);void Forward(ref bool value,bool* pointer){Native(ref value,pointer);}", options: new() { NoStdLib = true });
+        string ir = Compiler.Emit("extern \"C\" void Native(ref bool value,bool* pointer);void Forward(ref bool value,bool* pointer){Native(ref value,pointer);}", options: new() { NoStdLib = true });
         Assert.Contains("declare void @Native(i1*, i1*)", ir);
         Assert.Contains("define void @gflat$Forward(i1* %arg.value, i1* %arg.pointer)", ir);
     }
@@ -77,7 +77,7 @@ public sealed class AbiScalarInteropTests
     [Fact]
     public void VariadicFixedParametersAreAnnotatedButPromotedExtrasAreNot()
     {
-        string ir = Compiler.Emit("extern bool Native(bool value,...);bool Forward(bool value,byte extra)=>Native(value,extra);", options: new() { NoStdLib = true });
+        string ir = Compiler.Emit("extern \"C\" bool Native(bool value,...);bool Forward(bool value,byte extra)=>Native(value,extra);", options: new() { NoStdLib = true });
         Assert.Contains("declare zeroext i1 @Native(i1 zeroext, ...)", ir);
         Assert.Matches(@"call zeroext i1 \(i1, \.\.\.\) @Native\(i1 zeroext %[^,]+, i32 %", ir);
     }

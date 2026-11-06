@@ -64,7 +64,7 @@ public sealed class NamespaceExternSignatureTests
     private static SourceFile[] Sources(string declaration, string body, bool early, bool reverse, bool privateExtern = false)
     {
         string library = "namespace Library { alias Word=int; " + (privateExtern ? "private " : "") +
-            "extern Word abs(Word value); }";
+            "extern \"C\" Word abs(Word value); }";
         string helper = $$"""
             namespace Helpers {
                 alias Word=long;

@@ -20,9 +20,9 @@ public sealed class BitRoundingTests
                 output.Write(value);output.Write(BitOperations.RoundUpToPowerOf2((uint)value));output.Write(BitOperations.RoundUpToPowerOf2(value));
             }
             string code=$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
-                extern nuint fread(void* output,nuint size,nuint count,void* input)nothrow;
-                extern int fclose(void* input)nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* input)nothrow;
+                extern "C" int fclose(void* input)nothrow;
                 ulong Word(readonly(char)* bytes,nuint count)nothrow{
                     ulong result=0ul;for(nuint i=0;i<count;i++)result=result|((ulong)(byte)bytes[i]<<(int)(i*8));return result;
                 }

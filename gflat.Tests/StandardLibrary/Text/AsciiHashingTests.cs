@@ -105,8 +105,8 @@ public sealed class AsciiHashingTests
     {
         Run("""
             using Standard; using Standard::Text; using Standard::Collections;
-            extern void*? malloc(nuint count);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);
+            extern "C" void free(void* storage);
             int attempts = 0;
             int allocations = 0;
             int releases = 0;

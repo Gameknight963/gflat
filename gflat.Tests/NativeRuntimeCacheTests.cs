@@ -82,7 +82,7 @@ public sealed class NativeRuntimeCacheTests
     {
         using var fixture = new Fixture();
         File.WriteAllText(fixture.Source, """
-            extern int __gflat_stdio_is_redirected(int selector) nothrow;
+            extern "C" int __gflat_stdio_is_redirected(int selector) nothrow;
             int main() nothrow {
                 if (__gflat_stdio_is_redirected(1) < 0) return 1;
                 return 0;

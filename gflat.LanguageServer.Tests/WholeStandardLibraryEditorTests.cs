@@ -43,8 +43,8 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         const string text="""
             using Standard; using Standard::Text; using Standard::Csv; using Standard::Json; using Standard::IO; using Standard::Encoding; using Standard::Time; using Standard::Net; using Standard::Memory; using Standard::Binary; using Standard::Hashing; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* storage);
             bool Contains(int value) => value == 42;
             bool RemoveZero(readonly(int)* value) => *value == 0;
             Unique<int> FoldOwned(Unique<int> total,int value) { total.Value+=value; return move total; }

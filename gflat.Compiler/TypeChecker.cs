@@ -486,6 +486,7 @@ namespace gflat
 
         public class EnumInfo
         {
+            public EnumDeclaration? Declaration;
             public string Name = "";
             public string Namespace = "";
             public TypeExpression UnderlyingType = new NamedTypeExpression("int", null, 0);
@@ -2132,7 +2133,6 @@ namespace gflat
                 ResolveDeclarationSignatures(node);
                 PrepareOverloads(node);
                 ValidateExplicitConversionDeclarations();
-                ValidateAllocatorPair();
                 ValidateUnhandledExceptionHook();
                 RegisterStaticStorage(node);
             }
@@ -5309,9 +5309,10 @@ namespace gflat
             if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
             RequireMemoryFunction("Allocate", node);
             RequireMemoryFunction("Free", node);
-            if (GetClass("Standard::BadAllocException") == null)
-                throw new TypeCheckException("new* requires Standard::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own Standard::BadAllocException", node.Span);
-            var value = new NewExpression(new NamedTypeExpression("BadAllocException", "Standard", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
+            var failureType = ResolveAlias(new NamedTypeExpression("AllocationFailure", "__gflat_runtime", node.Line));
+            if (failureType is not NamedTypeExpression namedFailure || GetClass(namedFailure.Namespace == null ? namedFailure.Name : namedFailure.Namespace + "::" + namedFailure.Name) == null)
+                throw new TypeCheckException("new* requires the compiler runtime exception type __gflat_runtime::AllocationFailure", node.Span);
+            var value = new NewExpression(failureType, [], AllocationKind.Value, node.Line) { Span = node.Span };
             var failure = new ThrowStatement(value, node.Line) { Span = node.Span };
             failure.Accept(this);
             _allocationFailures[node] = failure;
@@ -5748,6 +5749,7 @@ namespace gflat
                     foreach (AstNode member in ns.Members.ToList()) CheckDeclarationAttributes(member);
                     return;
                 }
+                AddGeneratedFieldAttribute(node);
                 foreach (AttributeNode attribute in node.Attributes) attribute.Accept(this);
                 IEnumerable<AstNode> members = Array.Empty<AstNode>();
                 if (node is ClassDeclaration cls)
@@ -5816,6 +5818,8 @@ namespace gflat
             if (ContainsReflectionValue(ResolveAlias(node.ReturnType)) ||
                 node.Parameters.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter.Type))))
                 throw new TypeCheckException("Extern signatures cannot contain reflection values", node.Span);
+            if (node.IsVariadic && !node.IsCLinkage)
+                throw new TypeCheckException("Variadic extern functions require explicit C linkage", node.Span);
             ValidateReturnType(node.ReturnType, node.Line);
             if (ContainsManagedReference(node.ReturnType) ||
                 node.Parameters.Any(p => ContainsManagedReference(p.Type)))
@@ -5886,6 +5890,7 @@ namespace gflat
 
             EnumInfo info = new EnumInfo
             {
+                Declaration = enumDecl,
                 Name = enumDecl.Name,
                 Namespace = nsPath,
                 UnderlyingType = underlying,
@@ -6080,6 +6085,9 @@ namespace gflat
         {
             src = ResolveAlias(src);
             dst = ResolveAlias(dst);
+            if (IsNullable(src) && (dst is PointerTypeExpression { IsNullable: false } or
+                ManagedTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false }))
+                return false;
             if (src is ManagedTypeExpression sourceCollector && dst is ManagedTypeExpression targetCollector &&
                 !TypesMatch(ResolveCollectorType(sourceCollector.Collector, sourceCollector.Line), ResolveCollectorType(targetCollector.Collector, targetCollector.Line))) return false;
             if (src is PointerTypeExpression nativeSource && dst is ManagedTypeExpression rawTarget &&

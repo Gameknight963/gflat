@@ -18,7 +18,7 @@ public sealed class ParameterListSplicingTests
     [InlineData("int Target(int value) => value; int main() { int(int)* function = ([:reflect(Target).Parameters:]) => Target([:reflect(Target).Parameters:]); return function(42); }")]
     [InlineData("int Target(int value) => value; int Forward([:reflect(Target).Parameters:]) => value; int Forward(long value) => 0; int main() => Forward(42);")]
     [InlineData("int Target(int prefix, int value, int suffix) => prefix + value + suffix; int Source(int value) => value; int Forward([:reflect(Source).Parameters:]) => Target(10, [:reflect(Source).Parameters:], 12); int main() => Forward(20);")]
-    [InlineData("int Target(int value) => value; extern int abs([:reflect(Target).Parameters:]); int main() => abs(-42);")]
+    [InlineData("int Target(int value) => value; extern \"C\" int abs([:reflect(Target).Parameters:]); int main() => abs(-42);")]
     [InlineData("int Target(int value) => value; int Forward<T>([:reflect(Target).Parameters:]) => Target([:reflect(Target).Parameters:]); int main() => Forward<long>(42);")]
     [InlineData("int Target(int value) => value; const reflection signature = reflect(Target); [:signature.ReturnType:] Forward([:signature.Parameters:]) => Target([:signature.Parameters:]); int main() => Forward(42);")]
     [InlineData("struct Owner { public int Value; public Owner(int value) { Value = value; } private copy Owner(immutable(Owner)* source) { Value = source.Value; } } int Target(Owner owner) => owner.Value; int Forward([:reflect(Target).Parameters:]) => Target(move [:reflect(Target).Parameters:]); int main() { Owner owner = new(42); return Forward(move owner); }")]

@@ -84,7 +84,7 @@ struct Arena
         {
             Block* current = head!;
             head = current.Next;
-            global::Memory::Free((void*)current);
+            global::Memory::Free(current!);
         }
     }
 

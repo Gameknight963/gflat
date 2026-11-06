@@ -10,7 +10,7 @@ namespace monotonic_clock_detail
         public nint Seconds;
         public nint Nanoseconds;
     }
-    private extern int clock_gettime(int clock, Timespec* result);
+    private extern "C" int clock_gettime(int clock, Timespec* result);
 
     // Share this exact native signature and timespec identity with SystemClock.
     internal Timespec Read(int clock)

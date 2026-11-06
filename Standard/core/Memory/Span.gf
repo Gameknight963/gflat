@@ -33,7 +33,7 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
         if (start > length || count > length - start)
             throw new Exception("Span slice out of range", 3);
         if (count == 0) return new Span<T>();
-        return new Span<T>((T*)data + start, count);
+        return new Span<T>(data! + start, count);
     }
 
     public readonly Span<T> Slice(nuint start)
@@ -45,13 +45,13 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
     public readonly Span<readonly(T)> AsReadOnly()
     {
         if (length == 0) return new Span<readonly(T)>();
-        return new Span<readonly(T)>((readonly(T)*)data, length);
+        return new Span<readonly(T)>(data!, length);
     }
 
     public immutable Span<immutable(T)> AsImmutable()
     {
         if (length == 0) return new Span<immutable(T)>();
-        return new Span<immutable(T)>((immutable(T)*)data, length);
+        return new Span<immutable(T)>(data!, length);
     }
 
     // Borrows the same storage as its source view.

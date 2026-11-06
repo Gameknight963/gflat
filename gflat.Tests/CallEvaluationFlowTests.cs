@@ -68,7 +68,7 @@ public sealed class CallEvaluationFlowTests
     public void ExtensionReceiverAndArgumentsExecuteOnceInSourceOrder()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Box {}
             Box Create(){putchar(67);return new Box();}
             int First(){putchar(65);return 20;}

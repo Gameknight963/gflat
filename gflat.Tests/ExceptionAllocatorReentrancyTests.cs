@@ -6,7 +6,7 @@ public sealed class ExceptionAllocatorReentrancyTests
     public void ThrowingPayloadAllocatorUsesReserveWithoutReenteringTheCallback()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             int calls = 0;
             struct Guard { ~Guard() { putchar(68); } }
             namespace Memory {

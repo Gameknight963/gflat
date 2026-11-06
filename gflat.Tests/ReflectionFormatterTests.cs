@@ -22,8 +22,8 @@ public sealed class ReflectionFormatterTests
             using Standard;
             using Standard::Text;
 
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             bool denyAllocation = false;
             int allocationAttempts = 0;
             namespace Memory

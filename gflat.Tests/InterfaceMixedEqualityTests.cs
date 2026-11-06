@@ -69,7 +69,7 @@ public sealed class InterfaceMixedEqualityTests
     {
         // Existing test adapter pattern: malloc supplies live objects, not a real collector.
         const string source = Declarations + """
-            extern void*? malloc(nuint size);
+            extern "C" void*? malloc(nuint size);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint size, nuint alignment) => malloc(size)!;

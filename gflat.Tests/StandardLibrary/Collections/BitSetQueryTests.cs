@@ -8,7 +8,7 @@ public sealed class BitSetQueryTests
     public void ProtectedQueriesBorrowSetIndicesLazilyAndObserveContentEdits(int optimization)
         => Run("""
             using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);extern void free(void* pointer);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             bool Odd(nuint index){predicates++;return index%2==1;}

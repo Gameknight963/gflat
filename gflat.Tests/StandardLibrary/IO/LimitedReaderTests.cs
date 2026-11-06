@@ -207,13 +207,14 @@ public sealed class LimitedReaderTests
                 using Standard::IO;
                 // Throwing still requires the host's explicit exception-storage allocator.
                 namespace Memory {
-                    private extern void*? HostAllocate(nuint count);
-                    private extern void HostFree(void* storage);
+                    private extern "C" void*? HostAllocate(nuint count);
+                    private extern "C" void HostFree(void* storage);
                     public void*? Allocate(nuint count) => HostAllocate(count);
                     public void Free(void* storage) nothrow { HostFree(storage); }
                 }
                 struct Source : IByteReader { public nuint Read(char* data, nuint count) => 0; }
                 int main() { Source source = new(); LimitedReader reader = new(&source, 1); return (int)reader.Remaining; }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         Compiler.Check(sources, options: new() { NoStdLib = true, NoBuiltins = true });
     }

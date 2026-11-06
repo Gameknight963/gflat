@@ -11,7 +11,7 @@ public sealed class QueueStackQueryTests
     public void CapturedFifoAndLifoOrderMatchDotNetAcrossWrappedExtents(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" int printf(readonly(char)* format,...);
             int main(){
                 for(int count=0;count<=16;count++)for(int removed=0;removed<=count;removed++)for(int roomy=0;roomy<2;roomy++){
                     Queue<int> queue=new();Stack<int> stack=new();
@@ -43,7 +43,7 @@ public sealed class QueueStackQueryTests
     [InlineData(2)]
     public void LazyQueriesRepeatAndObserveElementEditsWithoutAllocation(int optimization)
         =>Run("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             bool Even(int value){predicates++;return value%2==0;}
@@ -75,7 +75,7 @@ public sealed class QueueStackQueryTests
     [InlineData(2)]
     public void NoncopyableElementsSupportMetadataQueriesAndDirectBorrowedIteration(int optimization)
         =>Run("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int allocations=0;int releases=0;bool deny=false;int dead=0;
             namespace Memory{public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{releases++;free(pointer);}}
             struct Owner{public int Id;public Owner(int id){Id=id;}~Owner(){dead++;}}

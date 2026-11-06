@@ -10,7 +10,7 @@ public sealed class ParameterOwnerDelimiterRecoveryTests
     [InlineData("public void Pending(")]
     [InlineData("public C(int")]
     [InlineData("public static C operator +(C")]
-    [InlineData("private extern int Pending(int")]
+    [InlineData("private extern \"C\" int Pending(int")]
     public void IncompleteParameterListPreservesOwningClassAndGlobalMethods(string pending)
     {
         string text=$$"""
@@ -24,9 +24,9 @@ public sealed class ParameterOwnerDelimiterRecoveryTests
     }
 
     [Theory]
-    [InlineData("extern int Pending(int;")]
+    [InlineData("extern \"C\" int Pending(int;")]
     [InlineData("int Pending(int;")]
-    [InlineData("extern int Pending(;")]
+    [InlineData("extern \"C\" int Pending(;")]
     public void ParameterSemicolonPreservesLaterGlobalBinding(string pending)
         => Check(pending+"\nclass C{public int Read(){return 42;}}\nint Healthy(){C c=new();return c.Read();}");
 

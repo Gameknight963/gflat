@@ -8,7 +8,7 @@ public sealed class TimeOfDayArithmeticTests
     private const string Helpers="""
         using Standard; using Standard::Encoding; using Standard::Time;
         int attempts=0;bool deny=false;
-        extern void*? malloc(nuint size);extern void free(void* value);
+        extern "C" void*? malloc(nuint size);extern "C" void free(void* value);
         namespace Memory {
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;return malloc(size);}
             public replace void Free(void* value)nothrow{free(value);}

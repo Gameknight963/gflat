@@ -18,8 +18,8 @@ public sealed class MemoryImportScopeTests
             }
             """:"";
         string program="""
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* address);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* address);
             int allocated=0;int released=0;
             """+replacement+$$"""
             int main(){
@@ -53,7 +53,7 @@ public sealed class MemoryImportScopeTests
             Assert.Contains("private to its source file",error.Message);
         }
         string ir=Compiler.Emit([new SourceFile("automatic-memory-coexist.gf","""
-            private extern void*? malloc(nuint bytes);private extern void free(void* address);
+            private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* address);
             int main(){void*? raw=malloc(8);if(raw==null)return 1;free(raw!);
                 void*? other=Memory::Allocate(8);if(other==null)return 2;Memory::Free(other!);return 0;}
             """)]);
@@ -65,9 +65,9 @@ public sealed class MemoryImportScopeTests
     public void IndependentNativeImportsStillRejectConflictingAbiAndNothrowContracts()
     {
         foreach(var value in new[]{
-            ("private extern int malloc(nuint bytes);","incompatible native signatures"),
-            ("private extern void*? malloc(nuint bytes) nothrow;","conflicting nothrow contracts"),
-            ("private extern void free(int value);","incompatible native signatures")})
+            ("private extern \"C\" int malloc(nuint bytes);","incompatible native signatures"),
+            ("private extern \"C\" void*? malloc(nuint bytes) nothrow;","conflicting nothrow contracts"),
+            ("private extern \"C\" void free(int value);","incompatible native signatures")})
         {
             var error=Assert.Throws<TypeCheckException>(()=>Compiler.Emit([new SourceFile("conflicting-memory-import.gf",value.Item1+"int main()=>0;")]));
             Assert.Contains(value.Item2,error.Message);

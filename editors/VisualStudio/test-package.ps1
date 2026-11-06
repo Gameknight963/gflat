@@ -1,4 +1,4 @@
-#requires -PSEdition Desktop
+﻿#requires -PSEdition Desktop
 # The installed Visual Studio SDK checks require Windows PowerShell/.NET Framework.
 param(
     [string]$Package = (Join-Path $PSScriptRoot 'bin/Release/net472/gflat.VisualStudio.vsix'),
@@ -31,7 +31,7 @@ try {
         foreach ($file in @('Sdk.props', 'Sdk.targets')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Sdks/Gflat.Sdk/Sdk/$file"))) { throw "VSIX is missing $tool's private SDK entry $file" }
         }
-        foreach ($source in @('core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/allocation.gf')) {
+        foreach ($source in @('core/Attribute.gf', 'core/CompilerGeneratedAttribute.gf', 'core/Exception.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/allocation.gf')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Standard/$source"))) { throw "VSIX is missing $tool/Standard/$source" }
         }
     }
@@ -164,7 +164,7 @@ int main() { Counter value=new(Pure()); return value.Value; }
     $redirectionSource = Join-Path $extracted 'console-redirection.gf'
     $redirectionExecutable = Join-Path $extracted 'console-redirection.exe'
     @'
-extern int getchar() nothrow;
+extern "C" int getchar() nothrow;
 int main() nothrow {
     if (!Console::IsInputRedirected || !Console::IsOutputRedirected || !Console::IsErrorRedirected) return 1;
     if (getchar() != 81) return 2;
@@ -275,8 +275,8 @@ int main() { int value = 21; IHash* view = &value; return Hash(ref value) + view
     if ($LASTEXITCODE -ne 0) { throw 'Packaged primitive interface smoke test failed' }
     $imports = Join-Path $extracted 'private-native-imports.gf'
     @'
-private extern void*? malloc(nuint bytes);
-private extern void free(void* storage);
+private extern "C" void*? malloc(nuint bytes);
+private extern "C" void free(void* storage);
 int main() {
     void*? own = malloc(8); if (own == null) return 1; free(own!);
     void*? normal = Memory::Allocate(8); if (normal == null) return 2;
@@ -1612,9 +1612,9 @@ int main()
     $networkConsumer = Join-Path $extracted 'network consumer'
     New-Item -ItemType Directory -Force -Path $networkConsumer | Out-Null
     @'
-extern nuint socket(int family, int kind, int protocol) nothrow;
-extern int WSAGetLastError() nothrow;
-extern int closesocket(nuint socket) nothrow;
+extern "C" nuint socket(int family, int kind, int protocol) nothrow;
+extern "C" int WSAGetLastError() nothrow;
+extern "C" int closesocket(nuint socket) nothrow;
 int main()
 {
     Windows::TcpClient client = new();

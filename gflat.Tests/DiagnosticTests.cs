@@ -377,7 +377,7 @@ namespace gflat.Tests
         public void UndefinedTypeInNewExpression_DoesNotThrowNullReferenceException()
         {
             string code = """
-                extern int printf(readonly(char)* fmt, ...);
+                extern "C" int printf(readonly(char)* fmt, ...);
 
                 struct Cool
                 {
@@ -405,7 +405,7 @@ namespace gflat.Tests
         public void ComprehensiveMultiBugProgram_CollectsAllDiagnosticsWithoutCrashing()
         {
             string code = """
-                extern int printf(readonly(char)* fmt, ...);
+                extern "C" int printf(readonly(char)* fmt, ...);
 
                 struct Cool
                 {

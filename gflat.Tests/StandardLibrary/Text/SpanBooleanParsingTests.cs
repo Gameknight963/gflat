@@ -27,9 +27,9 @@ public sealed class SpanBooleanParsingTests
             }
             Run($$"""
                 using Standard; using Standard::Text; using Standard::Memory;
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     char[16] record;nuint seen=0;

@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonStringTextTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Json; using Standard::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
+        using Standard; using Standard::Text; using Standard::Json; using Standard::Memory;extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
         int allocations=0;int releases=0;int large=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){if(size>1024)large++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocations++;return result;}
@@ -37,9 +37,9 @@ public sealed class StandardJsonStringTextTests
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             string target="\""+(file+".jsonl").Replace("\\","\\\\")+"\"";
             Run(Allocator+$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
-                extern nuint fwrite(readonly(void)* data,nuint size,nuint count,void* file);extern int fputc(int value,void* file);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* file);extern "C" int fclose(void* file);
+                extern "C" nuint fwrite(readonly(void)* data,nuint size,nuint count,void* file);extern "C" int fputc(int value,void* file);
                 int main(){
                     void*? file=fopen({{literal}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     void*? target=fopen({{target}},"wb");if(target==null)return 10;defer{fclose(target!);}

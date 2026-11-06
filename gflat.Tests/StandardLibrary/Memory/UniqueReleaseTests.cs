@@ -72,7 +72,7 @@ public sealed class UniqueReleaseTests
 
     private const string Counters="""
         using Standard; using Standard::Memory;
-        extern void*? malloc(nuint size);extern void free(void* storage);
+        extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int dead=0;int baseDead=0;int derivedDead=0;
         void*? watched=null;int watchedFrees=0;bool deny=false;
         namespace Memory{

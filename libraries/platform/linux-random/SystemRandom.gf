@@ -2,7 +2,7 @@ namespace Linux;
 
 namespace random_detail
 {
-    private extern int getentropy(void* output, nuint count) nothrow;
+    private extern "C" int getentropy(void* output, nuint count) nothrow;
 }
 
 public static class SystemRandom

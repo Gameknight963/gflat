@@ -87,8 +87,8 @@ public class StandardHashingTests
     public void StringContractCallsBorrowStorageAndNeverAllocate()
         => Run("""
             using Standard; using Standard::Text; using Standard::Collections;
-            extern void* malloc(nuint count);
-            extern void free(void* data);
+            extern "C" void* malloc(nuint count);
+            extern "C" void free(void* data);
             int allocations = 0; int releases = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { allocations++; return malloc(count); }

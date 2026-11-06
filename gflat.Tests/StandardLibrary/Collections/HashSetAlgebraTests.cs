@@ -49,7 +49,7 @@ public sealed class HashSetAlgebraTests
     [InlineData(2)]
     public void IntersectionOwnsNoncopyableCollisionKeysAndKeepsCompletedRemovalsOnFailure(int optimization)
         => Run("""
-            using Standard; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using Standard; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
             int allocations=0;int releases=0;int dead=0;int budget=-1;bool failHash=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
@@ -90,7 +90,7 @@ public sealed class HashSetAlgebraTests
     public void SymmetricDifferenceCopiesOnlyMissingKeysAndPreservesEarlierTogglesOnCopyFailure(int optimization)
         => Run("""
             using Standard; using Standard::Collections;int made=0;int dead=0;int copies=0;bool denyCopy=false;bool denyAlloc=false;
-            extern void*? malloc(nuint count);extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(denyAlloc)return null;return malloc(count);}
                 public replace void Free(void* storage) nothrow{free(storage);}

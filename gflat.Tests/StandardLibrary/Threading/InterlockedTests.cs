@@ -53,7 +53,7 @@ public sealed class InterlockedTests
         {
             string ir = Emit("""
                 using Standard::Threading;
-                extern int run_atomic_threads(void(int,int,int,int*,long*,long*)* worker,int mode,int* narrow,long* wide,long* total)nothrow;
+                extern "C" int run_atomic_threads(void(int,int,int,int*,long*,long*)* worker,int mode,int* narrow,long* wide,long* total)nothrow;
                 void Worker(int mode,int workerIndex,int iterations,int* narrow,long* wide,long* result)nothrow{
                     long sum=0l;
                     for(int index=0;index<iterations;index++){

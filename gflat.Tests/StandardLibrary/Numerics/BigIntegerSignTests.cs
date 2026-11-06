@@ -88,7 +88,7 @@ public sealed class BigIntegerSignTests
         });
 
     private const string Counters="""
-        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* value);
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* value);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;void*? watchSource=null;void*? watchTarget=null;int watchedFrees=0;
         namespace Memory{

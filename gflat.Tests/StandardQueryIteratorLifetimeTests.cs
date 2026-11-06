@@ -4,8 +4,8 @@ public sealed class StandardQueryIteratorLifetimeTests
 {
     private const string Source = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        private extern void*? malloc(nuint bytes);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);
+        private extern "C" void free(void* storage);
         int allocations = 0; int releases = 0;
         int attempted = 0; int created = 0; int destroyed = 0; int active = 0;
         int moves = 0; int reads = 0; int failure = 0;

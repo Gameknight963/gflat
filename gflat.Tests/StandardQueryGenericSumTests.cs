@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryGenericSumTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Encoding; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Encoding; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}

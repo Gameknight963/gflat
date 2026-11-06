@@ -20,9 +20,9 @@ public sealed class CollectionIterationTests
     public void SpanVectorAndReadOnlyViewsIterateWithoutAllocating()
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(immutable(char*) text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* pointer) nothrow { free(pointer); }
@@ -94,9 +94,9 @@ public sealed class CollectionIterationTests
     public void DirectTemporaryVectorOwnsItsElementsUntilIterationFinishes()
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(immutable(char*) text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);
                 public replace void Free(void* pointer) nothrow { printf("F"); free(pointer); }

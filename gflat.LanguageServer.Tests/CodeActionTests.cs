@@ -21,6 +21,7 @@ public sealed class CodeActionTests
                 public void*? Allocate(nuint bytes) => null;
                 public void Free(void* memory) nothrow {}
             }
+            namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
             """);
         var snapshot = new AnalysisSnapshot([source, support], new() { NoStdLib = true });
         var model = new EditorModel(snapshot, [source, support]);

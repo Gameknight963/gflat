@@ -11,7 +11,7 @@ public sealed class SpanWindowsTests
     public void FullWindowsMatchIndependentSmallSequenceOracle(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" int printf(readonly(char)* format,...);
             int main(){
                 int[9] data;for(nuint i=0;i<9;i++)data[i]=(int)(2*i+1);
                 for(nuint length=0;length<=9;length++)for(nuint width=1;width<=11;width++)for(nuint step=1;step<=12;step++){
@@ -40,7 +40,7 @@ public sealed class SpanWindowsTests
     [InlineData(2)]
     public void AdjacentDifferencesAndLazySmoothingBorrowCapturedStorageWithoutAllocation(int optimization)
         => Run("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
             int allocations=0;int selected=0;
             namespace Memory{public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             int Average(Span<readonly(int)> window){selected++;return (window[0]+window[1]+window[2])/3;}

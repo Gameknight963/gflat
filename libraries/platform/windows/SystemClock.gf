@@ -9,7 +9,7 @@ namespace system_clock_detail
         public uint Low;
         public uint High;
     }
-    private extern void GetSystemTimePreciseAsFileTime(FileTime* value);
+    private extern "C" void GetSystemTimePreciseAsFileTime(FileTime* value);
 
     internal Standard::Time::DateTime FromFileTime(uint low, uint high)
     {

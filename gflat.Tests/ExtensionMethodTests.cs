@@ -26,7 +26,7 @@ public sealed class ExtensionMethodTests
     [InlineData("int Bad(int n, this int self) => n; int main() => 0;", "this parameter modifier was removed")]
     [InlineData("extension int* { public int Bad() => **this; } int main() => 0;", "pointer")]
     [InlineData("struct S { public int Bad(this int self) => self; } int main() => 0;", "this parameter modifier was removed")]
-    [InlineData("extern int Bad(this int self); int main() => 0;", "this parameter modifier was removed")]
+    [InlineData("extern \"C\" int Bad(this int self); int main() => 0;", "this parameter modifier was removed")]
     [InlineData("extension int { public void Set() { *this = 1; } } int main() { immutable(int) n = 0; n.Set(); return 0; }", "Set")]
     [InlineData("namespace Helpers { extension int { public int Add() => *this; } } int main() { int n = 0; return n.Add(); }", "Add")]
     [InlineData("extension int { public void Set() { *this = 1; } } int main() { readonly(int) n = 0; n.Set(); return 0; }", "Set")]
@@ -84,7 +84,7 @@ public sealed class ExtensionMethodTests
     public void AllExtensionReceiversBorrowWithoutCopyingOrDestroyingTheValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             struct R {
                 public int n;
                 public R(int value) { n = value; }
@@ -105,7 +105,7 @@ public sealed class ExtensionMethodTests
     public void FreshValueReceiverDoesNotCopyAndHasOneDestructor()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             struct R { public int n; public R() { n = 42; } ~R() { printf("D"); } }
             int Read(R self) => self.n;
             extension R { public int Read() => (*this).n; }

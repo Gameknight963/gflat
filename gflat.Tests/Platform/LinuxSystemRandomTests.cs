@@ -5,7 +5,7 @@ namespace gflat.Tests.Platform;
 
 public sealed class LinuxSystemRandomTests
 {
-    private const string NativeDeclaration = "private extern int getentropy(void* output, nuint count) nothrow;";
+    private const string NativeDeclaration = "private extern \"C\" int getentropy(void* output, nuint count) nothrow;";
     private const string NativeStub = """
         private int getentropy(void* output, nuint count) nothrow
         {

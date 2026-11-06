@@ -57,9 +57,9 @@ public sealed class BigIntegerTests
             }
             Run("""
                 using Standard; using Standard::Text; using Standard::Numerics; using Standard::Collections;
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* buffer,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* buffer,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);
                 String ReadText(void* stream){
                     int length=0;
                     if(fread(&length,4,1,stream)!=1||length<0||length>8192)throw new Exception("bad oracle length");
@@ -94,7 +94,7 @@ public sealed class BigIntegerTests
     private const string Allocator="""
         using Standard; using Standard::Text; using Standard::Numerics; using Standard::Collections;
         int allocations=0;int releases=0;bool deny=false;int failAfter=-1;
-        extern void*? malloc(nuint bytes);extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){
                 if(deny||failAfter==0)return null;if(failAfter>0)failAfter--;

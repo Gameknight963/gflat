@@ -8,8 +8,8 @@ public sealed class UserProgramEnvironmentTests
     private static readonly string[] PrivateBuildVariables = ["MSBUILD_EXE_PATH", "MSBuildExtensionsPath", "MSBuildSDKsPath"];
 
     private const string Source = """
-        extern readonly(char)*? getenv(readonly(char)* name) nothrow;
-        extern int puts(readonly(char)* text) nothrow;
+        extern "C" readonly(char)*? getenv(readonly(char)* name) nothrow;
+        extern "C" int puts(readonly(char)* text) nothrow;
         void Show(readonly(char)* name) nothrow {
             puts(name);
             readonly(char)*? value = getenv(name);

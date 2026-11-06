@@ -33,13 +33,13 @@ public sealed class ConsoleInputStateTests
     public void ClearingEofPermitsNewFileDataAndPreservesBufferedAndPushedBackBytes(int optimization)
     {
         Run("""
-            extern void* __gflat_stdio_stdin();
-            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
-            extern void*? fopen(immutable(char*) path, immutable(char*) mode);
-            extern int fclose(void* stream);
-            extern int fputc(int value, void* stream);
-            extern int feof(void* stream);
-            extern int ferror(void* stream);
+            extern "C" void* __gflat_stdio_stdin();
+            extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+            extern "C" void*? fopen(immutable(char*) path, immutable(char*) mode);
+            extern "C" int fclose(void* stream);
+            extern "C" int fputc(int value, void* stream);
+            extern "C" int feof(void* stream);
+            extern "C" int ferror(void* stream);
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -75,10 +75,10 @@ public sealed class ConsoleInputStateTests
     public void ClearingReadErrorOnlyResetsIndicatorsAndDoesNotRepairTheStreamMode(int optimization)
     {
         Run("""
-            extern void* __gflat_stdio_stdin();
-            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
-            extern int feof(void* stream);
-            extern int ferror(void* stream);
+            extern "C" void* __gflat_stdio_stdin();
+            extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+            extern "C" int feof(void* stream);
+            extern "C" int ferror(void* stream);
             int main() {
                 void* stream = __gflat_stdio_stdin();
                 if (freopen($PATH, "wb", stream) == null) return 1;

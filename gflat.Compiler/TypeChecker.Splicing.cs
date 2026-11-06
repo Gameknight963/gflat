@@ -82,12 +82,12 @@ public partial class TypeChecker
         var reflection = argumentSpliceValues.GetValueOrDefault(node) ?? RequireReflection(node.Reflection);
         if (TryBindReflectedFunctionValue(node, node, reflection)) return;
         AstNode resolved;
-        if (node.Receiver != null && reflection.Kind is not ("Field" or "Method" or "OverloadGroup"))
-            throw new TypeCheckException("A member splice requires a field or method reflection", node.Span);
+        if (node.Receiver != null && reflection.Kind is not ("Field" or "Property" or "Method" or "OverloadGroup"))
+            throw new TypeCheckException("A member splice requires a field, property, or method reflection", node.Span);
         if (TryResolveReflectedDeclarationSplice(node, reflection, out var declared)) resolved = declared!;
         else if (reflection.Kind == "Value" && reflection.Value != null && reflection.Type != null)
             resolved = new ConstantExpression(reflection.Value, reflection.Type, node.Line);
-        else if (reflection.Kind is "Field" or "Method" or "OverloadGroup")
+        else if (reflection.Kind is "Field" or "Property" or "Method" or "OverloadGroup")
         {
             if (node.Receiver != null) resolved = new MemberAccessExpression(ReflectedFieldReceiver(node, reflection), reflection.Name, false, node.Line);
             else if (reflection.DeclaringType != null)

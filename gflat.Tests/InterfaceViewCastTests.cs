@@ -168,7 +168,7 @@ public sealed class InterfaceViewCastTests
         if (countAllocation) sources.Add(new SourceFile("count-allocation.gf", """
             int rawAllocations=0;int rawReleases=0;
             namespace Memory{
-                namespace Imports{private extern void*? malloc(nuint size);private extern void free(void* address);}
+                namespace Imports{private extern "C" void*? malloc(nuint size);private extern "C" void free(void* address);}
                 public replace void*? Allocate(nuint size){rawAllocations++;return Imports::malloc(size);}
                 public replace void Free(void* address)nothrow{rawReleases++;Imports::free(address);}
             }

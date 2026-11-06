@@ -57,8 +57,8 @@ public sealed class DirectoryCreateTests(ITestOutputHelper output)
                 using Standard;
                 using Standard::IO;
 
-                extern void*? malloc(nuint bytes);
-                extern void free(void* data);
+                extern "C" void*? malloc(nuint bytes);
+                extern "C" void free(void* data);
                 static class State { public static bool Failing; public static int Live; public static int Calls; }
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes) {

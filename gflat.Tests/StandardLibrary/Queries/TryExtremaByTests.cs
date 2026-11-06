@@ -4,8 +4,8 @@ public sealed class TryExtremaByTests
 {
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        private extern void*? malloc(nuint count);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint count);
+        private extern "C" void free(void* storage);
         int attempts = 0;
         int allocated = 0;
         int released = 0;

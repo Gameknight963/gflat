@@ -111,7 +111,7 @@ public sealed class FileGetLengthTests(ITestOutputHelper output)
             .Append(new SourceFile("file-get-length.gf", """
                 using Standard::IO;
 
-                extern int printf(readonly(char)* format, ...);
+                extern "C" int printf(readonly(char)* format, ...);
                 static class State { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes) { State::Allocations++; return null; }

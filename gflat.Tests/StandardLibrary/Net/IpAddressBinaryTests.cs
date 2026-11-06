@@ -152,6 +152,7 @@ public sealed class IpAddressBinaryTests
                     IpAddress value=new();bool success=IpAddress::TryFromBytes(input,count,&value);nuint size=value.ByteCount;
                     return value.TryWriteBytes(output,capacity,ref written)&&success;
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });
         string body = System.Text.RegularExpressions.Regex.Match(ir,

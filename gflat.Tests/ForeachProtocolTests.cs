@@ -44,7 +44,7 @@ public sealed class ForeachProtocolTests
     }
 
     private const string OwningSource = """
-        extern int printf(immutable(char*) message, ...);
+        extern "C" int printf(immutable(char*) message, ...);
         struct Iterator {
             private int n;
             public Iterator() { n = -1; printf("E"); }

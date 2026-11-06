@@ -9,7 +9,7 @@ public sealed class DefaultVectorResizeTests
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         int attempts=0; int allocated=0; int freed=0; bool deny=false; nuint firstDenied=0;
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {
                 attempts++; if(deny){if(firstDenied==0)firstDenied=bytes;return null;}

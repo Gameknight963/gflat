@@ -27,15 +27,15 @@ public sealed class AbiScalarNativeInteropTests
         """;
 
     private const string Source = """
-        extern bool native_bool(bool value);
-        extern sbyte native_sbyte(sbyte value);
-        extern byte native_byte(byte value);
-        extern short native_short(short value);
-        extern ushort native_ushort(ushort value);
-        extern int native_promote(sbyte value);
-        extern int native_invoke(int(sbyte)* callback);
-        extern int native_invoke_bool(int(bool)* callback);
-        extern int native_check_gflat();
+        extern "C" bool native_bool(bool value);
+        extern "C" sbyte native_sbyte(sbyte value);
+        extern "C" byte native_byte(byte value);
+        extern "C" short native_short(short value);
+        extern "C" ushort native_ushort(ushort value);
+        extern "C" int native_promote(sbyte value);
+        extern "C" int native_invoke(int(sbyte)* callback);
+        extern "C" int native_invoke_bool(int(bool)* callback);
+        extern "C" int native_check_gflat();
         bool EchoBool(bool value)=>value;
         sbyte EchoSbyte(sbyte value)=>value;
         byte EchoByte(byte value)=>value;

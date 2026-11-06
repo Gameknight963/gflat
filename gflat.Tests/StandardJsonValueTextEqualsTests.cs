@@ -73,7 +73,7 @@ public sealed class StandardJsonValueTextEqualsTests
     {
         string code="""
             using Standard; using Standard::Json;
-            extern void*? malloc(nuint size);extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
             int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* storage) nothrow{free(storage);}}
             int main(){

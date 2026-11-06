@@ -93,7 +93,7 @@ public class WeakReplacementTests
     [InlineData("weak int f(int[2] x) => 1; replace int f(int[3] x) => 2;", "matching weak")]
     [InlineData("weak int f(const int x) => 1; replace int f(int x) => 2;", "must match")]
     [InlineData("class C { public immutable weak int f() => 1; public replace int f() => 2; }", "static methods")]
-    [InlineData("extern int f(); weak int f() => 1;", "extern declaration")]
+    [InlineData("extern \"C\" int f(); weak int f() => 1;", "extern declaration")]
     [InlineData("class C { public static virtual weak int f() => 1; }", "Static methods cannot")]
     [InlineData("interface I { weak int f(); }", "concrete function body")]
     public void InvalidReplacementsAreRejected(string source, string message)
@@ -111,8 +111,8 @@ public class WeakReplacementTests
     [Theory]
     [InlineData("public replace void*? Allocate(nuint size) => null;")]
     [InlineData("public replace void Free(void* p) nothrow {}")]
-    public void AllocatorMustBeReplacedAsPair(string source)
-        => Assert.Contains("together", Assert.Throws<TypeCheckException>(() => Compiler.Check("namespace Memory { " + source + " } int main() => 0;")).Message);
+    public void AllocatorFunctionsCanBeReplacedIndependently(string source)
+        => Compiler.Check("namespace Memory { " + source + " } int main() => 0;");
 
     [Fact]
     public void DirectAllocatorCallsUseSelectedImplementation()

@@ -17,11 +17,13 @@ public sealed class ConstructorAccessTests
     public void PrivateConstructorIsCheckedForEveryCreationKind(string kind,string creation)
         => Reject($"{kind} Secret {{private Secret(int value){{}}}} int main(){{{creation}return 0;}}");
 
-    [Theory]
-    [InlineData("class")]
-    [InlineData("struct")]
-    public void UnmarkedConstructorsArePrivate(string kind)
-        => Reject($"{kind} Secret {{Secret(int value){{}}}} int main(){{Secret value=new(1);return 0;}}");
+    [Fact]
+    public void UnmarkedClassConstructorsArePrivate()
+        => Reject("class Secret {Secret(int value){}} int main(){Secret value=new(1);return 0;}");
+
+    [Fact]
+    public void UnmarkedStructConstructorsArePublic()
+        => Compiler.Check("struct Item {Item(int value){}} int main(){Item value=new(1);return 0;}");
 
     [Theory]
     [InlineData("class")]

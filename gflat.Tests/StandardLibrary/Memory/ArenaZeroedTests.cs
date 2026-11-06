@@ -5,7 +5,7 @@ public sealed class ArenaZeroedTests
     private const string Allocator="""
         using Standard; using Standard::Memory;
         int allocations=0;int releases=0;bool fail=false;
-        private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){
                 if(fail)return null;

@@ -20,7 +20,7 @@ public sealed class StandardRingShrinkTests
 
     private const string Allocator = """
         using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes);extern void free(void* pointer);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
         int allocations=0;int frees=0;bool deny=false;nuint lastSize=0;
         namespace Memory{
             replace void*? Allocate(nuint bytes){if(deny)return null;void*? result=malloc(bytes);if(result!=null){allocations++;lastSize=bytes;}return result;}

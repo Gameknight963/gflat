@@ -3,8 +3,8 @@ namespace gflat.Tests;
 public sealed class DeleteTemporaryLifetimeTests
 {
     private const string Prelude="""
-        extern int putchar(int value);
-        private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+        extern "C" int putchar(int value);
+        private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
         void*? watched=null;int childDead=0;int holderDead=0;int freed=0;
         namespace Memory{
             public replace void*? Allocate(nuint bytes)=>malloc(bytes);

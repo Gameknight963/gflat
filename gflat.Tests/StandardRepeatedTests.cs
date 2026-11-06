@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardRepeatedTests
 {
     private const string Counters="""
-        using Standard; using Standard::Text; using Standard::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Queries;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint count) { attempts++;if(deny)return null;void*? p=malloc(count);if(p!=null)allocated++;return p; }

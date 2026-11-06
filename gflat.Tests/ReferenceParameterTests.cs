@@ -27,7 +27,7 @@ public class ReferenceParameterTests
     }
 
     private const string OwnerDeclaration = """
-        extern int putchar(int value);
+        extern "C" int putchar(int value);
         struct R { private int value; public R(int n) { value = n; } ~R() { putchar(value); } }
         """;
 
@@ -51,7 +51,7 @@ public class ReferenceParameterTests
     public void BorrowDoesNotCopyOrDestroyAnOwningValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct R { public int n; public ~R() { putchar(68); } }
             void F(ref R r) { r.n = 42; }
             int main() { R r = new R(); F(ref r); putchar(65); return r.n; }
@@ -64,7 +64,7 @@ public class ReferenceParameterTests
     public void ReplacingBorrowedOwnerDestroysOldValueButLeavesNewValueWithCaller()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct R { public int n; public R(int x) { n = x; } public ~R() { putchar(n); } }
             void Replace(ref R r) { r = new R(66); throw new Exception(); }
             int main() { R r = new R(65); try { Replace(ref r); } catch { putchar(67); } return 0; }

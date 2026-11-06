@@ -147,7 +147,7 @@ public class AttributeTests
     [InlineData("class Tag : Attribute { public Tag(int n) {} }", "[Tag(true)]", "No matching constructor")]
     [InlineData("class Tag : Attribute { ~Tag() {} }", "[Tag]", "destructors")]
     [InlineData("int runtime() { return 1; } class Tag : Attribute { public Tag(int n) {} }", "[Tag(runtime())]", "compile time")]
-    [InlineData("extern int external(); class Tag : Attribute { public Tag() { int n = external(); } }", "[Tag]", "compile time")]
+    [InlineData("extern \"C\" int external(); class Tag : Attribute { public Tag() { int n = external(); } }", "[Tag]", "compile time")]
     [InlineData("class Tag : Attribute { public Tag() { while (true) {} } }", "[Tag]", "compile time")]
     [InlineData("int counter = 0; class Tag : Attribute { public Tag() { counter = 1; } }", "[Tag]", "non-local")]
     [InlineData("class Tag : Attribute { public Tag() { defer { int n = 1; } } }", "[Tag]", "not supported at compile time")]

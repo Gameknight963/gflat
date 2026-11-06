@@ -99,7 +99,7 @@ public sealed class SpanTryCopyTests
     {
         Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint bytes); extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
             int allocated = 0; int freed = 0; int copies = 0; int made = 0; int dead = 0;
             int budget = -1; bool deny = false; bool failNext = false;
             namespace Memory {
@@ -190,8 +190,8 @@ public sealed class SpanTryCopyTests
             using Standard::Memory;
             using Standard::Queries;
             using Standard::Collections;
-            extern void*? malloc(nuint count);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);
+            extern "C" void free(void* storage);
             int attempts = 0;
             int allocated = 0;
             int released = 0;

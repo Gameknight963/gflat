@@ -5,7 +5,7 @@ public sealed class BufferedReaderPeekTests
     private const string MemoryHooks = """
         int attempts = 0; int allocations = 0; int releases = 0; bool deny = false;
         namespace Memory {
-            namespace Native { private extern void*? malloc(nuint count); private extern void free(void* data); }
+            namespace Native { private extern "C" void*? malloc(nuint count); private extern "C" void free(void* data); }
             public replace void*? Allocate(nuint count) {
                 attempts++; if (deny) return null;
                 void*? result = Native::malloc(count); if (result != null) allocations++; return result;

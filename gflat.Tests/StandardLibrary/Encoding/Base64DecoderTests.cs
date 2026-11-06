@@ -16,7 +16,7 @@ public sealed class Base64DecoderTests
 
     private const string DenyAllocation="""
         using Standard; using Standard::IO; using Standard::Encoding;int attempts=0;
-        extern void free(void* storage);
+        extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
             public replace void Free(void* storage) nothrow{free(storage);}
@@ -72,9 +72,9 @@ public sealed class Base64DecoderTests
                 }
             }
             Run(DenyAllocation+"""
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);
                 int ReadInt(void* stream){int value=0;if(fread((void*)&value,4,1,stream)!=1)return -1;return value;}
                 struct Sink:ITextWriter {
                     private char* data;public nuint Count;public int Calls;

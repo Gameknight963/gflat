@@ -139,7 +139,7 @@ public sealed class ReadOnlyTypeTests
     public void ManagedViewsPreserveTransitiveQualification()
     {
         const string source = """
-            extern void*? malloc(nuint size);
+            extern "C" void*? malloc(nuint size);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;

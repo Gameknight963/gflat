@@ -29,7 +29,7 @@ public sealed class FunctionGroupDiagnosticTests
     [InlineData("global-field", "bool()* callback=F;")]
     [InlineData("return", "bool()* Get()=>F;")]
     [InlineData("method-argument", "void Accept(bool()* callback){} int main(){Accept(F);return 0;}")]
-    [InlineData("extern-argument", "extern void Accept(bool()* callback);int main(){Accept(F);return 0;}")]
+    [InlineData("extern-argument", "extern \"C\" void Accept(bool()* callback);int main(){Accept(F);return 0;}")]
     [InlineData("indirect-argument", "void Accept(bool()* callback){} int main(){void(bool()*)* accept=&Accept;accept(F);return 0;}")]
     [InlineData("interface-argument", "interface I{void Accept(bool()* callback);}void Pass(I* receiver){receiver.Accept(F);}")]
     [InlineData("class-constructor", "class Owner{public Owner(bool()* callback){}}int main(){Owner value=new Owner(F);return 0;}")]

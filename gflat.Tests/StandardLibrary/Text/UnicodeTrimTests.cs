@@ -56,8 +56,8 @@ public sealed class UnicodeTrimTests
     [InlineData(2)]
     public void FullValidationPrecedesResultAllocationAndOwningResultsCleanUpOnFailure(int optimization)
         => Run(Imports + """
-            extern void*? malloc(nuint bytes);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* data);
             static class State { public static bool Failing; public static int Calls; public static int Large; public static int Live; }
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {

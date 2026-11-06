@@ -47,7 +47,7 @@ public sealed class StaticCallbackTests
     public void IncompatibleNativeShutdownDeclarationHasASourceDiagnostic()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
-            extern void atexit();
+            extern "C" void atexit();
             struct Owner { public Owner() {} ~Owner() {} }
             Owner owner = new Owner();
             int main() => 0;
@@ -60,7 +60,7 @@ public sealed class StaticCallbackTests
     public void NativeShutdownCallbackSignatureIsCheckedBeforePointerErasure()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
-            extern int atexit(int(int)* callback);
+            extern "C" int atexit(int(int)* callback);
             struct Owner { public Owner() {} ~Owner() {} }
             Owner owner = new Owner();
             int main() => 0;
@@ -72,8 +72,8 @@ public sealed class StaticCallbackTests
     public void CompatibleNativeShutdownDeclarationIsSharedWithStaticCleanup()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
-            extern int atexit(void()* callback);
+            extern "C" int putchar(int value);
+            extern "C" int atexit(void()* callback);
             struct Owner { public Owner() {} ~Owner() { putchar(65); } }
             Owner owner = new Owner();
             int main() => 0;

@@ -85,7 +85,7 @@ public partial class TypeChecker
             if (reflected != null) { }
             else
             {
-                if (type is NamedTypeExpression methodName && !IsPrimitive(methodName.Name) && GetClass(methodName.Name) == null &&
+                if (type is NamedTypeExpression { TypeArguments.Count: 0 } methodName && !IsPrimitive(methodName.Name) && GetClass(methodName.Name) == null &&
                     GetStruct(methodName.Name) == null && ResolveEnum(methodName) == null && !IsInterface(methodName))
                 {
                     var methods = ResolveNamespaceCallables(methodName.Name).Methods.ToArray();
@@ -134,6 +134,8 @@ public partial class TypeChecker
 
     public ConstValue ReflectionMember(ConstValue.Reflection target, string member, int line)
     {
+        if (TryReflectAttributeMember(target, member, line, out var attributeMember)) return attributeMember!;
+        if (TryReflectPropertyMember(target, member, line, out var propertyMember)) return propertyMember!;
         if (TryReflectDeclarationMember(target, member, line, out var declarationMember)) return declarationMember!;
         if (TryReflectMethodMember(target, member, line, out var methodMember)) return methodMember!;
         ConstValue Text(string value) => new ConstValue.String(value);
@@ -200,7 +202,7 @@ public partial class TypeChecker
                 // Class layout contains inherited fields; enumeration describes this declaration.
                 var declarations = (str?.Declaration?.Members ?? cls?.Declaration?.Members)?.OfType<FieldDeclaration>();
                 if (declarations != null) fields = declarations;
-                return new ConstValue.Array(fields.Where(f => f.PropertyName == null && (f.IsStatic || f.IsConst) == (member == "StaticFields"))
+                return new ConstValue.Array(fields.Where(f => (f.IsStatic || f.IsConst) == (member == "StaticFields"))
                     .Select(f => (ConstValue)ReflectField(type, f)).ToList());
             }
             if (member == "Methods")
@@ -290,14 +292,14 @@ public partial class TypeChecker
     public static TypeExpression? ReflectionMemberType(string member, int line)
         => member switch {
             "Name" or "QualifiedName" or "Kind" or "Accessibility" => new PointerTypeExpression(new NamedTypeExpression("char", null, line), false, line, isReadOnly: true),
-            "Fields" or "StaticFields" or "Methods" or "Bases" or "Overloads" or "ParameterTypes" or "Parameters" or "Constraints" => new ArrayTypeExpression(ReflectionType(line), (int?)null, line),
-            "Type" or "DeclaringType" or "ElementType" or "ReturnType" or "Target" or "CollectorType" => ReflectionType(line),
+            "Fields" or "StaticFields" or "Properties" or "StaticProperties" or "Attributes" or "Methods" or "Bases" or "Overloads" or "ParameterTypes" or "Parameters" or "Constraints" => new ArrayTypeExpression(ReflectionType(line), (int?)null, line),
+            "Type" or "DeclaringType" or "ElementType" or "ReturnType" or "Target" or "CollectorType" or "Value" => ReflectionType(line),
             "Size" or "Alignment" or "Offset" or "Length" or "ParameterCount" or "Position" => new NamedTypeExpression("nuint", null, line),
             "IsType" or "IsStruct" or "IsClass" or "IsInterface" or "IsEnum" or "IsPrimitive" or
             "IsArray" or "IsReference" or "IsFunctionPointer" or "IsFunctionSignature" or "IsReadOnly" or
             "IsImmutable" or "IsPointer" or "IsManaged" or "IsNullable" or "IsStatic" or "IsConst" or
             "IsPublic" or "IsPrivate" or "IsRef" or "IsConstrained" or "IsNoThrow" or "IsVirtual" or "IsOverride" or "IsAbstract" or "HasLayout" or "HasElementType" or
-            "HasDestructor" or "HasFixedLength" or "HasDefaultValue" => new NamedTypeExpression("bool", null, line),
+            "HasGetter" or "HasSetter" or "HasDestructor" or "HasFixedLength" or "HasDefaultValue" => new NamedTypeExpression("bool", null, line),
             _ => null
         };
 

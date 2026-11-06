@@ -11,7 +11,7 @@ public sealed class LinkedListQueryTests
     public void QueriesMatchDotNetAfterMixedNodeOperations(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; extern "C" int printf(readonly(char)* format,...);
             int main() {
                 for (int count=0;count<25;count++) {
                     LinkedList<int> values=new();
@@ -48,7 +48,7 @@ public sealed class LinkedListQueryTests
     public void NoncopyableBorrowedQueriesSurviveOwnerMoveAndObserveElementEdits(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; extern void*? malloc(nuint size); extern void free(void* pointer);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections; extern "C" void*? malloc(nuint size); extern "C" void free(void* pointer);
             int allocations=0; int releases=0; int dead=0; bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if(deny)return null; allocations++; return malloc(size); }

@@ -33,9 +33,9 @@ public static class EditDistance
         if (scratch.Length <= columns) return false;
         // Valid nonempty spans supply readable/writable storage. Pointer access
         // avoids checked element indexers within these proven loop bounds.
-        readonly(char)* horizontal = (readonly(char)*)shorter.Data;
-        readonly(char)* vertical = (readonly(char)*)longer.Data;
-        nuint* costs = (nuint*)scratch.Data;
+        readonly(char)* horizontal = shorter.Data!;
+        readonly(char)* vertical = longer.Data!;
+        nuint* costs = scratch.Data!;
         costs[0] = 0;
         for (nuint column = 0; column < columns; column++) costs[column + 1] = column + 1;
         for (nuint row = 0; row < rows; row++)

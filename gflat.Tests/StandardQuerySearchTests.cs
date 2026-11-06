@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQuerySearchTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
         int allocations=0;int releases=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){void*? result=malloc(size);if(result!=null)allocations++;return result;}

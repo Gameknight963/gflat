@@ -144,8 +144,8 @@ public sealed class ByteReaderSkipTests
             using Standard::IO;
             using Standard::Binary;
 
-            extern void*? malloc(nuint bytes);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* data);
             int attempts = 0;
             int allocated = 0;
             int released = 0;

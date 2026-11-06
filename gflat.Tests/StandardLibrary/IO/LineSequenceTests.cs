@@ -16,8 +16,8 @@ public sealed class LineSequenceTests
         {
             namespace Native
             {
-                private extern void*? malloc(nuint bytes);
-                private extern void free(void* storage);
+                private extern "C" void*? malloc(nuint bytes);
+                private extern "C" void free(void* storage);
             }
             public replace void*? Allocate(nuint bytes)
             {

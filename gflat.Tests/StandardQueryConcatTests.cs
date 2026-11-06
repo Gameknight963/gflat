@@ -110,7 +110,7 @@ public sealed class StandardQueryConcatTests
 
     private const string Owners = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         int allocated = 0; int freed = 0;
         int starts = 0; int active = 0; int created = 0; int destroyed = 0;
         int leftMoves = 0; int rightMoves = 0; int leftReads = 0; int rightReads = 0;

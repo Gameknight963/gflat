@@ -148,7 +148,7 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         // directly instead of destroying the transferred value a second time.
         T result = move *(&node.value);
         this.Unlink(node);
-        global::Memory::Free((void*)node);
+        global::Memory::Free(node!);
         return result;
     }
 

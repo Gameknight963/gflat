@@ -174,9 +174,9 @@ public sealed class WindowsTcpClientTests
 
     private const string LoopbackProgram="""
         using Windows;using Standard::Net;using Standard::IO;
-        extern nuint socket(int family,int kind,int protocol)nothrow;
-        extern int WSAGetLastError()nothrow;
-        extern int closesocket(nuint socket)nothrow;
+        extern "C" nuint socket(int family,int kind,int protocol)nothrow;
+        extern "C" int WSAGetLastError()nothrow;
+        extern "C" int closesocket(nuint socket)nothrow;
         int Single(IpEndpoint endpoint){
             TcpClient original=TcpClient::Connect(endpoint);TcpClient client=move original;original=new();
             if(original.IsOpen||!client.IsOpen)return 1;

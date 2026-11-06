@@ -15,7 +15,7 @@ public sealed class StandardQueryAggregateTransferTests
 
     private const string Counters = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
-        extern void*? malloc(nuint bytes);extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         int allocated=0;int released=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){void*? p=malloc(bytes);if(p!=null)allocated++;return p;}

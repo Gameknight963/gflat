@@ -21,7 +21,7 @@ included files. Namespaces do not scope macros.
 ```cpp
 #include "features.gfh"
 
-extern int printf(readonly(char)* format, ...);
+extern "C" int printf(readonly(char)* format, ...);
 
 int main()
 {
@@ -122,7 +122,7 @@ STRINGIFY(@(VERSION > 0))  // "VERSION > 0"
 FORWARD(@VERSION)          // "12"
 ```
 
-`@NAME` also permits keyword identifiers, such as `extern int @class();`. The
+`@NAME` also permits keyword identifiers, such as `extern "C" int @class();`. The
 identifier's name is `class`, including in native symbols, `nameof`, and
 reflection. `@(tokens)` preserves the tokens' usual keyword classification.
 

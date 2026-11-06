@@ -20,8 +20,8 @@ public class NoStandardLibraryTests
             using Standard::Memory;
             using Standard::Text;
             namespace Memory {
-                private extern void*? HostAllocate(nuint count);
-                private extern void HostFree(void* storage);
+                private extern "C" void*? HostAllocate(nuint count);
+                private extern "C" void HostFree(void* storage);
                 public void*? Allocate(nuint count) => HostAllocate(count);
                 public void Free(void* storage) nothrow { HostFree(storage); }
             }
@@ -33,6 +33,7 @@ public class NoStandardLibraryTests
                 if (text.Length != 2) return 1;
                 return 0;
             }
+            namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
             """)), options: new() { NoStdLib = true, NoBuiltins = true });
     }
 

@@ -198,7 +198,7 @@ public sealed class MaxHeapTests
 
     private const string Allocator = """
         using Standard;using Standard::Text;using Standard::Memory;using Standard::Collections;
-        extern void*? malloc(nuint count);extern void free(void* storage);
+        extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){

@@ -7,7 +7,7 @@ public sealed class BufferedReaderTests
     private const string MemoryHooks = """
         int allocations=0;int releases=0;bool deny=false;
         namespace Memory{
-            namespace Imports{private extern void*? malloc(nuint count);private extern void free(void* address);}
+            namespace Imports{private extern "C" void*? malloc(nuint count);private extern "C" void free(void* address);}
             public replace void*? Allocate(nuint count){if(deny)return null;void*? result=Imports::malloc(count);if(result!=null)allocations++;return result;}
             public replace void Free(void* address)nothrow{releases++;Imports::free(address);}
         }

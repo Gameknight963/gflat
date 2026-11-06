@@ -57,7 +57,7 @@ public sealed class VectorRemoveRangeTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint size); extern void free(void* pointer);
+            extern "C" void* malloc(nuint size); extern "C" void free(void* pointer);
             bool deny=false; int allocationAttempts=0;
             namespace Memory {
                 replace void*? Allocate(nuint size) {allocationAttempts++;if(deny)return null;return malloc(size);}

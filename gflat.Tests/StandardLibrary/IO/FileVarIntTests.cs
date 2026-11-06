@@ -31,7 +31,7 @@ public sealed class FileVarIntTests
             byte[] oracle = expected.ToArray(); File.WriteAllBytes(input, oracle);
             string program = $$"""
                 using Standard; using Standard::IO; int attempts=0;
-                extern void free(void* value);
+                extern "C" void free(void* value);
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes){attempts++;return null;}
                     public replace void Free(void* value) nothrow{free(value);}

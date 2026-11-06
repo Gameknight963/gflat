@@ -39,7 +39,7 @@ public sealed class NativeTestEnvironmentTests
     public void CompiledChildInheritsNoninteractiveWindowsFaultHandling()
     {
         if (!OperatingSystem.IsWindows()) return;
-        var result = CompilerTestHelper.Run("extern uint GetErrorMode(); int main() { return (int)(GetErrorMode() & 3u); }");
+        var result = CompilerTestHelper.Run("extern \"C\" uint GetErrorMode(); int main() { return (int)(GetErrorMode() & 3u); }");
         Assert.Equal(3, result.ExitCode);
     }
 }

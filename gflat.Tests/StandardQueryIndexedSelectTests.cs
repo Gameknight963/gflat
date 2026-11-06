@@ -12,8 +12,8 @@ public sealed class StandardQueryIndexedSelectTests
 
     private const string Memory = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);
+        extern "C" void free(void* storage);
         int allocated = 0;
         int released = 0;
         bool denied = false;

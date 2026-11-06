@@ -204,7 +204,7 @@ public sealed class PreprocessorTests
     [Fact]
     public void VerbatimExternNamesAndNameofUseTheIdentifierName()
     {
-        string ir = Compiler.Emit("extern int @class(); int main(){readonly(char)* text=nameof(@class);return @class();}", options: new() { NoStdLib = true });
+        string ir = Compiler.Emit("extern \"C\" int @class(); int main(){readonly(char)* text=nameof(@class);return @class();}", options: new() { NoStdLib = true });
         Assert.Contains("@class()", ir);
         Assert.DoesNotContain("@@class", ir);
         Assert.Contains("\\63\\6C\\61\\73\\73\\00", ir);
@@ -280,7 +280,7 @@ public sealed class PreprocessorTests
             using Standard;
             using Standard::Text;
 
-            extern int printf(readonly(char)* format, ...);
+            extern "C" int printf(readonly(char)* format, ...);
             int main()
             {
                 String text = RENDER(VALUE);

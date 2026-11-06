@@ -36,7 +36,7 @@ public sealed class CallableNamespaceShadowingTests
             namespace Library { public int abs<T>(T input) => 99; }
             namespace Outer {
                 public int abs(int input) => 98;
-                namespace Inner { private extern int abs(int input); public int Run() => abs(-42); }
+                namespace Inner { private extern "C" int abs(int input); public int Run() => abs(-42); }
             }
             int main() => Outer::Inner::Run();
             """, optimization).ExitCode);

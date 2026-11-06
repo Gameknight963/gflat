@@ -54,7 +54,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
                     else replacement![i] = (uint)0;
                 }
             }
-            if (data != null) global::Memory::Free((void*)data);
+            if (data != null) global::Memory::Free(data!);
             data = replacement;
             words = requested;
         }
@@ -301,7 +301,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
     public immutable Enumerable<nuint, BitSet::View, BitSet::Enumerator> AsEnumerable()
         => new Enumerable<nuint, BitSet::View, BitSet::Enumerator>(new View(data, length));
 
-    ~BitSet() { if (data != null) global::Memory::Free((void*)data); }
+    ~BitSet() { if (data != null) global::Memory::Free(data!); }
 
     // Captures storage and bit length, not the owning BitSet or iterator position.
     public struct View : IEnumerable<nuint, BitSet::Enumerator>

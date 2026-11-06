@@ -7,8 +7,8 @@ public class VectorTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint size);
-            extern void free(void* pointer);
+            extern "C" void* malloc(nuint size);
+            extern "C" void free(void* pointer);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size != (nuint)16) return null; return malloc(size); }
                 public replace void Free(void* pointer) nothrow { free(pointer); }
@@ -118,8 +118,8 @@ public class VectorTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint size);
-            extern void free(void* pointer);
+            extern "C" void* malloc(nuint size);
+            extern "C" void free(void* pointer);
             namespace Memory {
                 public replace void*? Allocate(nuint size) {
                     if (size > (nuint)256) return null;

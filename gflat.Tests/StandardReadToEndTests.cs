@@ -170,7 +170,7 @@ public sealed class StandardReadToEndTests
     [InlineData(2)]
     public void AllocationFailureStopsAtCurrentChunkAndReleasesPartialOwningResult(int optimization)
         => Run(PatternReader + """
-            extern void*? malloc(nuint size); extern void free(void* value);
+            extern "C" void*? malloc(nuint size); extern "C" void free(void* value);
             int allocated = 0; int released = 0; int denied = 0; int failAfter = -1;
             namespace Memory {
                 public replace void*? Allocate(nuint count) {

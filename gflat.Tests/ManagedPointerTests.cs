@@ -6,8 +6,8 @@ public class ManagedPointerTests
 {
     // Test adapter only: malloc does not implement garbage collection.
     private const string Runtime = """
-        extern int printf(readonly(char)* format, ...);
-        extern void*? malloc(nuint size);
+        extern "C" int printf(readonly(char)* format, ...);
+        extern "C" void*? malloc(nuint size);
         alias GC = TestCollector;
         static class TestCollector {
             public static void* Allocate(nuint size, nuint alignment) { printf("A"); return malloc(size)!; }
@@ -39,7 +39,7 @@ public class ManagedPointerTests
             class Holder { public Box^? item; }
             Box^ make() { return new^ Box(12); }
             int read(Box^ b) { return b.Get(); }
-            int main() { Holder^ h = new^ Holder(); h.item = make(); return read((Box^)h.item); }
+            int main() { Holder^ h = new^ Holder(); h.item = make(); return read(h.item!); }
             """);
         Assert.Equal(12, result.ExitCode);
         Assert.Equal("AA", result.StandardOutput);
@@ -111,11 +111,8 @@ public class ManagedPointerTests
     }
 
     [Fact]
-    public void NullableCastTrapsOnNull()
-    {
-        var result = CompilerTestHelper.Run(Runtime + "int main() { int^? p = null; int^ q = (int^)p; return 0; }");
-        Assert.NotEqual(0, result.ExitCode);
-    }
+    public void NullableManagedNarrowingCastIsRejected()
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check(Runtime + "int main() { int^? p = null; int^ q = (int^)p; return 0; }"));
 
     [Fact]
     public void ManagedAndRawAllocationHooksAreIndependent()
@@ -147,7 +144,7 @@ public class ManagedPointerTests
                 Node^ a = new^ Node(); Node^ b = new^ Node();
                 a.next = b; b.next = a; a.value = 13;
                 Box<Node^>^ box = new^ Box<Node^>(b);
-                Node^ first = (Node^)box.item.next;
+                Node^ first = box.item.next!;
                 return first.value;
             }
             """);
@@ -158,7 +155,7 @@ public class ManagedPointerTests
     [Fact]
     public void CollectorMayDelegateAllocationToForeignCode()
         => Assert.Contains("@foreign_allocate", Compiler.Emit("""
-            extern void* foreign_allocate(nuint size, nuint alignment);
+            extern "C" void* foreign_allocate(nuint size, nuint alignment);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint size, nuint alignment) => foreign_allocate(size, alignment);

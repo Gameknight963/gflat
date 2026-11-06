@@ -7,7 +7,7 @@ public sealed class StandardCollectionTraceTests
 {
     private const string OwnedPrelude = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
-        extern int puts(immutable(char*) message);
+        extern "C" int puts(immutable(char*) message);
         int made = 0;
         int destroyed = 0;
         struct Owned {
@@ -208,7 +208,7 @@ public sealed class StandardCollectionTraceTests
         var reference = new BitArray(0);
         var trace = new Trace("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
-            extern int puts(immutable(char*) message);
+            extern "C" int puts(immutable(char*) message);
             bool MatchesBits(immutable(BitSet)* values, readonly(uint)* words, nuint length, nuint count) {
                 if (values.Length != length || values.CountSetBits() != count) return false;
                 for (nuint i = 0; i < length; i++) {

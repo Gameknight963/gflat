@@ -5,7 +5,7 @@ namespace gflat.Tests.Std;
 public sealed class VersionTests
 {
     private const string Support="""
-        using Standard; using Standard::Text;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -159,6 +159,7 @@ public sealed class VersionTests
                 bool Observe(immutable(Standard::Version)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
                     Standard::Version parsed=new();return Standard::Version::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});Assert.DoesNotContain("$String",ir);
         Assert.DoesNotMatch(@"(?m)^declare\s+[^\r\n]*@(?:malloc|free|memcpy|memmove|memset|strlen)\(",ir);

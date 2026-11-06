@@ -6,7 +6,7 @@ public sealed class DisjointSetResetTests
 {
     private const string Counters = """
         using Standard::Collections;
-        extern void*? malloc(nuint count);extern void free(void* storage);
+        extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}

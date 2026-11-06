@@ -55,8 +55,8 @@ public sealed class IpCountExampleTests
             Assert.Contains(originalMain,source);
             string failing=Compile(directory,"output-failure",source.Replace(originalMain,"int IpCountMain(int argc, char** argv)")+"""
 
-                extern void* __gflat_stdio_stdout();
-                extern void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
+                extern "C" void* __gflat_stdio_stdout();
+                extern "C" void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
                 int main(int argc,char** argv){
                     if(freopen(argv[1],"rb",__gflat_stdio_stdout())==null)return 90;
                     return IpCountMain(1,argv);

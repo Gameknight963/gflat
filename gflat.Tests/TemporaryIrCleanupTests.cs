@@ -15,9 +15,9 @@ public sealed class TemporaryIrCleanupTests
         {
             string source = Path.Combine(directory, "main.gf");
             File.WriteAllText(source, """
-                extern int puts(readonly(char)* text) nothrow;
-                extern int getchar() nothrow;
-                extern int fflush(void*? stream) nothrow;
+                extern "C" int puts(readonly(char)* text) nothrow;
+                extern "C" int getchar() nothrow;
+                extern "C" int fflush(void*? stream) nothrow;
                 int main() nothrow {
                     puts("READY"); fflush(null);
                     getchar();

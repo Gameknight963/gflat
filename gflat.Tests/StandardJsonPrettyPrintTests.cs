@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonPrettyPrintTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Json; using Standard::IO;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Json; using Standard::IO;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny||failAfter==0){denied++;return null;}if(failAfter>0)failAfter--;

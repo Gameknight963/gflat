@@ -18,20 +18,20 @@ public sealed class ConsolePartialReadTests
             byte[] input = Enumerable.Range(0, 97).Select(index => (byte)(index * 13)).ToArray();
             File.WriteAllBytes(path, input);
             string invalidation = OperatingSystem.IsWindows() ? """
-                extern int _fileno(void* stream);
-                extern nint _get_osfhandle(int descriptor);
-                extern int CloseHandle(void* handle);
+                extern "C" int _fileno(void* stream);
+                extern "C" nint _get_osfhandle(int descriptor);
+                extern "C" int CloseHandle(void* handle);
                 bool Invalidate(void* stream) => CloseHandle((_get_osfhandle(_fileno(stream))).reinterpret<void*>()) != 0;
                 """ : """
-                extern int fileno(void* stream);
-                extern int close(int descriptor);
+                extern "C" int fileno(void* stream);
+                extern "C" int close(int descriptor);
                 bool Invalidate(void* stream) => close(fileno(stream)) == 0;
                 """;
             string program = $$"""
-                extern void* __gflat_stdio_stdin();
-                extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
-                extern int setvbuf(void* stream, char* data, int mode, nuint capacity);
-                extern int ferror(void* stream);
+                extern "C" void* __gflat_stdio_stdin();
+                extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+                extern "C" int setvbuf(void* stream, char* data, int mode, nuint capacity);
+                extern "C" int ferror(void* stream);
                 {{invalidation}}
                 int main(int argc, char** argv) {
                     void* stream = __gflat_stdio_stdin();

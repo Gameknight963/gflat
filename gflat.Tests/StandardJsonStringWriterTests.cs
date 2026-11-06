@@ -7,7 +7,7 @@ public sealed class StandardJsonStringWriterTests
 {
     private const string Counters="""
         using Standard; using Standard::Text; using Standard::Json; using Standard::IO;
-        extern void*? malloc(nuint size);extern void free(void* storage);
+        extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
         int allocations=0;int releases=0;int destroyed=0;
         namespace Memory {
             public replace void*? Allocate(nuint size) {allocations++;return malloc(size);}

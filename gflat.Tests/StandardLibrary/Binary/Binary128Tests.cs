@@ -38,9 +38,9 @@ public sealed class Binary128Tests
                 }
             string program = $$"""
                 using Standard; using Standard::Binary;
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
-                extern nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
-                extern int fclose(void* stream) nothrow;extern int ferror(void* stream) nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
+                extern "C" int fclose(void* stream) nothrow;extern "C" int ferror(void* stream) nothrow;
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;
                     byte[32] row;byte[64] output;byte[64] before;extralong[4] aligned;

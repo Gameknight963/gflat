@@ -53,7 +53,7 @@ public sealed class StandardRotationTests
     {
         var result=CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint size);extern void free(void* storage);
+            extern "C" void* malloc(nuint size);extern "C" void free(void* storage);
             int allocations=0;
             replace void*? Memory::Allocate(nuint bytes){allocations++;return malloc(bytes);}
             replace void Memory::Free(void* storage) nothrow{free(storage);}

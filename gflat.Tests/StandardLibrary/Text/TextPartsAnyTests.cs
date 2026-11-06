@@ -85,7 +85,7 @@ public sealed class TextPartsAnyTests
     {
         Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
-            extern void*? malloc(nuint count);extern void free(void* value);
+            extern "C" void*? malloc(nuint count);extern "C" void free(void* value);
             int attempts=0;bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint count){attempts++;if(deny)return null;return malloc(count);}

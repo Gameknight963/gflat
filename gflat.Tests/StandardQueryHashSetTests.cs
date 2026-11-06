@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryHashSetTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failureIndex=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){
@@ -32,9 +32,9 @@ public sealed class StandardQueryHashSetTests
                 foreach(int value in values)output.Write(value);foreach(int value in expected)output.Write(value);
             }
             Run(Allocator+$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 bool Keep(int value)=>value%2==0;
                 int Project(int value)=>value%7;
                 int main(){

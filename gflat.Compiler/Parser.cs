@@ -648,8 +648,14 @@ namespace gflat
             List<AstNode> members = new();
             // A namespace cannot be a type member. In editor recovery, leave it
             // for the enclosing declaration parser and insert the missing brace.
-            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
-                members.Add(ParseMember());
+            var previousAccessibility = defaultMemberAccessibility;
+            defaultMemberAccessibility = TokenKind.Private;
+            try
+            {
+                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
+                    members.Add(ParseMember());
+            }
+            finally { defaultMemberAccessibility = previousAccessibility; }
             Expect(TokenKind.CloseBrace);
 
             return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams) { IsStatic = isStatic, BaseTypes = baseTypes };
@@ -669,8 +675,14 @@ namespace gflat
 
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
-            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
-                members.Add(ParseMember());
+            var previousAccessibility = defaultMemberAccessibility;
+            defaultMemberAccessibility = TokenKind.Public;
+            try
+            {
+                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
+                    members.Add(ParseMember());
+            }
+            finally { defaultMemberAccessibility = previousAccessibility; }
             Expect(TokenKind.CloseBrace);
             return new StructDeclaration(name, interfaces, members, accessibility, line, attributes, genericParams) { BaseTypes = baseTypes };
         }
@@ -733,6 +745,8 @@ namespace gflat
             return new PrimitiveImplementationDeclaration(target, contract, members, line);
         });
 
+        private TokenKind defaultMemberAccessibility = TokenKind.Private;
+
         private AstNode ParseMember() => ParseDeclaration(() => ParseMemberCoreLocated());
 
         private AstNode ParseMemberCoreLocated()
@@ -750,7 +764,7 @@ namespace gflat
         {
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, line);
-            TokenKind accessibility = TokenKind.Private;
+            TokenKind accessibility = defaultMemberAccessibility;
             Token? firstAccessibility = null;
             bool isStatic = _inStaticInterface;
             int modifierStart = _pos;
@@ -1090,6 +1104,14 @@ namespace gflat
         private ExternDeclaration ParseExternDeclarationCoreLocated(List<AttributeNode> attributes, int line, TokenKind accessibility, Token? firstAccessibility)
         {
             Expect(TokenKind.Extern);
+            bool cLinkage = false;
+            if (Check(TokenKind.StringLiteral))
+            {
+                var linkage = Consume();
+                if (linkage.Text != "\"C\"")
+                    throw new TypeCheckException("Supported explicit extern linkage is \"C\"", linkage.Span);
+                cLinkage = true;
+            }
             while (Check(TokenKind.Public) || Check(TokenKind.Private) || Check(TokenKind.Protected) || Check(TokenKind.Internal))
                 ParseAccessibilityModifier(ref accessibility, ref firstAccessibility);
             TypeExpression returnType = ParseTypeExpression();
@@ -1118,7 +1140,7 @@ namespace gflat
             Expect(TokenKind.CloseParen);
             bool isNoThrow = Match(TokenKind.NoThrow);
             Expect(TokenKind.Semicolon);
-            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility, isNoThrow);
+            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility, isNoThrow) { IsCLinkage = cLinkage };
         }
 
         private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false) => Located(() => ParseConstructorDeclarationCoreLocated(name, accessibility, line, attributes, isConst));

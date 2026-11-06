@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Net;
 public sealed class IpNetworkTests
 {
     private const string Counters="""
-        using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -195,6 +195,7 @@ public sealed class IpNetworkTests
                     nuint hash=network.GetHashCode();bool equal=network.Equals(&parsed);bool contains=network.Contains(&address);
                     return network.TryFormat(output,capacity,ref written)&&valid&&contains;
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
         string definition=ir.Split('\n').Single(line=>line.StartsWith("define ")&&line.Contains("$Observe("));Assert.Contains("nounwind",definition);

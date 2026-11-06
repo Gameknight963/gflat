@@ -51,8 +51,8 @@ public sealed class SpanSearchTests
 
     private const string Owning = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint size);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint size);
+        extern "C" void free(void* storage);
         int allocations=0; int releases=0; int destroyed=0; int calls=0; int failAt=0;
         namespace Memory {
             public replace void*? Allocate(nuint size) { allocations++; return malloc(size); }

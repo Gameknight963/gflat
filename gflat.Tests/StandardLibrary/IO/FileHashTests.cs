@@ -10,7 +10,7 @@ public sealed class FileHashTests
 
     private const string DenyAllocation="""
         using Standard; using Standard::IO; using Standard::Hashing;int attempts=0;
-        extern void free(void* storage);
+        extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
             public replace void Free(void* storage) nothrow{free(storage);}
@@ -128,7 +128,7 @@ public sealed class FileHashTests
         WithDirectory(directory=>
         {
             string executable=Compile(directory,DenyAllocation+"""
-                private extern int remove(immutable(char*) path);
+                private extern "C" int remove(immutable(char*) path);
                 int main(int argc,char** argv){
                     byte[32] first=FileHash::SHA256(argv[1]);byte[32] second=FileHash::SHA256(argv[1]);
                     // Remove while this process still runs: Windows rejects an open CRT file.

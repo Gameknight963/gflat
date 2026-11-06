@@ -10,7 +10,7 @@ public sealed class AssignmentEvaluationTests
     public void NumericUpdatesEvaluateTheirIndexOnce(string expression, int expected)
     {
         var result = CompilerTestHelper.Run($$"""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             int Index() { putchar(73); return 0; }
             int main() {
                 int[1] data = [7]; int result = {{expression}};
@@ -26,7 +26,7 @@ public sealed class AssignmentEvaluationTests
     public void NumericUpdateCallsItsReferenceIndexerGetterOnce()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Buffer {
                 private int* data;
                 public Buffer(int* storage) { data = storage; }
@@ -44,7 +44,7 @@ public sealed class AssignmentEvaluationTests
     public void SimpleStorageTargetIsEvaluatedOnceBeforeTheValue(string statement)
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             int* Target(int* value) { putchar(84); return value; }
             int Value() { putchar(86); return 42; }
             int main() { int value = 0; STATEMENT return value; }
@@ -57,7 +57,7 @@ public sealed class AssignmentEvaluationTests
     public void SimpleReferenceIndexerEvaluatesReceiverIndexAndGetterBeforeTheValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Buffer {
                 private int* data;
                 public Buffer(int* storage) { data = storage; }
@@ -79,7 +79,7 @@ public sealed class AssignmentEvaluationTests
     public void ThrowingSimpleTargetPreventsConstructionOfTheAssignedOwner()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner { public Owner() { putchar(86); } ~Owner() { putchar(68); } }
             Owner* Target() { putchar(84); throw new Exception(); }
             int main() { try { *Target() = new Owner(); } catch { putchar(67); } return 0; }
@@ -92,7 +92,7 @@ public sealed class AssignmentEvaluationTests
     public void ThrowingValueDestroysTheTemporaryReferenceIndexerReceiver()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Buffer {
                 private int* data;
                 public Buffer(int* storage) { data = storage; putchar(77); }
@@ -114,7 +114,7 @@ public sealed class AssignmentEvaluationTests
     public void ThrowingValueDoesNotDestroyTheExistingOwnerAtTheCapturedDestination()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner {
                 private int marker;
                 public Owner(int value) { marker = value; }
@@ -171,7 +171,7 @@ public sealed class AssignmentEvaluationTests
     public void CompoundStorageTargetIsEvaluatedOnceBeforeTheRightOperand(string statement, string output)
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             int* Target(int* value) { putchar(84); return value; }
             int Value() { putchar(86); return 2; }
             int main() { int value = 1; STATEMENT return value; }
@@ -184,7 +184,7 @@ public sealed class AssignmentEvaluationTests
     public void ThrowingCompoundTargetPreventsRightOperandEvaluation()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             int* Target() { putchar(84); throw new Exception(); }
             int Value() { putchar(86); return 2; }
             int main() { try { *Target() += Value(); } catch {} return 0; }
@@ -197,7 +197,7 @@ public sealed class AssignmentEvaluationTests
     public void ReferenceIndexerCapturesAddressAndOldValueBeforeTheRightOperand()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Buffer {
                 private int* data;
                 public Buffer(int* storage) { data = storage; }

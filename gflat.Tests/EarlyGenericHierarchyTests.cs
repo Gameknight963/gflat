@@ -38,8 +38,8 @@ public sealed class EarlyGenericHierarchyTests
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("main.gf", """
                 using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-                extern void*? malloc(nuint size);
-                extern void free(void* storage);
+                extern "C" void*? malloc(nuint size);
+                extern "C" void free(void* storage);
                 namespace Memory {
                     public replace void*? Allocate(nuint size) {
                         if (size >= (nuint)100 * (nuint)sizeof(int^) ||

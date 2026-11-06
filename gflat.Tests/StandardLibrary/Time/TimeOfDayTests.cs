@@ -8,7 +8,7 @@ public sealed class TimeOfDayTests
 {
     private const long Day=864000000000L;
     private const string Counters="""
-        using Standard; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Time;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -172,6 +172,7 @@ public sealed class TimeOfDayTests
                 bool Observe(immutable(Standard::Time::TimeOfDay)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
                     Standard::Time::TimeOfDay parsed=new();return Standard::Time::TimeOfDay::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Observe\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;

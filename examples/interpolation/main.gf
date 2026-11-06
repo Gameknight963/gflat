@@ -1,7 +1,7 @@
 using Standard::Text;
 using Standard;
 
-extern int printf(readonly(char)* text, ...);
+extern "C" int printf(readonly(char)* text, ...);
 
 struct Player : IFormattable
 {

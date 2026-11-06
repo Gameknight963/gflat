@@ -66,9 +66,9 @@ public sealed class FileStateTests
             Directory.CreateDirectory(scratch);
             string exe = Compile(directory, """
                 using Standard; using Standard::IO;
-                extern int puts(immutable(char*) text);
-                extern int fflush(void*? stream);
-                extern int getchar();
+                extern "C" int puts(immutable(char*) text);
+                extern "C" int fflush(void*? stream);
+                extern "C" int getchar();
                 void Wait(immutable(char*) stage) { puts(stage); fflush(null); getchar(); }
                 int main() {
                     {

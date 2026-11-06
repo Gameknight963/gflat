@@ -138,7 +138,7 @@ public class TypeDescriptionShapeTests
     public void NamesResolveAliasesAndGenericNamespacesWithoutMangling()
     {
         var result = Run("""
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             namespace Game { struct Box<T> { public T value; } }
             alias IntBox = Game::Box<int>;
             int main() {

@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringAnySearchTests
 {
     private const string Counters="""
-        using Standard; using Standard::Text;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using Standard; using Standard::Text;extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;if(deny)return null;void*? p=malloc(bytes);if(p!=null)allocated++;return p;}

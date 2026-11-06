@@ -48,29 +48,29 @@ public sealed class WindowsTcpClientStubTests
 
     private static readonly (string Declaration,string Definition)[] Replacements=
     {
-        ("private extern int WSAStartup(ushort version, void* data) nothrow;","""
+        ("private extern \"C\" int WSAStartup(ushort version, void* data) nothrow;","""
         private int WSAStartup(ushort version,void* data)nothrow{
             Probe::Starts++;if(version!=(ushort)514||(data).reinterpret<nuint>()%8!=0){Probe::Bad=true;return 10022;}
             if(Probe::StartupError!=0){Probe::LastError=9999;return Probe::StartupError;}
             Probe::Active++;*((ushort*)data)=Probe::Version;return 0;
         }
         """),
-        ("private extern int WSACleanup() nothrow;","""
+        ("private extern \"C\" int WSACleanup() nothrow;","""
         private int WSACleanup()nothrow{
             Probe::CleanupCalls++;if(Probe::Active<=0){Probe::Bad=true;return Probe::Fail(10093);}
             if(Probe::CleanupFailures>0){Probe::CleanupFailures--;return Probe::Fail(10036);}
             Probe::Active--;Probe::LastError=7002;return 0;
         }
         """),
-        ("private extern int WSAGetLastError() nothrow;","private int WSAGetLastError()nothrow{return Probe::LastError;}"),
-        ("private extern nuint socket(int family, int kind, int protocol) nothrow;","""
+        ("private extern \"C\" int WSAGetLastError() nothrow;","private int WSAGetLastError()nothrow{return Probe::LastError;}"),
+        ("private extern \"C\" nuint socket(int family, int kind, int protocol) nothrow;","""
         private nuint socket(int family,int kind,int protocol)nothrow{
             Probe::Sockets++;if(Probe::Active<=0||family!=Probe::Family||kind!=1||protocol!=6){Probe::Bad=true;Probe::LastError=10022;return (nuint)0-1;}
             if(Probe::SocketFailure){Probe::LastError=10055;return (nuint)0-1;}
             nuint result=Probe::Next;Probe::Next++;return result;
         }
         """),
-        ("private extern int connect(nuint socket, readonly(void)* address, int length) nothrow;","""
+        ("private extern \"C\" int connect(nuint socket, readonly(void)* address, int length) nothrow;","""
         private int connect(nuint socket,readonly(void)* address,int length)nothrow{
             Probe::Connects++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             int expectedLength=16;if(Probe::Family==23)expectedLength=28;
@@ -86,7 +86,7 @@ public sealed class WindowsTcpClientStubTests
             if(Probe::ConnectFailure)return Probe::Fail(10061);return 0;
         }
         """),
-        ("private extern int recv(nuint socket, char* data, int count, int flags) nothrow;","""
+        ("private extern \"C\" int recv(nuint socket, char* data, int count, int flags) nothrow;","""
         private int recv(nuint socket,char* data,int count,int flags)nothrow{
             Probe::Reads++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             if(count<=0||flags!=0)Probe::Bad=true;
@@ -99,7 +99,7 @@ public sealed class WindowsTcpClientStubTests
             Probe::Received+=amount;return amount;
         }
         """),
-        ("private extern int send(nuint socket, readonly(char)* data, int count, int flags) nothrow;","""
+        ("private extern \"C\" int send(nuint socket, readonly(char)* data, int count, int flags) nothrow;","""
         private int send(nuint socket,readonly(char)* data,int count,int flags)nothrow{
             Probe::Writes++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             if(count<=0||flags!=0)Probe::Bad=true;
@@ -112,13 +112,13 @@ public sealed class WindowsTcpClientStubTests
             Probe::Sent+=amount;return amount;
         }
         """),
-        ("private extern int shutdown(nuint socket, int how) nothrow;","""
+        ("private extern \"C\" int shutdown(nuint socket, int how) nothrow;","""
         private int shutdown(nuint socket,int how)nothrow{
             Probe::Shutdowns++;if(!Probe::Usable(socket))return Probe::Fail(10038);if(how!=1)Probe::Bad=true;
             if(Probe::ShutdownFailure)return Probe::Fail(10058);return 0;
         }
         """),
-        ("private extern int closesocket(nuint socket) nothrow;","""
+        ("private extern \"C\" int closesocket(nuint socket) nothrow;","""
         private int closesocket(nuint socket)nothrow{
             Probe::CloseCalls++;if(!Probe::Usable(socket))return Probe::Fail(10038);
             if(Probe::CloseFailures>0){Probe::CloseFailures--;return Probe::Fail(10038);}

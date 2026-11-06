@@ -149,8 +149,8 @@ public sealed class FileWriterTests
             File.WriteAllBytes(path, Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
                 using Standard; using Standard::Text; using Standard::IO;
-                extern void*? malloc(nuint size);
-                extern void free(void* data);
+                extern "C" void*? malloc(nuint size);
+                extern "C" void free(void* data);
                 namespace Memory {
                     public replace void*? Allocate(nuint size) {
                         if (size == (nuint)4101) return null;

@@ -36,9 +36,9 @@ public sealed class Math128Tests
                 new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
                 new SourceFile("main.gf", $$"""
                     using Standard; using Standard::Numerics;
-                    extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                    extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                    extern int ferror(void* stream);extern int fclose(void* stream);
+                    extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                    extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                    extern "C" int ferror(void* stream);extern "C" int fclose(void* stream);
                     extralong Wide(ulong low,ulong high) nothrow => ((extralong)high<<64)|(extralong)low;
                     int main(){
                         // These bindings require exact return AND argument signatures.

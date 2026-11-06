@@ -165,8 +165,8 @@ public sealed class ReadAtLeastTests
             using Standard::Collections;
             using Standard::IO;
 
-            extern void*? malloc(nuint count);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);
+            extern "C" void free(void* storage);
             int allocationAttempts = 0;
             int liveAllocations = 0;
             int destroyedReaders = 0;

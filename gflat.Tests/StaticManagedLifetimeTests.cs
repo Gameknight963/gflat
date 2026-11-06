@@ -25,7 +25,7 @@ public sealed class StaticManagedLifetimeTests
     public void FailedManagedGlobalInitializerUnregistersItsStorageBeforeTheUnhandledHook()
     {
         var result = CompilerTestHelper.Run(ProbeSource + """
-            extern void exit(int status);
+            extern "C" void exit(int status);
             managed<int, Probe>? Fail() { throw new Exception(); }
             managed<int, Probe>? value = Fail();
             namespace Exceptions {
@@ -327,12 +327,12 @@ public sealed class StaticManagedLifetimeTests
         """;
 
     private const string ProbeSource = """
-            extern int putchar(int value);
-            extern void*? malloc(nuint bytes);
+            extern "C" int putchar(int value);
+            extern "C" void*? malloc(nuint bytes);
             static class Probe : Standard::IGarbageCollector {
                 private static void*?[128] slots;
                 private static nuint count;
-                public static void* Allocate(nuint bytes, nuint alignment) => (void*)malloc(bytes);
+                public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
                 public static void RegisterDestructor(void* storage, void(void*)* destroy) nothrow {}
                 public static nuint Collect() => 0;
                 public static nuint Count() => count;

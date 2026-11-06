@@ -120,9 +120,9 @@ public class SpanTests
     {
         var sources = Sources("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }

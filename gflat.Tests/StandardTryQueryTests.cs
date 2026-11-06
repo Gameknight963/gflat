@@ -4,7 +4,7 @@ public sealed class StandardTryQueryTests
 {
     private const string Prelude = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        private extern void*? malloc(nuint bytes); private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes); private extern "C" void free(void* storage);
         int allocations=0;int releases=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){void*? result=malloc(bytes);if(result!=null)allocations++;return result;}

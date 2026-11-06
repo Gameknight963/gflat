@@ -10,7 +10,7 @@ public sealed class StringResizeTests
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Collections;
         int allocations=0;int releases=0;bool deny=false;
-        extern void*? malloc(nuint bytes);extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){if(deny)return null;allocations++;return malloc(bytes);}
             public replace void Free(void* storage) nothrow{releases++;free(storage);}

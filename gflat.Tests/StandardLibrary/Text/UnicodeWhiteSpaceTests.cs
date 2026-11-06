@@ -7,8 +7,8 @@ public sealed class UnicodeWhiteSpaceTests
     private const string Prelude = """
         using Standard::Text;
 
-        extern void*? malloc(nuint count);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint count);
+        extern "C" void free(void* storage);
         int attempts = 0;
         int live = 0;
         bool deny = false;

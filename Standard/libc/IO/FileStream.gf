@@ -261,19 +261,19 @@ public struct FileStream : ITextWriter, IByteReader
 
 namespace file_detail
 {
-    private extern int __gflat_stdio_seek(FileHandle stream, long offset, int origin);
-    private extern long __gflat_stdio_tell(readonly(void)* stream);
-    private extern long __gflat_stdio_length(FileHandle stream);
-    private extern int __gflat_stdio_set_length(FileHandle stream, long length);
-    private extern FileHandle fopen(readonly(char)* path, readonly(char)* mode);
-    private extern int fclose(FileHandle stream);
-    private extern nuint fread(char* data, nuint size, nuint count, FileHandle stream);
-    private extern nuint fwrite(readonly(char)* data, nuint size, nuint count, FileHandle stream);
-    private extern int fflush(FileHandle stream);
-    private extern int ferror(FileHandle stream);
-    private extern int feof(readonly(void)* stream);
-    private extern void clearerr(FileHandle stream);
-    private extern int fgetc(FileHandle stream);
-    private extern int ungetc(int value, FileHandle stream);
-    private extern FileHandle tmpfile();
+    private extern "C" int __gflat_stdio_seek(FileHandle stream, long offset, int origin);
+    private extern "C" long __gflat_stdio_tell(readonly(void)* stream);
+    private extern "C" long __gflat_stdio_length(FileHandle stream);
+    private extern "C" int __gflat_stdio_set_length(FileHandle stream, long length);
+    private extern "C" FileHandle fopen(readonly(char)* path, readonly(char)* mode);
+    private extern "C" int fclose(FileHandle stream);
+    private extern "C" nuint fread(char* data, nuint size, nuint count, FileHandle stream);
+    private extern "C" nuint fwrite(readonly(char)* data, nuint size, nuint count, FileHandle stream);
+    private extern "C" int fflush(FileHandle stream);
+    private extern "C" int ferror(FileHandle stream);
+    private extern "C" int feof(readonly(void)* stream);
+    private extern "C" void clearerr(FileHandle stream);
+    private extern "C" int fgetc(FileHandle stream);
+    private extern "C" int ungetc(int value, FileHandle stream);
+    private extern "C" FileHandle tmpfile();
 }

@@ -8,8 +8,8 @@ public sealed class HashMapExtractionTests
         using Standard; using Standard::Text; using Standard::Collections;
         int made=0; int dead=0; int allocations=0; int releases=0;
         bool failHash=false; bool failEquality=false;
-        private extern void*? malloc(nuint bytes);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);
+        private extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) { void*? result=malloc(bytes); if(result!=null)allocations++; return result; }
             public replace void Free(void* storage) nothrow { releases++; free(storage); }

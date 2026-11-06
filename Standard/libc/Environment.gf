@@ -10,5 +10,5 @@ public static class Environment
 
 namespace environment_detail
 {
-    private extern readonly(char)*? getenv(readonly(char)* name) nothrow;
+    private extern "C" readonly(char)*? getenv(readonly(char)* name) nothrow;
 }

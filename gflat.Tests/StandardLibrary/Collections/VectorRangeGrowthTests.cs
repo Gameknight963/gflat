@@ -59,7 +59,7 @@ public sealed class VectorRangeGrowthTests
     private static void Run(string code,int optimization)
     {
         const string counters="""
-            using Standard; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using Standard; using Standard::Memory; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
             int allocations=0;int releases=0;int largeAllocations=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(count>8192){largeAllocations++;return null;}if(deny)return null;allocations++;return malloc(count);}

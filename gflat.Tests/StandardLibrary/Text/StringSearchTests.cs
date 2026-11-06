@@ -40,8 +40,8 @@ public sealed class StringSearchTests
     public void LongNearMatchesAndAliasedPatternsKeepSentinelsAndAllocateNothingDuringSearch(int optimization)
         => Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint count);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);
+            extern "C" void free(void* storage);
             int allocations = 0;
             namespace Memory {
                 replace void*? Allocate(nuint count) { allocations++; return malloc(count); }

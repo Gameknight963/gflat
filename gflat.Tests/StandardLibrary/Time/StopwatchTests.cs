@@ -7,7 +7,7 @@ namespace gflat.Tests.Std.Time;
 public sealed class StopwatchTests
 {
     private const string Support="""
-        using Standard; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Time;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -153,6 +153,7 @@ public sealed class StopwatchTests
                 static class Clock:Standard::Time::IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}
                 bool ResetProbe(Standard::Time::Stopwatch<Clock>* value)nothrow{value.Reset();return value.IsRunning;}
                 Standard::Time::TimeSpan Observe(immutable(Standard::Time::Stopwatch<Clock>)* value)=>value.Elapsed;
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         Assert.DoesNotContain("$String",ir);Assert.False(NativeToolchain.RequiresWideIntegerRuntime(ir));

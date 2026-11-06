@@ -34,7 +34,7 @@ public class NothrowCallEmissionTests
     [Fact]
     public void ExplicitForeignNothrowIsAnUnchangedNativeSignatureWithNoUnwindSupport()
     {
-        const string source="private extern int abs(int value) nothrow; int main()=>abs(-42);";
+        const string source="private extern \"C\" int abs(int value) nothrow; int main()=>abs(-42);";
         string ir=Compiler.Emit(source,options:new(){NoStdLib=true});
         Assert.Contains("declare i32 @abs(i32) nounwind",ir);
         Assert.Contains("call i32 @abs(i32",ir);
@@ -43,14 +43,14 @@ public class NothrowCallEmissionTests
         Assert.DoesNotContain("@__gflat_eh_",ir);
         Assert.Equal(42,CompilerTestHelper.Run(source).ExitCode);
 
-        string unknown=Compiler.Emit("extern int abs(int value) nothrow; int main(){int(int)* call=abs; return call(-42);}");
+        string unknown=Compiler.Emit("extern \"C\" int abs(int value) nothrow; int main(){int(int)* call=abs; return call(-42);}");
         Assert.Contains("invoke i32 %",unknown);
     }
 
     [Fact]
     public void ForeignNothrowAlsoSupportsNamespacedVariadicCalls()
     {
-        string ir=Compiler.Emit("namespace Native { private extern int printf(readonly(char)* text,...) nothrow; } int main()=>Native::printf(\"%d\",42);",options:new(){NoStdLib=true});
+        string ir=Compiler.Emit("namespace Native { private extern \"C\" int printf(readonly(char)* text,...) nothrow; } int main()=>Native::printf(\"%d\",42);",options:new(){NoStdLib=true});
         Assert.Contains("declare i32 @printf(i8*, ...) nounwind",ir);
         Assert.DoesNotContain("invoke",ir);
         Assert.DoesNotContain("@__gflat_eh_",ir);

@@ -8,8 +8,8 @@ public sealed class LinkedListReverseTests
     public void ReversalPreservesBothLinksNodeValueIdentityAndNoncopyableOwnershipWithoutAllocation(int optimization)
         => Run("""
             using Standard; using Standard::Queries; using Standard::Collections;
-            private extern void*? malloc(nuint size);
-            private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint size);
+            private extern "C" void free(void* storage);
             int attempts = 0;
             int allocated = 0;
             int freed = 0;

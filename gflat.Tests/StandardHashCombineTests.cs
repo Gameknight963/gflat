@@ -38,9 +38,9 @@ public sealed class StandardHashCombineTests
                 foreach(var pair in pairs){output.Write(pair.First);output.Write(pair.Second);output.Write(Combine(pair.First,pair.Second));}
             }
             string code=$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
-                extern nuint fread(void* output,nuint size,nuint count,void* input) nothrow;
-                extern int fclose(void* input) nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* input) nothrow;
+                extern "C" int fclose(void* input) nothrow;
                 ulong Word(readonly(char)* bytes,nuint count)nothrow{
                     ulong value=0ul;for(nuint i=0;i<count;i++)value=value|((ulong)(byte)bytes[i]<<(int)(i*8));return value;
                 }

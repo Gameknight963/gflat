@@ -153,7 +153,7 @@ public sealed class VectorResizeTests
     private const string Memory = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         int attempts=0;int allocations=0;int releases=0;int failAt=0;bool deny=false;
-        extern void*? malloc(nuint bytes);extern void free(void* value);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* value);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {
                 attempts++;

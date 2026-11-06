@@ -8,7 +8,7 @@ public sealed class HashSetMutationTests
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
         int made=0;int dead=0;int copies=0;int hashCalls=0;int equalityCalls=0;
         int failCopy=0;int failHash=0;int failEquality=0;int allocations=0;int releases=0;bool failLarge=false;
-        private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){if(failLarge && bytes>=100)return null;void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
             public replace void Free(void* storage) nothrow{releases++;free(storage);}
@@ -30,7 +30,7 @@ public sealed class HashSetMutationTests
     {
         var random=new Random(81119);HashSet<int>[] sets=[[],[]];
         var source=new StringBuilder("""
-            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern int puts(immutable(char*) text);
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Collections;extern "C" int puts(immutable(char*) text);
             bool Matches(immutable(HashSet<int>)* values,readonly(int)* expected,nuint count){
                 if(values.Count!=count)return false;for(nuint i=0;i<count;i++)if(!values.Contains(expected+i))return false;return true;
             }

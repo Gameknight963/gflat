@@ -153,7 +153,7 @@ public partial class TypeChecker
             new Parameter(parameter.Name, BindCallableOwnerType(definition, call.Callee, parameter.Type), parameter.Line,
                 parameter.IsConst, parameter.DefaultValue)).ToList())).ToList();
         return SelectBestOverload(candidates, candidate => candidate.Parameters, call.Arguments, method.Name, call.Line,
-            useDeclaredTypes: !primitiveInterpolationCalls.Contains(call) && !HasUnconstrainedGenericReceiver(call)).Definition;
+            useDeclaredTypes: !HasUnconstrainedGenericReceiver(call)).Definition;
     }
 
     private bool HasUnconstrainedGenericReceiver(CallExpression call)

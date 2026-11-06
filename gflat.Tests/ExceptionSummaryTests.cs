@@ -25,7 +25,7 @@ public class ExceptionSummaryTests
 
     [Fact]
     public void ForeignNothrowContractSuppressesUnknownOutgoingExceptions()
-        => Assert.Empty(Summary("extern int abs(int value) nothrow; void Test(){abs(-42);}"));
+        => Assert.Empty(Summary("extern \"C\" int abs(int value) nothrow; void Test(){abs(-42);}"));
 
     [Fact]
     public void CollectsDistinctDirectThrows()

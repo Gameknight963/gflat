@@ -8,7 +8,7 @@ public class UnwindingTests
     public void ThrowingABorrowedBaseValueCopiesItsStaticType()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             class E : Exception { public int n = 42; public ~E() { putchar(68); } }
             int main() {
                 try {
@@ -39,7 +39,7 @@ public class UnwindingTests
     public void CleanupCanHandleItsOwnExceptionWhileUnwinding()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             void Fail() { throw new Exception(); }
             void Work() {
                 defer { try { Fail(); } catch { putchar(65); } }
@@ -57,7 +57,7 @@ public class UnwindingTests
     public void ThrowUsesExplicitCopyAndMoveRules(string expression, string expected)
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             class E : Exception {
                 public E() {}
                 public copy E(immutable(E)* source) { putchar(67); }
@@ -85,7 +85,7 @@ public class UnwindingTests
         {
             string ir = Path.Combine(directory, "bridge.ll"), cpp = Path.Combine(directory, "test.cpp"), executable = Path.Combine(directory, "test.exe");
             File.WriteAllText(ir, CompilerTestHelper.EmitIr("""
-                extern void Cleanup();
+                extern "C" void Cleanup();
                 void Bridge(void()* callback) {
                     defer Cleanup();
                     try { callback(); } catch (Exception* e) { throw new Exception(); }

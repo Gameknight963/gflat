@@ -31,8 +31,8 @@ public sealed class BinaryCursorVarIntTests
                 output.WriteByte((byte)encoded.Length);output.Write(encoded);output.Write(new byte[10-encoded.Length]);
             }
             Run($$"""
-                using Standard; using Standard::Binary;extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);
+                using Standard; using Standard::Binary;extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* file);extern "C" int fclose(void* file);
                 int allocations=0;
                 namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}public replace void Free(void* pointer) nothrow{} }
                 int main(){void* file=fopen({{Literal(path)}},"rb");defer{fclose(file);}

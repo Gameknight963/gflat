@@ -6,8 +6,8 @@ public sealed class PriorityQueueFailureTests
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int made=0;int dead=0;int allocations=0;int releases=0;
         int calls=0;int failAt=-1;bool failAllocation=false;
-        private extern void*? malloc(nuint bytes);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);
+        private extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {
                 if(failAllocation)return null;

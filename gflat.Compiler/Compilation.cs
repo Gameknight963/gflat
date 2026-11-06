@@ -125,8 +125,7 @@ public sealed class Compilation
         {
             var bundledBadAlloc = StandardLibrary.Load("core/BadAllocException.gf");
             foreach (var ns in unit.Namespaces)
-                ns.Members.RemoveAll(m => m is ClassDeclaration { Name: "BadAllocException" } &&
-                    m.Span.Source?.Path == bundledBadAlloc.Path && m.Span.Source.Text == bundledBadAlloc.Text);
+                ns.Members.RemoveAll(m => m.Span.Source?.Path == bundledBadAlloc.Path && m.Span.Source.Text == bundledBadAlloc.Text);
         }
         bool hasException = unit.Members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
         foreach (string relative in StandardLibrary.AutomaticFiles)

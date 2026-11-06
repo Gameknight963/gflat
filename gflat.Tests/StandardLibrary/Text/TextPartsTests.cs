@@ -183,8 +183,8 @@ public sealed class TextPartsTests
     {
         Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* data);
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return malloc(size); }
@@ -219,7 +219,7 @@ public sealed class TextPartsTests
     {
         const string program = """
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size); extern void free(void* data);
+            extern "C" void*? malloc(nuint size); extern "C" void free(void* data);
             int allocated=0;int released=0;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { void*? result=malloc(size);if(result!=null)allocated++;return result; }

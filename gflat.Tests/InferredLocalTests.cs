@@ -8,7 +8,7 @@ public sealed class InferredLocalTests
     public void InferencePreservesConcreteTypesAndEvaluatesTheInitializerOnce()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Box<T> { public T Value; public Box(T value) { Value = value; } }
             Box<int> Make() { putchar(65); return new Box<int>(42); }
             int main() {
@@ -26,7 +26,7 @@ public sealed class InferredLocalTests
     public void InferredOwningValuesObeyCopyMoveAndDestructionRules()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Owner {
                 public Owner() {}
                 ~Owner() { putchar(68); }

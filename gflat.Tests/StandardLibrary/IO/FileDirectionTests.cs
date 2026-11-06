@@ -9,7 +9,7 @@ public sealed class FileDirectionTests
     {
         const string code="""
             using Standard; using Standard::IO;
-            extern void*? malloc(nuint size);extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
             bool deny=false;int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){attempts++;if(deny)return null;return malloc(size);}

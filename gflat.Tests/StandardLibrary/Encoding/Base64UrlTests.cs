@@ -25,9 +25,9 @@ public sealed class Base64UrlTests
             }
             Run(directory, $$"""
                 using Standard; using Standard::Encoding;
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;
                     uint[2] sizes;char[1024] input;char[1400] expected;char[1402] output;char[1402] inplace;

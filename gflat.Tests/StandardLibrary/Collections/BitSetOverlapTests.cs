@@ -22,7 +22,7 @@ public sealed class BitSetOverlapTests
         }
         Run($$"""
             using Standard; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);extern void free(void* value);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* value);
             bool deny=false;int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny){attempts++;return null;}return malloc(size);}

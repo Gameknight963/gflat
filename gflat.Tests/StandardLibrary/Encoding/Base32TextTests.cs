@@ -6,7 +6,7 @@ public sealed class Base32TextTests
 {
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Encoding;
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         int allocations=0; int releases=0; int large=0; bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {

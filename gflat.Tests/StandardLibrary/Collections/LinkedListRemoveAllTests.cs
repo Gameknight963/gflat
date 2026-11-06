@@ -4,8 +4,8 @@ public sealed class LinkedListRemoveAllTests
 {
     private const string Allocator="""
         using Standard; using Standard::Queries; using Standard::Collections;
-        private extern void*? malloc(nuint size);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint size);
+        private extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int freed=0;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}

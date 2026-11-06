@@ -47,7 +47,7 @@ public sealed class FunctionLinkageTests
     public void UnusedFunctionAndItsDataAreDiscarded(int optimization, bool internalize)
     {
         string ir = Compiler.Emit("""
-            extern int puts(immutable(char*) text);
+            extern "C" int puts(immutable(char*) text);
             int Unused() => puts("gflat_unused_function_data_984276");
             int main() => 42;
             """, options: new() { NoStdLib = true, InternalizeFunctions = internalize });
@@ -63,7 +63,7 @@ public sealed class FunctionLinkageTests
     public void OptimizedExecutableDoesNotRequireAnUnreachableNativeDependency()
     {
         string ir = Compiler.Emit("""
-            extern int gflat_missing_unused_dependency();
+            extern "C" int gflat_missing_unused_dependency();
             int Unused() => gflat_missing_unused_dependency();
             int main() => 42;
             """, options: new() { NoStdLib = true, InternalizeFunctions = true });
@@ -76,8 +76,8 @@ public sealed class FunctionLinkageTests
     public void NativeCodeCanRetainAndCallAnInternalCallback(int optimization)
     {
         string ir = Compiler.Emit("""
-            extern int atexit(void()* callback);
-            extern int putchar(int value);
+            extern "C" int atexit(void()* callback);
+            extern "C" int putchar(int value);
             void Callback() { putchar(65); }
             int main() { atexit(Callback); return 42; }
             """, options: new() { InternalizeFunctions = true });
@@ -95,7 +95,7 @@ public sealed class FunctionLinkageTests
     public void InternalLinkagePreservesStaticLifetimeAndExceptionDestruction(int optimization)
     {
         string ir = Compiler.Emit("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner { public Owner() {} ~Owner() { putchar(65); } }
             Owner appOwner = new Owner();
             class Failure : Exception { ~Failure() { putchar(69); } }

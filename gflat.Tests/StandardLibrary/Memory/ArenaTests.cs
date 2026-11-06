@@ -36,7 +36,7 @@ public sealed class ArenaTests
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Memory;
             int allocated=0;int released=0;int denied=0;int destroyed=0;bool deny=false;
-            extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
             namespace Memory{
                 replace void*? Allocate(nuint bytes){
                     if(deny){denied++;return null;}
@@ -119,7 +119,7 @@ public sealed class ArenaTests
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Memory;
             bool fail = false;
-            extern void* malloc(nuint bytes); extern void free(void* pointer);
+            extern "C" void* malloc(nuint bytes); extern "C" void free(void* pointer);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (fail) return null; return malloc(bytes); }
                 replace void Free(void* pointer) nothrow { free(pointer); }
@@ -145,7 +145,7 @@ public sealed class ArenaTests
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Memory;
             int allocated = 0; int released = 0;
-            extern void*? malloc(nuint bytes); extern void free(void* pointer);
+            extern "C" void*? malloc(nuint bytes); extern "C" void free(void* pointer);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) {
                     void*? result = malloc(bytes); if (result != null) allocated++; return result;

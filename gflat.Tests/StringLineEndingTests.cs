@@ -8,7 +8,7 @@ public sealed class StringLineEndingTests
         using Standard;
         using Standard::Text;
 
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         int attempts = 0; int allocations = 0; int releases = 0;
         bool deny = false; bool failNext = false; nuint failedSize = 0;
         namespace Memory {

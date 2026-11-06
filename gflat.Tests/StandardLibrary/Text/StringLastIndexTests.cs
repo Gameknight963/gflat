@@ -18,7 +18,7 @@ public sealed class StringLastIndexTests
         var random=new Random(9761);
         var code=new StringBuilder("""
             using Standard; using Standard::Text; using Standard::Collections;
-            extern void*? malloc(nuint size);extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
             int allocations=0;int releases=0;
             namespace Memory {
                 public replace void*? Allocate(nuint size){allocations++;return malloc(size);}

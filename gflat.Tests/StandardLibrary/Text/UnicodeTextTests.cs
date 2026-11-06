@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class UnicodeTextTests
 {
     private const string Prelude="""
-        using Standard; using Standard::Text; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocations=0;int releases=0;int largeAllocations=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){if(count>1024)largeAllocations++;if(deny)return null;allocations++;return malloc(count);}

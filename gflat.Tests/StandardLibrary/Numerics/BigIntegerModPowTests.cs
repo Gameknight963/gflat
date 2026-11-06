@@ -146,7 +146,7 @@ public sealed class BigIntegerModPowTests
 
     private const string Counters = """
         using Standard; using Standard::Text; using Standard::Numerics;
-        extern void*? malloc(nuint count); extern void free(void* value);
+        extern "C" void*? malloc(nuint count); extern "C" void free(void* value);
         int allocated = 0; int released = 0; int attempts = 0; int denied = 0; int failAfter = -1;
         bool capture = false; void*? captured = null;
         void*? watch0 = null; void*? watch1 = null; void*? watch2 = null; void*? watch3 = null; int watchedFrees = 0;

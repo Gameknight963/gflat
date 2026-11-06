@@ -13,9 +13,9 @@ public sealed class ConsoleWriterTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Text; using Standard::IO;
-            extern int printf(immutable(char*) text, ...);
-            extern void* malloc(nuint count);
-            extern void free(void* storage);
+            extern "C" int printf(immutable(char*) text, ...);
+            extern "C" void* malloc(nuint count);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint count) { printf("allocation"); return malloc(count); }
                 public replace void Free(void* storage) nothrow { free(storage); }

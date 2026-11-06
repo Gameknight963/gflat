@@ -5,7 +5,7 @@ namespace gflat.Tests.Platform;
 
 public sealed class WindowsSystemRandomTests
 {
-    private const string NativeDeclaration = "private extern int BCryptGenRandom(void*? algorithm, byte* output, uint count, uint flags) nothrow;";
+    private const string NativeDeclaration = "private extern \"C\" int BCryptGenRandom(void*? algorithm, byte* output, uint count, uint flags) nothrow;";
     private const string NativeStub = """
         private int BCryptGenRandom(void*? algorithm, byte* output, uint count, uint flags) nothrow
         {

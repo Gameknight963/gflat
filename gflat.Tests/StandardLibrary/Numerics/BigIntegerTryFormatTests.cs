@@ -45,7 +45,7 @@ public sealed class BigIntegerTryFormatTests
         string data = string.Join('|', rows) + "|";
         string program = $$"""
             using Standard; using Standard::Numerics;
-            extern void*? malloc(nuint count); extern void free(void* value);
+            extern "C" void*? malloc(nuint count); extern "C" void free(void* value);
             int attempts=0; int allocated=0; int released=0; bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint count){

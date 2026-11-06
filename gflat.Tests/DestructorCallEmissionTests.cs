@@ -8,7 +8,7 @@ public sealed class DestructorCallEmissionTests
     public void DestructorDispatchCallsKnownNonUnwindingEntriesWithoutInvokeScaffolding()
     {
         string ir = Compiler.Emit("""
-            extern void Observe(int value) nothrow;
+            extern "C" void Observe(int value) nothrow;
             interface IMarker
             {
                 int Marker();

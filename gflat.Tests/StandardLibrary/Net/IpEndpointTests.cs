@@ -8,7 +8,7 @@ public sealed class IpEndpointTests
 {
     private const string Counters = """
         using Standard;using Standard::Net;
-        extern void*? malloc(nuint bytes);extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){attempts++;if(deny)return null;void*? value=malloc(bytes);if(value!=null)allocated++;return value;}
@@ -214,6 +214,7 @@ public sealed class IpEndpointTests
                 IpEndpoint typed=new(address,source.Port);bool equal=typed.Equals(source);nuint hash=source.GetHashCode();
                 return source.TryFormat(output,capacity,ref written)&&success&&equal;
             }
+            namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
             """), options: new() { NoStdLib = true, NoBuiltins = true });
         string definition = ir.Split('\n').Single(line => line.StartsWith("define ") && line.Contains("$Observe("));
         Assert.Contains("nounwind", definition);

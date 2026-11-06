@@ -1,4 +1,4 @@
-extern int printf(readonly(char)* format, ...);
+extern "C" int printf(readonly(char)* format, ...);
 
 readonly(char)* BooleanText(bool value)
 {

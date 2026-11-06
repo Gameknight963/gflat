@@ -30,7 +30,7 @@ public sealed class GarbageCollectorRuntimeTests
     [Fact]
     public void RawNativeBytesDoNotBecomeManagedRoots() => Succeeds("""
         void* object = Collector::Allocate(32, 8);
-        void** native = (void**)Memory::Allocate((nuint)sizeof(void*));
+        void** native = (void**)Memory::Allocate((nuint)sizeof(void*))!;
         *native = object;
         if (Collector::Collect() != (nuint)1) return 1;
         Memory::Free(native);
@@ -57,7 +57,7 @@ public sealed class GarbageCollectorRuntimeTests
 
     [Fact]
     public void NativeBuffersExplicitlyRetireTheirRegisteredSlots() => Succeeds("""
-        void** native = (void**)Memory::Allocate((nuint)sizeof(void*));
+        void** native = (void**)Memory::Allocate((nuint)sizeof(void*))!;
         *native = Collector::Allocate(32, 8);
         Collector::ReferenceAdded(native);
         if (Collector::Collect() != (nuint)0) return 1;
@@ -118,8 +118,8 @@ public sealed class GarbageCollectorRuntimeTests
 
     private const string AllocationProbe = """
         namespace probe_native {
-            extern void*? malloc(nuint size);
-            extern void free(void* address);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* address);
         }
         static class AllocationProbe {
             public static nuint Allocations;

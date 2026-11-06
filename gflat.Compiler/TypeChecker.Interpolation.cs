@@ -11,7 +11,6 @@ public partial class TypeChecker
         CallExpression? Conversion = null, IdentifierExpression? Converted = null);
     private readonly Dictionary<InterpolatedStringExpression, InterpolationPlan> _interpolations = new();
     private int _interpolationTemporary;
-    private readonly HashSet<CallExpression> primitiveInterpolationCalls = new();
     public InterpolationPlan GetInterpolation(InterpolatedStringExpression node) => _interpolations[node];
 
     private void CheckInterpolation(InterpolatedStringExpression node)
@@ -62,17 +61,10 @@ public partial class TypeChecker
                     else if (type is NamedTypeExpression primitive && primitive.Name is
                         "bool" or "char" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "extralong" or "nint" or "nuint" or "float" or "double")
                     {
-                        if (!_globalScope.Children.TryGetValue("Standard", out var std) || !std.Functions.TryGetValue("Format", out var first) ||
-                            !(overloadFamilies.TryGetValue(first, out var family) ? family : new List<MethodDeclaration> { first })
-                                .Any(m => m.Parameters.Count == 2 && ResolveAlias(m.Parameters[0].Type) is NamedTypeExpression parameter && parameter.Name == primitive.Name))
-                        {
-                            string source = primitive.Name == "extralong"
-                                ? "Standard/core/Text/IntegerFormatting.gf and Standard/core/extra_long_format.gf"
-                                : "Standard/core/primitive_format.gf (and Standard/libc/floating_format.gf for floating-point values)";
-                            throw new TypeCheckException($"Primitive interpolation requires Standard::Format({primitive.Name}, ITextWriter*); include {source}", part.Line);
-                        }
-                        action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "Standard", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
-                        primitiveInterpolationCalls.Add(action);
+                        // Interpolation formats the checked primitive value, including a
+                        // specialized generic parameter, through ordinary extension lookup.
+                        var value = new CastExpression(new NamedTypeExpression(primitive.Name, null, part.Line), part, part.Line) { Span = part.Span };
+                        action = new(new MemberAccessExpression(value, "Format", false, part.Line), new() { destination }, part.Line) { Span = part.Span };
                     }
                     else if (TypeImplementsInterface(type, "IStringConvertable") || valueType is NamedTypeExpression { Name: "IStringConvertable" })
                     {
@@ -84,6 +76,12 @@ public partial class TypeChecker
                             new MemberAccessExpression(converted, "Data", false, part.Line),
                             new MemberAccessExpression(converted, "Length", false, part.Line)
                         }, part.Line) { Span = part.Span };
+                    }
+                    else if (type is PointerTypeExpression { Inner: NamedTypeExpression { Name: "char" } } textPointer)
+                    {
+                        if (textPointer.IsNullable)
+                            throw new TypeCheckException("A nullable C string must be checked for null or explicitly asserted with '!' before interpolation", part.Span);
+                        action = new(new MemberAccessExpression(result, "Write", false, part.Line), new() { part }, part.Line) { Span = part.Span };
                     }
                     else throw new TypeCheckException($"Interpolation value of type '{DisplayTypeName(type)}' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text", part.Line);
                 }

@@ -47,7 +47,7 @@ For example, `Describe<int**>().ElementType` describes `int*`, whose element des
 
 `Fields` points to `FieldCount` entries in declaration order. Each `FieldInfo` contains its name, type, byte offset, and public/private flags.
 
-The table contains the type's declared instance fields, including private fields. For inherited fields, follow `BaseType` and inspect that descriptor's table. Use `reflect(T).StaticFields` to inspect static fields and constants at compile time.
+The table contains the type's declared instance fields, including private fields and auto-property backing fields. Computed properties do not add storage. For inherited fields, follow `BaseType` and inspect that descriptor's table. Use `reflect(T).StaticFields` to inspect static fields and constants at compile time.
 
 Offsets are relative to the start of a value. Metadata describing a private field does not grant source-level access to it. Using an offset for raw memory access carries the same responsibilities as other pointer operations.
 

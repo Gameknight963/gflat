@@ -6,7 +6,7 @@ public class VariadicFloatTests
     public void FloatingArgumentsUseCVariadicCallingConvention()
     {
         const string source = """
-            extern int printf(readonly(char)* format, ...);
+            extern "C" int printf(readonly(char)* format, ...);
             int main() { printf("%.2f %.2f %d", 1.5f, 2.25d, (byte)255); return 0; }
             """;
         string ir = CompilerTestHelper.EmitIr(source);

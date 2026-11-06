@@ -28,11 +28,11 @@ public sealed class ManagedReturnStorageTests
     // Poisoning retired storage makes a gap between callee and caller roots
     // observable without relying on a system allocator's reuse behavior.
     private const string Runtime = """
-        extern void* rc_allocate(nuint bytes, nuint alignment);
-        extern void rc_added(void* slot);
-        extern void rc_removed(void* slot);
-        extern int rc_live_count();
-        extern int rc_first_references();
+        extern "C" void* rc_allocate(nuint bytes, nuint alignment);
+        extern "C" void rc_added(void* slot);
+        extern "C" void rc_removed(void* slot);
+        extern "C" int rc_live_count();
+        extern "C" int rc_first_references();
         alias GC = TestCollector;
         static class TestCollector {
             public static void* Allocate(nuint bytes, nuint alignment) => rc_allocate(bytes, alignment);

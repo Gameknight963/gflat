@@ -4,8 +4,8 @@ public sealed class StringShrinkTests
 {
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Collections;
-        extern void*? malloc(nuint bytes);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);
+        extern "C" void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;bool deny=false;
         nuint lastSize=0;nuint watched=0;int watchedReleases=0;
         namespace Memory {

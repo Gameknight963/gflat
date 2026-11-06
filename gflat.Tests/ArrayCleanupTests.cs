@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public class ArrayCleanupTests
 {
     private const string Prelude = """
-        extern int printf(readonly(char)* format, ...);
+        extern "C" int printf(readonly(char)* format, ...);
         struct Item { public int id; ~Item() { printf("%d", id); } }
         """;
     private const string Items = "Item[3] items = default(Item[3]); items[0].id = 1; items[1].id = 2; items[2].id = 3;";
@@ -36,8 +36,8 @@ public class ArrayCleanupTests
     public void DeletePointerToArrayDestroysElementsBeforeFree()
     {
         Check("""
-            extern void* malloc(nuint size);
-            extern void free(void* ptr);
+            extern "C" void* malloc(nuint size);
+            extern "C" void free(void* ptr);
             namespace Memory { public replace void*? Allocate(nuint size) { return malloc(size); } }
             namespace Memory { public replace void Free(void* ptr) nothrow { printf("F"); free(ptr); } }
             int main() {

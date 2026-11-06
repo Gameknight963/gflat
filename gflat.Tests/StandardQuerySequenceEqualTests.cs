@@ -87,7 +87,7 @@ public sealed class StandardQuerySequenceEqualTests
     [InlineData(2)]
     public void BothIteratorsAndOwningCurrentsCleanUpAcrossConstructionReadCopyAndComparisonFailures(int optimization)
         =>Run("""
-            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
             int allocations=0;int releases=0;int starts=0;int ends=0;int live=0;int mode=0;int calls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocations++;return value;}

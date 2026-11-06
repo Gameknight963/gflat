@@ -6,7 +6,7 @@ public sealed class DateTimeOffsetArithmeticTests
 {
     private const long Maximum=3155378975999999999L,Epoch=621355968000000000L,Minute=600000000L;
     private const string Support="""
-        using Standard; using Standard::Text; using Standard::Time;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Time;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}

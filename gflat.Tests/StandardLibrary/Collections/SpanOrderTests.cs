@@ -11,7 +11,7 @@ public sealed class SpanOrderTests
     {
         var random=new Random(89071);
         var source=new StringBuilder("""
-            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;extern int puts(immutable(char*) text);int calls=0;
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;extern "C" int puts(immutable(char*) text);int calls=0;
             int Compare(readonly(int)* a,readonly(int)* b){calls++;if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             int main(){
             """);
@@ -45,7 +45,7 @@ public sealed class SpanOrderTests
     public void NoncopyableOwnersAreBorrowedWithoutAllocationAndRemainIntactWhenComparisonThrows(int optimization)
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
-            private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
             int allocations=0;int releases=0;int made=0;int dead=0;int calls=0;int failAt=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){void*? result=malloc(bytes);if(result!=null)allocations++;return result;}

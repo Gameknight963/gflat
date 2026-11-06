@@ -149,47 +149,30 @@ public partial class TypeChecker
         first.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, first))
             .SequenceEqual(second.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, second)));
 
-    private void ValidateAllocatorPair()
-    {
-        if (!_globalScope.Children.TryGetValue("Memory", out var scope)) return;
-        var allocate = GetMemoryFunction("Allocate");
-        var free = GetMemoryFunction("Free");
-        if (free != null && !free.IsNoThrow)
-            throw new TypeCheckException("Memory::Free must be declared nothrow", free.Span);
-        if (allocate == null || free == null)
-        {
-            if (allocate?.ImplementationKind == FunctionImplementationKind.Replace || free?.ImplementationKind == FunctionImplementationKind.Replace)
-                throw new TypeCheckException("Replace Memory::Allocate and Memory::Free together", (allocate ?? free)!.Span);
-            return;
-        }
-        if ((allocate.ImplementationKind == FunctionImplementationKind.Replace) != (free.ImplementationKind == FunctionImplementationKind.Replace))
-            throw new TypeCheckException("Replace Memory::Allocate and Memory::Free together", allocate.Line);
-    }
-
     private void RequireMemoryFunction(string name, AstNode use)
     {
         if (!HasMemoryFunction(name))
-            throw new TypeCheckException($"This operation requires Memory::{name}; include a memory implementation or provide the function explicitly", use.Span);
+            throw new TypeCheckException($"This operation requires the compiler runtime entry __gflat_runtime::{name}", use.Span);
         if (GetMemoryFunction(name) == null)
-            throw new TypeCheckException($"Memory::{name} must provide the public non-generic signature " +
+            throw new TypeCheckException($"Runtime entry __gflat_runtime::{name} must provide the public non-generic signature " +
                 (name == "Allocate" ? "void*? Allocate(nuint bytes)" : "void Free(void* storage) nothrow"), use.Span);
     }
 
-    public bool HasMemoryFunction(string name) => _globalScope.Children.TryGetValue("Memory", out var scope) && scope.Functions.ContainsKey(name);
+    public bool HasMemoryFunction(string name) => _globalScope.Children.TryGetValue("__gflat_runtime", out var scope) && scope.Functions.ContainsKey(name);
     public MethodDeclaration? GetMemoryFunction(string name)
     {
-        if (!_globalScope.Children.TryGetValue("Memory", out var scope) || !scope.Functions.TryGetValue(name, out var first)) return null;
+        if (!_globalScope.Children.TryGetValue("__gflat_runtime", out var scope) || !scope.Functions.TryGetValue(name, out var first)) return null;
         var family = overloadFamilies.TryGetValue(first, out var overloads) ? overloads : [first];
         return family.FirstOrDefault(method => !method.IsGeneric && method.Accessibility == TokenKind.Public && method.Parameters.Count == 1 &&
             (name == "Allocate"
                 ? ResolveAlias(method.Parameters[0].Type) is NamedTypeExpression { Name: "nuint" } &&
                     ResolveAlias(method.ReturnType) is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } }
-                : ResolveAlias(method.Parameters[0].Type) is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } } &&
+                : method.IsNoThrow && ResolveAlias(method.Parameters[0].Type) is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } } &&
                     ResolveAlias(method.ReturnType) is NamedTypeExpression { Name: "void" }));
     }
     public MethodDeclaration? GetUnhandledExceptionHook()
     {
-        if (!_globalScope.Children.TryGetValue("Exceptions", out var scope) ||
+        if (!_globalScope.Children.TryGetValue("__gflat_runtime", out var scope) ||
             !scope.Functions.TryGetValue("Unhandled", out var first)) return null;
         var family = overloadFamilies.TryGetValue(first, out var overloads) ? overloads : [first];
         return family.FirstOrDefault(method => !method.IsGeneric && method.Body != null &&
@@ -206,10 +189,10 @@ public partial class TypeChecker
 
     private void ValidateUnhandledExceptionHook()
     {
-        if (!_globalScope.Children.TryGetValue("Exceptions", out var scope)) return;
+        if (!_globalScope.Children.TryGetValue("__gflat_runtime", out var scope)) return;
         AstNode? declaration = (AstNode?)scope.Functions.GetValueOrDefault("Unhandled") ??
             (AstNode?)scope.GenericFunctions.GetValueOrDefault("Unhandled") ?? scope.Externs.GetValueOrDefault("Unhandled");
         if (declaration != null && GetUnhandledExceptionHook() == null)
-            throw new TypeCheckException("Exceptions::Unhandled must provide the public non-generic signature 'void Unhandled(Exception*? error)'", declaration.Span);
+            throw new TypeCheckException("Runtime entry __gflat_runtime::Unhandled must provide the public non-generic signature 'void Unhandled(Exception*? error)'", declaration.Span);
     }
 }

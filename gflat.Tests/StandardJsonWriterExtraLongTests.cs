@@ -27,9 +27,9 @@ public sealed class StandardJsonWriterExtraLongTests
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
                 using Standard; using Standard::Text; using Standard::Json;
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* file);
-                extern int fclose(void* file);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* file);
+                extern "C" int fclose(void* file);
                 bool Digits(ref immutable(String) actual,nuint start,readonly(byte)* expected,nuint count){
                     for(nuint i=0;i<count;i++)if(actual.Data[start+i]!=(char)expected[i])return false;return true;
                 }
@@ -65,7 +65,7 @@ public sealed class StandardJsonWriterExtraLongTests
     [InlineData(2)]
     public void WideNumbersPreserveWriterStateAndOutputFailureContracts(int optimization)
         =>Run("""
-            using Standard; using Standard::Text; using Standard::Json;extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            using Standard; using Standard::Text; using Standard::Json;extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
             int allocations=0;int calls=0;int fail=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}

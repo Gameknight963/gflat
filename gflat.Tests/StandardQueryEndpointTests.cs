@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryEndpointTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocated=0;int released=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocated++;return value;}

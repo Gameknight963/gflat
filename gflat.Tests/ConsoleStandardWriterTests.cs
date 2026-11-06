@@ -88,9 +88,9 @@ public sealed class ConsoleStandardWriterTests
             string path = Path.Combine(directory, "read-only.txt");
             File.WriteAllText(path, "kept");
             var result = CompilerTestHelper.Run(Sources($$"""
-                extern void* __gflat_stdio_stdout();
-                extern void* __gflat_stdio_stderr();
-                extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+                extern "C" void* __gflat_stdio_stdout();
+                extern "C" void* __gflat_stdio_stderr();
+                extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
                 int main() {
                     ITextWriter* output = Console::Out;
                     ITextWriter* error = Console::Error;
@@ -116,11 +116,11 @@ public sealed class ConsoleStandardWriterTests
     {
         if (!OperatingSystem.IsWindows()) return;
         var result = CompilerTestHelper.Run(Sources("""
-            extern void* __gflat_stdio_stderr();
-            extern int _fileno(void* stream);
-            extern nint _get_osfhandle(int descriptor);
-            extern int CloseHandle(void* handle);
-            extern int ferror(void* stream);
+            extern "C" void* __gflat_stdio_stderr();
+            extern "C" int _fileno(void* stream);
+            extern "C" nint _get_osfhandle(int descriptor);
+            extern "C" int CloseHandle(void* handle);
+            extern "C" int ferror(void* stream);
             int main() {
                 void* stream = __gflat_stdio_stderr();
                 // Keep the CRT descriptor valid but make its underlying OS handle
@@ -140,11 +140,11 @@ public sealed class ConsoleStandardWriterTests
     {
         if (!OperatingSystem.IsLinux()) return;
         var result = CompilerTestHelper.Run(Sources("""
-            extern void* __gflat_stdio_stdout();
-            extern void* __gflat_stdio_stderr();
-            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
-            extern int setvbuf(void* stream, char* buffer, int mode, nuint size);
-            extern int fclose(void* stream);
+            extern "C" void* __gflat_stdio_stdout();
+            extern "C" void* __gflat_stdio_stderr();
+            extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+            extern "C" int setvbuf(void* stream, char* buffer, int mode, nuint size);
+            extern "C" int fclose(void* stream);
             int main() {
                 void* output = __gflat_stdio_stdout(); void* error = __gflat_stdio_stderr();
                 if (freopen("/dev/full", "wb", output) == null || freopen("/dev/full", "wb", error) == null) return 1;
@@ -165,10 +165,10 @@ public sealed class ConsoleStandardWriterTests
     {
         if (!OperatingSystem.IsLinux()) return;
         var result = CompilerTestHelper.Run(Sources("""
-            extern void* __gflat_stdio_stderr();
-            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
-            extern int setvbuf(void* stream, char* buffer, int mode, nuint size);
-            extern int fclose(void* stream);
+            extern "C" void* __gflat_stdio_stderr();
+            extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+            extern "C" int setvbuf(void* stream, char* buffer, int mode, nuint size);
+            extern "C" int fclose(void* stream);
             int main() {
                 void* stream = __gflat_stdio_stderr();
                 if (freopen("/dev/full", "wb", stream) == null) return 1;

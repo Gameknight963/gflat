@@ -7,6 +7,7 @@
         public List<Parameter> Parameters { get; }
         public bool IsVariadic { get; }
         public bool IsNoThrow { get; }
+        public bool IsCLinkage { get; set; }
         public TokenKind Accessibility { get; }
 
         public ExternDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, bool isVariadic, List<AttributeNode> attributes, int line, TokenKind accessibility = TokenKind.Public, bool isNoThrow = false) : base(line)

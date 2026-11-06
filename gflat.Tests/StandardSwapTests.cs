@@ -43,7 +43,7 @@ public sealed class StandardSwapTests
     public void OwningStringsAndNoncopyableUniqueValuesRelocateWithoutAllocatingOrDestroying(int optimization)
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
-            extern void*? malloc(nuint size);extern void free(void* pointer);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int attempts=0;int allocated=0;int freed=0;int dead=0;bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? p=malloc(size);if(p!=null)allocated++;return p;}

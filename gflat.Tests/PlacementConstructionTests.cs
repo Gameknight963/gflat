@@ -7,9 +7,9 @@ public class PlacementConstructionTests
     public void UsesDestinationOnceAndRunsNormalInitializationWithoutAllocation()
     {
         var result = CompilerTestHelper.Run("""
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }
@@ -23,7 +23,7 @@ public class PlacementConstructionTests
             int Argument() { printf("a"); return 42; }
             Thing* Destination(Thing* p) { printf("p"); return p; }
             int main() {
-                Thing* storage = (Thing*)Memory::Allocate((nuint)sizeof(Thing));
+                Thing* storage = (Thing*)Memory::Allocate((nuint)sizeof(Thing))!;
                 Thing* result = new* Thing(Argument()) at Destination(storage);
                 if (result != storage || result.field != 7 || result.argument != 42) return 1;
                 printf("S");
@@ -42,12 +42,12 @@ public class PlacementConstructionTests
             T* Place<T>(T* storage) { return new* T() at storage; }
             struct Empty { public int value = 9; }
             int main() {
-                Box<int>* storage = (Box<int>*)Memory::Allocate((nuint)sizeof(Box<int>) * (nuint)2);
+                Box<int>* storage = (Box<int>*)Memory::Allocate((nuint)sizeof(Box<int>) * (nuint)2)!;
                 new* Box<int>(11) at storage;
                 new* Box<int>(42) at storage + 1;
                 int at = storage[0].value + storage[1].value;
                 Memory::Free((void*)storage);
-                Empty* empty = (Empty*)Memory::Allocate((nuint)sizeof(Empty));
+                Empty* empty = (Empty*)Memory::Allocate((nuint)sizeof(Empty))!;
                 Empty* result = Place<Empty>(empty);
                 if (result.value != 9 || at != 53) return 1;
                 delete result;
@@ -59,7 +59,7 @@ public class PlacementConstructionTests
     public void InitializesClassMetadataBaseAndFields()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct Field { public int n = 8; ~Field() { printf("F"); } }
             class Base { public virtual int Value() { return 1; } ~Base() { printf("B"); } }
             class Derived : Base {
@@ -68,7 +68,7 @@ public class PlacementConstructionTests
                 ~Derived() { printf("D"); }
             }
             int main() {
-                Derived* storage = (Derived*)Memory::Allocate((nuint)sizeof(Derived));
+                Derived* storage = (Derived*)Memory::Allocate((nuint)sizeof(Derived))!;
                 Derived* object = new* Derived() at storage;
                 Base* view = object;
                 if (view.Value() != 8) return 1;
@@ -86,7 +86,7 @@ public class PlacementConstructionTests
             struct S { public int value; public S(int n) { value = n; } }
             int Fail() { throw new Exception(); }
             int main() {
-                void* memory = (void*)Memory::Allocate((nuint)sizeof(S));
+                void* memory = Memory::Allocate((nuint)sizeof(S))!;
                 int* marker = (int*)memory; *marker = 123;
                 try { new* S(Fail()) at (S*)memory; return 1; } catch { }
                 if (*marker != 123) return 2;
@@ -99,15 +99,15 @@ public class PlacementConstructionTests
     public void ThrowingPlacementExceptionDoesNotGiveCatchOwnershipOfStorage()
     {
         var result = CompilerTestHelper.Run("""
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             int main() {
-                Exception* storage = (Exception*)Memory::Allocate((nuint)sizeof(Exception));
+                Exception* storage = (Exception*)Memory::Allocate((nuint)sizeof(Exception))!;
                 try { new* Exception() at storage; throw *storage; } catch { printf("C"); }
                 printf("S"); delete storage;
                 return 0;
@@ -132,23 +132,23 @@ public class PlacementConstructionTests
     }
 
     [Theory]
-    [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S)); new S() at p;")]
-    [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S)); new^ S() at p;")]
+    [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S))!; new S() at p;")]
+    [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S))!; new^ S() at p;")]
     [InlineData("S*? p = null; new* S() at p;")]
-    [InlineData("immutable(S)* p = (immutable(S)*)Memory::Allocate((nuint)sizeof(S)); new* S() at p;")]
-    [InlineData("void* p = (void*)Memory::Allocate((nuint)sizeof(S)); new* S() at p;")]
+    [InlineData("immutable(S)* p = (immutable(S)*)Memory::Allocate((nuint)sizeof(S))!; new* S() at p;")]
+    [InlineData("void* p = Memory::Allocate((nuint)sizeof(S))!; new* S() at p;")]
     [InlineData("S* p; new* S() at p;")]
     [InlineData("S^? p = null; new* S() at p!;")]
-    [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S)); new* S(1) at p;")]
+    [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S))!; new* S(1) at p;")]
     public void InvalidDestinationsAndConstructorsAreRejected(string body)
         => Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("struct S { public int n; } int main() { " + body + " return 0; }"));
 
     [Theory]
     [InlineData("S*? p = null; new* S() at p!;")]
-    [InlineData("void* memory = (void*)Memory::Allocate(32); S* p = ((char*)memory + 1).reinterpret<S*>(); new* S() at p;")]
+    [InlineData("void* memory = Memory::Allocate(32)!; S* p = ((char*)memory + 1).reinterpret<S*>(); new* S() at p;")]
     public void NullAndMisalignedStorageTrapBeforeConstructor(string body)
     {
-        var result = CompilerTestHelper.Run("extern void exit(int code); struct S { public long n; public S() { exit(77); } } int main() { " + body + " return 0; }");
+        var result = CompilerTestHelper.Run("extern \"C\" void exit(int code); struct S { public long n; public S() { exit(77); } } int main() { " + body + " return 0; }");
         Assert.NotEqual(0, result.ExitCode);
         Assert.NotEqual(77, result.ExitCode);
     }

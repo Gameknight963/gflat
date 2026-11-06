@@ -47,7 +47,7 @@ public sealed class AutoGetterReadOnlyTests
     {
         string type=readOnly ? "readonly(int)^" : "int^";
         string source=$$$"""
-            extern void*? malloc(nuint size);
+            extern "C" void*? malloc(nuint size);
             alias GC=TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint size,nuint alignment)=>malloc(size)!;

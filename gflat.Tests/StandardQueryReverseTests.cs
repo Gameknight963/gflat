@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryReverseTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocations=0;int releases=0;int failAt=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny||(failAt!=0&&attempts==failAt))return null;void*? value=malloc(count);if(value!=null)allocations++;return value;}

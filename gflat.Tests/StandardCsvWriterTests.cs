@@ -18,7 +18,7 @@ public sealed class StandardCsvWriterTests
     private const string Allocator = """
         using Standard; using Standard::Csv;
         int attempts=0;
-        extern void free(void* storage);
+        extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
             public replace void Free(void* storage) nothrow{free(storage);}
@@ -85,9 +85,9 @@ public sealed class StandardCsvWriterTests
             }
 
             Run(Allocator + """
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);
                 struct Sink:ITextWriter {
                     private char* data;public nuint Count;public nuint Calls;
                     public Sink(char* target){data=target;Count=0;Calls=0;}

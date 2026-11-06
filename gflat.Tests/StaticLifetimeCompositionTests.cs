@@ -10,7 +10,7 @@ public sealed class StaticLifetimeCompositionTests
     public void OwningStaticFieldsAreUnaffectedByInstanceCopyAndDestruction(string kind)
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Token {
                 private int id;
                 public Token(int value) { id = value; }
@@ -36,7 +36,7 @@ public sealed class StaticLifetimeCompositionTests
     public void StaticConstructorCanReplaceAnOwningReadonlyAggregateAsAWhole()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Token {
                 private int id;
                 public Token(int value) { id = value; }

@@ -14,9 +14,9 @@ public sealed class NativeStdioTests
             string child = Path.Combine(directory, "child");
             string literal = "\"" + child.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
             string ir = Compiler.Emit($$"""
-                extern int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
-                extern int __gflat_stdio_remove_directory(readonly(char)* path) nothrow;
-                extern int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
+                extern "C" int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
+                extern "C" int __gflat_stdio_remove_directory(readonly(char)* path) nothrow;
+                extern "C" int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
                 int main() nothrow {
                     if (__gflat_stdio_make_directory({{literal}}) != 0) return 2;
                     if (__gflat_stdio_path_kind({{literal}}) != 2) return 3;
@@ -40,12 +40,12 @@ public sealed class NativeStdioTests
     public void LengthBridgeUsesTheCOnlyHostProfile(int optimization)
     {
         string ir = Compiler.Emit("""
-            extern void*? tmpfile() nothrow;
-            extern int fclose(void* stream) nothrow;
-            extern int fflush(void* stream) nothrow;
-            extern int fputs(readonly(char)* text, void* stream) nothrow;
-            extern long __gflat_stdio_length(void* stream) nothrow;
-            extern int __gflat_stdio_set_length(void* stream, long length) nothrow;
+            extern "C" void*? tmpfile() nothrow;
+            extern "C" int fclose(void* stream) nothrow;
+            extern "C" int fflush(void* stream) nothrow;
+            extern "C" int fputs(readonly(char)* text, void* stream) nothrow;
+            extern "C" long __gflat_stdio_length(void* stream) nothrow;
+            extern "C" int __gflat_stdio_set_length(void* stream, long length) nothrow;
             int main() nothrow {
                 void*? stream = tmpfile();
                 if (stream == null) return 1;
@@ -66,10 +66,10 @@ public sealed class NativeStdioTests
     public void PositionBridgeUsesFixedWidthOffsetsWithTheCOnlyHostProfile(int optimization)
     {
         string ir = Compiler.Emit("""
-            extern void*? tmpfile() nothrow;
-            extern int fclose(void* stream) nothrow;
-            extern int __gflat_stdio_seek(void* stream, long offset, int origin) nothrow;
-            extern long __gflat_stdio_tell(void* stream) nothrow;
+            extern "C" void*? tmpfile() nothrow;
+            extern "C" int fclose(void* stream) nothrow;
+            extern "C" int __gflat_stdio_seek(void* stream, long offset, int origin) nothrow;
+            extern "C" long __gflat_stdio_tell(void* stream) nothrow;
             int main() nothrow {
                 void*? stream = tmpfile();
                 if (stream == null) return 1;
@@ -92,12 +92,12 @@ public sealed class NativeStdioTests
     public void StreamBridgeWorksWithCOnlyOrMatchedExceptionHostProfile(int optimization, bool exceptions)
     {
         string text = """
-            extern void* __gflat_stdio_stdin() nothrow;
-            extern void* __gflat_stdio_stdout() nothrow;
-            extern void* __gflat_stdio_stderr() nothrow;
-            extern int fputs(readonly(char)* text, void* stream) nothrow;
-            extern int fflush(void* stream) nothrow;
-            extern int ferror(void* stream) nothrow;
+            extern "C" void* __gflat_stdio_stdin() nothrow;
+            extern "C" void* __gflat_stdio_stdout() nothrow;
+            extern "C" void* __gflat_stdio_stderr() nothrow;
+            extern "C" int fputs(readonly(char)* text, void* stream) nothrow;
+            extern "C" int fflush(void* stream) nothrow;
+            extern "C" int ferror(void* stream) nothrow;
             double Remainder(double left, double right) nothrow => left % right;
 
             int main(int argc, char** argv) nothrow

@@ -29,9 +29,9 @@ public sealed class SHA256Tests
                 output.Write((uint)value.Length);output.Write(value);output.Write(SHA256.HashData(value));
             }
             Run($$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
-                extern nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
-                extern int fclose(void* stream) nothrow;extern int ferror(void* stream) nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
+                extern "C" int fclose(void* stream) nothrow;extern "C" int ferror(void* stream) nothrow;
                 bool Matches(byte[32] digest,readonly(byte)* expected) nothrow{
                     for(nuint i=0;i<32;i++)if(digest[i]!=expected[i])return false;return true;
                 }

@@ -6,7 +6,7 @@ public sealed class VoidStorageTests
 {
     [Theory]
     [InlineData("void F(void value) {}")]
-    [InlineData("extern void F(void value);")]
+    [InlineData("extern \"C\" void F(void value);")]
     [InlineData("struct S { public S(void value) {} }")]
     [InlineData("interface I { void F(void value); }")]
     [InlineData("struct S { public static S operator +(S a, void b) => new S(); }")]

@@ -29,7 +29,7 @@ public sealed class UuidGeneratorTests
         }
         Run($$"""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint count); extern void free(void* storage);
+            extern "C" void*? malloc(nuint count); extern "C" void free(void* storage);
             bool deny=false; int allocations=0; int calls=0; nuint requested=0;
             readonly(byte)* payload=((nuint)1).reinterpret<readonly(byte)*>();
             namespace Memory {

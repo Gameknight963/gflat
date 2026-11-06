@@ -52,7 +52,7 @@ public sealed class TextSplitOnceSpanTests
     [InlineData(2)]
     public void KeyValueViewsRetainRemainderAndAllowReceiverMetadataReuseWithoutCopyingOwner(int optimization)
         => Run("""
-            using Standard; using Standard::Text; using Standard::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using Standard; using Standard::Text; using Standard::Memory;extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int allocations=0;int releases=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;if(deny)return null;return malloc(size);}

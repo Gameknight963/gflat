@@ -177,9 +177,9 @@ public sealed class GarbageCollectionTests
     public void ReplacedMemoryHooksStillTrackAndFreeManagedAllocations()
     {
         var result = Run("""
-        extern void*? malloc(nuint size);
-        extern void free(void* storage);
-        extern int printf(immutable(char*) text, ...);
+        extern "C" void*? malloc(nuint size);
+        extern "C" void free(void* storage);
+        extern "C" int printf(immutable(char*) text, ...);
         namespace Memory {
             public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
             public replace void Free(void* storage) nothrow { printf("F"); free(storage); }
@@ -224,11 +224,11 @@ public sealed class GarbageCollectionTests
         """);
 
     [Theory]
-    [InlineData("extern int^ Read();")]
-    [InlineData("extern void Save(int^ value);")]
-    [InlineData("extern void Save(int^* value);")]
-    [InlineData("struct Holder { public int^? value; } extern Holder Read();")]
-    [InlineData("struct Holder { public int^? value; } extern void Save(Holder* value);")]
+    [InlineData("extern \"C\" int^ Read();")]
+    [InlineData("extern \"C\" void Save(int^ value);")]
+    [InlineData("extern \"C\" void Save(int^* value);")]
+    [InlineData("struct Holder { public int^? value; } extern \"C\" Holder Read();")]
+    [InlineData("struct Holder { public int^? value; } extern \"C\" void Save(Holder* value);")]
     public void ManagedReferencesCannotCrossOrdinaryNativeDeclarations(string source)
     {
         var error = Assert.Throws<CompileExceptions.TypeCheckException>(() => Compiler.Check(source));
@@ -239,9 +239,9 @@ public sealed class GarbageCollectionTests
     public void FailedManagedConstructionIsReclaimedByCollector()
     {
         var result = Run("""
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int puts(immutable(char*) text);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int puts(immutable(char*) text);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);
                 public replace void Free(void* storage) nothrow {
@@ -286,8 +286,8 @@ public sealed class GarbageCollectionTests
     public void ExceptionReserveStorageKeepsManagedFieldsAlive()
     {
         Succeeds("""
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) {
                     if (size == (nuint)sizeof(ManagedError)) return null;
@@ -317,8 +317,8 @@ public sealed class GarbageCollectionTests
 
     [Fact]
     public void ManagedPayloadAndExceptionAllocationFailureUsesBadAllocReserve() => Succeeds("""
-        extern void*? malloc(nuint size);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint size);
+        extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint size) {
                 if (size == (nuint)sizeof(int) || size == (nuint)sizeof(Standard::BadAllocException)) return null;
@@ -346,8 +346,8 @@ public sealed class GarbageCollectionTests
     public void LegacyAllocationSymbolDoesNotOverrideSelectedCollector()
     {
         var result = Run("""
-            extern void*? malloc(nuint size);
-            extern int puts(immutable(char*) text);
+            extern "C" void*? malloc(nuint size);
+            extern "C" int puts(immutable(char*) text);
             void*? __gflat_gc_alloc(nuint size) { puts("legacy allocation"); return malloc(size); }
             int main() {
                 int^ value = new^ int(42);
@@ -398,8 +398,8 @@ public sealed class GarbageCollectionTests
 
     [Fact]
     public void AllocationFailureCollectsAndRetriesOnce() => Succeeds("""
-        extern void*? malloc(nuint size);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint size);
+        extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint size) {
                 if (size == (nuint)4 && Standard::TracingCollector::ManagedCount != (nuint)0) return null;
@@ -431,7 +431,7 @@ public sealed class GarbageCollectionTests
     public void PrivateGcRuntimeBridgeHasNoMandatoryNativeSymbolName()
     {
         string source = """
-            private extern void*? RuntimeReference(void* address, nuint bytes);
+            private extern "C" void*? RuntimeReference(void* address, nuint bytes);
             public int^? Bridge(void* address) { return (int^?)RuntimeReference(address, 4); }
             int main() { void*? storage = Memory::Allocate(4); if (storage == null) return 1; int^? value = Bridge(storage!); return 0; }
             """;
@@ -465,7 +465,7 @@ public sealed class GarbageCollectionTests
         var sources = new[] {
             new SourceFile("Standard/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "TracingCollector.gf"))),
             new SourceFile("Standard/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "libc", "GC.gf"))),
-            new SourceFile("main.gf", "int main() { int* storage = (int*)Memory::Allocate(4); *storage = 42; int^ value = Standard::TracingCollector::Adopt(storage); return *value; }")
+            new SourceFile("main.gf", "int main() { int* storage = (int*)Memory::Allocate(4)!; *storage = 42; int^ value = Standard::TracingCollector::Adopt(storage); return *value; }")
         };
         string ir = Compiler.Emit(sources);
         Assert.DoesNotContain("__gflat_gc_", ir);

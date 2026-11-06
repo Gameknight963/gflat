@@ -106,8 +106,8 @@ public sealed class ForeachFreshCurrentTests
 
     private const string Support = """
         using Standard; using Standard::Text;
-        extern void*? malloc(nuint count);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint count);
+        extern "C" void free(void* storage);
         int allocated=0;
         int freed=0;
         int mode=0;

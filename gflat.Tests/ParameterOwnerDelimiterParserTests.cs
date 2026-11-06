@@ -10,7 +10,7 @@ public sealed class ParameterOwnerDelimiterParserTests
     [InlineData("public void Pending(")]
     [InlineData("public C(int")]
     [InlineData("public static C operator +(C")]
-    [InlineData("private extern int Pending(int")]
+    [InlineData("private extern \"C\" int Pending(int")]
     public void ParameterRecoveryLeavesClassClosingBraceForItsOwner(string pending)
     {
         string text=$"class C{{ public int Read(){{return 42;}} {pending}\n}}\nint Healthy(){{return 7;}}";
@@ -22,7 +22,7 @@ public sealed class ParameterOwnerDelimiterParserTests
     }
 
     [Theory]
-    [InlineData("extern int Pending(int;")]
+    [InlineData("extern \"C\" int Pending(int;")]
     [InlineData("int Pending(int;")]
     public void ParameterRecoveryLeavesSemicolonForItsDeclaration(string pending)
     {

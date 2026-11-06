@@ -17,7 +17,7 @@ public sealed class CountingWriterTests
 
     private const string DenyAllocation="""
         using Standard; using Standard::Text; using Standard::IO; using Standard::Encoding;int attempts=0;
-        extern void free(void* storage);
+        extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
             public replace void Free(void* storage) nothrow{free(storage);}

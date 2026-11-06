@@ -578,7 +578,7 @@ For example, `new int(42)` produces an `int`, `new* int(42)` produces an allocat
 
 Constructors must initialize fields that cannot have a default value on every normally completing path. Field initializers and automatic property assignments count. Reading such a field, exposing `this`, or calling an instance method requires the relevant initialization first. The analysis follows branches, loops, returns, and deferred assignments. It does not infer initialization performed inside arbitrary helper methods. Required array fields must be assigned a complete array value. An implicit parameterless constructor is available only when each field has an initializer or a valid default, and the base can be constructed without arguments.
 
-Constructor declarations follow ordinary member accessibility and default to private. Private constructors are accessible from the declaring type and its enclosing or nested types. Protected constructors are accessible from the declaring type and derived classes. Construction checks the selected constructor, including target-typed, pointer, managed, placement, and explicit or implicit base construction. An inaccessible best overload is an error. Selection does not fall back to a less specific accessible overload. Synthesized constructors retain their existing availability when no user constructor is declared.
+Constructor declarations follow ordinary member accessibility: public in structs and private in classes. Private constructors are accessible from the declaring type and its enclosing or nested types. Protected constructors are accessible from the declaring type and derived classes. Construction checks the selected constructor, including target-typed, pointer, managed, placement, and explicit or implicit base construction. An inaccessible best overload is an error. Selection does not fall back to a less specific accessible overload. Synthesized constructors retain their existing availability when no user constructor is declared.
 
 Instance constructors cannot be `immutable`, `virtual`, `override`, or `abstract`. Copy constructors also cannot be `static`. Destructors cannot be `static`, `const`, `immutable`, `override`, or `abstract`.
 
@@ -586,29 +586,42 @@ Instance constructors cannot be `immutable`, `virtual`, `override`, or `abstract
 
 ### Allocation hooks
 
-The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `Standard/libc/Memory/allocation.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public signatures and non-throwing callback behavior:
+The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `Standard/libc/Memory/allocation.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. The shipped runtime adapters forward `new*`, `delete`, and exception cleanup to these functions. The compiler binds only the `__gflat_runtime` ABI, not the public `Memory` namespace. Applications may call them directly. Applications can replace either function independently, preserving its declared signature and modifiers:
 
 ```csharp
-extern void*? malloc(nuint size);
-extern void free(void* ptr);
+extern "C" void*? malloc(nuint size);
+extern "C" void free(void* ptr);
 namespace Memory {
     public replace void*? Allocate(nuint size) { return malloc(size); }
     public replace void Free(void* ptr) nothrow { free(ptr); }
 }
 ```
 
-`Memory::Free(void*)` must be declared `nothrow`, including selected replacements
-and declarations supplied without Standard. An exception reaching that boundary
-terminates rather than escaping into callers or runtime cleanup. This is the
-ordinary `nothrow` boundary behavior, not a promise that its body cannot call
-potentially throwing functions.
+The shipped `Memory::Free(void*)` is `nothrow`, and replacements preserve that
+contract. An exception reaching that boundary terminates through ordinary
+`nothrow` behavior. Unrelated functions named `Memory::Free` in a freestanding
+program have no compiler-imposed contract.
 
 `Allocate` can return null or throw. It has no `nothrow` requirement. The exception
 runtime uses these same hooks for payload allocation and release. Its allocation
 callback guard uses the emergency reserve for recursive exception storage rather
 than reentering the same allocator. An exhausted reserve can still terminate.
 
-`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `Standard::BadAllocException` on null before initialization. Direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`. Hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now. Replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
+`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `Standard::BadAllocException` on null before initialization. Direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern "C" void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`. Hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now. Replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
+
+Freestanding builds supply compiler runtime bindings explicitly in `__gflat_runtime`:
+
+| Entry | Contract |
+| --- | --- |
+| `Allocate` | Public nongeneric `void*? Allocate(nuint bytes)` |
+| `Free` | Public nongeneric `void Free(void* storage) nothrow` |
+| `AllocationFailure` | Exception type with an accessible parameterless constructor, or an alias to one |
+| `Unhandled` | Optional public nongeneric `void Unhandled(Exception*? error)` |
+
+These bindings are needed only by operations using the corresponding runtime
+service. The shipped library supplies adapters to its public APIs. `AllocationFailure`
+aliases `Standard::BadAllocException`; a freestanding program can choose its own
+exception type. Inspection of public library function names does not select runtime bindings.
 
 ### Inline arrays
 
@@ -1076,7 +1089,7 @@ explicit accessor bodies, or an expression-bodied getter:
 
 ```csharp
 namespace Settings;
-private extern int putchar(int character);
+private extern "C" int putchar(int character);
 public int Limit => 256;
 public int Output { set { putchar(value); } }
 ```
@@ -1207,11 +1220,13 @@ untyped lambda parameters.
 Ordinary function declarations require a body, including generic functions and
 struct methods. A declaration such as `int Missing();` is an error. Use `extern`
 for a function implemented elsewhere. Interface and abstract method declarations
-retain their bodyless forms. Namespace extern declarations support accessibility
-modifiers: `private extern int abs(int value);` and `extern private int abs(int value);`
+retain their bodyless forms. Bare extern declarations use Gflat symbol mangling. Use `extern "C"` to declare a native C symbol. Variadic declarations require C linkage.
+
+Namespace extern declarations support accessibility
+modifiers: `private extern "C" int abs(int value);` and `extern "C" private int abs(int value);`
 are equivalent. A private extern is accessible throughout its source file, including
 from other namespaces in that file, but cannot be called or addressed from another
-file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers before the return type. `static` and `protected` are not supported.
+file. Accessibility does not change its linker symbol. Namespace extern declarations accept only accessibility modifiers before the return type. `static` and `protected` are not supported.
 
 Private externs still participate in ordinary namespace declaration uniqueness.
 Repeating the same qualified declaration name in multiple source files is rejected.
@@ -1219,7 +1234,7 @@ Privacy restricts access rather than creating a file-local declaration namespace
 Different G♭ namespaces may independently declare the same native C symbol,
 provided their native signatures and `nothrow` contracts agree.
 An extern may declare a trailing `nothrow` contract, for example
-`private extern int abs(int value) nothrow;`. This promises that the foreign
+`private extern "C" int abs(int value) nothrow;`. This promises that the foreign
 implementation never unwinds through the call. The compiler emits an LLVM
 `nounwind` declaration and omits exception handling for direct calls. It cannot
 enforce this promise inside foreign code. Violating it is invalid native
@@ -1234,7 +1249,7 @@ A declaration permits at most one explicit accessibility modifier. Repeated or c
 
 Namespace classes, structs, interfaces, and enums default to `internal`, including static classes and static interfaces.
 
-Class and struct fields and methods default to `private`. Access through another instance follows the same visibility rules as ordinary member access. The declaring type can access its own instances' private members.
+Struct fields and methods default to `public`. Class fields and methods default to `private`. Access through another instance follows the same visibility rules as ordinary member access. The declaring type can access its own instances' private members.
 
 Scalar function boundaries use the host C ABI consistently for ordinary functions, externs, and function-pointer calls. Both supported targets zero-extend `bool`; Linux x64 also sign-extends signed 8/16-bit integers (including `char`) and zero-extends unsigned 8/16-bit integers. These LLVM ABI attributes do not change function-pointer type identity. Aggregate and fixed-buffer values do not thereby gain C ABI compatibility. Use explicit pointers at those boundaries.
 
@@ -1367,7 +1382,9 @@ struct Item {
     public Item(int n) { value = n; }
 }
 int main() {
-    Item* storage = (Item*)Memory::Allocate((nuint)sizeof(Item));
+    Item*? allocation = (Item*?)Memory::Allocate((nuint)sizeof(Item));
+    if (allocation == null) return 1;
+    Item* storage = allocation;
     Item* item = new* Item(42) at storage;
     int result = item.value;
     delete item; // This example owns the entire allocation, not an interior slot.
@@ -1530,11 +1547,13 @@ Custom values, pointers, and managed references implement `IFormattable`. Holes 
 `immutable Standard::Text::String ToString()`: the hole converts once, writes the returned
 string's counted bytes, and destroys the owning temporary. `IFormattable` takes
 precedence when both contracts are implemented. Interface views support dynamic dispatch. Nullable
-receivers require a checked cast or unchecked postfix `!`. Primitives call the exact
-`global::Standard::Format(value, writer)` overload independently of local using directives.
+receivers require a preceding null check or explicit postfix `!`. Primitive values
+call ordinary `Format(writer)` extensions, which must be visible through imports.
 Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
-`uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
-arrays are not implicitly converted to text. Provide an explicit string value.
+`uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Nonnullable character pointers
+call the destination's `Write(readonly(char)*)` overload. `String` supplies that overload
+and reads a null-terminated C string. Other destinations must supply their own overload.
+Arrays are not implicitly converted to text.
 Signed 128-bit formatting uses `Standard/core/Text/IntegerFormatting.gf` and the optional
 `Standard/core/extra_long_format.gf` writer adapter. Both are included by the full
 standard library. Explicit source selections must include them together.
@@ -1773,7 +1792,8 @@ headers that use the enclosing type in signatures and reflected method bodies.
 | `HasElementType`, `ElementType` | Pointer, managed reference, buffer, or reference element |
 | `HasFixedLength`, `Length` | Fixed-buffer extent |
 | `IsFunctionPointer`, `IsFunctionSignature`, `ReturnType`, `ParameterTypes`, `ParameterCount` | Function signature |
-| `Fields`, `StaticFields`, `Methods`, `Bases` | Declaration lists |
+| `Fields`, `StaticFields`, `Properties`, `StaticProperties`, `Methods`, `Bases` | Declaration lists |
+| `Attributes` | Applied attributes, with reflected `Type` and constructed `Value` |
 | `CollectorType` | A managed reference's collector |
 
 Use shape predicates before querying a member specific to that shape. For
@@ -1821,10 +1841,21 @@ int main()
 
 ### Fields and splicing
 
-`reflect(T).Fields` lists declared instance fields, including private fields.
+`reflect(T).Fields` lists declared instance fields, including private fields and
+auto-property backing fields. Backing fields carry `CompilerGeneratedAttribute`
+when that core attribute type is available. Freestanding builds can supply the
+attribute type themselves.
+Computed properties have no backing field. `Properties` and `StaticProperties`
+list property declarations, exposing `HasGetter`, `HasSetter`, `IsRef`, and
+accessibility. Splicing a property uses its ordinary accessor.
 Static fields and constants appear in `StaticFields`. Each field exposes `Name`,
 `Type`, `DeclaringType`, `Offset`, `IsPublic`, `IsPrivate`, and `IsStatic`.
 Inspection does not grant private access.
+
+`declaration.Attributes` returns attribute reflections in source order. Each
+attribute exposes its `Type`; `[:attribute.Value:]` produces its constructed
+constant value so ordinary public members can be read. Attribute reflection
+does not bypass member accessibility.
 
 `[:type:]` substitutes a reflected type. `value.[:field:]` accesses a reflected
 field with the same access, mutability, and initialization checks as a named

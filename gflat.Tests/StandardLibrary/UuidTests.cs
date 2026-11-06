@@ -36,10 +36,10 @@ public sealed class UuidTests
             }
             Run($$"""
                 using Standard; using Standard::Text; using Standard::Collections;
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* output,nuint size,nuint count,void* file);
-                extern int fclose(void* file);
-                extern void*? malloc(nuint count);extern void free(void* pointer);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* file);
+                extern "C" int fclose(void* file);
+                extern "C" void*? malloc(nuint count);extern "C" void free(void* pointer);
                 bool deny=false;int allocations=0;
                 namespace Memory{
                     public replace void*? Allocate(nuint count){if(deny){allocations++;return null;}return malloc(count);}

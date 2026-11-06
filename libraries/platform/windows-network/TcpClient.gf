@@ -5,15 +5,15 @@ namespace Windows;
 
 namespace tcp_detail
 {
-    private extern int WSAStartup(ushort version, void* data) nothrow;
-    private extern int WSACleanup() nothrow;
-    private extern int WSAGetLastError() nothrow;
-    private extern nuint socket(int family, int kind, int protocol) nothrow;
-    private extern int connect(nuint socket, readonly(void)* address, int length) nothrow;
-    private extern int recv(nuint socket, char* data, int count, int flags) nothrow;
-    private extern int send(nuint socket, readonly(char)* data, int count, int flags) nothrow;
-    private extern int shutdown(nuint socket, int how) nothrow;
-    private extern int closesocket(nuint socket) nothrow;
+    private extern "C" int WSAStartup(ushort version, void* data) nothrow;
+    private extern "C" int WSACleanup() nothrow;
+    private extern "C" int WSAGetLastError() nothrow;
+    private extern "C" nuint socket(int family, int kind, int protocol) nothrow;
+    private extern "C" int connect(nuint socket, readonly(void)* address, int length) nothrow;
+    private extern "C" int recv(nuint socket, char* data, int count, int flags) nothrow;
+    private extern "C" int send(nuint socket, readonly(char)* data, int count, int flags) nothrow;
+    private extern "C" int shutdown(nuint socket, int how) nothrow;
+    private extern "C" int closesocket(nuint socket) nothrow;
 }
 
 // Owns one blocking WinSock TCP connection and its startup reference.

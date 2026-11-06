@@ -8,9 +8,9 @@ public class ExplicitDestructorTests
     public void DestroysInteriorSlotsWithoutFreeingAndAllowsReconstruction()
     {
         var result = CompilerTestHelper.Run("""
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }
@@ -23,7 +23,7 @@ public class ExplicitDestructorTests
             void Destroy<T>(T* p) { p.~T(); }
             Item* Once(Item* p) { printf("P"); return p; }
             int main() {
-                Item* data = (Item*)Memory::Allocate((nuint)sizeof(Item) * (nuint)2);
+                Item* data = (Item*)Memory::Allocate((nuint)sizeof(Item) * (nuint)2)!;
                 new* Item(1) at data;
                 new* Item(2) at data + 1;
                 Once(data + 1).~Item();
@@ -42,7 +42,7 @@ public class ExplicitDestructorTests
     public void ImplicitDestructorsCleanFieldsAndClassBases()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct Field { ~Field() { printf("F"); } }
             struct Outer { public Field field = new Field(); }
             class Base { ~Base() { printf("B"); } }
@@ -82,14 +82,14 @@ public class ExplicitDestructorTests
     [InlineData("S^? p = null; p!.~S();", "raw pointer")]
     [InlineData("S p = new S(); p.~S();", "raw pointer")]
     [InlineData("S* p = new* S(); p.~int();", "must match")]
-    [InlineData("void* p = (void*)malloc(8); p.~void();", "concrete")]
+    [InlineData("void* p = malloc(8)!; p.~void();", "concrete")]
     [InlineData("S* p; p.~S();", "unassigned")]
     [InlineData("S* p = new* S(); p.~S(1);", "no arguments")]
     [InlineData("S* p = new* S(); p->~S();", "Use '.'")]
     public void InvalidTargetsAreRejected(string body, string message)
     {
         var error = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(
-            "extern void*? malloc(nuint size); struct S { public int n; } int main() { " + body + " return 0; }"));
+            "extern \"C\" void*? malloc(nuint size); struct S { public int n; } int main() { " + body + " return 0; }"));
         Assert.Contains(message, error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -97,7 +97,7 @@ public class ExplicitDestructorTests
     public void NullSuppressionDoesNotBypassDestructionGuard()
     {
         var result = CompilerTestHelper.Run("""
-            extern void exit(int code);
+            extern "C" void exit(int code);
             struct S { ~S() { exit(77); } }
             int main() { S*? p = null; p!.~S(); return 0; }
             """);
@@ -109,7 +109,7 @@ public class ExplicitDestructorTests
     public void VirtualDestructionThroughBasePointerRunsCompleteDerivedCleanup()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             class Base { public virtual ~Base() { printf("B"); } }
             class Derived : Base { ~Derived() { printf("D"); } }
             int main() {
@@ -127,7 +127,7 @@ public class ExplicitDestructorTests
     public void QualifiedGenericTypeAndGenericContainerCleanupWork()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Lib {
                 public struct Box<T> { public T value; ~Box() { printf("D"); } }
             }
@@ -162,7 +162,7 @@ public class ExplicitDestructorTests
     public void FixedArrayDestructionRunsElementsInReverseOrder()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct S {
                 public int n;
                 public S(int value) { n = value; }
@@ -170,7 +170,7 @@ public class ExplicitDestructorTests
             }
             void Destroy<T>(T* p) { p.~T(); }
             int main() {
-                S[2]* p = (S[2]*)Memory::Allocate((nuint)sizeof(S[2]));
+                S[2]* p = (S[2]*)Memory::Allocate((nuint)sizeof(S[2]))!;
                 S* elements = p.reinterpret<S*>();
                 new* S(1) at elements;
                 new* S(2) at elements + 1;

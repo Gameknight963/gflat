@@ -6,11 +6,11 @@ public sealed class HashSetRelationTests
 {
     private const string Prelude = """
         using Standard; using Standard::Text; using Standard::Collections;
-        extern int puts(immutable(char*) message);
+        extern "C" int puts(immutable(char*) message);
         int made = 0; int destroyed = 0; int allocations = 0; int releases = 0;
         bool failHash = false; bool failEquality = false;
-        private extern void*? malloc(nuint bytes);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);
+        private extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) { allocations++; return malloc(bytes); }
             public replace void Free(void* storage) nothrow { releases++; free(storage); }

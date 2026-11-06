@@ -30,7 +30,7 @@ public sealed class TemporaryAddressTests
 
     [Theory]
     [InlineData("void Nothing() {} int main() { &Nothing(); return 0; }", "void")]
-    [InlineData("extern void Nothing(); int main() { &Nothing(); return 0; }", "void")]
+    [InlineData("extern \"C\" void Nothing(); int main() { &Nothing(); return 0; }", "void")]
     [InlineData("int main() { &null; return 0; }", "null")]
     public void ValuelessExpressionsCannotHaveTheirAddressTaken(string source, string type)
     {

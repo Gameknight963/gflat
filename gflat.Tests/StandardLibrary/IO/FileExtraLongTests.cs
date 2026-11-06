@@ -42,8 +42,8 @@ public sealed class FileExtraLongTests
                         return malloc(count);
                     }
                     public replace void Free(void* value) nothrow { free(value); }
-                    private extern void*? malloc(nuint count);
-                    private extern void free(void* value);
+                    private extern "C" void*? malloc(nuint count);
+                    private extern "C" void free(void* value);
                 }
                 int main() {
                     FileStream input = FileStream::OpenRead({{{Literal(inputPath)}}});

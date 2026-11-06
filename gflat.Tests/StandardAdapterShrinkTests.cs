@@ -97,7 +97,7 @@ public sealed class StandardAdapterShrinkTests
         bool deny = false; bool failNext = false;
         int attempts = 0; int allocated = 0; int freed = 0;
         int made = 0; int dead = 0; int comparisons = 0;
-        extern void*? malloc(nuint count); extern void free(void* value);
+        extern "C" void*? malloc(nuint count); extern "C" void free(void* value);
         namespace Memory {
             public replace void*? Allocate(nuint count) {
                 attempts++;

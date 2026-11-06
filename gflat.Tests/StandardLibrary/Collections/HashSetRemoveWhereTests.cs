@@ -6,8 +6,8 @@ public sealed class HashSetRemoveWhereTests
 {
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Collections;
-        private extern void*? malloc(nuint bytes);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);
+        private extern "C" void free(void* storage);
         bool denied = false;
         int attempts = 0;
         int allocations = 0;

@@ -6,8 +6,8 @@ public sealed class StringPaddingTests
 {
     private const string Counters = """
         using Standard; using Standard::Text;
-        extern void*? malloc(nuint size);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint size);
+        extern "C" void free(void* storage);
         int allocations = 0;
         int releases = 0;
         namespace Memory {
@@ -100,8 +100,8 @@ public sealed class StringPaddingTests
     public void FailedGrowthAndImpossibleWidthLeaveStorageAndContentsUnchanged(int optimization)
         => Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size != 4) return null; return malloc(size); }
                 public replace void Free(void* storage) nothrow { free(storage); }

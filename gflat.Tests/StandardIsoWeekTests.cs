@@ -51,9 +51,9 @@ public sealed class StandardIsoWeekTests
                     public replace void*? Allocate(nuint count){allocations++;return null;}
                     public replace void Free(void* storage)nothrow{allocations++;}
                 }
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* buffer,nuint size,nuint count,void* file);
-                extern int ferror(void* file);extern int fclose(void* file);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* buffer,nuint size,nuint count,void* file);
+                extern "C" int ferror(void* file);extern "C" int fclose(void* file);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     int[2] counts;int[4] record;
@@ -127,6 +127,7 @@ public sealed class StandardIsoWeekTests
                 using Standard; using Standard::Time;
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
                 int Read(immutable(Date)* value)nothrow=>value.IsoWeekYear+value.IsoWeekOfYear;
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         string[] definitions=ir.Split('\n').Where(line=>line.StartsWith("define ")&&(line.Contains("IsoWeekYear")||line.Contains("IsoWeekOfYear"))).ToArray();

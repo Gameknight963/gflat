@@ -7,7 +7,7 @@ namespace gflat.Tests.Std;
 public sealed class UuidByteTests
 {
     private const string Counters="""
-        using Standard;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? p=malloc(count);if(p!=null)allocated++;return p;}
@@ -125,6 +125,7 @@ public sealed class UuidByteTests
                 bool Convert(readonly(byte)* input,nuint count,byte* output,nuint capacity,ref nuint written)nothrow{
                     Standard::Uuid value=new();return Standard::Uuid::TryFromBytes(input,count,&value)&&value.TryWriteBytes(output,capacity,ref written);
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Convert\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;

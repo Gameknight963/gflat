@@ -8,7 +8,7 @@ public sealed class UniqueTests
     public void MovesAndFailuresDestroyNoncopyablePointeesExactlyOnce(int optimization)
         => Run("""
             using Standard; using Standard::Memory; using Standard::Collections;
-            extern void*? malloc(nuint size);extern void free(void* ptr);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* ptr);
             void*? watched=null;int watchedFrees=0;int dead=0;
             namespace Memory {
                 public replace void*? Allocate(nuint size)=>malloc(size);

@@ -49,7 +49,7 @@ public class PropertyTests
     public void ReceiverEvaluatedOnceAndBeforeValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct Counter { public int Count { get; set; } }
             Counter* receiver(Counter* c) { printf("R"); return c; }
             int value() { printf("V"); return 7; }
@@ -69,7 +69,7 @@ public class PropertyTests
     public void StaticAndWriteOnlyAccessors()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             class Constants {
                 public static int Answer => 42;
                 public static int Output { set => printf("%d", value); }
@@ -147,7 +147,7 @@ public class PropertyTests
     public void InitializersKeepDeclarationOrder()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             int init(int n) { printf("%d", n); return n; }
             struct S {
                 public int A = init(1);
@@ -213,7 +213,7 @@ public class PropertyTests
     public void TemporaryReceiverLivesThroughSetterAndThrowingValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct S {
                 int n;
                 public int P { get { printf("G"); return n; } set { printf("S"); n = value; } }
@@ -235,7 +235,7 @@ public class PropertyTests
     public void ThrowingAccessorsUseNormalExceptionCleanup()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct S {
                 public int P {
                     get { printf("G"); throw new Exception(); }

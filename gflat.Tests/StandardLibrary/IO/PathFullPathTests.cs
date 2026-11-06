@@ -129,8 +129,8 @@ public sealed class PathFullPathTests
     [InlineData(2)]
     public void AllocationFailureReleasesPartialNormalizationAndPreservesAssignmentTarget(int optimization)
         => Run(Imports + """
-            extern void*? malloc(nuint bytes);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* storage);
             static class State { public static bool Failing; public static int Remaining; public static int Live; }
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {

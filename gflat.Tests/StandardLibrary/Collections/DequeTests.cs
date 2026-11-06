@@ -7,7 +7,7 @@ public sealed class DequeTests
 {
     private const string Owner="""
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
-        extern int puts(immutable(char*) text);
+        extern "C" int puts(immutable(char*) text);
         int made=0;int dead=0;
         struct Owned{
             public int Value;public String Token;
@@ -67,7 +67,7 @@ public sealed class DequeTests
     [InlineData(2)]
     public void FailedGrowthAtEitherEndPreservesWrappedOwnersAndMovesCleanly(int optimization)
         => Run(Owner+"""
-            private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
             int allocations=0;int releases=0;bool fail=false;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){if(fail)return null;void*? result=malloc(bytes);if(result!=null)allocations++;return result;}

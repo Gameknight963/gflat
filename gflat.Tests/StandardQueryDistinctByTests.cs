@@ -14,7 +14,7 @@ public sealed class StandardQueryDistinctByTests
 
     private const string Memory = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         int attempts = 0; int allocated = 0; int freed = 0; int denyAt = 0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {

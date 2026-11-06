@@ -228,7 +228,7 @@ public sealed class Base32DecoderTests
         if (denyAllocation || countAllocations) sources.Add(new SourceFile("allocation-hooks.gf", $$"""
             int attempts=0;
             namespace Memory{
-                namespace Imports{private extern void*? malloc(nuint size);private extern void free(void* storage);}
+                namespace Imports{private extern "C" void*? malloc(nuint size);private extern "C" void free(void* storage);}
                 public replace void*? Allocate(nuint size){
                     attempts++;{{(denyAllocation ? "return null;" : "return Imports::malloc(size);")}}
                 }

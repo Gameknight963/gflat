@@ -378,6 +378,7 @@ namespace gflat.semantics
 
             TypeChecker.EnumInfo info = new TypeChecker.EnumInfo
             {
+                Declaration = enumDecl,
                 Name = enumDecl.Name,
                 Namespace = nsPath,
                 UnderlyingType = underlying,

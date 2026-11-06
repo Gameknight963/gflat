@@ -6,7 +6,7 @@ public class StabilityTests
     public void LambdaReturnInsideDestructorUsesItsOwnFunction()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* format, ...);
+            extern "C" int printf(readonly(char)* format, ...);
             struct S {
                 ~S() { int()* f = () => { return 7; }; printf("%d", f()); }
             }
@@ -54,7 +54,7 @@ public class StabilityTests
     }
 
     private const string Leaf = """
-        extern int printf(readonly(char)* format, ...);
+        extern "C" int printf(readonly(char)* format, ...);
         struct Leaf {
             public int id;
             public Leaf(int value) { id = value; }
@@ -95,7 +95,7 @@ public class StabilityTests
     public void ClassDestructorCanCallVirtualMethod()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* format, ...);
+            extern "C" int printf(readonly(char)* format, ...);
             class C {
                 public virtual int Value() { return 7; }
                 public ~C() { printf("%d", this.Value()); }
@@ -134,9 +134,9 @@ public class StabilityTests
     }
 
     private const string TrackedAllocator = """
-        extern int printf(readonly(char)* format, ...);
-        extern void* malloc(nuint size);
-        extern void free(void* ptr);
+        extern "C" int printf(readonly(char)* format, ...);
+        extern "C" void* malloc(nuint size);
+        extern "C" void free(void* ptr);
         namespace Memory { public replace void*? Allocate(nuint size) { return malloc(size); } }
         namespace Memory { public replace void Free(void* ptr) nothrow { printf("F"); free(ptr); } }
         """;

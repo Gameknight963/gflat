@@ -8,7 +8,7 @@ public sealed class StringSpanTests
     public void ViewsBorrowCountedBytesWithoutCopyingOrAllocating(int optimization)
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory;
-            extern void*? malloc(nuint count);extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny)return null;allocations++;return malloc(count);}
@@ -62,7 +62,7 @@ public sealed class StringSpanTests
     {
         const string program = """
             using Standard; using Standard::Text; using Standard::Memory;
-            extern void*? malloc(nuint size);extern void free(void* data);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* data);
             int allocated=0;int released=0;
             namespace Memory {
                 public replace void*? Allocate(nuint size){void*? result=malloc(size);if(result!=null)allocated++;return result;}

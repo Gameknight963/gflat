@@ -31,9 +31,9 @@ public sealed class SHA512Tests
                 output.Write((uint)value.Length);output.Write(value);output.Write(SHA512.HashData(value));
             }
             await Run($$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
-                extern nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
-                extern int fclose(void* stream) nothrow;extern int ferror(void* stream) nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
+                extern "C" int fclose(void* stream) nothrow;extern "C" int ferror(void* stream) nothrow;
                 bool Matches(byte[64] digest,readonly(byte)* expected) nothrow{
                     for(nuint i=0;i<64;i++)if(digest[i]!=expected[i])return false;return true;
                 }

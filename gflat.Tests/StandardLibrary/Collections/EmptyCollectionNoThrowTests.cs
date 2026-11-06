@@ -125,6 +125,7 @@ public sealed class EmptyCollectionNoThrowTests
                     || destroyed != 0 || hashed != 0 || equated != 0 || compared != 0) return 13;
                 return 0;
             }
+            namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
             """;
         string[] names = ["Exception.gf", "BadAllocException.gf", "IHashable.gf", "IEquatable.gf",
             "Hashing/primitive_hashing.gf", "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/Span.gf",

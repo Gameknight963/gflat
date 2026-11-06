@@ -29,7 +29,7 @@ public sealed class ConstantCStringTests
     public void ConstantPointerOffsetsSurviveEmissionReturnsDefaultsAndObjectFields()
     {
         var result = CompilerTestHelper.Run("""
-            extern int puts(readonly(char)* text);
+            extern "C" int puts(readonly(char)* text);
             const immutable(char*) tail = "hello" + 1;
             readonly(char)* Default(readonly(char)* value = "hello" + 1) => value;
             struct View {

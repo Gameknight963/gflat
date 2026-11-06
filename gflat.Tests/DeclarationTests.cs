@@ -7,30 +7,30 @@ public class DeclarationTests
     [Fact]
     public void RepeatedForeignSymbolsShareOneNativeDeclaration()
     {
-        string ir = Compiler.Emit("namespace A { private extern int abs(int value); } namespace B { extern int abs(int value); } int main() => B::abs(-42);");
+        string ir = Compiler.Emit("namespace A { private extern \"C\" int abs(int value); } namespace B { extern \"C\" int abs(int value); } int main() => B::abs(-42);");
         Assert.Equal(1, ir.Split("declare i32 @abs(").Length - 1);
-        Assert.Equal(42, CompilerTestHelper.Run("namespace A { extern int abs(int value); } namespace B { extern int abs(int value); } int main() => B::abs(-42);").ExitCode);
+        Assert.Equal(42, CompilerTestHelper.Run("namespace A { extern \"C\" int abs(int value); } namespace B { extern \"C\" int abs(int value); } int main() => B::abs(-42);").ExitCode);
     }
 
     [Fact]
     public void RepeatedForeignNothrowDeclarationsMustAgreeOnTheirContract()
     {
-        string ir=Compiler.Emit("namespace A { private extern int abs(int value) nothrow; } namespace B { extern int abs(int value) nothrow; } int main()=>B::abs(-42);");
+        string ir=Compiler.Emit("namespace A { private extern \"C\" int abs(int value) nothrow; } namespace B { extern \"C\" int abs(int value) nothrow; } int main()=>B::abs(-42);");
         Assert.Equal(1,ir.Split("declare i32 @abs(").Length-1);
         Assert.Contains("declare i32 @abs(i32) nounwind",ir);
         Assert.Contains("conflicting nothrow contracts",Assert.Throws<TypeCheckException>(()=>Compiler.Emit(
-            "namespace A { extern int abs(int value) nothrow; } namespace B { extern int abs(int value); } int main()=>0;")).Message);
+            "namespace A { extern \"C\" int abs(int value) nothrow; } namespace B { extern \"C\" int abs(int value); } int main()=>0;")).Message);
     }
 
     [Fact]
     public void ConflictingForeignSignaturesHaveASourceError()
         => Assert.Contains("incompatible native signatures", Assert.Throws<TypeCheckException>(() => Compiler.Emit(
-            "namespace A { extern int abs(int value); } namespace B { extern long abs(long value); } int main() => 0;")).Message);
+            "namespace A { extern \"C\" int abs(int value); } namespace B { extern \"C\" long abs(long value); } int main() => 0;")).Message);
 
     [Fact]
     public void ErasedCallbackStorageDoesNotHideConflictingForeignSignatures()
         => Assert.Contains("incompatible native signatures", Assert.Throws<TypeCheckException>(() => Compiler.Emit(
-            "namespace A { extern void Run(int(int)* callback); } namespace B { extern void Run(int(long)* callback); } int main() => 0;")).Message);
+            "namespace A { extern \"C\" void Run(int(int)* callback); } namespace B { extern \"C\" void Run(int(long)* callback); } int main() => 0;")).Message);
 
     [Theory]
     [InlineData("int Missing();")]
@@ -42,11 +42,11 @@ public class DeclarationTests
 
     [Fact]
     public void InterfaceAbstractAndExternDeclarationsRemainValid()
-        => Compiler.Check("interface I { int Value(); } abstract class Base { public abstract int Value(); } extern int abs(int value);");
+        => Compiler.Check("interface I { int Value(); } abstract class Base { public abstract int Value(); } extern \"C\" int abs(int value);");
 
     [Theory]
-    [InlineData("private extern")]
-    [InlineData("extern private")]
+    [InlineData("private extern \"C\"")]
+    [InlineData("extern \"C\" private")]
     public void PrivateExternCanBeCalledAndAddressedInsideItsFile(string modifiers)
     {
         var result = CompilerTestHelper.Run($$"""
@@ -63,7 +63,7 @@ public class DeclarationTests
     public void PrivateExternCannotBeUsedFromAnotherFile(string body)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(new SourceFile[] {
-            new("library.gf", "namespace detail { private extern int abs(int value); }"),
+            new("library.gf", "namespace detail { private extern \"C\" int abs(int value); }"),
             new("main.gf", "using detail; int main() { " + body + " }")
         }));
         Assert.Contains("private", error.Message);

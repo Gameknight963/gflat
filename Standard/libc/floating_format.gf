@@ -2,7 +2,7 @@ namespace Standard;
 
 namespace detail
 {
-    extern int snprintf(char* buffer, nuint size, readonly(char)* format, ...);
+    extern "C" int snprintf(char* buffer, nuint size, readonly(char)* format, ...);
     void FloatingText(double value, readonly(char)* format, ITextWriter* output)
     {
         char[64] buffer;
@@ -19,12 +19,12 @@ void Format(float value, ITextWriter* output) => value.Format(output);
 extension float
 {
     public immutable void Format(ITextWriter* output)
-    { detail::FloatingText((double)(*this), "%.9g", output); }
+        => detail::FloatingText((double)(*this), "%.9g", output);
 }
 void Format(double value, ITextWriter* output) => value.Format(output);
 
 extension double
 {
     public immutable void Format(ITextWriter* output)
-    { detail::FloatingText((*this), "%.17g", output); }
+        => detail::FloatingText((*this), "%.17g", output);
 }

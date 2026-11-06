@@ -167,8 +167,8 @@ public sealed class StringTextComparisonTests
             int attempts = 0;
             int live = 0;
             bool deny = false;
-            extern void*? malloc(nuint bytes);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {
                     attempts++;

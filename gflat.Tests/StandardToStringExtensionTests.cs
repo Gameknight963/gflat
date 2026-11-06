@@ -42,7 +42,7 @@ public sealed class StandardToStringExtensionTests
     }
 
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -184,6 +184,7 @@ public sealed class StandardToStringExtensionTests
                 }
                 Standard::Text::String ConvertLabel(ref immutable(Label) value) => Standard::Text::ToString(ref value);
                 Standard::Text::String ConvertInteger(int value) => Standard::Text::ToString(value);
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotMatch(@"(?m)^declare\s+[^\r\n]*@(?:malloc|free|snprintf|printf|fwrite|strlen)\(", ir);

@@ -17,7 +17,7 @@ public sealed class FileAllLinesTests
                 using Standard::IO;
                 using Standard::Text;
 
-                extern int printf(readonly(char)* format, ...);
+                extern "C" int printf(readonly(char)* format, ...);
                 int main(int argc, char** argv) {
                     Vector<String> lines = File::ReadAllLines(argv[1]);
                     File::WriteAllLines(argv[2], ref lines);
@@ -56,8 +56,8 @@ public sealed class FileAllLinesTests
                 using Standard::Memory;
                 using Standard::Text;
 
-                extern void*? malloc(nuint bytes);
-                extern void free(void* memory);
+                extern "C" void*? malloc(nuint bytes);
+                extern "C" void free(void* memory);
                 static class State { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes) { State::Allocations++; return malloc(bytes); }
@@ -115,8 +115,8 @@ public sealed class FileAllLinesTests
                 using Standard::IO;
                 using Standard::Text;
 
-                extern void*? malloc(nuint bytes);
-                extern void free(void* memory);
+                extern "C" void*? malloc(nuint bytes);
+                extern "C" void free(void* memory);
                 static class State {
                     public static int Calls;
                     public static int FailAt;

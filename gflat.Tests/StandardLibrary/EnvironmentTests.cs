@@ -127,8 +127,8 @@ public sealed class EnvironmentTests
     {
         Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* data);
             static class State { public static bool Fail; public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) {

@@ -6,7 +6,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DisjointSetTests
 {
     private const string Counters="""
-        using Standard; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){

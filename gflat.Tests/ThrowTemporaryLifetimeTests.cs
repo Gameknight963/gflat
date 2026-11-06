@@ -3,8 +3,8 @@ namespace gflat.Tests;
 public sealed class ThrowTemporaryLifetimeTests
 {
     private const string Prelude="""
-        extern int putchar(int value);
-        private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+        extern "C" int putchar(int value);
+        private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
         int allocations=0;int releases=0;int buffers=0;int bufferDead=0;int made=0;int dead=0;int holders=0;int copies=0;bool failCopy=false;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){void*? result=malloc(bytes);if(result!=null)allocations++;return result;}

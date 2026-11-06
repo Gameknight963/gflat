@@ -20,11 +20,11 @@ public sealed class AccessibilityModifierTests
     [InlineData("class Holder{public private int Value=>42;}", "private")]
     [InlineData("struct Holder<T>{private private int value;}", "private")]
     [InlineData("class Holder{public private class Nested{}}", "private")]
-    [InlineData("private public extern int Foreign(int value);", "public")]
-    [InlineData("private extern public int Foreign(int value);", "public")]
-    [InlineData("extern private public int Foreign(int value);", "public")]
-    [InlineData("extern private private int Foreign(int value);", "private")]
-    [InlineData("private extern private int Foreign(int value);", "private")]
+    [InlineData("private public extern \"C\" int Foreign(int value);", "public")]
+    [InlineData("private extern \"C\" public int Foreign(int value);", "public")]
+    [InlineData("extern \"C\" private public int Foreign(int value);", "public")]
+    [InlineData("extern \"C\" private private int Foreign(int value);", "private")]
+    [InlineData("private extern \"C\" private int Foreign(int value);", "private")]
     public void TheSecondAccessibilityModifierIsRejectedAtItsToken(string text, string modifier)
     {
         var source = new SourceFile("accessibility-modifier.gf", text);
@@ -59,8 +59,8 @@ public sealed class AccessibilityModifierTests
             abstract public class Base{public abstract int Read();}
             public interface I{int Read();}
             public alias Number=int;
-            private extern int First(int value);
-            extern private int Second(int value);
+            private extern "C" int First(int value);
+            extern "C" private int Second(int value);
             public int Read()=>42;
             """, options: new() { NoStdLib = true });
 }

@@ -8,8 +8,8 @@ namespace gflat.Tests;
 public class FreestandingCoreUtilitiesTests
 {
     private const string ProgramSource = """
-        extern ulong formatter_input() nothrow;
-        extern void byte_search_input(byte* data) nothrow;
+        extern "C" ulong formatter_input() nothrow;
+        extern "C" void byte_search_input(byte* data) nothrow;
         int ZlibProof() nothrow {
             byte[11] compressed = [120,1,0x4b,0x4c,0x4a,0x06,0,2,77,1,39];
             compressed[0] = (byte)(119ul + (formatter_input() >> 63));

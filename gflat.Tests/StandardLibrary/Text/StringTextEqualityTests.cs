@@ -89,7 +89,7 @@ public sealed class StringTextEqualityTests
         => Run("""
             using Standard; using Standard::Text; using Standard::Collections;
             int attempts=0;bool deny=false;
-            extern void*? malloc(nuint bytes);extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes){attempts++;if(deny)return null;return malloc(bytes);}
                 public replace void Free(void* storage) nothrow {free(storage);}

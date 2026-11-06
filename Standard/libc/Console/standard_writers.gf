@@ -29,8 +29,8 @@ namespace writer_detail
         }
     }
 
-    private extern void* __gflat_stdio_stderr();
-    private extern nuint fwrite(readonly(void)* data, nuint size, nuint count, void* stream);
-    private extern int fflush(void* stream);
-    private extern int ferror(void* stream);
+    private extern "C" void* __gflat_stdio_stderr();
+    private extern "C" nuint fwrite(readonly(void)* data, nuint size, nuint count, void* stream);
+    private extern "C" int fflush(void* stream);
+    private extern "C" int ferror(void* stream);
 }

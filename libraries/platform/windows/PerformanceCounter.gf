@@ -5,8 +5,8 @@ namespace Windows;
 namespace performance_counter_detail
 {
     // Win64 BOOL is int; LARGE_INTEGER storage is a signed 64-bit integer.
-    private extern int QueryPerformanceCounter(long* value);
-    private extern int QueryPerformanceFrequency(long* value);
+    private extern "C" int QueryPerformanceCounter(long* value);
+    private extern "C" int QueryPerformanceFrequency(long* value);
 }
 
 public static class PerformanceCounter : Standard::Time::IMonotonicClock

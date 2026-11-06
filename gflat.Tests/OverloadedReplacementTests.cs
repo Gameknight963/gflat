@@ -37,15 +37,14 @@ public sealed class OverloadedReplacementTests
             """).ExitCode);
 
     [Fact]
-    public void AllocatorReplacementPairIsCheckedWhenOtherOverloadsExist()
+    public void AllocatorReplacementIsIndependentWhenOtherOverloadsExist()
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+        Compiler.Check("""
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) => null;
                 public void*? Allocate(nuint bytes, int tag) => null;
             }
             int main() => 0;
-            """));
-        Assert.Contains("together", error.Message);
+            """);
     }
 }

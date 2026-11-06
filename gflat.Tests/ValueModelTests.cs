@@ -54,7 +54,7 @@ public class ValueModelTests
     }
 
     private const string Resource = """
-        extern int printf(readonly(char)* text, ...);
+        extern "C" int printf(readonly(char)* text, ...);
         struct R {
             public int n;
             public R(int value) { n = value; }
@@ -91,7 +91,7 @@ public class ValueModelTests
     public void InterfaceDestruction(string types, string body, string expected, bool needsRaw = false)
     {
         if (needsRaw) body = body.Replace("I* p = new* R();", "R* raw = new* R(); I* p = raw;");
-        var result = CompilerTestHelper.Run("extern int printf(readonly(char)* text, ...);" + types + "int main() {" + body + "return 0;}");
+        var result = CompilerTestHelper.Run("extern \"C\" int printf(readonly(char)* text, ...);" + types + "int main() {" + body + "return 0;}");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(expected, result.StandardOutput);
     }
@@ -100,7 +100,7 @@ public class ValueModelTests
     public void ErasingAClassToAnInterfacePreservesItsDynamicDestructor()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             interface I {}
             class Base : I {}
             class Derived : Base { ~Derived() { printf("D"); } }

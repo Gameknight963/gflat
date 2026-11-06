@@ -49,9 +49,9 @@ public sealed class HMACSHA512Tests
             }
             await Run($$"""
                 using Standard::Hashing;
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
-                extern nuint fread(void* data,nuint size,nuint count,void* file)nothrow;
-                extern int fclose(void* file)nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* file)nothrow;
+                extern "C" int fclose(void* file)nothrow;
                 bool Same(byte[64] digest,readonly(byte)* expected)nothrow{
                     for(nuint i=0;i<64;i++)if(digest[i]!=expected[i])return false;return true;
                 }

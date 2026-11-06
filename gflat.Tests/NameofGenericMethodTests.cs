@@ -67,7 +67,7 @@ public sealed class NameofGenericMethodTests
     {
         var result = CompilerTestHelper.Run("""
             using N;
-            extern int printf(readonly(char)* format,...);
+            extern "C" int printf(readonly(char)* format,...);
             struct Box<T>{public T value;}
             class Helpers{
                 public Box<T> Make<T>(Box<T> value)=>value;

@@ -4,7 +4,7 @@ namespace Standard
 {
     namespace collector_detail
     {
-        private extern void abort();
+        private extern "C" void abort();
     }
 
     // A non-moving, single-threaded tracing collector.
@@ -274,7 +274,7 @@ namespace Standard
                         state.freeSlots = slot;
                         state.cachedSlots++;
                     }
-                    else global::Memory::Free((void*)slot);
+                    else global::Memory::Free(slot!);
                     return;
                 }
                 previous = slot;
@@ -381,7 +381,7 @@ namespace Standard
                 garbage = garbage!.next;
                 RemoveOwnedSlots(state, allocation!);
                 Release(allocation!.address);
-                global::Memory::Free((void*)allocation);
+                global::Memory::Free(allocation!);
                 reclaimed++;
             }
             state.collecting = false;

@@ -81,7 +81,7 @@ public class StringLiteralOperatorTests
     public void ReturnedObjectsAreDestroyedOnce()
     {
         string source = """
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             class S {
                 public int n;
                 public S(int value) { n = value; }
@@ -141,7 +141,7 @@ public class StringLiteralOperatorTests
     public void ThrowingFactoryUsesNormalExceptionCleanup()
     {
         Assert.Equal("NC", CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             class S {
                 ~S() { putchar(68); }
                 public static S operator s""(readonly(char)* p, nuint n) {
@@ -156,7 +156,7 @@ public class StringLiteralOperatorTests
     public void UnhandledThrowingFactoryTerminatesAtNonThrowingBoundary()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             class S { public static S operator s""(readonly(char)* p, nuint n) { throw new Exception(); } }
             S make() nothrow { return s"abc"; }
             int main() { try { make(); } catch { putchar(67); } putchar(88); return 0; }
@@ -169,7 +169,7 @@ public class StringLiteralOperatorTests
     public void ShortCircuitOnlyDestroysConstructedTemporaries()
     {
         Assert.Equal("ND", CompilerTestHelper.Run("""
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             class S {
                 public bool Test() { return true; }
                 ~S() { putchar(68); }

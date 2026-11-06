@@ -130,8 +130,8 @@ public class ConsoleTests
     {
         var result = Run("""
             using Standard; using Standard::Text; using Standard::IO;
-            extern void*? malloc(nuint size);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* data);
             static class State { public static bool Fail; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) {
@@ -202,9 +202,9 @@ public class ConsoleTests
         {
             string literal = "\"" + file.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
             var result = Run("""
-                extern void* __gflat_stdio_stdin();
-                extern void* __gflat_stdio_stdout();
-                extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+                extern "C" void* __gflat_stdio_stdin();
+                extern "C" void* __gflat_stdio_stdout();
+                extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
                 int main() {
                 """ + $$"""
                     if (freopen({{literal}}, "w", __gflat_stdio_stdin()) == null) return 1;

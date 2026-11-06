@@ -4,7 +4,7 @@ public sealed class AllOfTests
 {
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         int attempts = 0; int allocated = 0; int released = 0; bool deny = false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {

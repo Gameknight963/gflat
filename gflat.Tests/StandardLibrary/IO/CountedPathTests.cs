@@ -26,9 +26,9 @@ public sealed class CountedPathTests
                 record[38]=Rooted(value,true)?(byte)1:(byte)0;record[39]=Qualified(value,true)?(byte)1:(byte)0;stream.Write(record);
             }
             Run($$"""
-                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     char[40] record;char[34] terminated;nuint seen=0;
@@ -100,9 +100,9 @@ public sealed class CountedPathTests
                 stream.Write(left);stream.Write(right);stream.Write(expected);
             }
             Run($$"""
-                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     uint[3] header;char styleByte=(char)0;char[32] left;char[32] right;char[64] expected;nuint seen=0;
@@ -133,7 +133,7 @@ public sealed class CountedPathTests
     [InlineData(2)]
     public void JoinAllocationFailuresAtEachGrowthPreserveInputsAndExistingDestination(int optimization)
         =>Run("""
-            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern void*? malloc(nuint bytes);extern void free(void* storage);
+            using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
             int attempts=0;int failAt=0;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){

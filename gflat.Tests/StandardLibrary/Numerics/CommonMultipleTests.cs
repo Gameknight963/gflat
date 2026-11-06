@@ -29,9 +29,9 @@ public sealed class CommonMultipleTests
                 var native=Expected(pair.A&nativeMaximum,pair.B&nativeMaximum,nativeMaximum);output.Write(native.Gcd);output.Write(native.Lcm);output.Write(native.Fits?1:0);
             }
             string code=$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
-                extern nuint fread(void* output,nuint size,nuint count,void* input)nothrow;
-                extern int fclose(void* input)nothrow;
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode)nothrow;
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* input)nothrow;
+                extern "C" int fclose(void* input)nothrow;
                 ulong Word(readonly(char)* bytes,nuint count)nothrow{
                     ulong value=0ul;for(nuint i=0;i<count;i++)value=value|((ulong)(byte)bytes[i]<<(int)(8*i));return value;
                 }

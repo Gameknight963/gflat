@@ -112,7 +112,7 @@ public sealed class StandardJsonStringTests
     private static string[] QuoteCases(List<byte[]> cases,int optimization)
     {
         int maximum=Math.Max(1,cases.Max(value=>value.Length));
-        var code=new StringBuilder($"using Standard; using Standard::Json;extern int putchar(int value) nothrow;int main(){{char[{maximum}] input;char[{maximum*6+4}] output;nuint needed=0;nuint written=0;\n");
+        var code=new StringBuilder($"using Standard; using Standard::Json;extern \"C\" int putchar(int value) nothrow;int main(){{char[{maximum}] input;char[{maximum*6+4}] output;nuint needed=0;nuint written=0;\n");
         foreach(byte[] input in cases)
         {
             Assign(code,"input",input);

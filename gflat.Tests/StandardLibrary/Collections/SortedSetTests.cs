@@ -8,7 +8,7 @@ public sealed class SortedSetTests
     private const string Owners = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
         int made=0;int dead=0;int budget=-1;int allocations=0;int releases=0;bool fail=false;
-        private extern void*? malloc(nuint bytes);private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){if(fail)return null;void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
             public replace void Free(void* storage) nothrow{releases++;free(storage);}

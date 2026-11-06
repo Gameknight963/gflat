@@ -35,9 +35,9 @@ public sealed class TimeSpanTests
             }
             Run($$"""
                 using Standard; using Standard::Text; using Standard::Time; using Standard::Collections;
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* output,nuint size,nuint count,void* file);
-                extern int fclose(void* file);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* file);
+                extern "C" int fclose(void* file);
                 int main(){
                     void* file=fopen({{Literal(path)}},"rb");defer{fclose(file);}
                     long ticks=0l;int[5] parts;double seconds=0d;char length='\0';char comparison='\0';char[26] expected;
@@ -184,6 +184,7 @@ public sealed class TimeSpanTests
                     bool equal=value.Equals(&other);int comparison=value.CompareTo(&other);nuint hash=value.GetHashCode();
                     return value.TryFormat(output,capacity,ref written);
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         Compiler.Emit(sources, options: new() { NoStdLib = true });
     }

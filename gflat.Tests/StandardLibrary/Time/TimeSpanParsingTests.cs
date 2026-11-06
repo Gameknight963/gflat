@@ -162,6 +162,7 @@ public sealed class TimeSpanParsingTests
                 bool Convert(readonly(char)* input,nuint count,TimeSpan* result)nothrow{
                     bool first=TimeSpan::TryParse(input,count,result);bool second=TimeSpan::TryParse(input,result);return first&&second;
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Convert\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;

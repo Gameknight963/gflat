@@ -6,7 +6,7 @@ public sealed class OwningCodecTests
 {
     private const string Allocator = """
         using Standard; using Standard::Text; using Standard::Encoding;
-        extern void*? malloc(nuint bytes);extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         int allocations=0;int releases=0;int large=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){
@@ -34,9 +34,9 @@ public sealed class OwningCodecTests
                 writer.Write((uint)length);writer.Write((uint)expected.Length);writer.Write(input);writer.Write(expected);
             }
             Run(Allocator+$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     void*? file=fopen({{Literal(file)}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     uint[2] header;char[1024] raw;char[1400] expected;int seen=0;

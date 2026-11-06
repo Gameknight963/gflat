@@ -39,7 +39,7 @@ public class InlineTests
     [Theory]
     [InlineData("inline int value;", "callable")]
     [InlineData("inline struct S {}", "callable")]
-    [InlineData("inline extern int F();", "extern")]
+    [InlineData("inline extern \"C\" int F();", "extern")]
     [InlineData("interface I { inline int F(); }", "concrete")]
     [InlineData("interface I { inline int P { get; } }", "concrete")]
     [InlineData("abstract class C { public inline abstract int F(); }", "concrete")]

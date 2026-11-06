@@ -41,9 +41,9 @@ public sealed class IntegerSequenceTests
     {
         var result = Run("""
             using Standard; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint count);
-            extern void free(void* storage);
-            extern int printf(immutable(char*) text, ...);
+            extern "C" void* malloc(nuint count);
+            extern "C" void free(void* storage);
+            extern "C" int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint count) { printf("allocation"); return malloc(count); }
                 public replace void Free(void* storage) nothrow { free(storage); }
@@ -67,7 +67,7 @@ public sealed class IntegerSequenceTests
     {
         var result = Run("""
             using Standard; using Standard::Queries; using Standard::Collections;
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             bool Odd(int n) { printf("%d", n); return n % 2 == 1; }
             int main() {
                 FilteredIntRange query = new IntRange(0, 10).Where(&Odd).Take(1);
@@ -86,7 +86,7 @@ public sealed class IntegerSequenceTests
     {
         var result = Run("""
             using Standard; using Standard::Queries; using Standard::Collections;
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             bool Seen(int n) { printf("%d", n); return true; }
             int main() {
                 if (new IntRange(0, 3).Where(&Seen).Skip(3).Any()) return 1;

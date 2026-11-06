@@ -40,9 +40,9 @@ public sealed class BinaryCursorZigZagTests
                 }
             Run(directory,$$"""
                 {{NoAllocation}}
-                extern void* fopen(readonly(char)* path,readonly(char)* mode)nothrow;
-                extern nuint fread(void* output,nuint size,nuint count,void* file)nothrow;
-                extern int fclose(void* file)nothrow;
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode)nothrow;
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* file)nothrow;
+                extern "C" int fclose(void* file)nothrow;
                 int main(int argc,char** argv){
                     void* file=fopen(argv[1],"rb");defer{fclose(file);}
                     byte[20] record;byte[16] data;byte[14] source;int records=0;
@@ -201,6 +201,7 @@ public sealed class BinaryCursorZigZagTests
         using Standard; using Standard::Binary;
         int allocations=0;
         namespace Memory{public void*? Allocate(nuint count){allocations++;return null;}public void Free(void* value)nothrow{}}
+        namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
         """;
     private static string Emit(string program,bool native=true)
     {

@@ -9,7 +9,7 @@ public sealed class StandardMapQualifierViewTests
         using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int destroyed=0;
         int allocations=0;
-        extern void*? malloc(nuint bytes);extern void free(void* pointer);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}
             public replace void Free(void* pointer) nothrow{free(pointer);}

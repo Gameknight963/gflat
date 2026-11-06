@@ -53,7 +53,7 @@ public sealed class ZipArchiveWriterTests
             code.Append(Array("Name" + index, Encoding.UTF8.GetBytes(items[index].Name)));
             code.Append(Array("Payload" + index, items[index].Data));
         }
-        code.AppendLine("extern int putchar(int value);");
+        code.AppendLine("extern \"C\" int putchar(int value);");
         code.AppendLine("int main() { String output = new(); ZipArchiveWriter writer = new(&output);");
         for (int index = 0; index < items.Length; index++)
         {
@@ -121,8 +121,8 @@ public sealed class ZipArchiveWriterTests
     [InlineData(2)]
     public void ValidationAndAllocationFailuresPrecedeOutputAndMovesKeepOwnership(int optimization)
         => Run(Imports + FixedOutput + """
-            extern void*? malloc(nuint bytes);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* data);
             static class State { public static int Calls; public static int FailAt; public static int Live; public static bool Failing; }
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {
@@ -176,8 +176,8 @@ public sealed class ZipArchiveWriterTests
     [InlineData(2)]
     public void OutputFailurePermanentlyFaultsEntryAndCompletionOperations(int optimization)
         => Run(Imports + FixedOutput + """
-            extern void*? malloc(nuint bytes);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* data);
             static class State { public static int Live; }
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {

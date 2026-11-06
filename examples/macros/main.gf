@@ -1,6 +1,6 @@
 #include "features.gfh"
 
-extern int printf(readonly(char)* format, ...);
+extern "C" int printf(readonly(char)* format, ...);
 
 int main()
 {

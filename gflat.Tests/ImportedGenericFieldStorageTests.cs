@@ -44,7 +44,7 @@ public sealed class ImportedGenericFieldStorageTests
         var result = CompilerTestHelper.Run(new[] {
             new SourceFile("library.gf", """
                 namespace Library {
-                    private extern int putchar(int value);
+                    private extern "C" int putchar(int value);
                     public struct Owner<T>{public T Value;public Owner(T value){Value=value;}~Owner(){putchar((int)Value);}}
                 }
                 """),

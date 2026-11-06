@@ -51,9 +51,9 @@ public sealed class StandardEnumerableTests
     public void LazyOperatorsAllocateNothingAndShortCircuitInOrder()
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int putchar(int c);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int putchar(int c);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { putchar(65); return malloc(size); }
                 public replace void Free(void* p) nothrow { free(p); }
@@ -136,7 +136,7 @@ public sealed class StandardEnumerableTests
     public void PointerElementsRemainBorrowedAndTheSourceVectorIsNotOwned()
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Item {
                 public int Value;
                 public Item(int value) { Value = value; }
@@ -179,8 +179,8 @@ public sealed class StandardEnumerableTests
     public void MaterializationCleansPartialResultsWhenProjectionThrows()
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             int allocations = 0;
             int releases = 0;
             namespace Memory {
@@ -234,7 +234,7 @@ public sealed class StandardEnumerableTests
     public void IteratorResourcesAreReleasedOnShortCircuitAndExceptions(string statement, string output)
         => Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Source {
                 public struct Iterator {
                     private int n;

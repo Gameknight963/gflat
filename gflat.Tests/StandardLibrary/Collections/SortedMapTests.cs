@@ -7,7 +7,7 @@ public sealed class SortedMapTests
 {
     private const string Prelude = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Numerics; using Standard::Queries; using Standard::Collections;
-        extern int puts(immutable(char*) text);
+        extern "C" int puts(immutable(char*) text);
         int made = 0; int dead = 0; int budget = -1;
         struct Owned {
             public int Value;
@@ -124,8 +124,8 @@ public sealed class SortedMapTests
     [InlineData(2)]
     public void FailedInsertionAllocationKeepsOwnersAndBorrowedValuesValid(int optimization)
         => Run(Prelude + """
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* storage);
             int allocations = 0; int releases = 0; bool fail = false;
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {

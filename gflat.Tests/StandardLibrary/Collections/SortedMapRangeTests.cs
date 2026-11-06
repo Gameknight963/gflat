@@ -62,7 +62,7 @@ public sealed class SortedMapRangeTests
     public void RangesBorrowNoncopyableOwnersAndComparerFailuresPreserveTheMap(int optimization)
         => Run("""
             using Standard::Collections;using Standard::Memory;
-            extern void*? malloc(nuint count);extern void free(void* storage);
+            extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
             int allocations=0;int releases=0;int dead=0;int calls=0;int budget=-1;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;if(deny)return null;return malloc(count);}

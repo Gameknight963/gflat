@@ -113,7 +113,7 @@ public sealed class GenericDeclarationContextTests
     public void LocalEnumsKeepTheirOwnIdentityAndDoNotEscape()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             int First() { enum Color { Red = 1 } Color color = Color::Red; printf("%s ", reflect(Color).Name); return (int)color; }
             int main() { enum Color { Red = 41 } Color color = Color::Red; printf("%s", reflect(Color).Name); return First() + (int)color; }
             """);

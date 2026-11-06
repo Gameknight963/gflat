@@ -33,7 +33,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     public readonly Span<readonly(T)> AsReadOnly()
     {
         if (count == 0) return new Span<readonly(T)>();
-        return new Span<readonly(T)>((readonly(T)*)data, count);
+        return new Span<readonly(T)>(data!, count);
     }
 
     // Borrows an immutable view. Keep the vector alive and its buffer stable.
@@ -41,7 +41,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     public immutable Span<immutable(T)> AsImmutable()
     {
         if (count == 0) return new Span<immutable(T)>();
-        return new Span<immutable(T)>((immutable(T)*)data, count);
+        return new Span<immutable(T)>(data!, count);
     }
 
     public ref T this[nuint index]
@@ -73,7 +73,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     {
         if (requested == 0)
         {
-            if (data != null) global::Memory::Free((void*)data);
+            if (data != null) global::Memory::Free(data!);
             data = null; capacity = 0;
             return;
         }
@@ -88,7 +88,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         {
             move *(data! + i) at replacement + i;
         }
-        if (data != null) global::Memory::Free((void*)data);
+        if (data != null) global::Memory::Free(data!);
         data = replacement;
         capacity = requested;
     }
@@ -256,6 +256,6 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     ~Vector()
     {
         this.Clear();
-        if (data != null) global::Memory::Free((void*)data);
+        if (data != null) global::Memory::Free(data!);
     }
 }

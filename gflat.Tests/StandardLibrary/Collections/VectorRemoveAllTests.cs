@@ -31,7 +31,7 @@ public sealed class VectorRemoveAllTests
         }
         string program = $$"""
             using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
             bool deny=false;int attempts=0;int divisor=1;int calls=0;
             namespace Memory{
                 replace void*? Allocate(nuint bytes){attempts++;if(deny)return null;return malloc(bytes);}

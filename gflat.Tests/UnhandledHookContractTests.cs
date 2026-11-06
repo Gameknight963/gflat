@@ -4,6 +4,11 @@ namespace gflat.Tests;
 
 public sealed class UnhandledHookContractTests
 {
+    [Fact]
+    public void PublicLibraryNamesDoNotImposeCompilerRuntimeContracts()
+        => Compiler.Check("namespace Exceptions { public int Unhandled(int code) => code; } int main() => Exceptions::Unhandled(42);",
+            options: new() { NoStdLib = true });
+
     [Theory]
     [InlineData("public void Unhandled(int code) {}")]
     [InlineData("public int Unhandled(Exception*? error) => 1;")]
@@ -15,7 +20,7 @@ public sealed class UnhandledHookContractTests
     public void InvalidUnhandledContractsHaveASourceDiagnostic(string method)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(
-            "class Exception {} namespace Exceptions { " + method + " } int main() => 0;",
+            "class Exception {} namespace __gflat_runtime { " + method + " } int main() => 0;",
             options: new() { NoStdLib = true }));
         Assert.Contains("void Unhandled(Exception*? error)", error.Message);
         Assert.True(error.Span.Length > 0);
@@ -25,8 +30,8 @@ public sealed class UnhandledHookContractTests
     public void AdditionalOverloadsDoNotChangeTheRuntimeEntryPoint()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
-            extern void exit(int status);
+            extern "C" int putchar(int value);
+            extern "C" void exit(int status);
             namespace Exceptions {
                 public void Unhandled(int code) { putchar(88); exit(2); }
                 public replace void Unhandled(Exception*? error) { putchar(65); exit(42); }

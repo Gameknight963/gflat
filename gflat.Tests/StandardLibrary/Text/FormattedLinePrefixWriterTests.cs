@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class FormattedLinePrefixWriterTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;int formats=0;int destroyed=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}

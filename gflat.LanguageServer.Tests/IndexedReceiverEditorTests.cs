@@ -18,7 +18,7 @@ public sealed class IndexedReceiverEditorTests
             "array"=>"Entry[2]", "readonly"=>"readonly(Entry)*?", "immutable"=>"immutable(Entry)*?", _=>"Entry*?"
         };
         string receiver=form switch {
-            "array"=>"data[0]", "cast"=>"((Entry*)data)[0]", "parentheses"=>"(data![0])", _=>"data![0]"
+            "array"=>"data[0]", "cast"=>"((Entry*)data!)[0]", "parentheses"=>"(data![0])", _=>"data![0]"
         };
         string text=$$"""
             struct Holder<T> {

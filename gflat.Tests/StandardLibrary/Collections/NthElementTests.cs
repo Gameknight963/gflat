@@ -178,7 +178,7 @@ public sealed class NthElementTests
     private const string Memory="""
         using Standard; using Standard::Memory; using Standard::Collections;
         int attempts=0;int allocated=0;int released=0;bool deny=false;
-        extern void*? malloc(nuint count);extern void free(void* value);
+        extern "C" void*? malloc(nuint count);extern "C" void free(void* value);
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
             public replace void Free(void* value)nothrow{released++;free(value);}

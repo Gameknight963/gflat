@@ -121,7 +121,7 @@ public sealed class PathChangeExtensionTests
     public void AllocationFailuresPreserveBorrowedInputsAndExistingDestination(int optimization)
         =>Run("""
             using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;
-            extern void*? malloc(nuint bytes);extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
             int attempts=0;int failAt=0;int allocations=0;int releases=0;
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {

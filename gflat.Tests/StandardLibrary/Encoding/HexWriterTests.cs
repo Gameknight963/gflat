@@ -22,7 +22,7 @@ public sealed class HexWriterTests
             Run($$"""
                 using Standard; using Standard::Text; using Standard::Encoding;int allocations=0;
                 namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);extern int ferror(void* file);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);extern "C" nuint fread(void* output,nuint size,nuint count,void* file);extern "C" int fclose(void* file);extern "C" int ferror(void* file);
                 struct Sink:ITextWriter{
                     private char* output;public nuint Length;public int Calls;
                     public Sink(char* data){output=data;Length=0;Calls=0;}
@@ -103,6 +103,7 @@ public sealed class HexWriterTests
                 }
                 return 0;
             }
+            namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
             """;
         string[] names=["Encoding/Hex.gf","Encoding/hex_writer.gf","ITextWriter.gf", "IFormattable.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))

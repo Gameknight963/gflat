@@ -180,7 +180,7 @@ public sealed class VectorMutationTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint bytes); extern void free(void* address);
+            extern "C" void* malloc(nuint bytes); extern "C" void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 64) return null; return malloc(bytes); }
                 replace void Free(void* address) nothrow { free(address); }

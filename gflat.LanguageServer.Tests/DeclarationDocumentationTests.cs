@@ -135,7 +135,7 @@ public sealed class DeclarationDocumentationTests
     [InlineData("struct Named {}")]
     [InlineData("interface Named {}")]
     [InlineData("enum Named { Value }")]
-    [InlineData("extern int Named(int value) nothrow;")]
+    [InlineData("extern \"C\" int Named(int value) nothrow;")]
     public void NamedTypesAndExternsUseTheirExactDeclarationProse(string declaration)
     {
         var fixture = Analyze("/// Named declaration prose\n" + declaration, "int main() => 0;");

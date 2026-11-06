@@ -51,11 +51,11 @@ public sealed class BitSetShiftTests
             }
             Run(directory, $$"""
                 using Standard; using Standard::Queries; using Standard::Collections;
-                extern void*? fopen(immutable(char*) path,immutable(char*) mode);
-                extern nuint fread(void* output,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);
-                extern int ferror(void* stream);
-                extern int printf(immutable(char*) format,...);
+                extern "C" void*? fopen(immutable(char*) path,immutable(char*) mode);
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);
+                extern "C" int ferror(void* stream);
+                extern "C" int printf(immutable(char*) format,...);
                 int main(){
                     void*? input=fopen({{Literal(path)}},"rb");if(input==null)return 1;
                     uint[19] row;BitSet bits=new();
@@ -100,7 +100,7 @@ public sealed class BitSetShiftTests
         => WithDirectory(directory => Run(directory, """
             using Standard; using Standard::Queries; using Standard::Collections;
             int allocations=0;int releases=0;bool deny=false;
-            extern void*? malloc(nuint size);extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}
                 public replace void Free(void* storage) nothrow{releases++;free(storage);}

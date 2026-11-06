@@ -6,8 +6,8 @@ namespace gflat.Tests;
 public sealed class ExternDeclarationModifierTests
 {
     [Theory]
-    [InlineData("public static extern int Foreign(int value);")]
-    [InlineData("namespace Library{static private extern int Foreign(int value);}")]
+    [InlineData("public static extern \"C\" int Foreign(int value);")]
+    [InlineData("namespace Library{static private extern \"C\" int Foreign(int value);}")]
     public void NamespaceExternCannotDiscardAStaticModifier(string text)
     {
         var source = new SourceFile("extern-modifier.gf", text);

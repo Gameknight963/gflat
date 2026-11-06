@@ -6,8 +6,8 @@ public sealed class OwnedExceptionMessageTests
         using Standard;
         using Standard::Text;
 
-        private extern void*? malloc(nuint bytes);
-        private extern void free(void* storage);
+        private extern "C" void*? malloc(nuint bytes);
+        private extern "C" void free(void* storage);
         int allocations = 0;
         int releases = 0;
         int sourceScopesDestroyed = 0;

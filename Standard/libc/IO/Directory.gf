@@ -29,7 +29,7 @@ public static class Directory
 
 namespace directory_path_detail
 {
-    private extern int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
-    private extern int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
-    private extern int __gflat_stdio_remove_directory(readonly(char)* path) nothrow;
+    private extern "C" int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
+    private extern "C" int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
+    private extern "C" int __gflat_stdio_remove_directory(readonly(char)* path) nothrow;
 }

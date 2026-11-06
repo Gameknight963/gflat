@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class DequeTryRemoveTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;bool deny=false;bool capture=false;void*? captured=null;
         namespace Memory{
             public replace void*? Allocate(nuint count){
@@ -41,9 +41,9 @@ public sealed class DequeTryRemoveTests
         try{
             using(var writer=new BinaryWriter(File.Create(path)))foreach(int[] record in records)foreach(int field in record)writer.Write(field);
             Run(Allocator+$$"""
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* output,nuint size,nuint count,void* file);
-                extern int fclose(void* file);extern int ferror(void* file);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* output,nuint size,nuint count,void* file);
+                extern "C" int fclose(void* file);extern "C" int ferror(void* file);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;defer{fclose(file!);}
                     {

@@ -192,8 +192,8 @@ public sealed class ZipArchiveTests
         Fixture fixture = Create([new("owner", [0, 255, 128], CompressionLevel.NoCompression)]);
         byte[] badCrc = fixture.Bytes.ToArray(); badCrc[DataStart(badCrc)] ^= 1;
         Run(Imports + Array("Image", fixture.Bytes) + Array("BadCrc", badCrc) + """
-            extern void*? malloc(nuint bytes);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* data);
             static class State { public static bool Failing; public static int Live; }
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {
@@ -257,8 +257,8 @@ public sealed class ZipArchiveTests
         image[local + 30 + 3] = 0;
         Fixture legacy = Create([new("éÇα─.bin", [6], CompressionLevel.NoCompression)], names: Cp437());
         Run(Imports + Array("Image", image) + Array("Legacy", legacy.Bytes) + """
-            extern void*? malloc(nuint bytes);
-            extern void free(void* data);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* data);
             static class State { public static bool Failing; }
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {

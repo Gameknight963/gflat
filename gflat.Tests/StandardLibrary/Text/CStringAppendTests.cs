@@ -28,8 +28,8 @@ public sealed class CStringAppendTests
             }
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using Standard; using Standard::Text;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
+                using Standard; using Standard::Text;extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* file);extern "C" int fclose(void* file);
                 int main(){
                     void*? input=fopen({{literal}},"rb");if(input==null)return 1;defer{fclose(input!);}
                     byte[132] record;char[66] bytes;nuint seen=0;

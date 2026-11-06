@@ -28,8 +28,8 @@ public class ExceptionBoundaryTests
     public void ReplacementUnhandledHookControlsOutputAndExitStatus()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) format, ...);
-            extern void exit(int status);
+            extern "C" int printf(immutable(char*) format, ...);
+            extern "C" void exit(int status);
             namespace Exceptions {
                 public replace void Unhandled(Exception*? error) {
                     printf("custom failure");
@@ -57,7 +57,7 @@ public class ExceptionBoundaryTests
     }
 
     private const string Prelude = """
-        extern int printf(readonly(char)* format, ...);
+        extern "C" int printf(readonly(char)* format, ...);
         class First : Exception {}
         class Second : Exception {}
         void Fail() { throw new First(); }

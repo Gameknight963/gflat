@@ -46,7 +46,7 @@ public class StandardLibraryTests
     public void DefaultMemoryImplementationLivesInLibc()
     {
         Assert.Contains("namespace Memory", StandardLibrary.Load("libc/Memory/allocation.gf").Text);
-        Assert.Contains("extern void*? malloc", StandardLibrary.Load("libc/Memory/allocation.gf").Text);
+        Assert.Contains("extern \"C\" void*? malloc", StandardLibrary.Load("libc/Memory/allocation.gf").Text);
         foreach (string relative in StandardLibrary.AutomaticFiles.Where(p => p.StartsWith("core/")))
             Assert.DoesNotContain("extern ", StandardLibrary.Load(relative).Text);
     }
@@ -65,6 +65,7 @@ public class StandardLibraryTests
                     public void Free(void* storage) nothrow { }
                 }
                 int main() => 0;
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """))
             .ToArray();
 
@@ -80,7 +81,7 @@ public class StandardLibraryTests
     {
         var sources = StandardLibrary.AutomaticFiles.Select(StandardLibrary.Load).Append(new SourceFile("main.gf", """
             class Exception { public int GetCode() => code; public int code; public Exception() { code = 7; } }
-            extern void* malloc(nuint size);
+            extern "C" void* malloc(nuint size);
             int main() { Exception e = new Exception(); return e.code; }
             """));
         Assert.Equal(7, CompilerTestHelper.Run(sources).ExitCode);

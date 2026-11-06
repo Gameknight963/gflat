@@ -9,9 +9,9 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }
@@ -36,8 +36,8 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) {
                     if (size == (nuint)7) return null;
@@ -63,9 +63,9 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }
@@ -113,7 +113,7 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern int printf(readonly(char)* p, ...);
+            extern "C" int printf(readonly(char)* p, ...);
             int main() {
                 char[3] input = "ab";
                 String text = String::From(&input[0], 2);
@@ -179,8 +179,8 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size == (nuint)101) return null; return malloc(size); }
                 public replace void Free(void* p) nothrow { free(p); }
@@ -205,8 +205,8 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size != (nuint)4) return null; return malloc(size); }
                 public replace void Free(void* p) nothrow { free(p); }
@@ -230,7 +230,7 @@ public class StringTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern int printf(readonly(char)* p, ...);
+            extern "C" int printf(readonly(char)* p, ...);
             int main() {
                 String text = s$"{(byte)255} {(sbyte)-128} {(short)-32768} {(ushort)65535} {4294967295u} {(nint)-12} {(nuint)17} {0}";
                 printf("%s", text.Data); return 0;

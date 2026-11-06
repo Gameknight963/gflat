@@ -58,7 +58,7 @@ public sealed class StandardElementAtQueryTests
     public void NoncopyableIteratorsAndOwningResultsCleanUpOnReturnAndFailures(int optimization)
         =>Run("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries;
-            extern void*? malloc(nuint size);extern void free(void* pointer);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int allocations=0;int releases=0;int active=0;int created=0;int destroyed=0;
             int moves=0;int reads=0;int mode=0;
             namespace Memory{

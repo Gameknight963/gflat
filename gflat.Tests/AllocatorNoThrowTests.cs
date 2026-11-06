@@ -5,15 +5,11 @@ namespace gflat.Tests;
 public sealed class AllocatorNoThrowTests
 {
     [Theory]
-    [InlineData("namespace Memory { public void Free(void* storage) {} }")]
-    [InlineData("namespace Memory { public weak void Free(void* storage) {} }")]
-    [InlineData("alias Address = void*; namespace Memory { public void Free(Address storage) {} }")]
-    public void StandaloneAllocatorRequiresNonThrowingFree(string source)
-    {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source,
-            options: new() { NoStdLib = true }));
-        Assert.Contains("Memory::Free must be declared nothrow", error.Message);
-    }
+    [InlineData("namespace Memory { public void Free(void* storage) {} } namespace __gflat_runtime { public void Free(void* storage) nothrow => global::Memory::Free(storage); }")]
+    [InlineData("namespace Memory { public weak void Free(void* storage) {} } namespace __gflat_runtime { public void Free(void* storage) nothrow => global::Memory::Free(storage); }")]
+    [InlineData("alias Address = void*; namespace Memory { public void Free(Address storage) {} } namespace __gflat_runtime { public void Free(void* storage) nothrow => global::Memory::Free(storage); }")]
+    public void OrdinaryFunctionNamesDoNotImposeRuntimeContracts(string source)
+        => Compiler.Check(source, options: new() { NoStdLib = true });
 
     [Theory]
     [InlineData("namespace Memory { public replace void Free(void* storage) {} }")]
@@ -34,6 +30,7 @@ public sealed class AllocatorNoThrowTests
                 public void Free(void* storage) nothrow {}
                 public void Free(void* storage, int tag) {}
             }
+            namespace __gflat_runtime { public void Free(void* storage) nothrow => global::Memory::Free(storage); }
             """, options: new() { NoStdLib = true });
     }
 
@@ -48,7 +45,7 @@ public sealed class AllocatorNoThrowTests
             ? "void(void*)* release = Memory::Free; release(storage!);"
             : "Memory::Free(storage!);";
         var result = CompilerTestHelper.Run("""
-            extern void*? malloc(nuint bytes);
+            extern "C" void*? malloc(nuint bytes);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) => malloc(bytes);
                 public replace void Free(void* storage) nothrow {
@@ -74,8 +71,8 @@ public sealed class AllocatorNoThrowTests
     public void DeallocatorCanCatchItsOwnExceptionAndReleaseNormally(int optimization)
     {
         var result = CompilerTestHelper.Run("""
-            extern void*? malloc(nuint bytes);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* storage);
             int released = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) => malloc(bytes);

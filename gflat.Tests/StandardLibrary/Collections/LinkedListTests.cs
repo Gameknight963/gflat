@@ -146,7 +146,7 @@ public sealed class LinkedListTests
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             bool fail = false;
-            extern void* malloc(nuint bytes); extern void free(void* pointer);
+            extern "C" void* malloc(nuint bytes); extern "C" void free(void* pointer);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (fail) return null; return malloc(bytes); }
                 replace void Free(void* pointer) nothrow { free(pointer); }
@@ -183,7 +183,7 @@ public sealed class LinkedListTests
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int budget = 0; int allocated = 0; int released = 0;
-            extern void*? malloc(nuint bytes); extern void free(void* pointer);
+            extern "C" void*? malloc(nuint bytes); extern "C" void free(void* pointer);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) {
                     if (budget == 0) return null;

@@ -28,8 +28,8 @@ public class NullablePointerUseTests
     [Theory]
     [InlineData("int*? p = null; int* q = (int*)p; return *q;")]
     [InlineData("int()*? p = null; int()* q = (int()*)p; return q();")]
-    public void CheckedNullCastsTrap(string body)
-        => Assert.NotEqual(0, CompilerTestHelper.Run("int main() { " + body + " }").ExitCode);
+    public void NullNarrowingCastsAreRejected(string body)
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check("int main() { " + body + " }"));
 
     [Fact]
     public void FunctionPointerReturnTypesCannotSilentlyChangeCallingConvention()

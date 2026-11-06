@@ -25,7 +25,7 @@ public sealed class RuntimeDependencyTests
         Assert.Contains("declare void @__gflat_eh_release(i8*) nounwind", exceptionIr);
         Assert.Equal((true, false), NativeToolchain.RequiredNativeRuntimes(exceptionIr));
         string stdioIr = Compiler.Emit("""
-            extern void* __gflat_stdio_stdin() nothrow;
+            extern "C" void* __gflat_stdio_stdin() nothrow;
             int main() nothrow {__gflat_stdio_stdin();return 0;}
             """, options: new() { NoStdLib = true });
         Assert.Contains("@__gflat_stdio_stdin(", stdioIr);

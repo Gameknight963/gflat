@@ -97,7 +97,7 @@ public class ExceptionReserveTests
     public void NewAllocationFailureThrowsBadAllocWithoutRunningConstructor()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) format, ...);
+            extern "C" int printf(immutable(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => null;
                 public replace void Free(void* ptr) nothrow { }
@@ -120,9 +120,9 @@ public class ExceptionReserveTests
     public void ConstructorFailureReleasesNormalAllocationWithMatchingAllocator()
     {
         var result = CompilerTestHelper.Run("""
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
-            extern int printf(immutable(char*) format, ...);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
+            extern "C" int printf(immutable(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A;"); return malloc(size); }
                 public replace void Free(void* ptr) nothrow { printf("F;"); free(ptr); }
@@ -155,7 +155,7 @@ public class ExceptionReserveTests
                     return 1;
                 }
                 """),
-            new("Standard/core/BadAllocException.gf", "namespace Standard; public class BadAllocException : Exception { public BadAllocException() {} }")
+            new("Standard/core/BadAllocException.gf", "namespace Standard { public class BadAllocException : Exception { public BadAllocException() {} } } namespace __gflat_runtime { public alias AllocationFailure = Standard::BadAllocException; }")
         };
         Assert.Equal(42, CompilerTestHelper.Run(sources).ExitCode);
     }

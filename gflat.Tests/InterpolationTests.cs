@@ -21,7 +21,7 @@ public class InterpolationTests
     {
         var sources = Sources("""
             using Standard; using Standard::Text;
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             String Render<T>(T value) => s$"{value}";
             int main() {
                 extralong minimum = (extralong)1 << 127;
@@ -39,14 +39,43 @@ public class InterpolationTests
     }
 
     [Fact]
-    public void Signed128InterpolationNamesItsMissingFormatterSources()
+    public void MissingInterpolationFormatterReportsOrdinaryMemberLookup()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
             using Standard; using Standard::Text;
             String Render(extralong value) => s$"{value}";
             """)));
-        Assert.Contains("Standard::Format(extralong, ITextWriter*)", error.Message);
-        Assert.Contains("Standard/core/Text/IntegerFormatting.gf and Standard/core/extra_long_format.gf", error.Message);
+        Assert.Contains("Format", error.Message);
+    }
+
+    [Fact]
+    public void CStringHolesUseTheDestinationLibraryOverload()
+    {
+        var result = Run("""
+            using Standard;
+            using Standard::Text;
+
+            int main()
+            {
+                readonly(char)* name = "Ada";
+                String text = s$"Hello {name}{"!"}";
+                if (text.Length != 10) return 1;
+                if (text[6] != 'A' || text[9] != '!') return 2;
+                return 42;
+            }
+            """);
+        Assert.Equal(42, result.ExitCode);
+    }
+
+    [Fact]
+    public void NullableCStringHolesRequireAnExplicitProof()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
+            using Standard::Text;
+
+            String Render(readonly(char)*? text) => s$"{text}";
+            """)));
+        Assert.Contains("nullable C string", error.Message);
     }
 
     [Fact]
@@ -54,7 +83,7 @@ public class InterpolationTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             int main() {
                 String text = s$"{{{42}}} {true} {false} {'!'} {s$"nested {7}"} {-9223372036854775807l - 1l} {18446744073709551615ul} {1.5f} {2.25d}";
                 printf("%s", text.Data);
@@ -69,6 +98,8 @@ public class InterpolationTests
     public void QualifiedPrefixesGenericCloningAndLiteralByteLengths()
     {
         var result = Run("""
+            using Standard;
+
             Standard::Text::String Format<T>(T value) { return Standard::Text::s$"é\0{value}{{}}"; }
             int main() {
                 Standard::Text::String text = Format<int>(12);
@@ -86,7 +117,7 @@ public class InterpolationTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             int Read(readonly(char)* p) { return (int)p[0]; }
             int main() {
                 String first = s$"{Read("}") /* } */} {'{'} {1 // }
@@ -105,7 +136,7 @@ public class InterpolationTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct Value : IFormattable {
                 public int n;
                 public Value(int id) { n = id; printf("C%d;", n); }
@@ -124,8 +155,8 @@ public class InterpolationTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
@@ -151,7 +182,6 @@ public class InterpolationTests
     [Theory]
     [InlineData("$\"x\"", "custom string prefix")]
     [InlineData("c$\"x\"", "Unknown string prefix")]
-    [InlineData("s$\"{\"text\"}\"", "IFormattable")]
     [InlineData("s$\"{null}\"", "IFormattable")]
     public void UnsupportedValuesProduceDiagnostics(string expression, string expected)
     {
@@ -183,7 +213,7 @@ public class InterpolationTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern int putchar(int c);
+            extern "C" int putchar(int c);
             struct Broken : IFormattable {
                 public immutable void Format(ITextWriter* output) { throw new Exception(); }
             }
@@ -218,9 +248,9 @@ public class InterpolationTests
     {
         var result = Run("""
             using Standard; using Standard::Text;
-            extern void* malloc(nuint size);
-            extern void free(void* p);
-            extern int printf(readonly(char)* text, ...);
+            extern "C" void* malloc(nuint size);
+            extern "C" void free(void* p);
+            extern "C" int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* pointer) nothrow { free((void*)pointer); }

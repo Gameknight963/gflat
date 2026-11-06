@@ -2,7 +2,7 @@ namespace Windows;
 
 namespace random_detail
 {
-    private extern int BCryptGenRandom(void*? algorithm, byte* output, uint count, uint flags) nothrow;
+    private extern "C" int BCryptGenRandom(void*? algorithm, byte* output, uint count, uint flags) nothrow;
 }
 
 public static class SystemRandom

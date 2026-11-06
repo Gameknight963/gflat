@@ -62,9 +62,9 @@ public sealed class StringConversionTests
 
     private const string Tracking = """
         using Standard; using Standard::Text;
-        extern void*? malloc(nuint size);
-        extern void free(void* storage);
-        extern int printf(readonly(char)* text, ...);
+        extern "C" void*? malloc(nuint size);
+        extern "C" void free(void* storage);
+        extern "C" int printf(readonly(char)* text, ...);
         namespace Memory {
             public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
             public replace void Free(void* p) nothrow { printf("F"); free(p); }

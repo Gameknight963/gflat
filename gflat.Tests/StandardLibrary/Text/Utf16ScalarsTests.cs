@@ -5,8 +5,8 @@ namespace gflat.Tests.Std.Text;
 public sealed class Utf16ScalarsTests
 {
     private const string Allocator = """
-        extern void*? malloc(nuint count);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint count);
+        extern "C" void free(void* storage);
         int allocations = 0; int releases = 0;
         namespace Memory {
             public replace void*? Allocate(nuint count) {

@@ -93,8 +93,8 @@ public sealed class FileBytesTests
             File.WriteAllBytes(path, new byte[9000]);
             Run(directory, $$"""
                 using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-                extern void*? malloc(nuint size);
-                extern void free(void* data);
+                extern "C" void*? malloc(nuint size);
+                extern "C" void free(void* data);
                 static class State { public static void*? Last; public static int Released; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) {

@@ -15,7 +15,7 @@ public sealed class ArrayShapeValidationTests
     [InlineData("int[][2] Make() { return [[1, 2], [3, 4]]; }")]
     [InlineData("alias Buffer = int[]; Buffer Make() { return [1, 2]; }")]
     [InlineData("int main() { int[][] values = [[1, 2], [3, 4]]; return 0; }")]
-    [InlineData("extern int[] Make();")]
+    [InlineData("extern \"C\" int[] Make();")]
     [InlineData("int[]()* callback;")]
     [InlineData("int main() { int[]* pointer = ((nuint)1).reinterpret<int[]*>(); *pointer; return 0; }")]
     [InlineData("int main() { int[]* pointer = ((nuint)1).reinterpret<int[]*>(); pointer[0]; return 0; }")]

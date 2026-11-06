@@ -4,8 +4,8 @@ public class StandardQueryOwnershipTests
 {
     private const string AllocationCounters = """
         using Standard; using Standard::Text; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes);
-        extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);
+        extern "C" void free(void* storage);
         int allocations = 0;
         int releases = 0;
         namespace Memory {

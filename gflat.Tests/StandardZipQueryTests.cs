@@ -42,7 +42,7 @@ public sealed class StandardZipQueryTests
 
     private const string OwningSources="""
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes);extern void free(void* pointer);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
         int allocations=0;int releases=0;int active=0;int created=0;int destroyed=0;
         int starts=0;int advances=0;int callbacks=0;int failure=0;
         namespace Memory{

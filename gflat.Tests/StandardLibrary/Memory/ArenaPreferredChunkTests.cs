@@ -9,7 +9,7 @@ public sealed class ArenaPreferredChunkTests
     {
         const string program = """
             using Standard; using Standard::Memory;
-            extern void*? malloc(nuint bytes);extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
             int attempts=0;int allocated=0;int released=0;int oversized=0;
             nuint requested=0;
             namespace Memory{

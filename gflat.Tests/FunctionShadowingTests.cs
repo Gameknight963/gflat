@@ -6,7 +6,7 @@ public sealed class FunctionShadowingTests
 {
     [Theory]
     [InlineData("int Target() => 0;", "int Target = 42;", "")]
-    [InlineData("extern int Target();", "int Target = 42;", "")]
+    [InlineData("extern \"C\" int Target();", "int Target = 42;", "")]
     [InlineData("int Target() => 0;", "", "int Target")]
     public void TakingAnAddressUsesTheVisibleVariable(string declaration, string local, string parameter)
     {

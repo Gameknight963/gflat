@@ -112,7 +112,7 @@ public sealed class InstanceGenericReturnTests
     public void ReceiverIsEvaluatedOnceBeforeArguments(int optimization)
     {
         string text=Box+"""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Receiver{public Box<T> Make<T>(Box<T> value){putchar(77);return value;}}
             Receiver receiver;
             Receiver* GetReceiver(){putchar(82);return &receiver;}

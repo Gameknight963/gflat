@@ -14,7 +14,7 @@ public sealed class StandardJsonTextTests
             " { \"x\" : \"a b\\t\\u0061\\/\", \"x\" : 1.00e-0001, \"empty\" : [ ] } ",
             " [ \"\\\\\\\"  x\", \"\\u0000\", \"\ud83d\ude00 \u20ac\", false, null, {}, [] ] ",
             new string('[',70) + " \"x\" " + new string(']',70)];
-        var code = new StringBuilder("using Standard; using Standard::Text; using Standard::Json;extern int printf(readonly(char)* text,...);extern int putchar(int ch);int main(){\n");
+        var code = new StringBuilder("using Standard; using Standard::Text; using Standard::Json;extern \"C\" int printf(readonly(char)* text,...);extern \"C\" int putchar(int ch);int main(){\n");
         for (int id=0; id<documents.Length; id++)
         {
             byte[] bytes=Encoding.UTF8.GetBytes(documents[id]);
@@ -56,7 +56,7 @@ public sealed class StandardJsonTextTests
     [InlineData(2)]
     public void ValidationStackIsReleasedBeforeOutputAndFailuresPreserveExceptions(int optimization)
         => Run("""
-            using Standard; using Standard::Text; using Standard::Json;extern void*? malloc(nuint count);extern void free(void* pointer);
+            using Standard; using Standard::Text; using Standard::Json;extern "C" void*? malloc(nuint count);extern "C" void free(void* pointer);
             int live=0;bool deny=false;int allowance=-1;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny||allowance==0)return null;if(allowance>0)allowance--;void*? result=malloc(count);if(result!=null)live++;return result;}

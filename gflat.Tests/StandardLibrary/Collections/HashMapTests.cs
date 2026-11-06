@@ -13,8 +13,8 @@ public class HashMapTests
         => Run("""
             using Standard; using Standard::Text; using Standard::Collections;
             int allocations=0; int releases=0;
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* address);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* address);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { allocations++; return malloc(bytes); }
                 public replace void Free(void* address) nothrow { releases++; free(address); }
@@ -78,8 +78,8 @@ public class HashMapTests
         => Run("""
             using Standard; using Standard::Text; using Standard::Collections;
             bool fail=false; bool compareFail=false;
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* address);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* address);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { if(global::fail) return null; return malloc(bytes); }
                 public replace void Free(void* address) nothrow { free(address); }

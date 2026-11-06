@@ -8,8 +8,8 @@ public sealed class AccessibilityRecoveryTests
     [Theory]
     [InlineData("public private class Holder { BODY }")]
     [InlineData("class Holder { public private static int Broken()=>0; BODY }")]
-    [InlineData("private extern public int Foreign(int value); class Holder { BODY }")]
-    [InlineData("extern private public int Foreign(int value); class Holder { BODY }")]
+    [InlineData("private extern \"C\" public int Foreign(int value); class Holder { BODY }")]
+    [InlineData("extern \"C\" private public int Foreign(int value); class Holder { BODY }")]
     public void ConflictingModifiersPreserveTypedBodiesAndCrossFileNavigation(string template)
     {
         string declaration = template.Replace("BODY", "public static int Healthy(){long actual=42;return (int)actual;}", StringComparison.Ordinal);

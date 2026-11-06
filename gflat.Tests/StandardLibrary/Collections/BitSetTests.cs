@@ -99,8 +99,8 @@ public sealed class BitSetTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using Standard; using Standard::Queries; using Standard::Collections;
-            extern void* malloc(nuint bytes);
-            extern void free(void* address);
+            extern "C" void* malloc(nuint bytes);
+            extern "C" void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 4) return null; return malloc(bytes); }
                 replace void Free(void* address) nothrow { free(address); }

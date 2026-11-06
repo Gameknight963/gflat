@@ -75,7 +75,7 @@ namespace gflat.Tests
         public void PrintfStandardOutput()
         {
             string code = """
-                extern int printf(readonly(char)* fmt, ...);
+                extern "C" int printf(readonly(char)* fmt, ...);
 
                 void Greet(readonly(char)* name)
                 {
@@ -293,8 +293,8 @@ namespace gflat.Tests
         public void PointerFreeTest()
         {
             string code = """
-                extern void* malloc(nuint size);
-                extern void free(void* ptr);
+                extern "C" void* malloc(nuint size);
+                extern "C" void free(void* ptr);
 
                 struct Item
                 {
@@ -536,8 +536,8 @@ namespace gflat.Tests
         public void DeferPointerFreeOnScopeExit()
         {
             string code = """
-                extern void* malloc(nuint size);
-                extern void free(void* ptr);
+                extern "C" void* malloc(nuint size);
+                extern "C" void free(void* ptr);
 
                 int main()
                 {
@@ -635,7 +635,7 @@ namespace gflat.Tests
                         hasAddress = 1;
                     }
 
-                    int(int, int)* callable = (int(int, int)*)fn;
+                    int(int, int)* callable = fn!;
                     int val = callable(6, 7);
                     return isNullBefore * 100 + isNullAfter * 10 + hasAddress * val;
                 }
@@ -1727,8 +1727,8 @@ namespace gflat.Tests
         public void HeapStructInterfaceCallExecution()
         {
             string code = """
-                extern void* malloc(nuint size);
-                extern void free(void* ptr);
+                extern "C" void* malloc(nuint size);
+                extern "C" void free(void* ptr);
 
                 interface IShape
                 {

@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Text;
 public sealed class StringJoinTests
 {
     private const string Prelude="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
         int allocations=0;int releases=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){if(deny)return null;allocations++;return malloc(count);}

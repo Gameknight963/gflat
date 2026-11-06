@@ -34,7 +34,7 @@ public sealed class SpanCopyTests
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern int puts(immutable(char*) text);
+            extern "C" int puts(immutable(char*) text);
             int Nibble(char value) {
                 if (value <= '9') return (int)value - (int)'0';
                 return (int)value - (int)'A' + 10;
@@ -151,8 +151,8 @@ public sealed class SpanCopyTests
             using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int allocations = 0; int releases = 0; int copies = 0;
             int constructed = 0; int destroyed = 0; int budget = -1;
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) {
                     void*? result = malloc(bytes); if (result != null) allocations++; return result;

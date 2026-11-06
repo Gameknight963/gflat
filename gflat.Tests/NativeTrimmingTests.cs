@@ -88,7 +88,7 @@ public sealed class NativeTrimmingTests
     public void UnreferencedGlobalStillRunsItsInitializerAndDestructor(int optimization)
     {
         string ir = Emit("""
-            extern int putchar(int value) nothrow;
+            extern "C" int putchar(int value) nothrow;
             struct Owner {
                 public Owner() nothrow { putchar(65); }
                 ~Owner() { putchar(67); }

@@ -17,7 +17,7 @@ public sealed class StandardCsvReaderTests
     private const string Allocator="""
         using Standard; using Standard::Text; using Standard::Csv; using Standard::Memory;
         int attempts=0;
-        extern void*? malloc(nuint bytes);extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
             public replace void Free(void* storage) nothrow{free(storage);}
@@ -90,9 +90,9 @@ public sealed class StandardCsvReaderTests
                 }
             }
             Run(Allocator+"""
-                extern void* fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);
+                extern "C" void* fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);
                 int main(){
                     void* stream=fopen("PATH","rb");
                     char[32768] input;char[32768] original;char[8192] expected;char[8194] output;

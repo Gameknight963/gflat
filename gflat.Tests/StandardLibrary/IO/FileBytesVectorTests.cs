@@ -52,7 +52,7 @@ public sealed class FileBytesVectorTests
         {
             string executable=Compile(directory,"""
                 using Standard; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-                extern void*? malloc(nuint size);extern void free(void* value);
+                extern "C" void*? malloc(nuint size);extern "C" void free(void* value);
                 int allocations=0;int frees=0;bool deny=false;
                 namespace Memory{
                     public replace void*? Allocate(nuint size){allocations++;if(deny)return null;return malloc(size);}

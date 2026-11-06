@@ -227,8 +227,8 @@ public static class File
 
 namespace file_path_detail
 {
-    private extern int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
-    private extern long __gflat_stdio_file_length(readonly(char)* path) nothrow;
-    private extern int remove(readonly(char)* path);
-    private extern int rename(readonly(char)* source, readonly(char)* destination);
+    private extern "C" int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
+    private extern "C" long __gflat_stdio_file_length(readonly(char)* path) nothrow;
+    private extern "C" int remove(readonly(char)* path);
+    private extern "C" int rename(readonly(char)* source, readonly(char)* destination);
 }

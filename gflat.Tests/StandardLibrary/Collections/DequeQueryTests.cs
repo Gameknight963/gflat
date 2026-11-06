@@ -46,7 +46,7 @@ public sealed class DequeQueryTests
         => Run("""
             using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
             int made=0;int dead=0;int allocations=0;int releases=0;bool deny=false;
-            extern void*? malloc(nuint bytes);extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){if(deny)return null;allocations++;return malloc(bytes);}
                 public replace void Free(void* storage) nothrow{releases++;free(storage);}

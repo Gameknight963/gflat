@@ -68,8 +68,8 @@ public sealed class StringAliasingTests
     public void SnapshotFailureForTrimmedTailLeavesOriginalStorageAndInitializedBytesUntouched(int optimization)
         => Run("""
             using Standard; using Standard::Text;
-            extern void*? malloc(nuint size);
-            extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);
+            extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size == 3) return null; return malloc(size); }
                 public replace void Free(void* storage) nothrow { free(storage); }

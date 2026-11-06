@@ -74,7 +74,7 @@ public sealed class NullableFlowTests
     public void RawManagedAndFunctionPointerGuardsExecute()
     {
         Assert.Equal(42, CompilerTestHelper.Run("""
-            extern void*? malloc(nuint bytes);
+            extern "C" void*? malloc(nuint bytes);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
@@ -256,7 +256,7 @@ public sealed class NullableFlowTests
     public void IgnoredFreshValuesStillAccountForTheirDestructor()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Item + """
-            extern void SideEffect();
+            extern "C" void SideEffect();
             struct Temporary { ~Temporary() { SideEffect(); } }
             int Read(Item*? p) {
                 Item*?* slot = &p;
@@ -272,7 +272,7 @@ public sealed class NullableFlowTests
     public void ReplacingAnOwnedValueAccountsForItsOldDestructor()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Item + """
-            extern void SideEffect();
+            extern "C" void SideEffect();
             struct Temporary { ~Temporary() { SideEffect(); } }
             int Read(Item*? p) {
                 Temporary owner = default(Temporary);

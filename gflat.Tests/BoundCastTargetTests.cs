@@ -81,7 +81,7 @@ public sealed class BoundCastTargetTests
                 ReadView read=(ReadView)storage;DeepView deep=(DeepView)storage;
                 readonly(Box<int>::Item)* direct=(readonly(Box<int>::Item)*)storage;
                 Optional optional=(Optional)storage;
-                Required required=(Required)optional;
+                Required required=(Required)optional!;
                 if(optional==null||read.Value!=42||deep.Value!=42||direct.Value!=42||required.Value!=42)return 1;
                 required.Value=73;if(read.Value!=73||deep.Value!=73||direct.Value!=73||optional!.Value!=73)return 2;
                 void*? empty=null;Optional missing=(Optional)empty;

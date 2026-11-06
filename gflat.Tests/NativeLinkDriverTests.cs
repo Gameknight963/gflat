@@ -226,7 +226,7 @@ public sealed class NativeLinkDriverTests
     private static string WriteSource(string root)
     {
         string source = Path.Combine(root, "main.gf");
-        File.WriteAllText(source, "extern int native_answer(); int main() => native_answer();");
+        File.WriteAllText(source, "extern \"C\" int native_answer(); int main() => native_answer();");
         return source;
     }
     private static string CompileObject(string root, string name, string source)

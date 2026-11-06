@@ -33,8 +33,8 @@ public sealed class SpanIntegerParsingTests
                 """));
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using Standard; using Standard::Text; using Standard::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
+                using Standard; using Standard::Text; using Standard::Memory;extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* file);extern "C" int fclose(void* file);
                 int main(){
                     void*? input=fopen({{literal}},"rb");if(input==null)return 1;defer{fclose(input!);}
                     char[64] record;nuint seen=0;

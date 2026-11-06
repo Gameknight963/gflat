@@ -13,7 +13,7 @@ public sealed class BitSetRangeTests
         var random = new Random(91207);
         var source = new StringBuilder("""
             using Standard; using Standard::Queries; using Standard::Collections;
-            extern int puts(immutable(char*) message);
+            extern "C" int puts(immutable(char*) message);
             bool Matches(immutable(BitSet)* bits, readonly(uint)* words, nuint count) {
                 if (bits.CountSetBits() != count) return false;
                 for (nuint i = 0; i < bits.Length; i++) {
@@ -54,8 +54,8 @@ public sealed class BitSetRangeTests
         => Run("""
             using Standard; using Standard::Queries; using Standard::Collections;
             int allocations = 0; int releases = 0; bool failAllocation = false;
-            private extern void*? malloc(nuint bytes);
-            private extern void free(void* storage);
+            private extern "C" void*? malloc(nuint bytes);
+            private extern "C" void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { if (failAllocation) return null; allocations++; return malloc(bytes); }
                 public replace void Free(void* storage) nothrow { releases++; free(storage); }

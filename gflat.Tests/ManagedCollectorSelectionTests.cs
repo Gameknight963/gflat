@@ -5,8 +5,8 @@ namespace gflat.Tests;
 public sealed class ManagedCollectorSelectionTests
 {
     private const string Providers = """
-        extern void*? malloc(nuint bytes);
-        extern int printf(immutable(char*) format, ...);
+        extern "C" void*? malloc(nuint bytes);
+        extern "C" int printf(immutable(char*) format, ...);
         static class First {
             public static void* Allocate(nuint bytes, nuint alignment) { printf("A"); return malloc(bytes)!; }
             public static void ReferenceAdded(void* slot) nothrow {}

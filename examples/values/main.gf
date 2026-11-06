@@ -2,7 +2,7 @@ using Standard::Text;
 using Standard::Collections;
 using Standard;
 
-extern int puts(readonly(char)* text);
+extern "C" int puts(readonly(char)* text);
 
 int main()
 {

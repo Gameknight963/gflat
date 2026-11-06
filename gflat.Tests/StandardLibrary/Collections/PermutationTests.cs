@@ -270,8 +270,8 @@ public sealed class PermutationTests
         int allocated = 0;
         int released = 0;
         bool deny = false;
-        extern void*? malloc(nuint count);
-        extern void free(void* value);
+        extern "C" void*? malloc(nuint count);
+        extern "C" void free(void* value);
         namespace Memory
         {
             public replace void*? Allocate(nuint count)

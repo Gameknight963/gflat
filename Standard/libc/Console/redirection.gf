@@ -7,5 +7,5 @@ public bool IsErrorRedirected { get nothrow => redirect_detail::__gflat_stdio_is
 
 namespace redirect_detail
 {
-    private extern int __gflat_stdio_is_redirected(int stream) nothrow;
+    private extern "C" int __gflat_stdio_is_redirected(int stream) nothrow;
 }

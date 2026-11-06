@@ -11,7 +11,7 @@ public sealed class SpanChunksTests
     public void EverySmallPartitionMatchesDotNetChunkIncludingPartialTail(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern int printf(readonly(char)* format,...);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" int printf(readonly(char)* format,...);
             int main(){
                 int[20] data;for(nuint i=0;i<20;i++)data[i]=(int)(3*i+2);
                 for(nuint length=0;length<=20;length++)for(nuint size=1;size<=25;size++){
@@ -42,7 +42,7 @@ public sealed class SpanChunksTests
     [InlineData(2)]
     public void LazyRepeatedQueriesCaptureMetadataAndObserveWritesWithoutAllocation(int optimization)
         => Run("""
-            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern void*? malloc(nuint size);extern void free(void* data);
+            using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint size);extern "C" void free(void* data);
             int allocations=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* data) nothrow{free(data);}}
             int SumChunk(Span<readonly(int)> chunk){selections++;int sum=0;for(nuint i=0;i<chunk.Length;i++)sum+=chunk[i];return sum;}

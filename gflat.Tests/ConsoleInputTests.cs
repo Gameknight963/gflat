@@ -121,9 +121,9 @@ public sealed class ConsoleInputTests
     public void OutputOnlyRedirectedStdinReportsIoErrorsInsteadOfEof(int optimization)
     {
         Run("""
-            extern void* __gflat_stdio_stdin();
-            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
-            extern void clearerr(void* stream);
+            extern "C" void* __gflat_stdio_stdin();
+            extern "C" void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+            extern "C" void clearerr(void* stream);
             int main() {
                 void* stream = __gflat_stdio_stdin();
                 if (freopen($PATH, "wb", stream) == null) return 1;

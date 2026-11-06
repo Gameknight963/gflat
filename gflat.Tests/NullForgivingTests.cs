@@ -87,10 +87,24 @@ public class NullForgivingTests
         => Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(source));
 
     [Fact]
-    public void ExistingCastStillChecks()
+    public void OrdinaryCastCannotNarrowNullablePointers()
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check("int* Convert(int*? p) { return (int*)p; }"));
+
+    [Fact]
+    public void ChangingThePointeeTypeDoesNotAddACheckAfterExplicitNullSuppression()
     {
-        string ir = CompilerTestHelper.EmitIr("int* Convert(int*? p) { return (int*)p; } int main() { return 0; }");
-        Assert.Contains("null_failure", ir);
-        Assert.Contains("call void @llvm.trap()", ir);
+        string ir = Compiler.Emit("""
+            int main()
+            {
+                void*? storage = null;
+                int* pointer = (int*)storage!;
+                int*? view = pointer;
+                if (view != null) return 1;
+                return 0;
+            }
+            """, options: new() { NoStdLib = true });
+        Assert.DoesNotContain("null_failure", ir);
+        Assert.DoesNotContain("llvm.assume", ir);
+        Assert.Equal(0, CompilerTestHelper.RunIr(ir).ExitCode);
     }
 }

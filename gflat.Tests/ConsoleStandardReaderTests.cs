@@ -68,12 +68,12 @@ public sealed class ConsoleStandardReaderTests
             byte[] textExpected = OperatingSystem.IsWindows() ? [65, 0, 66, 10] : [65, 0, 66, 13, 10, 26, 255, 90, 67];
             string executable = Compile(directory, $$"""
                 using Standard::IO;
-                extern void* __gflat_stdio_stdin();
-                extern void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern int fclose(void* stream);
-                extern int fputc(int value,void* stream);
-                extern int feof(void* stream);extern int ferror(void* stream);
+                extern "C" void* __gflat_stdio_stdin();
+                extern "C" void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" int fclose(void* stream);
+                extern "C" int fputc(int value,void* stream);
+                extern "C" int feof(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     IByteReader* input=Console::In;void* stream=__gflat_stdio_stdin();
                     if(freopen({{Literal(original)}},"rb",stream)==null)return 21;

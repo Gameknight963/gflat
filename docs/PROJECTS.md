@@ -343,7 +343,7 @@ clang -c native_add.c -o native_add.o
 Save the caller as `main.gf`:
 
 ```csharp
-extern int native_add(int left, int right) nothrow;
+extern "C" int native_add(int left, int right) nothrow;
 int main() nothrow
 {
     return native_add(20, 22) - 42;

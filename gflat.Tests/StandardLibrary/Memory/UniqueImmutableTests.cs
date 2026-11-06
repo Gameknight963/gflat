@@ -9,7 +9,7 @@ public sealed class UniqueImmutableTests
     [InlineData(2)]
     public void DeepBorrowReadsNoncopyablePayloadWithoutAllocationCopyOrEarlyDestruction(int optimization)
         => Run("""
-            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* data);
+            using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* data);
             int allocations=0;int dead=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}

@@ -38,9 +38,9 @@ public sealed class MathRoundingTests
             int recordSize = wide ? 40 : 20;
             string program = $$"""
                 using Standard; using Standard::Numerics;
-                extern void*? fopen(readonly(char)* path,readonly(char)* mode);
-                extern nuint fread(void* data,nuint size,nuint count,void* stream);
-                extern int fclose(void* stream);extern int ferror(void* stream);
+                extern "C" void*? fopen(readonly(char)* path,readonly(char)* mode);
+                extern "C" nuint fread(void* data,nuint size,nuint count,void* stream);
+                extern "C" int fclose(void* stream);extern "C" int ferror(void* stream);
                 int main(){
                     void*? file=fopen({{Literal(path)}},"rb");if(file==null)return 1;
                     {{integer}}[5] row;{{scalar}}[4] actual;

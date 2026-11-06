@@ -38,9 +38,9 @@ internal static class ExampleOutputFailure
             Assert.Contains(signature, example);
             example = example.Replace(signature, "int ExampleMain(int argc, char** argv)");
             string failure = OperatingSystem.IsWindows() ? """
-                extern int _fileno(void* stream);
-                extern nint _get_osfhandle(int descriptor);
-                extern int CloseHandle(void* handle);
+                extern "C" int _fileno(void* stream);
+                extern "C" nint _get_osfhandle(int descriptor);
+                extern "C" int CloseHandle(void* handle);
                 bool BreakOutput(void* stream){
                     // Keep the CRT descriptor valid to avoid its invalid-parameter
                     // handler; only the underlying OS handle becomes unwritable.
@@ -60,10 +60,10 @@ internal static class ExampleOutputFailure
                 ? 2 + leadingArguments.Length + extraArguments.Length : 1 + exactArguments.Length;
             int readOnlyPathIndex = exactArguments == null ? 1 + leadingArguments.Length : argumentCount;
             string wrapper = """
-                extern void* __gflat_stdio_stdout();
-                extern int setvbuf(void* stream,char* buffer,int mode,nuint count);
-                extern int fclose(void* stream);
-                extern void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
+                extern "C" void* __gflat_stdio_stdout();
+                extern "C" int setvbuf(void* stream,char* buffer,int mode,nuint count);
+                extern "C" int fclose(void* stream);
+                extern "C" void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
                 int main(int argc,char** argv){
                     void* stream=__gflat_stdio_stdout();char[4096] buffer;
                     if(argc==ARGCOUNT+1){

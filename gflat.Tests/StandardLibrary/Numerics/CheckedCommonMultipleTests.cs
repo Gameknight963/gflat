@@ -102,7 +102,7 @@ public sealed class CheckedCommonMultipleTests
     private const string Memory="""
         using Standard; using Standard::Text; using Standard::Numerics;
         bool deny=false;int attempts=0;int allocated=0;int released=0;
-        extern void*? malloc(nuint count);extern void free(void* value);
+        extern "C" void*? malloc(nuint count);extern "C" void free(void* value);
         namespace Memory {
             public replace void*? Allocate(nuint count) {
                 attempts++;if(deny)return null;

@@ -69,7 +69,7 @@ public class OptionalParameterTests
     [Fact]
     public void ExternDefaultPreservesNativeSignature()
     {
-        var result = CompilerTestHelper.Run("extern int putchar(int c = 42); int main() { putchar(); return 0; }");
+        var result = CompilerTestHelper.Run("extern \"C\" int putchar(int c = 42); int main() { putchar(); return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("*", result.StandardOutput);
     }

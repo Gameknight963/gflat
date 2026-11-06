@@ -20,8 +20,8 @@ public sealed class MemoryStreamTests
         """;
 
     private const string AllocationTracking = """
-        extern void*? malloc(nuint bytes);
-        extern void free(void* memory);
+        extern "C" void*? malloc(nuint bytes);
+        extern "C" void free(void* memory);
         static class State { public static bool Failing; public static int Live; }
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {

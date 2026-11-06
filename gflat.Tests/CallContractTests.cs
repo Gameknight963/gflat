@@ -6,7 +6,7 @@ public sealed class CallContractTests
 {
     [Theory]
     [InlineData("int F(const int x) => x; int main() { int(int)* p = &F; return p(1); }")]
-    [InlineData("extern int F(const int x); int main() { int(int)* p = &F; return p(1); }")]
+    [InlineData("extern \"C\" int F(const int x); int main() { int(int)* p = &F; return p(1); }")]
     public void FunctionAddressesCannotDiscardCallRequirements(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
 

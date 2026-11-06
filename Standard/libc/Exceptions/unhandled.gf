@@ -1,7 +1,7 @@
 // Called at main, a nothrow boundary, or a destructor when an exception escapes.
 // The pointer is borrowed and may be null for a foreign exception.
 // Returning or throwing from this hook triggers runtime termination with status 1.
-extern void exit(int status);
+extern "C" void exit(int status);
 
 namespace Exceptions {
     public weak void Unhandled(Exception*? error) {
@@ -9,4 +9,9 @@ namespace Exceptions {
         if (error != null) status = error.GetCode();
         exit(status);
     }
+}
+
+namespace __gflat_runtime
+{
+    public void Unhandled(Exception*? error) => global::Exceptions::Unhandled(error);
 }

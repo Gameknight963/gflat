@@ -69,7 +69,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
-        if (capacity != 0) global::Memory::Free((void*)data);
+        if (capacity != 0) global::Memory::Free(data!);
         data = replacement;
         capacity = requested;
     }
@@ -81,7 +81,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (length == capacity) return;
         if (length == 0)
         {
-            if (capacity != 0) global::Memory::Free((void*)data);
+            if (capacity != 0) global::Memory::Free(data!);
             data = (char*)"";
             capacity = 0;
             return;
@@ -92,7 +92,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
-        if (capacity != 0) global::Memory::Free((void*)data);
+        if (capacity != 0) global::Memory::Free(data!);
         data = replacement;
         capacity = length;
     }
@@ -130,7 +130,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
             // Copy before freeing: text may refer to this string's own buffer.
             for (nuint i = 0; i < count; i++) replacement[length + i] = text[i];
             replacement[required] = '\0';
-            if (capacity != 0) global::Memory::Free((void*)data);
+            if (capacity != 0) global::Memory::Free(data!);
             data = replacement;
             capacity = grown;
         }
@@ -575,6 +575,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     // Keep the String alive. Mutation can change bytes or replace the buffer.
     public immutable readonly(char)* ToCString() nothrow => data;
 
+    public void Write(readonly(char)* text) => this.Append(text);
     public void Write(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }
     public immutable void Format(ITextWriter* output) { output.Write(data, length); }
 
@@ -651,5 +652,5 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         }
     }
 
-    ~String() { if (capacity != 0) global::Memory::Free((void*)data); }
+    ~String() { if (capacity != 0) global::Memory::Free(data!); }
 }

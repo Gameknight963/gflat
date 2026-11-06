@@ -24,7 +24,7 @@ public sealed class DirectoryUtf8Tests(ITestOutputHelper output)
                 using Standard::IO;
 
                 // Windows SDK ucrt/locale.h defines LC_CTYPE as 2.
-                extern char*? setlocale(int category, readonly(char)* locale) nothrow;
+                extern "C" char*? setlocale(int category, readonly(char)* locale) nothrow;
                 int main(int argc, char** argv) {
                     if (setlocale(2, ".UTF8") == null) return 1;
                     readonly(char)* path = {{Literal(child)}};

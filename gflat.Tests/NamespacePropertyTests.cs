@@ -8,7 +8,7 @@ public class NamespacePropertyTests
     public void ExplicitAccessorsSupportQualifiedReadsWritesAndUpdates()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             namespace Settings {
                 public int Value { get => 4; set { printf("%d", value); } }
                 int Read() => Value;
@@ -38,7 +38,7 @@ public class NamespacePropertyTests
     public void ThrowingAccessorsPropagateNormally()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(immutable(char*) text, ...);
+            extern "C" int printf(immutable(char*) text, ...);
             namespace Settings {
                 int Value { get { throw new Exception(); } set { throw new Exception(); } }
             }

@@ -218,6 +218,7 @@ public sealed class HexDecoderTests
                 namespace Memory { public void*? Allocate(nuint count)=>null;public void Free(void* value)nothrow{} }
                 struct Sink:ITextWriter { public void Write(readonly(char)* data,nuint count){} }
                 void Decode(Sink* sink,readonly(char)* text,nuint count){HexDecoder decoder=new(sink);decoder.Write(text,count);decoder.Complete();}
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         // Successful emission with only these sources proves no String definition is required.

@@ -2,9 +2,9 @@ namespace Standard::Text;
 
 namespace floating_parsing_detail
 {
-    private extern float strtof(readonly(char)* text, char** end) nothrow;
-    private extern double strtod(readonly(char)* text, char** end) nothrow;
-    private extern int isspace(int value) nothrow;
+    private extern "C" float strtof(readonly(char)* text, char** end) nothrow;
+    private extern "C" double strtod(readonly(char)* text, char** end) nothrow;
+    private extern "C" int isspace(int value) nothrow;
 }
 
 // Parses a complete C string using the current C locale and native floating grammar.

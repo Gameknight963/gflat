@@ -28,8 +28,8 @@ public sealed class CodeGenerationBoundaryTests
     public void LambdaDefinitionDuringCleanupPreservesDoubleExceptionTermination()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
-            extern void exit(int status);
+            extern "C" int putchar(int value);
+            extern "C" void exit(int status);
             namespace Exceptions {
                 public replace void Unhandled(Exception*? error) { putchar(84); exit(0); }
             }

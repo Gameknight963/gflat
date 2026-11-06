@@ -45,7 +45,7 @@ public sealed class ExtraLongParsingTests
     [InlineData(2)]
     public void CountedOverlapAndStringWrappersCommitOnlyAfterReadingWithoutAllocation(int optimization)
         => Run("""
-            using Standard; using Standard::Text;extern void*? malloc(nuint size);extern void free(void* pointer);bool deny=false;int calls=0;
+            using Standard; using Standard::Text;extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);bool deny=false;int calls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny){calls++;return null;}return malloc(size);}
                 public replace void Free(void* pointer) nothrow{free(pointer);}

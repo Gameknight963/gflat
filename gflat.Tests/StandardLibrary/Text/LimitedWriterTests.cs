@@ -50,8 +50,8 @@ public sealed class LimitedWriterTests
         {
             namespace Native
             {
-                private extern void*? malloc(nuint count);
-                private extern void free(void* storage);
+                private extern "C" void*? malloc(nuint count);
+                private extern "C" void free(void* storage);
             }
             public replace void*? Allocate(nuint count)
             {
@@ -307,8 +307,8 @@ public sealed class LimitedWriterTests
                 using Standard::Text;
                 namespace Memory
                 {
-                    private extern void*? HostAllocate(nuint count);
-                    private extern void HostFree(void* storage);
+                    private extern "C" void*? HostAllocate(nuint count);
+                    private extern "C" void HostFree(void* storage);
                     public void*? Allocate(nuint count) => HostAllocate(count);
                     public void Free(void* storage) nothrow { HostFree(storage); }
                 }
@@ -323,6 +323,7 @@ public sealed class LimitedWriterTests
                     frame.Write("X", 1);
                     return (int)frame.Remaining;
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         Compiler.Check(sources, options: new() { NoStdLib = true, NoBuiltins = true });
     }

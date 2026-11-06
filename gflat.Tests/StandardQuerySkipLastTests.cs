@@ -265,7 +265,7 @@ public sealed class StandardQuerySkipLastTests
     private const string Memory = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
         int attempts=0;int allocated=0;int released=0;int failAt=0;bool deny=false;
-        extern void*? malloc(nuint count);extern void free(void* value);
+        extern "C" void*? malloc(nuint count);extern "C" void free(void* value);
         namespace Memory {
             public replace void*? Allocate(nuint count) {
                 attempts++;if(deny||attempts==failAt)return null;

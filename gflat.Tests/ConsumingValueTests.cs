@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public class ConsumingValueTests
 {
     private const string Resource = """
-        extern int printf(readonly(char)* text, ...);
+        extern "C" int printf(readonly(char)* text, ...);
         struct R {
             public int n;
             public R(int value) { n = value; }
@@ -38,7 +38,7 @@ public class ConsumingValueTests
     }
 
     private const string Copyable = """
-        extern int printf(readonly(char)* text, ...);
+        extern "C" int printf(readonly(char)* text, ...);
         struct R {
             public int n;
             public R(int value) { n = value; }
@@ -138,9 +138,9 @@ public class ConsumingValueTests
     public void FailedConstructorFreesOnlyFreshHeapStorage()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
-            extern void* malloc(nuint size);
-            extern void free(void* p);
+            extern "C" int printf(readonly(char)* text, ...);
+            extern "C" void* malloc(nuint size);
+            extern "C" void free(void* p);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { return malloc(size); }
                 public replace void Free(void* p) nothrow { printf("F"); free(p); }

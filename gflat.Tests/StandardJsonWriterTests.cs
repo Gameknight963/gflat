@@ -21,7 +21,7 @@ public sealed class StandardJsonWriterTests
     public void InvalidStructuralOperationsAreRetryableAndCompleteOnlyValidates(int optimization)
         => Run("""
             using Standard; using Standard::Text; using Standard::Json;
-            extern int puts(readonly(char)* text);
+            extern "C" int puts(readonly(char)* text);
             int main(){
                 String text=s"";JsonWriter writer=new(&text);int caught=0;
                 try{writer.Complete();}catch(JsonWriteException* error){caught++;}
@@ -56,7 +56,7 @@ public sealed class StandardJsonWriterTests
         string[] invalid = ["", " ", " 1", "1 ", "+1", "01", "-", "1.", "1e", "1e+", "1 2", "1,", "1]", "NaN", "Infinity", "null", "true", "[]", "{}", "\"1\""];
         var code = new System.Text.StringBuilder("""
             using Standard; using Standard::Text; using Standard::Json;
-            extern int puts(readonly(char)* text);
+            extern "C" int puts(readonly(char)* text);
             int main(){String text=s"";JsonWriter writer=new(&text);writer.WriteStartObject();
                 char[2] invalid=[(char)192,(char)128];int caught=0;
                 try{writer.WritePropertyName(invalid,2);}catch(JsonWriteException* error){caught++;}
@@ -142,8 +142,8 @@ public sealed class StandardJsonWriterTests
     public void FailedNestingAllocationDoesNotEmitDelimiterOrConsumeParentAndCanRetry(int optimization)
         => Run("""
             using Standard; using Standard::Text; using Standard::Json;
-            extern int puts(readonly(char)* text);
-            private extern void*? malloc(nuint bytes);private extern void free(void* pointer);
+            extern "C" int puts(readonly(char)* text);
+            private extern "C" void*? malloc(nuint bytes);private extern "C" void free(void* pointer);
             bool deny=false;
             namespace Memory{
                 replace void*? Allocate(nuint bytes){if(deny)return null;return malloc(bytes);}
@@ -166,7 +166,7 @@ public sealed class StandardJsonWriterTests
     public void MovingPreservesStateAndDestructionDoesNotWriteOrDisposeDestination(int optimization)
         => Run("""
             using Standard; using Standard::Text; using Standard::Json;
-            extern int puts(readonly(char)* text);
+            extern "C" int puts(readonly(char)* text);
             int main(){String text=s"";
                 {JsonWriter writer=new(&text);writer.WriteStartArray();JsonWriter moved=move writer;
                  moved.WriteNumber(1);moved.WriteEndArray();moved.Complete();}

@@ -43,7 +43,7 @@ public sealed class ValueExpressionLifetimeTests
     public void OwningCastsCreateAndDestroyExactlyOneResult(string statement, string output)
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner {
                 private int number;
                 public Owner(int value) { number = value; }
@@ -61,7 +61,7 @@ public sealed class ValueExpressionLifetimeTests
     public void OwningDefaultTemporaryIsDestroyedAfterMemberUse()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner { public int number; ~Owner() { putchar(68); } }
             int main() { return default(Owner).number; }
             """);
@@ -75,7 +75,7 @@ public sealed class ValueExpressionLifetimeTests
     public void OwningBufferValueTemporariesDestroyAllElements(string expression, string output)
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner {
                 public int number;
                 COPY_MEMBERS
@@ -93,7 +93,7 @@ public sealed class ValueExpressionLifetimeTests
     public void ThrowingCastCopyKeepsItsSourceAssignedForTheCatchPath()
     {
         var result = CompilerTestHelper.Run("""
-            extern int putchar(int value);
+            extern "C" int putchar(int value);
             struct Owner {
                 private int number;
                 public Owner() { number = 42; }

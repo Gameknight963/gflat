@@ -84,7 +84,7 @@ public partial class LlvmEmitter
     {
         var declaration = _typeChecker.GetUnhandledExceptionHook();
         string hook = declaration != null
-            ? "bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled" + _typeChecker.GetOverloadSuffix(declaration) + " to void (i8*)*)" : "null";
+            ? "bitcast (void (%Exception*)* @gflat$__gflat_runtime$Unhandled" + _typeChecker.GetOverloadSuffix(declaration) + " to void (i8*)*)" : "null";
         EmitRuntimeCall(ExceptionRuntime.Terminate, $"i8* {handle}, void (i8*)* {hook}");
         Emit("    unreachable");
     }

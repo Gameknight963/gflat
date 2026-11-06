@@ -223,6 +223,7 @@ public sealed class IpAddressTests
                     bool family=value.IsIpv4;bool equal=value.Equals(&other);int comparison=value.CompareTo(&other);nuint hash=value.GetHashCode();
                     return value.TryFormat(output,capacity,ref written)&&valid;
                 }
+                namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });
     }

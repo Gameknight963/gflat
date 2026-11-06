@@ -9,7 +9,7 @@ public sealed class UniqueReplacementFailureTests
     {
         const string program = """
             using Standard;using Standard::Memory;
-            extern void*? malloc(nuint bytes);extern void free(void* storage);
+            extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
             int allocated=0;int released=0;int denied=0;int started=0;int dead=0;
             int originalFrees=0;int failedFrees=0;
             bool failNext=false;bool captureNext=false;

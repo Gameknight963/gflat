@@ -206,7 +206,7 @@ public sealed class BigIntegerConversionTests
     }
     private const string Counters="""
         using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;
-        extern void*? malloc(nuint count);extern void free(void* value);
+        extern "C" void*? malloc(nuint count);extern "C" void free(void* value);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}

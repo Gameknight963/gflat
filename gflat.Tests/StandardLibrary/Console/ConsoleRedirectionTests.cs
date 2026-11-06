@@ -22,8 +22,8 @@ public sealed class ConsoleRedirectionTests
         try
         {
             string executable = Compile(directory, AllocationProbe + """
-                extern void* __gflat_stdio_stdin() nothrow;
-                extern int fgetc(void* stream) nothrow;
+                extern "C" void* __gflat_stdio_stdin() nothrow;
+                extern "C" int fgetc(void* stream) nothrow;
                 int main() nothrow {
                     for (int index = 0; index < 32; index++) {
                         if (!Console::IsInputRedirected || !Console::IsOutputRedirected || !Console::IsErrorRedirected) return 1;
@@ -54,11 +54,11 @@ public sealed class ConsoleRedirectionTests
             string error = Path.Combine(directory, "error.txt");
             File.WriteAllText(input, "Q");
             string executable = Compile(directory, AllocationProbe + """
-                extern void* __gflat_stdio_stdin() nothrow;
-                extern void* __gflat_stdio_stdout() nothrow;
-                extern void* __gflat_stdio_stderr() nothrow;
-                extern void*? freopen(readonly(char)* path, readonly(char)* mode, void* stream) nothrow;
-                extern int fgetc(void* stream) nothrow;
+                extern "C" void* __gflat_stdio_stdin() nothrow;
+                extern "C" void* __gflat_stdio_stdout() nothrow;
+                extern "C" void* __gflat_stdio_stderr() nothrow;
+                extern "C" void*? freopen(readonly(char)* path, readonly(char)* mode, void* stream) nothrow;
+                extern "C" int fgetc(void* stream) nothrow;
                 int main(int argc, char** argv) nothrow {
                     if (argc != 5) return 1;
                     if (!Console::IsInputRedirected || !Console::IsOutputRedirected || !Console::IsErrorRedirected) return 2;
@@ -100,7 +100,7 @@ public sealed class ConsoleRedirectionTests
         try
         {
             string ir = Compiler.Emit(Sources("""
-                extern int __gflat_stdio_is_redirected(int selector) nothrow;
+                extern "C" int __gflat_stdio_is_redirected(int selector) nothrow;
                 int main() nothrow {
                     if (__gflat_stdio_is_redirected(-1) != 1 || __gflat_stdio_is_redirected(3) != 1
                         || __gflat_stdio_is_redirected(2147483647) != 1) return 1;

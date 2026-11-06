@@ -72,7 +72,7 @@ public sealed class StandardJsonReaderTests
     public void StackGrowthFailureRequiresResetAndAllOwnedStorageIsReleased(int optimization)
         => Run("""
             using Standard; using Standard::Json;
-            extern void*? malloc(nuint size);extern void free(void* storage);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* storage);
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}

@@ -27,7 +27,7 @@ public class IndexerTests
     public void MultipleIndicesAreEvaluatedOnceInOrder()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             int Row() { printf("R"); return 1; }
             int Column() { printf("C"); return 2; }
             int Value() { printf("V"); return 3; }
@@ -77,7 +77,7 @@ public class IndexerTests
     public void ReceiverIsDestroyedIfAnIndexThrowsBeforeTheValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct S { public int this[int i] { get => i; set { printf("S"); } } ~S() { printf("D"); } }
             S Make() { printf("M"); return new S(); }
             int Index() { printf("I"); throw new Exception(); }
@@ -92,7 +92,7 @@ public class IndexerTests
     public void ThrowingAccessorsUseNormalExceptionHandling()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char)* text, ...);
+            extern "C" int printf(readonly(char)* text, ...);
             struct S { public int this[int i] {
                 get { printf("G"); throw new Exception(); }
                 set { printf("S"); throw new Exception(); }
@@ -107,7 +107,7 @@ public class IndexerTests
     [Fact]
     public void ManagedReceiversAndInterfaceViewsSupportIndexers()
         => Assert.Equal(42, CompilerTestHelper.Run("""
-            extern void*? malloc(nuint n);
+            extern "C" void*? malloc(nuint n);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;

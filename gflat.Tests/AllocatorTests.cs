@@ -33,8 +33,8 @@ int main()
         public void CustomAllocator_HeaderTagging_InterceptsNewAndDelete()
         {
             string code = @"
-extern void* malloc(nuint size);
-extern void free(void* ptr);
+extern ""C"" void* malloc(nuint size);
+extern ""C"" void free(void* ptr);
 
 namespace Memory { public replace void*? Allocate(nuint size)
 {
@@ -87,8 +87,8 @@ int main()
         public void CustomAllocator_ExpressionBodyHooks_Succeeds()
         {
             string code = @"
-extern void* malloc(nuint size);
-extern void free(void* ptr);
+extern ""C"" void* malloc(nuint size);
+extern ""C"" void free(void* ptr);
 
 namespace Memory { public replace void*? Allocate(nuint size) => malloc(size); }
 namespace Memory { public replace void Free(void* ptr) nothrow => free(ptr); }
@@ -133,8 +133,8 @@ int main()
             string code = @"
 
 
-extern void* malloc(nuint size);
-extern void free(void* ptr);
+extern ""C"" void* malloc(nuint size);
+extern ""C"" void free(void* ptr);
 
 namespace Memory { public replace void*? Allocate(nuint size)
 {
@@ -168,8 +168,8 @@ int main()
         public void CustomAllocator_AlignedWrapper_Succeeds()
         {
             string code = @"
-extern void* malloc(nuint size);
-extern void free(void* ptr);
+extern ""C"" void* malloc(nuint size);
+extern ""C"" void free(void* ptr);
 
 namespace Memory { public replace void*? Allocate(nuint size)
 {

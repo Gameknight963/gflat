@@ -8,7 +8,7 @@ public sealed class VectorTryPopTests
     public void NoncopyableOwnersTransferWithoutAllocationAndEmptyPreservesOutput(int optimization)
         => Run("""
             using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-            extern void*? malloc(nuint size);extern void free(void* pointer);
+            extern "C" void*? malloc(nuint size);extern "C" void free(void* pointer);
             int attempts=0;int allocated=0;int freed=0;int made=0;int dead=0;bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint size){attempts++;if(deny)return null;

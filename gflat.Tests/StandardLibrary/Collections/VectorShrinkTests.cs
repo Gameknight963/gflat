@@ -14,7 +14,7 @@ public sealed class VectorShrinkTests
 
     private const string Allocator = """
         using Standard; using Standard::Memory; using Standard::Queries; using Standard::Collections;
-        extern void*? malloc(nuint bytes);extern void free(void* pointer);
+        extern "C" void*? malloc(nuint bytes);extern "C" void free(void* pointer);
         int allocations=0;int frees=0;nuint lastSize=0;bool deny=false;
         namespace Memory{
             replace void*? Allocate(nuint bytes){

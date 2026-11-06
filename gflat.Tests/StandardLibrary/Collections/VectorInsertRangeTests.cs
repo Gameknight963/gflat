@@ -39,9 +39,9 @@ public sealed class VectorInsertRangeTests
             }
             Run("""
                 using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
-                extern void* fopen(readonly(char)* path, readonly(char)* mode);
-                extern nuint fread(void* buffer, nuint size, nuint count, void* stream);
-                extern int fclose(void* stream);
+                extern "C" void* fopen(readonly(char)* path, readonly(char)* mode);
+                extern "C" nuint fread(void* buffer, nuint size, nuint count, void* stream);
+                extern "C" int fclose(void* stream);
                 int main() {
                     void* stream = fopen("PATH", "rb");
                     int[21] row; int processed = 0;
@@ -74,7 +74,7 @@ public sealed class VectorInsertRangeTests
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;
         int made=0; int dead=0; int budget=-1; int copies=0;
         int allocations=0; int releases=0; bool deny=false;
-        extern void*? malloc(nuint bytes); extern void free(void* storage);
+        extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) { if(deny)return null; allocations++;return malloc(bytes); }
             public replace void Free(void* storage) nothrow { releases++;free(storage); }

@@ -12,10 +12,9 @@ public sealed partial class EditorModel
         var fields = symbols.Where(symbol => symbol.Syntax.Node is FieldDeclaration)
             .ToDictionary(symbol => (symbol.Syntax.Span, symbol.Name));
         if (fields.Count == 0) return;
-        foreach (var syntax in activeNodes)
+        foreach (var syntax in activeNodes.Where(syntax => syntax.Node is IdentifierExpression or MemberAccessExpression or NamespaceAccessExpression))
         {
             var site = syntax.Node;
-            if (site is not (IdentifierExpression or MemberAccessExpression or NamespaceAccessExpression)) continue;
             if (TypeChecker.TypeName(checker.GetType(site)) == "<error>" || checker.GetPropertyRead(site) != null) continue;
             FieldDeclaration? field = checker.GetStaticStorage(site);
             string? owner = field == null ? null : checker.GetStaticStorageInfo(field).Owner;

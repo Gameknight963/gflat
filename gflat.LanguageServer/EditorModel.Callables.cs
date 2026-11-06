@@ -43,7 +43,8 @@ public sealed partial class EditorModel
             if (syntax.Node is TypeExpression && syntax.Parent?.Node is NewExpression creation &&
                 (!writtenCreationTypes.TryGetValue(creation, out var previous) || syntax.Span.Start < previous.Start))
                 writtenCreationTypes[creation] = syntax.Span;
-        foreach (var syntax in activeNodes)
+        foreach (var syntax in activeNodes.Where(syntax => syntax.Node is NewExpression or CallExpression ||
+            checker.GetFunctionAddressTarget(syntax.Node) != null))
         {
             if (syntax.Node is NewExpression creation && syntax.Span.Source?.Path is { } creationPath)
             {

@@ -120,7 +120,7 @@ public sealed partial class EditorModel
                     s.Parameters?.Select(p => DisplayType(p.Type)).SequenceEqual(fields.Select(f => DisplayType(f.Type!))) == true))
                 {
                     string generated = newline + indent + "public " + CompletionSpelling(owner) + "(" + string.Join(", ", fields.Select(f => DisplayType(f.Type!) + " " + CompletionSpelling(f))) + ")" +
-                        newline + indent + "{" + newline + string.Join(newline, fields.Select(f => indent + "    (*this)." + CompletionSpelling(f) + " = move " + CompletionSpelling(f) + ";")) +
+                        newline + indent + "{" + newline + string.Join(newline, fields.Select(f => indent + "    this." + CompletionSpelling(f) + " = move " + CompletionSpelling(f) + ";")) +
                         newline + indent + "}" + newline;
                     actions.Add(Action("Generate constructor", "refactor.rewrite", path, new SourceEdit(Workspace.ToRange(source.Span(close.Start, 0)), generated)));
                 }

@@ -845,8 +845,22 @@ public sealed partial class EditorModel
         // Comments are trivia, so inspect only the gap after the preceding token.
         int start = token?.End + 1 ?? 0;
         var trivia = sources[path].Text.AsSpan(start, offset - start);
-        for (int index = 0; index + 1 < trivia.Length; index++)
+        for (int index = 0; index < trivia.Length; index++)
         {
+            // Recovery omits malformed literals from the token stream. Their
+            // opening quote still suppresses code completion on that line.
+            if (trivia[index] is '"' or '\'' && (index == 0 || trivia[index - 1] != '$'))
+            {
+                char quote = trivia[index++];
+                for (; index < trivia.Length && trivia[index] is not ('\r' or '\n'); index++)
+                {
+                    if (trivia[index] == '\\') { index++; continue; }
+                    if (trivia[index] == quote) break;
+                }
+                if (index >= trivia.Length) return true;
+                continue;
+            }
+            if (index + 1 == trivia.Length) break;
             if (trivia[index] != '/') continue;
             if (trivia[index + 1] == '/')
             {

@@ -434,6 +434,9 @@ public class EditorTests
     [InlineData("int main() { // /* ignored */ co|mment\n return 0; }")]
     [InlineData("int main() { /* // ignored\n co|mment */ return 0; }")]
     [InlineData("int main() { \"he|llo\"; return 0; }")]
+    [InlineData("int main() { \"unfinished|")]
+    [InlineData("int main() { 'unfinished|")]
+    [InlineData("int main() { \"unfinished\\|")]
     public void CompletionDoesNotOfferCodeInsideCommentsOrStrings(string text)
     {
         var (model, path, offset, _) = Analyze(text);
@@ -445,7 +448,10 @@ public class EditorTests
     [InlineData("/* /* */ ")]
     [InlineData("// comment\r")]
     [InlineData("/* // */ /* second */ ")]
-    public void CompletionResumesAfterTheActualCommentTerminator(string trivia)
+    [InlineData("\"unfinished\n")]
+    [InlineData("'unfinished\r\n")]
+    [InlineData("$\"{")]
+    public void CompletionRemainsAvailableAfterTriviaAndLiteralRecovery(string trivia)
     {
         var (model, path, offset, _) = Analyze("int main() { int local = 0; " + trivia + "| return local; }");
         Assert.Contains("local", Labels(model.Completion(path, offset)));

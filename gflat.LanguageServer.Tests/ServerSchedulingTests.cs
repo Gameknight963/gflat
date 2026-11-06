@@ -5,7 +5,37 @@ namespace gflat.LanguageServer.Tests;
 public sealed partial class ServerTests
 {
     [Fact]
-    public async Task GeneratedFileNotificationsDoNotCancelPendingCompletion()
+    public async Task CustomSourceGlobsStillObserveNewFilesAndTheirDiagnostics()
+    {
+        await using var session = new Session();
+        System.IO.File.WriteAllText(session.File("app.gfproj"), gflat.TestSupport.ProjectFileFixture.WithImports("""
+            <Project>
+              <PropertyGroup><NoStdLib>true</NoStdLib><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+              <ItemGroup><Compile Include="main.gf" /><Compile Include="*.custom" /></ItemGroup>
+            </Project>
+            """));
+        await session.Initialize();
+        await session.Open("main.gf", "int main() => 0;");
+        await session.Diagnostics("main.gf", 1);
+        System.IO.File.WriteAllText(session.File("new.custom"), "int Read() => missing;");
+        await session.Notify("workspace/didChangeWatchedFiles", new { changes = new[] {
+            new { uri = session.Uri("new.custom"), type = 1 } } });
+        var error = await session.Diagnostics("new.custom");
+        Assert.Contains("missing", error.ToString());
+        System.IO.File.WriteAllText(session.File("new.custom"), "int Read() => 42;");
+        await session.Notify("workspace/didChangeWatchedFiles", new { changes = new[] {
+            new { uri = session.Uri("new.custom"), type = 2 } } });
+        await session.Receive(message => message.TryGetProperty("method", out var method) &&
+            method.GetString() == "textDocument/publishDiagnostics" && message.GetProperty("params").GetProperty("uri").GetString() == session.Uri("new.custom") &&
+            message.GetProperty("params").GetProperty("diagnostics").GetArrayLength() == 0);
+        await session.Stop();
+    }
+
+    [Theory]
+    [InlineData("obj/generated.gf")]
+    [InlineData("trace.log")]
+    [InlineData("README.md")]
+    public async Task IrrelevantFileNotificationsDoNotCancelPendingCompletion(string changedPath)
     {
         await using var session = new Session();
         await session.Initialize();
@@ -17,7 +47,7 @@ public sealed partial class ServerTests
         await session.Send(new { jsonrpc = "2.0", id = 1410, method = "textDocument/completion", @params = new {
             textDocument = new { uri = session.Uri("main.gf") }, position = new { line = 0, character = 37 } } });
         await session.Notify("workspace/didChangeWatchedFiles", new { changes = new[] {
-            new { uri = session.Uri("obj/generated.gf"), type = 2 } } });
+            new { uri = session.Uri(changedPath), type = 2 } } });
         var reply = await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 1410);
         Assert.False(reply.TryGetProperty("error", out _), reply.ToString());
         Assert.Contains(reply.GetProperty("result").GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "local");

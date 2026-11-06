@@ -66,10 +66,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         if (exit != null) return exit.Value;
                         break;
                     case Changed changed when !shutdown:
-                        if (changed.Force || watchedPaths.Contains(changed.Path) ||
-                            ProjectWorkspace.IsProjectDiscoveryChange(changed.Path, projectDiscoveryDirectories) ||
-                            projectDirectories.Any(dir => changed.Path.StartsWith(dir + Path.DirectorySeparatorChar, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) ||
-                            root != null && Workspace.Paths.Equals(changed.Path, Path.Combine(root, Workspace.ConfigurationName)))
+                        if (changed.Force || RelevantFileChange(changed.Path))
                         { await Schedule(invalidateProjects: true); }
                         break;
                     case Finished result when result.Generation == generation && !shutdown:
@@ -253,7 +250,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         break;
                     case "workspace/didChangeWatchedFiles":
                         if (!parameters.TryGetProperty("changes", out var changes) || changes.EnumerateArray().Any(change =>
-                            !IgnoreGeneratedChange(Workspace.FilePath(change.GetProperty("uri").GetString()!))))
+                            RelevantFileChange(Workspace.FilePath(change.GetProperty("uri").GetString()!))))
                             await Schedule(invalidateProjects: true);
                         break;
                     case "$/cancelRequest":
@@ -458,6 +455,21 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
 
     private bool IgnoreGeneratedChange(string path) => !watchedPaths.Contains(path) &&
         path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory);
+
+    private bool RelevantFileChange(string path)
+    {
+        if (IgnoreGeneratedChange(path)) return false;
+        if (latest == null || watchedPaths.Contains(path) ||
+            ProjectWorkspace.IsProjectDiscoveryChange(path, projectDiscoveryDirectories) ||
+            root != null && Workspace.Paths.Equals(path, Path.Combine(root, Workspace.ConfigurationName))) return true;
+        // Use the completed graph's immutable glob rules, rather than querying
+        // the project cache while the next analysis may be updating it.
+        if (latest.SourceProjects?.Any(project => project.IncludesFile(path)) == true) return true;
+        string prefix = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return watchedPaths.Any(input => input.StartsWith(prefix, comparison)) ||
+            Directory.Exists(path) && projectDirectories.Any(directory => path.StartsWith(directory + Path.DirectorySeparatorChar, comparison));
+    }
 
     private void UpdateFormattingOptions(JsonElement settings)
     {

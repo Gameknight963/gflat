@@ -848,7 +848,13 @@ public sealed partial class EditorModel
             return value;
         return candidates.FirstOrDefault(s => s.Name == token.Text);
     }
-    private int TokenAt(string path, int offset) => Array.FindIndex(tokens[path], t => t.Start <= offset && t.End >= offset);
+    private int TokenAt(string path, int offset)
+    {
+        var ts = tokens[path];
+        int index = TokenStartIndex(ts, offset);
+        if (index < ts.Length && ts[index].Start == offset) return index;
+        return index > 0 && ts[index - 1].End >= offset ? index - 1 : -1;
+    }
 
     public object Completion(string path, int offset) => Completion(path, offset, null);
 
@@ -866,8 +872,7 @@ public sealed partial class EditorModel
         if (IncludeCompletion(path, offset) is { } include) return include;
         var ts = tokens[path];
         if (InCommentOrLiteral(path, offset)) return new { isIncomplete = false, items = Array.Empty<object>() };
-        int index = Array.FindIndex(ts, t => t.Start >= offset);
-        if (index < 0) index = ts.Length;
+        int index = TokenStartIndex(ts, offset);
         int start = offset;
         static bool IsWord(Token token) => token.Kind == TokenKind.Identifier ||
             token.Text.Length > 0 && (char.IsLetter(token.Text[0]) || token.Text[0] == '_') &&

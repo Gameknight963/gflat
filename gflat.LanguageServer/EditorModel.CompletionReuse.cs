@@ -75,7 +75,9 @@ public sealed partial class EditorModel
         while (oldEnd < previous.Length && IdentifierPart(previous[oldEnd])) oldEnd++;
         if (!text.AsSpan(end).SequenceEqual(previous.AsSpan(oldEnd))) return false;
         var ts = tokens[path];
-        var separator = ts.FirstOrDefault(token => token.End == start - 1 && token.Kind is TokenKind.Dot or TokenKind.DoubleColon);
+        int separatorIndex = TokenStartIndex(ts, start) - 1;
+        var separator = separatorIndex >= 0 && ts[separatorIndex].End == start - 1 &&
+            ts[separatorIndex].Kind is TokenKind.Dot or TokenKind.DoubleColon ? ts[separatorIndex] : null;
         if (separator == null || InCommentOrLiteral(path, start)) return false;
         if (!ContextParents(path, start).Any(parent => parent.Node is BlockStatement)) return false;
         var current = new SourceFile(path, text);
@@ -91,8 +93,9 @@ public sealed partial class EditorModel
         if (text[separatorStart] != '.' || separatorStart > previous.Length ||
             !text.AsSpan(0, separatorStart).SequenceEqual(previous.AsSpan(0, separatorStart)) ||
             !text.AsSpan(end).SequenceEqual(previous.AsSpan(separatorStart))) return false;
-        int leftIndex = Array.FindIndex(tokens[path], token => token.End == separatorStart - 1);
-        if (leftIndex < 0 || InCommentOrLiteral(path, separatorStart) ||
+        var ts = tokens[path];
+        int leftIndex = TokenStartIndex(ts, separatorStart) - 1;
+        if (leftIndex < 0 || ts[leftIndex].End != separatorStart - 1 || InCommentOrLiteral(path, separatorStart) ||
             !ContextParents(path, separatorStart).Any(parent => parent.Node is BlockStatement)) return false;
         var current = new SourceFile(path, text);
         var range = Workspace.ToRange(current.Span(start, end - start));

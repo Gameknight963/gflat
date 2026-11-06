@@ -22,6 +22,15 @@ public partial class TypeChecker
             forward?.Invoke(source);
             return source;
         }
+        // A primitive pointee cannot reenter binding. Retain the published view
+        // while avoiding a scoped publication and its temporary pointer.
+        if (source is PointerTypeExpression { Inner: NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } pointee } &&
+            IsPrimitive(pointee.Name))
+        {
+            var resolved = QualifyPublishedTypeBinding(source, source);
+            forward?.Invoke(resolved);
+            return resolved;
+        }
         // A published nominal identity has already passed lexical lookup. Keep
         // specialization/layout validation without opening another publication.
         if (source is NamedTypeExpression { IsResolvedNominal: true })
@@ -59,15 +68,20 @@ public partial class TypeChecker
 
         void Publish(TypeExpression identity)
         {
-            identity = MarkResolvedNominal(identity);
-            CheckPublishedTypeBinding(identity, source.Line);
-            TypeExpression qualified = CanonicalizeBoundScalarProtection(identity.WithQualifiersFrom(source));
-            if (source.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(source.InterfaceConstraints);
-            if (source.GenericUse != null) qualified = qualified.WithGenericUse(source.GenericUse);
-            if ((source.GenericParameterView ?? identity.GenericParameterView) is { } view) qualified = qualified.WithGenericParameterView(view);
-            if (aliasContracts.TryGetValue(identity, out var contract)) aliasContracts[qualified] = contract;
-            binding.Publish(qualified);
+            binding.Publish(QualifyPublishedTypeBinding(source, identity));
         }
+    }
+
+    private TypeExpression QualifyPublishedTypeBinding(TypeExpression source, TypeExpression identity)
+    {
+        identity = MarkResolvedNominal(identity);
+        CheckPublishedTypeBinding(identity, source.Line);
+        TypeExpression qualified = CanonicalizeBoundScalarProtection(identity.WithQualifiersFrom(source));
+        if (source.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(source.InterfaceConstraints);
+        if (source.GenericUse != null) qualified = qualified.WithGenericUse(source.GenericUse);
+        if ((source.GenericParameterView ?? identity.GenericParameterView) is { } view) qualified = qualified.WithGenericParameterView(view);
+        if (aliasContracts.TryGetValue(identity, out var contract)) aliasContracts[qualified] = contract;
+        return qualified;
     }
 
     // Enums, like built-in scalar types, have no reachable mutable storage.

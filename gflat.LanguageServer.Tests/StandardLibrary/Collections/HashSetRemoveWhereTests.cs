@@ -8,8 +8,7 @@ public sealed class HashSetRemoveWhereTests
     [Fact]
     public void BorrowedOwningKeyPredicateRetainsItsConcreteImmutableSignatureAndDefinition()
     {
-        var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var sources = StandardTestSources.Collections.ToList();
         const string text = """
             using Standard; using Standard::Text; using Standard::Collections;
             bool Temporary(immutable(String)* key) => key.StartsWith("tmp:");

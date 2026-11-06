@@ -8,9 +8,7 @@ public sealed class ClosedGenericInterfaceDisplayTests
     [Fact]
     public void ActualStandardInterfaceViewsBindParametersAndReturnTypesWithoutChangingOpenContexts()
     {
-        string directory = Path.Combine(AppContext.BaseDirectory, "StandardLibrary");
-        var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var sources = StandardTestSources.Values.ToList();
         const string text = """
             using Standard; using Standard::Memory; using Standard::Collections;
             nuint Hash<T : IHashable>(ref immutable(T) value) => value.GetHashCode();

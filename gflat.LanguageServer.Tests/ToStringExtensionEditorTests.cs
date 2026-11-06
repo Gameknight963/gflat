@@ -52,9 +52,7 @@ public sealed class ToStringExtensionEditorTests
     {
         const string text = "using Standard; using Standard::Text;namespace Views{alias Bound=IFormattable;String Describe<T:Bound>(ref immutable(T) value)=>value.ToString();}";
         string[] excluded = ["primitive_string.gf", "extra_long_string.gf", "floating_string.gf"];
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Where(path => !excluded.Contains(Path.GetFileName(path)))
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Text.Where(source => !excluded.Contains(Path.GetFileName(source.Path))).ToList();
         var source = new SourceFile(Path.GetFullPath("open-single-conversion.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

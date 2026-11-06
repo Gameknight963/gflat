@@ -11,9 +11,8 @@ public sealed class PlatformSystemClockEditorTests
         foreach (string platform in new[] { "Windows", "Linux" })
         {
             string providerDirectory = Path.Combine(AppContext.BaseDirectory, "PlatformLibrary", platform.ToLowerInvariant());
-            var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-                .Concat(Directory.GetFiles(providerDirectory, "*.gf"))
-                .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+            var files = StandardTestSources.Time.Concat(Directory.GetFiles(providerDirectory, "*.gf")
+                .Select(path => new SourceFile(path, File.ReadAllText(path)))).ToList();
             var provider = files.Single(file => Path.GetFileName(file.Path) == "SystemClock.gf");
             string text = $"void Probe(){{Standard::Time::DateTime utc={platform}::SystemClock::GetUtcNow();long ticks=utc.Ticks;}}";
             var source = new SourceFile(Path.GetFullPath("system-clock-editor.gf"), text);

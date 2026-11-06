@@ -8,9 +8,7 @@ public sealed class ConstructorSignatureHelpTests
     [Fact]
     public void ActualNestedEnumeratorCreationFormsShareConcreteSignaturesAndKeepTypeTokens()
     {
-        string directory = Path.Combine(AppContext.BaseDirectory, "StandardLibrary");
-        var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var sources = StandardTestSources.Values.ToList();
         const string text = """
             using Standard; using Standard::Memory;
             alias IntIterator = Standard::Memory::Span<int>::Enumerator;

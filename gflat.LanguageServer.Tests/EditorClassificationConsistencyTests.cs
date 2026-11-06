@@ -130,9 +130,8 @@ public sealed class EditorClassificationConsistencyTests
     [InlineData(true)]
     public void TasksExampleKeepsFieldBindingsThroughImmutableGenericIndexerViews(bool focused)
     {
-        string root = Path.Combine(AppContext.BaseDirectory, "StandardLibrary");
-        var files = Directory.GetFiles(root, "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Combine(StandardTestSources.Collections, StandardTestSources.Console,
+            StandardTestSources.Load("core/Text/parsing.gf")).ToList();
         var source = new SourceFile("tasks.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "EditorFixtures", "Tasks.gf")));
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true },
@@ -150,9 +149,7 @@ public sealed class EditorClassificationConsistencyTests
     [Fact]
     public void ShippedQueryExtensionsKeepGenericNamesAndCreationKeywordsClassified()
     {
-        string root = Path.Combine(AppContext.BaseDirectory, "StandardLibrary");
-        var files = Directory.GetFiles(root, "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Queries.ToList();
         var selected = files.Where(file => Path.GetFileName(file.Path) is "enumerable_slice.gf" or "enumerable_distinct_by.gf").ToArray();
         Assert.Equal(2, selected.Length);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true },

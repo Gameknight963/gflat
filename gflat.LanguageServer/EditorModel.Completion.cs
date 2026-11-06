@@ -62,7 +62,7 @@ public sealed partial class EditorModel
             symbols.Any(s => s.Syntax.Node is ClassDeclaration && used.Contains(s.Qualified));
         var self = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == ts[declaration + 1].Start);
         return new(true, s => s.Syntax.Node is NamespaceDeclaration ||
-            (s.Syntax.Node is InterfaceDeclaration || ts[declaration].Kind == TokenKind.Class && !alreadyHasBase && s.Syntax.Node is ClassDeclaration { IsGeneric: false }) &&
+            (s.Syntax.Node is InterfaceDeclaration || ts[declaration].Kind == TokenKind.Class && !alreadyHasBase && s.Syntax.Node is ClassDeclaration { IsStatic: false }) &&
             s != self && s.Qualified != self?.Qualified && !used.Contains(s.Qualified) &&
             !visible.Any(v => v == s && used.Contains(v.Name)));
     }

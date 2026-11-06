@@ -320,6 +320,18 @@ public class EditorTests
     }
 
     [Fact]
+    public void InheritanceCompletionOffersGenericBasesAndExcludesStaticClasses()
+    {
+        var (model, path, offset, _) = Analyze("class Base<T> {} static class Scope {} class Child : | {}");
+        var labels = Labels(model.Completion(path, offset));
+        Assert.Contains("Base", labels);
+        Assert.DoesNotContain("Scope", labels);
+        var source = new SourceFile(Path.GetFullPath("generic-base-completion.gf"), "class Base<T> {} class Child : Base<int> {}");
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == gflat.diagnostics.DiagnosticSeverity.Error);
+    }
+
+    [Fact]
     public void QualifiedInheritanceFiltersNamespaceMembers()
     {
         var (model, path, offset, _) = Analyze("namespace Lib { public interface I {} public struct Value {} public int Helper() => 1; } struct Child : Lib::| {}");

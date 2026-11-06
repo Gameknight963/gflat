@@ -5,6 +5,28 @@ namespace gflat.LanguageServer.Tests;
 public sealed class EscapedIdentifierEditorTests
 {
     [Theory]
+    [InlineData("namespace Names { public class @int {} } void Use(Names::@int* value) {}", "Names::@int* value")]
+    [InlineData("namespace Names { public class @readonly<T> {} } void Use(Names::@readonly<int>* value) {}", "Names::@readonly<int>* value")]
+    [InlineData("using Names;\n\nnamespace Names { public class @int {} } void Use(Names::@int* value) {}", "Names::@int* value")]
+    [InlineData("using Names;\n\nnamespace Names { public class @readonly<T> {} } void Use(Names::@readonly<int>* value) {}", "@readonly<int>* value")]
+    public void QualifiedKeywordTypeNamesAreEscapedInVariableHovers(string text, string expected)
+    {
+        var source = new SourceFile(Path.GetFullPath("qualified-escaped-hover.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == gflat.diagnostics.DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.LastIndexOf("value", StringComparison.Ordinal)), Protocol.JsonOptions);
+        Assert.Contains(expected, hover.GetProperty("contents").GetProperty("value").GetString());
+        var rich = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.LastIndexOf("value", StringComparison.Ordinal),
+            new VisualStudioHover(JsonSerializer.SerializeToElement(new { }))), Protocol.JsonOptions);
+        var runs = rich.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements")[0].GetProperty("Runs").EnumerateArray().ToArray();
+        string escapedName = expected.Contains("@readonly", StringComparison.Ordinal) ? "@readonly" : "@int";
+        Assert.Contains(runs, run => run.GetProperty("Text").GetString() == escapedName && run.GetProperty("ClassificationTypeName").GetString() == "class name");
+        if (expected.Contains("<int>", StringComparison.Ordinal))
+            Assert.Contains(runs, run => run.GetProperty("Text").GetString() == "int" && run.GetProperty("ClassificationTypeName").GetString() == "keyword");
+    }
+
+    [Theory]
     [InlineData("class @class {} @class* value;", "class", "class")]
     [InlineData("int Read(){int @while=0; return @while;}", "while", "variable")]
     public void SemanticClassificationIncludesTheIdentifierEscape(string text, string name, string kind)

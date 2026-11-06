@@ -87,10 +87,13 @@ public sealed partial class EditorModel
                     : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
                 Location? target = null;
                 string spelling = text[token.Start..(token.End + 1)];
+                bool qualifiedName = i > 0 && tokens[i - 1].Kind == TokenKind.DoubleColon;
+                bool shortenedName = shortened?.ContainsKey(token.Start) == true;
                 bool escapedTypeKeyword = token.Kind != TokenKind.Identifier && char.IsLetter(token.Text.FirstOrDefault()) &&
-                    !TypeChecker.IsPrimitive(token.Text) && token.Kind != TokenKind.Ref &&
-                    !(token.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Managed &&
-                        i + 1 < tokens.Length && tokens[i + 1].Kind is TokenKind.OpenParen or TokenKind.Less);
+                    (qualifiedName || shortenedName ||
+                        !TypeChecker.IsPrimitive(token.Text) && token.Kind != TokenKind.Ref &&
+                        !(token.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Managed &&
+                            i + 1 < tokens.Length && tokens[i + 1].Kind is TokenKind.OpenParen or TokenKind.Less));
                 if (inSplice && token.Kind == TokenKind.Identifier)
                     kind = token.Text == "this" ? "keyword" : i > 0 && tokens[i - 1].Kind == TokenKind.Dot ? "property" : "variable";
                 if (!inSplice && (navigable && token.Kind == TokenKind.Identifier || escapedTypeKeyword))
@@ -375,6 +378,9 @@ public sealed partial class EditorModel
         return System.Text.RegularExpressions.Regex.Replace(text, @"\b[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+", match =>
         {
             string simple = match.Value.Split("::").Last();
+            // A bare primitive spelling denotes the built-in type, even when
+            // an imported declaration has the same source name.
+            if (TypeChecker.IsPrimitive(simple)) return match.Value;
             var matches = visible.Where(s => s.Name == simple).DistinctBy(s => s.Qualified).ToArray();
             if (typeParameters.Contains(simple) || matches.Length != 1 || matches[0].Qualified != match.Value) return match.Value;
             shortened?.Add(match.Index + delta, matches[0]);

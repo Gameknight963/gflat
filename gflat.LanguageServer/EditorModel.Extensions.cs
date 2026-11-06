@@ -1,9 +1,11 @@
 using gflat.ast;
+using System.Collections.Concurrent;
 
 namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
+    private readonly ConcurrentDictionary<(string Path, int Offset, AstNode Receiver), Symbol[]> completionExtensions = new();
     private bool IsCallableMember(Symbol symbol)
     {
         if (symbol.Syntax.Node is MethodDeclaration || symbol.Type is FunctionPointerTypeExpression) return true;
@@ -36,6 +38,11 @@ public sealed partial class EditorModel
     private IEnumerable<Symbol> ExtensionMembers(string path, int offset, AstNode? receiver, TypeExpression? receiverType, string? memberName = null)
     {
         if (snapshot.Checker is not { } checker || receiverType == null) return [];
+        // Completion previews are fixed for this snapshot and use site. Named
+        // member resolution keeps its narrow query instead of filling this cache.
+        bool cacheCompletion = memberName == null && receiver != null;
+        var cacheKey = (path, offset, receiver!);
+        if (cacheCompletion && completionExtensions.TryGetValue(cacheKey, out var cached)) return cached;
         while (receiverType is ReferenceTypeExpression reference) receiverType = reference.Inner;
         string ns = ScopeAt(path, offset).Namespace;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
@@ -50,9 +57,13 @@ public sealed partial class EditorModel
             if (storageType != null) storageType = cloner.CloneType(storageType);
         }
         receiverType = SourceNominalExtensionReceiver(receiverType, sourceReceiver, path, offset);
-        return checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, memberName: memberName, receiverStorageType: storageType)
+        var candidates = checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, memberName: memberName, receiverStorageType: storageType)
             .Select(candidate => ExtensionCandidateSymbol(candidate)).OfType<Symbol>()
             .Where(symbol => Accessible(symbol, path, offset));
+        if (!cacheCompletion) return candidates;
+        var result = candidates.ToArray();
+        if (completionExtensions.Count < 256) completionExtensions.TryAdd(cacheKey, result);
+        return result;
     }
 
     private TypeExpression SourceNominalExtensionReceiver(TypeExpression receiver, TypeExpression source, string path, int offset)

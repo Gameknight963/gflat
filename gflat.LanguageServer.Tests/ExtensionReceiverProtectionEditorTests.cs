@@ -6,6 +6,25 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ExtensionReceiverProtectionEditorTests
 {
+    [Fact]
+    public void RepeatedCompletionKeepsReadonlyAndMutableReceiverViewsSeparate()
+    {
+        string text = Extensions + "int Probe(readonly(int) saved, int value){saved.Read();value.Read();return 0;}";
+        var source = new SourceFile(Path.GetFullPath("repeated-receiver-completion.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true, NoBuiltins = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        for (int repeat = 0; repeat < 3; repeat++)
+        foreach (bool readOnly in new[] { false, true })
+        {
+            string receiver = readOnly ? "saved" : "value";
+            int offset = text.IndexOf(receiver + ".Read", StringComparison.Ordinal) + receiver.Length + 1;
+            var items = Json(model.Completion(source.Path, offset)).GetProperty("items").EnumerateArray().ToArray();
+            Assert.Contains(items, item => item.GetProperty("label").GetString() == "Read");
+            Assert.Equal(!readOnly, items.Any(item => item.GetProperty("label").GetString() == "Increment"));
+        }
+    }
+
     private const string Extensions="extension int{public int Increment(){(*this)++;return *this;}public readonly int Read()=>*this;public const readonly int Next()=>*this+1;}const int Folded()=>41;";
 
     [Theory]

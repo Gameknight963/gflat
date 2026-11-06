@@ -10,6 +10,7 @@ public sealed partial class EditorModel
 
     public object DocumentSymbols(string path, bool hierarchical = true)
     {
+        path = CanonicalQueryPath(path);
         var entries = nodes.GetValueOrDefault(path, []).Select(syntax => (Syntax: syntax, Kind: OutlineKind(syntax.Node)))
             .Where(entry => entry.Kind != 0).OrderBy(entry => entry.Syntax.Span.Start).ToArray();
         var included = entries.Select(entry => entry.Syntax).ToHashSet(ReferenceEqualityComparer.Instance);

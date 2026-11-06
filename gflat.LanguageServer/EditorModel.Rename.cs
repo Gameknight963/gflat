@@ -25,6 +25,7 @@ public sealed partial class EditorModel
 
     public PrepareRenameResult? PrepareRename(string path, int offset)
     {
+        path = CanonicalQueryPath(path);
         if (MacroAt(path, offset) is { Classification: "macro", Declaration.Source: { } macroSource } macro && !macroSource.Path.StartsWith('<'))
         {
             if (snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
@@ -39,6 +40,7 @@ public sealed partial class EditorModel
 
     public RenameEdit[] Rename(string path, int offset, string newName)
     {
+        path = CanonicalQueryPath(path);
         var macro = MacroAt(path, offset) is { Classification: "macro", Declaration.Source: { } macroSource } selectedMacro &&
             !macroSource.Path.StartsWith('<') ? selectedMacro : null;
         var symbol = RenameSymbol(path, offset);

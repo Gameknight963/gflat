@@ -9,6 +9,7 @@ public sealed partial class EditorModel
 {
     private Symbol? NavigationSymbol(string path, int offset)
     {
+        path = CanonicalQueryPath(path);
         int index = TokenAt(path, offset);
         return index < 0 ? null : Resolve(path, index);
     }
@@ -102,6 +103,7 @@ public sealed partial class EditorModel
 
     public TypeHierarchyItem[] PrepareTypeHierarchy(string path, int offset)
     {
+        path = CanonicalQueryPath(path);
         var selected = NavigationSymbol(path, offset);
         if (selected != null && !IsType(selected.Syntax.Node) && selected.Type != null)
         {

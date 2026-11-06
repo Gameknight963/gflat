@@ -867,6 +867,8 @@ public sealed partial class EditorModel
             return value;
         return candidates.FirstOrDefault(s => s.Name == token.Text);
     }
+    private string CanonicalQueryPath(string path) => sources.TryGetValue(path, out var source) ? source.Path : path;
+
     private int TokenAt(string path, int offset)
     {
         var ts = tokens[path];
@@ -888,6 +890,7 @@ public sealed partial class EditorModel
 
     private object Completion(string path, int offset, TextRange? replacementRange)
     {
+        path = CanonicalQueryPath(path);
         using var queryTiming = PipelineTimings.Measure("editor.query.completion");
         if (IncludeCompletion(path, offset) is { } include) return include;
         var ts = tokens[path];
@@ -966,6 +969,7 @@ public sealed partial class EditorModel
     }
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
+        path = CanonicalQueryPath(path);
         using var queryTiming = PipelineTimings.Measure("editor.query.hover");
         options ??= new();
         if (DocumentationReferenceAt(path, offset) is { } documented)
@@ -1067,6 +1071,7 @@ public sealed partial class EditorModel
     }
     public object? Definition(string path, int offset)
     {
+        path = CanonicalQueryPath(path);
         using var queryTiming = PipelineTimings.Measure("editor.query.definition");
         if (DocumentationReferenceAt(path, offset) is { } documentation) return NavigationLocation(documentation.Symbol);
         if (OverriddenMember(path, offset) is { } overridden) return NavigationLocation(overridden);
@@ -1078,6 +1083,7 @@ public sealed partial class EditorModel
     }
     public object? SignatureHelp(string path, int offset, bool visualStudio = false)
     {
+        path = CanonicalQueryPath(path);
         using var queryTiming = PipelineTimings.Measure("editor.query.signature-help");
         var ts = tokens[path];
         var stack = new Stack<(int Index, int Commas)>();
@@ -1107,6 +1113,7 @@ public sealed partial class EditorModel
     }
     public object SemanticTokens(string path, TextRange? range = null, bool visualStudio = false)
     {
+        path = CanonicalQueryPath(path);
         using var queryTiming = PipelineTimings.Measure("editor.query.semantic-tokens", range == null ? "full" : "range");
         var data = new List<int>();
         var classified = new List<(SourceSpan Span, int Kind, int Modifiers)>();

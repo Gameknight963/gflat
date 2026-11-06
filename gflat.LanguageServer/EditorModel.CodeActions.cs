@@ -14,6 +14,7 @@ public sealed partial class EditorModel
 
     public EditorCodeAction[] CodeActions(string path, TextRange range)
     {
+        path = CanonicalQueryPath(path);
         var source = sources[path];
         int offset = Workspace.Offset(source.Text, System.Text.Json.JsonSerializer.SerializeToElement(range.Start, Protocol.JsonOptions));
         var actions = new List<EditorCodeAction>();

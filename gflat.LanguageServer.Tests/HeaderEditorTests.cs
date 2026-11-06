@@ -5,9 +5,12 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class HeaderEditorTests
 {
-    [Fact]
-    public void SelectedHeaderContextChangesEnclosingMemberCompletion()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SelectedHeaderContextChangesEnclosingMemberCompletion(bool alternatePathCasing)
     {
+        if (alternatePathCasing && !OperatingSystem.IsWindows()) return;
         string directory = Path.GetFullPath("header-context");
         var header = new SourceFile(Path.Combine(directory, "members.gfh"), "public int Read() { return Value; }");
         var root = new SourceFile(Path.Combine(directory, "main.gf"), """
@@ -21,12 +24,13 @@ public sealed class HeaderEditorTests
         var snapshot = new AnalysisSnapshot([root], new() { NoStdLib = true, IncludeLoader = path => path == header.Path ? header : null });
         Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, [root, header]);
-        var contexts = model.HeaderContexts(header.Path);
+        string queryPath = alternatePathCasing ? header.Path.ToUpperInvariant() : header.Path;
+        var contexts = model.HeaderContexts(queryPath);
         Assert.Equal(2, contexts.Length);
         foreach (string type in new[] { "First", "Second" })
         {
-            var selected = model.WithHeaderContext(header.Path, Assert.Single(contexts, c => c.Label.EndsWith(": " + type)).Id);
-            var items = JsonSerializer.SerializeToElement(selected.Completion(header.Path, header.Text.IndexOf("Value", StringComparison.Ordinal)), Protocol.JsonOptions)
+            var selected = model.WithHeaderContext(queryPath, Assert.Single(contexts, c => c.Label.EndsWith(": " + type)).Id);
+            var items = JsonSerializer.SerializeToElement(selected.Completion(queryPath, header.Text.IndexOf("Value", StringComparison.Ordinal)), Protocol.JsonOptions)
                 .GetProperty("items").EnumerateArray().Select(i => i.GetProperty("label").GetString()).ToArray();
             Assert.Contains(type + "Only", items);
             Assert.DoesNotContain((type == "First" ? "Second" : "First") + "Only", items);

@@ -9,6 +9,7 @@ public sealed partial class EditorModel
     public DocumentHighlight[] DocumentHighlights(string path, int offset)
     {
         if (!sources.TryGetValue(path, out var source)) return [];
+        path = source.Path;
         int index = TokenAt(source.Path, offset);
         var symbol = DocumentationReferenceAt(path, offset)?.Symbol ?? (index < 0 ? null : Resolve(source.Path, index));
         if (symbol?.NameSpan.Source is not { } declaration || declaration.Path.StartsWith('<')) return [];
@@ -25,6 +26,7 @@ public sealed partial class EditorModel
 
     public Location[] References(string path, int offset, bool includeDeclaration)
     {
+        path = CanonicalQueryPath(path);
         int index = TokenAt(path, offset);
         var symbol = DocumentationReferenceAt(path, offset)?.Symbol ?? (index < 0 ? null : Resolve(path, index));
         if (symbol?.NameSpan.Source is not { } source || source.Path.StartsWith('<')) return [];

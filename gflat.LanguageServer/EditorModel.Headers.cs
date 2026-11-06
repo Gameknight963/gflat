@@ -22,8 +22,12 @@ public sealed partial class EditorModel
         return new(root.Path + "|" + scope, Path.GetFileName(root.Path) + (scope.Length == 0 ? "" : ": " + scope));
     }
 
-    public HeaderContext[] HeaderContexts(string path) => snapshot.Nodes.Where(n => n.Span.Source?.Path == path)
-        .Select(n => InclusionContext(n, path)).OfType<HeaderContext>().DistinctBy(c => c.Id).OrderBy(c => c.Label).ToArray();
+    public HeaderContext[] HeaderContexts(string path)
+    {
+        path = CanonicalQueryPath(path);
+        return snapshot.Nodes.Where(n => n.Span.Source?.Path == path)
+            .Select(n => InclusionContext(n, path)).OfType<HeaderContext>().DistinctBy(c => c.Id).OrderBy(c => c.Label).ToArray();
+    }
 
     public EditorModel WithHeaderContext(string path, string id)
     {

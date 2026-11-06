@@ -4,6 +4,37 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed partial class ServerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExternalSourceChangesRetryPendingQueriesWithoutDiscardingTheRequest(bool workspaceQuery)
+    {
+        await using var session = new Session();
+        System.IO.File.WriteAllText(session.File(Workspace.ConfigurationName), """{"sources":["main.gf","helper.gf"]}""");
+        System.IO.File.WriteAllText(session.File("helper.gf"), "int Helper() => 42;");
+        await session.Initialize();
+        await session.Open("main.gf", "int Answer() => Helper();");
+        await session.Diagnostics("main.gf", 1);
+        string changed = "int Answer() { int local = Helper(); return local; }\n" + string.Join("\n",
+            Enumerable.Range(0, 400).Select(index => $"struct Item{index} {{ public int Value; }}"));
+        await session.Change("main.gf", changed, 2);
+        if (workspaceQuery)
+            await session.Send(new { jsonrpc = "2.0", id = 1411, method = "workspace/symbol", @params = new { query = "Added" } });
+        else
+            await session.Send(new { jsonrpc = "2.0", id = 1411, method = "textDocument/completion", @params = new {
+                textDocument = new { uri = session.Uri("main.gf") }, position = new { line = 0, character = 44 } } });
+        System.IO.File.WriteAllText(session.File("helper.gf"), "int Helper() => 43; int Added() => 7;");
+        await session.Notify("workspace/didChangeWatchedFiles", new { changes = new[] {
+            new { uri = session.Uri("helper.gf"), type = 2 } } });
+        var reply = await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 1411);
+        Assert.False(reply.TryGetProperty("error", out _), reply.ToString());
+        if (workspaceQuery)
+            Assert.Contains(reply.GetProperty("result").EnumerateArray(), item => item.GetProperty("name").GetString() == "Added");
+        else
+            Assert.Contains(reply.GetProperty("result").GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "local");
+        await session.Stop();
+    }
+
     [Fact]
     public async Task CustomSourceGlobsStillObserveNewFilesAndTheirDiagnostics()
     {

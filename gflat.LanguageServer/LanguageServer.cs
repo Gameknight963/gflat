@@ -499,8 +499,20 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         var fullRequested = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         interactiveRequested = requested;
         fullAnalysisRequested = fullRequested;
-        foreach (var query in editorRequests) await Error(query.Id, -32801, "Document changed");
-        editorRequests.Clear();
+        if (invalidateProjects)
+        {
+            // External inputs changed, but the open documents and request
+            // positions did not. Answer against the refreshed graph.
+            for (int i = 0; i < editorRequests.Count; i++)
+                editorRequests[i] = editorRequests[i] with { Generation = revision };
+            if (editorRequests.Count > 0) requested.TrySetResult(true);
+            if (editorRequests.Any(query => RequiresFullAnalysis(query.Method))) fullRequested.TrySetResult(true);
+        }
+        else
+        {
+            foreach (var query in editorRequests) await Error(query.Id, -32801, "Document changed");
+            editorRequests.Clear();
+        }
         string? workspaceRoot = root;
         var snapshot = new Dictionary<string, OpenDocument>(documents, Workspace.Paths);
         _ = Task.Run(async () =>

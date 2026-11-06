@@ -88,7 +88,7 @@ public sealed partial class EditorModel
             .FirstOrDefault(node => ExpressionType(node, path, end) is { } type && TypeChecker.IsReflectionType(type));
     }
 
-    private object? ReflectionCompletion(string path, int offset, int index, TextRange range, bool insertedSeparator = false)
+    private object? ReflectionCompletion(string path, int offset, int index, TextRange range, bool insertedSeparator = false, bool escapedPrefix = false)
     {
         if (snapshot.Checker is not { } checker || ReflectionReceiver(path, index - 1, insertedSeparator) is not { } receiver) return null;
         checker.TryGetConstValue(receiver, out var constant);
@@ -123,7 +123,9 @@ public sealed partial class EditorModel
         if (value?.Declaration is MethodDeclaration) names.AddRange(["IsStatic", "Parameters", "Accessibility", "IsPublic",
             "IsPrivate", "IsConst", "IsReadOnly", "IsImmutable", "IsNoThrow", "IsVirtual", "IsOverride", "IsAbstract"]);
         return new { isIncomplete = false, items = names.Distinct().Select(name => new {
-            label = name, kind = 10, detail = "reflection." + name, textEdit = new { range, newText = name }
+            label = name, kind = 10, detail = "reflection." + name,
+            filterText = escapedPrefix ? "@" + name : name,
+            textEdit = new { range, newText = escapedPrefix ? "@" + name : name }
         }).ToArray() };
     }
 

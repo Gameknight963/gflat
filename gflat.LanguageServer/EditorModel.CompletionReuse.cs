@@ -54,7 +54,7 @@ public sealed partial class EditorModel
             .Select(symbol => new {
                 label = symbol.Name, kind = symbol.Kind, detail = Detail(symbol),
                 documentation = Documentation(symbol) is { } prose ? new Markup("plaintext", prose) : null,
-                textEdit = new { range, newText = symbol.Name }
+                textEdit = new { range, newText = CompletionSpelling(symbol) }
             }).ToArray();
         result = new { isIncomplete = false, items };
         return true;

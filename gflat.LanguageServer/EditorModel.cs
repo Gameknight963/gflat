@@ -294,7 +294,7 @@ public sealed partial class EditorModel
     {
         var span = node.Span;
         if (span.Source == null || !tokens.TryGetValue(span.Source.Path, out var fileTokens)) return span with { Length = 0 };
-        Token? first = null;
+        Token? first = null, firstIdentifier = null, keyword = null;
         // In `String String`, the first occurrence belongs to the type.
         for (int index = TokenStartIndex(fileTokens, span.Start);
             index < fileTokens.Length && fileTokens[index].End < span.Start + span.Length; index++)
@@ -302,10 +302,17 @@ public sealed partial class EditorModel
             var candidate = fileTokens[index];
             if (candidate.Text != name) continue;
             first ??= candidate;
+            if (candidate.Kind == TokenKind.Identifier) firstIdentifier ??= candidate;
             if (type == null || type.Span.Source != span.Source || candidate.Start >= type.Span.Start + type.Span.Length)
-                return candidate.Span;
+            {
+                // In `class @class`, the keyword and name have equal text.
+                // Operators and indexers deliberately use keyword name spans.
+                if (candidate.Kind == TokenKind.Identifier || node.Node is OperatorDeclaration or PropertyDeclaration { Name: "$index" })
+                    return candidate.Span;
+                keyword ??= candidate;
+            }
         }
-        return first?.Span ?? span with { Length = 0 };
+        return firstIdentifier?.Span ?? keyword?.Span ?? first?.Span ?? span with { Length = 0 };
     }
 
     private bool Contains(Syntax node, int offset) => offset >= node.Span.Start && offset < scopeEnds.GetValueOrDefault(node, node.Span.Start + node.Span.Length);
@@ -822,6 +829,14 @@ public sealed partial class EditorModel
 
     public object Completion(string path, int offset) => Completion(path, offset, null);
 
+    private static string CompletionSpelling(Symbol symbol, bool escapedPrefix = false)
+    {
+        var span = symbol.NameSpan;
+        bool declaredEscaped = span.Length > 0 && span.Source is { } source && span.Start > 0 &&
+            span.Start <= source.Text.Length && source.Text[span.Start - 1] == '@';
+        return escapedPrefix || declaredEscaped || Lexer.GetKeyword(symbol.Name) != TokenKind.Identifier ? "@" + symbol.Name : symbol.Name;
+    }
+
     private object Completion(string path, int offset, TextRange? replacementRange)
     {
         if (IncludeCompletion(path, offset) is { } include) return include;
@@ -832,13 +847,19 @@ public sealed partial class EditorModel
         int start = offset;
         if (index > 0 && ts[index - 1].Kind == TokenKind.Identifier && ts[index - 1].End + 1 >= offset) { index--; start = ts[index].Start; }
         int end = index < ts.Length && ts[index].Kind == TokenKind.Identifier && ts[index].Start <= offset ? ts[index].End + 1 : offset;
+        bool escapedPrefix = start > 0 && sources[path].Text[start - 1] == '@';
+        if (escapedPrefix) start--;
         var range = replacementRange ?? Workspace.ToRange(sources[path].Span(start, end - start));
-        if (ReflectionCompletion(path, offset, index, range) is { } reflectionCompletion) return reflectionCompletion;
+        if (ReflectionCompletion(path, offset, index, range, escapedPrefix: escapedPrefix) is { } reflectionCompletion) return reflectionCompletion;
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
         var completionContext = CompletionContext(path, index);
         var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration && completionContext.Allows(s))
-            .DistinctBy(s => (s.Name, member && s.BoundExtension ? "extension" : "symbol")).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = Detail(s), documentation = Documentation(s) is { } prose ? new Markup("plaintext", prose) : null, textEdit = new { range, newText = s.Name } }).ToList();
-        if (!member && !completionContext.Restricted)
+            .DistinctBy(s => (s.Name, member && s.BoundExtension ? "extension" : "symbol")).Select(s => (object)new {
+                label = s.Name, kind = s.Kind, detail = Detail(s), filterText = escapedPrefix ? "@" + s.Name : s.Name,
+                documentation = Documentation(s) is { } prose ? new Markup("plaintext", prose) : null,
+                textEdit = new { range, newText = CompletionSpelling(s, escapedPrefix) }
+            }).ToList();
+        if (!escapedPrefix && !member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
             string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "default", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "reflect", "nameof", "var", "alias", "constrained"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace", "extension", "alias", "constrained"];

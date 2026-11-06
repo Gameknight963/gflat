@@ -543,9 +543,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         foreach (var entry in directories)
         {
             string directory = entry.Key;
+            FileSystemWatcher? watcher = null;
             try
             {
-                var watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = entry.Value, NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
+                watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = entry.Value, NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
                 void ChangedPath(string path)
                 {
                     if (explicitPaths.Contains(path) || !Path.GetRelativePath(directory, path).Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
@@ -563,7 +564,12 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 watcher.EnableRaisingEvents = true;
                 watchers.Add(watcher);
             }
-            catch (IOException error) { watchersNeedRefresh = true; log.WriteLine(error.Message); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                watcher?.Dispose();
+                watchersNeedRefresh = true;
+                log.WriteLine(error.Message);
+            }
         }
     }
 }

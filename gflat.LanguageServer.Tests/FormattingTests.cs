@@ -6,6 +6,45 @@ namespace gflat.LanguageServer.Tests;
 public sealed class FormattingTests
 {
     [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public void FormattingPreservesTheDocumentsLineEnding(string newline)
+    {
+        string text = string.Join(newline, "int F()", "{", "int value=1;", "return value;", "}", "");
+        var source = new SourceFile(Path.GetFullPath("format-line-endings.gf"), text);
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Equal(string.Join(newline, "int F()", "{", "    int value = 1;", "    return value;", "}", ""), actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public void RangeFormattingUsesLogicalLinesForEveryLineEnding(string newline)
+    {
+        string text = string.Join(newline, "int F()", "{", "int value=1;", "return value;", "}", "");
+        var source = new SourceFile(Path.GetFullPath("format-range-line-endings.gf"), text);
+        string actual = Apply(source, SourceFormatter.Format(source, new(), new(new(2, 0), new(2, int.MaxValue))));
+        Assert.Equal(string.Join(newline, "int F()", "{", "    int value = 1;", "return value;", "}", ""), actual);
+    }
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public void DirectiveContinuationAndCommentLinesKeepTheirContents(string newline)
+    {
+        string prefix = string.Join(newline, "#define ADD(x) \\", "    ((x)+1)", "// keep  spacing", "");
+        var source = new SourceFile(Path.GetFullPath("format-directive-lines.gf"), prefix + "int F(){return ADD(1);}" + newline);
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.StartsWith(prefix, actual);
+        Assert.Contains("    return ADD(1);" + newline, actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
+    [Theory]
     [InlineData("int F(int* p){return * p;}", "return *p;")]
     [InlineData("int* F(ref int value){return & value;}", "return &value;")]
     [InlineData("int F(int value){return ++ value;}", "return ++value;")]

@@ -12,7 +12,7 @@ public static class SourceFormatter
     {
         if (options.TabSize is < 1 or > 16) throw new ArgumentException("Tab size must be between 1 and 16.");
         string text = source.Text;
-        string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : text.Contains('\r') && !text.Contains('\n') ? "\r" : "\n";
         syntax ??= new AnalysisSnapshot([source], new() { NoStdLib = true }, checkTypes: false).Nodes;
         var typeSpans = syntax.Where(n => n.Node is TypeExpression && n.Span.Source?.Path == source.Path).Select(n => n.Span).ToArray();
         var orderedTypes = typeSpans.OrderBy(span => span.Start).ToArray();
@@ -63,19 +63,29 @@ public static class SourceFormatter
         var directives = new HashSet<int>();
         bool continued = false;
         int lineNumber = 1;
-        foreach (string line in text.Split('\n'))
+        var lineStarts = new List<int> { 0 };
+        for (int i = 0; i < text.Length; i++)
         {
-            bool directive = continued || line.TrimStart().StartsWith('#');
+            if (text[i] == '\r')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '\n') i++;
+                lineStarts.Add(i + 1);
+            }
+            else if (text[i] == '\n') lineStarts.Add(i + 1);
+        }
+        foreach (int lineStart in lineStarts)
+        {
+            int relativeEnd = text.AsSpan(lineStart).IndexOfAny('\r', '\n');
+            var line = text.AsSpan(lineStart, relativeEnd < 0 ? text.Length - lineStart : relativeEnd);
+            bool directive = continued || line.TrimStart().StartsWith("#");
             if (directive) directives.Add(lineNumber);
-            continued = directive && line.TrimEnd('\r', ' ', '\t').EndsWith('\\');
+            continued = directive && line.TrimEnd(" \t").EndsWith("\\");
             lineNumber++;
         }
         var edits = new List<SourceEdit>();
         int braces = 0, parens = 0, interpolation = 0;
         bool usingLine = false;
         Token? previous = null;
-        var lineStarts = new List<int> { 0 };
-        for (int i = 0; i < text.Length; i++) if (text[i] == '\n') lineStarts.Add(i + 1);
         int Offset(Position position)
         {
             if (position.Line < 0 || position.Character < 0) throw new ArgumentException("Formatting positions cannot be negative.");
@@ -86,15 +96,29 @@ public static class SourceFormatter
             return at + Math.Min(position.Character, end - at);
         }
         int lower = range == null ? 0 : Offset(range.Start), upper = range == null ? text.Length : Offset(range.End);
+        static int LineBreaks(ReadOnlySpan<char> value)
+        {
+            int count = 0;
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (value[i] == '\r')
+                {
+                    count++;
+                    if (i + 1 < value.Length && value[i + 1] == '\n') i++;
+                }
+                else if (value[i] == '\n') count++;
+            }
+            return count;
+        }
         string Indent(int depth) => string.Concat(Enumerable.Repeat(options.InsertSpaces ? new string(' ', options.TabSize) : "\t", Math.Max(0, depth)));
         void Edit(int start, int length, string replacement)
         {
-            if (start < lower && start + length >= lower && replacement.Contains('\n') &&
-                !text.AsSpan(lower, start + length - lower).Contains('\n'))
+            if (start < lower && start + length >= lower && replacement.AsSpan().IndexOfAny('\r', '\n') >= 0 &&
+                text.AsSpan(lower, start + length - lower).IndexOfAny('\r', '\n') < 0)
             {
                 length -= lower - start;
                 start = lower;
-                replacement = replacement[(replacement.LastIndexOf('\n') + 1)..];
+                replacement = replacement[(Math.Max(replacement.LastIndexOf('\r'), replacement.LastIndexOf('\n')) + 1)..];
             }
             if (start < lower || start + length > upper) return;
             var span = source.Span(start, length);
@@ -126,12 +150,12 @@ public static class SourceFormatter
                     bool separateUsing = previous?.Kind == TokenKind.Semicolon && usingLine && token.Kind != TokenKind.Using;
                     if (gap.All(char.IsWhiteSpace))
                     {
-                        bool lineBreak = hardBreak || wasDirective || gap.Contains('\n') && !(token.Kind == TokenKind.OpenBrace && !options.BracesOnNewLine);
+                        bool lineBreak = hardBreak || wasDirective || gap.AsSpan().IndexOfAny('\r', '\n') >= 0 && !(token.Kind == TokenKind.OpenBrace && !options.BracesOnNewLine);
                         string replacement;
                         if (previous == null) replacement = Indent(depth);
                         else if (lineBreak)
                         {
-                            int count = separateUsing || gap.Count(c => c == '\n') > 1 ? 2 : 1;
+                            int count = separateUsing || LineBreaks(gap) > 1 ? 2 : 1;
                             replacement = string.Concat(Enumerable.Repeat(newline, count)) + Indent(depth + (parens > 0 && token.Kind != TokenKind.CloseParen ? 1 : 0));
                         }
                         else
@@ -155,7 +179,7 @@ public static class SourceFormatter
                     {
                         // Preserve comment text and line structure, adjusting only
                         // the whitespace between its final newline and this token.
-                        int lastLine = gap.LastIndexOf('\n');
+                        int lastLine = Math.Max(gap.LastIndexOf('\r'), gap.LastIndexOf('\n'));
                         if (lastLine >= 0 && gap.AsSpan(lastLine + 1).Trim().IsEmpty)
                             Edit(start + lastLine + 1, gap.Length - lastLine - 1, Indent(depth));
                     }

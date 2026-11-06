@@ -27,6 +27,16 @@ public static class SourceFormatter
             return i >= 0 && typeEnds[i] > end;
         }
         var tokens = Lexer.Tokenize(source, new diagnostics.DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
+        var tokenStarts = tokens.Select(token => token.Start).ToArray();
+        var unaryMinus = new HashSet<int>();
+        foreach (var node in syntax)
+            if (node.Node is UnaryExpression { IsPrefix: true, Operator: TokenKind.Minus } unary &&
+                unary.Operand.Span.Source?.Path == source.Path)
+            {
+                int index = Array.BinarySearch(tokenStarts, unary.Operand.Span.Start);
+                index = index < 0 ? ~index - 1 : index - 1;
+                if (index >= 0 && tokens[index].Kind == TokenKind.Minus) unaryMinus.Add(tokens[index].Start);
+            }
         var directives = new HashSet<int>();
         bool continued = false;
         int lineNumber = 1;
@@ -104,7 +114,9 @@ public static class SourceFormatter
                         else
                         {
                             bool typeGap = InSameType(previous.Start, token.End);
-                            replacement = typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
+                            replacement = unaryMinus.Contains(previous.Start)
+                                ? token.Kind is TokenKind.Minus or TokenKind.MinusMinus ? " " : ""
+                                : typeGap && previous.Kind != TokenKind.Comma ? gap : Spacing(previous, token, gap);
                         }
                         Edit(start, length, replacement);
                     }
@@ -150,7 +162,7 @@ public static class SourceFormatter
             TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.Bang or TokenKind.StringLiteral or TokenKind.InterpolatedStringEnd) return "";
         if (current.Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.Comma or TokenKind.Semicolon or TokenKind.Dot or TokenKind.DoubleColon ||
             previous.Kind is TokenKind.OpenParen or TokenKind.OpenBracket or TokenKind.Dot or TokenKind.DoubleColon) return "";
-        if (current.Kind == TokenKind.OpenParen) return previous.Kind is TokenKind.If or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Switch or TokenKind.Catch ? " " : "";
+        if (current.Kind == TokenKind.OpenParen) return previous.Kind is TokenKind.If or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Switch or TokenKind.Catch or TokenKind.Return or TokenKind.Throw ? " " : "";
         if (current.Kind is TokenKind.PlusPlus or TokenKind.MinusMinus || previous.Kind is TokenKind.Bang or TokenKind.Tilde) return "";
         if (current.Kind is TokenKind.Star or TokenKind.Ampersand or TokenKind.Caret or TokenKind.QuestionMark or TokenKind.Less or TokenKind.Greater or TokenKind.GreaterGreater ||
             previous.Kind is TokenKind.Star or TokenKind.Ampersand or TokenKind.Caret or TokenKind.QuestionMark or TokenKind.Less or TokenKind.Greater or TokenKind.GreaterGreater)

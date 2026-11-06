@@ -5,6 +5,21 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class FormattingTests
 {
+    [Theory]
+    [InlineData("int F(int value){return -value;}", "return -value;")]
+    [InlineData("int F(int value){return -  value;}", "return -value;")]
+    [InlineData("int F(int value){return - -value;}", "return - -value;")]
+    [InlineData("int F(int value){return value-1;}", "return value - 1;")]
+    [InlineData("int F(int value){return - (value+1);}", "return -(value + 1);")]
+    [InlineData("int F(int value){return (- value);}", "return (-value);")]
+    public void UnaryMinusStaysAttachedToItsOperand(string text, string expected)
+    {
+        var source = new SourceFile(Path.GetFullPath("format-unary.gf"), text);
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Contains(expected, actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
     [Fact]
     public void FormatsWhitespaceBeforeEscapedNamesWithoutRemovingTheirEscape()
     {

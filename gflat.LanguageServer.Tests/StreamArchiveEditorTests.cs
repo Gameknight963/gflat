@@ -23,8 +23,9 @@ public sealed class StreamArchiveEditorTests
                 long position = stream.Position;
             }
             """;
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        var files = StandardTestSources.Combine(StandardTestSources.IO, StandardTestSources.Load(
+            "core/Compression/ZipArchive.gf", "core/Compression/ZipArchiveEntry.gf",
+            "core/Compression/Deflate.gf", "core/Hashing/CRC32.gf", "core/Text/utf8.gf")).ToList();
         if (brokenFile)
             files.Insert(0, new SourceFile(Path.GetFullPath("stream-editor/broken.gf"), "void Broken() { int value = ; }"));
         var source = new SourceFile(Path.GetFullPath("stream-editor/main.gf"), text);

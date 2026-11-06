@@ -17,7 +17,7 @@ public sealed class FileExtraLongEditorTests
                 FileBinary::WriteExtraLongBigEndian(stream, second);
             }
             """;
-        var files = StandardTestSources.IO.ToList();
+        var files = StandardTestSources.Combine(StandardTestSources.Values, StandardTestSources.FileBinary).ToList();
         var source = new SourceFile(Path.GetFullPath("file-extra-long-editor.gf"), text);
         files.Add(source);
         SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "FileBinary.gf");

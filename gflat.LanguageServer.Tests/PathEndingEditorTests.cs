@@ -16,7 +16,8 @@ public sealed class PathEndingEditorTests
         string text="using Standard; using Standard::Text; using Standard::IO; using Standard::Memory;void Probe(){Span<readonly(char)> path=new(\"folder/\",7);"
             +pointerResult+" pointerResult=Paths::"+name+"(\"folder/\",PathStyle::Unix);"
             +spanResult+" spanResult=Paths::"+name+"(path,PathStyle::Unix);}";
-        var files=StandardTestSources.IO.ToList();
+        var files = StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/IO/Paths.gf", "core/IO/PathStyle.gf")).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="Paths.gf");
         var source=new SourceFile(Path.GetFullPath("path-ending-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});

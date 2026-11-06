@@ -5,6 +5,23 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class SourceSyntaxCacheTests
 {
+    [Fact]
+    public void BodyNodeAttributesRemainIndependentAcrossCachedSnapshots()
+    {
+        var source = new SourceFile(Path.GetFullPath("cached-body-attributes.gf"), "int Read() => 42;");
+        var cache = new SourceSyntaxCache();
+        var first = new AnalysisSnapshot([source], Bare, checkTypes: false, syntaxCache: cache);
+        var literal = Assert.Single(first.Nodes.Select(syntax => syntax.Node).OfType<LiteralExpression>());
+        literal.Attributes.Add(new("Marker", [], 1));
+        for (int pass = 0; pass < 2; pass++)
+        {
+            var next = new AnalysisSnapshot([source], Bare, checkTypes: false, syntaxCache: cache);
+            var nextLiteral = Assert.Single(next.Nodes.Select(syntax => syntax.Node).OfType<LiteralExpression>());
+            Assert.Empty(nextLiteral.Attributes);
+            Assert.NotSame(literal.Attributes, nextLiteral.Attributes);
+        }
+    }
+
     private static readonly CompilationOptions Bare = new() { NoStdLib = true };
 
     [Fact]

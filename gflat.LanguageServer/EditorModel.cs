@@ -869,8 +869,11 @@ public sealed partial class EditorModel
         int index = Array.FindIndex(ts, t => t.Start >= offset);
         if (index < 0) index = ts.Length;
         int start = offset;
-        if (index > 0 && ts[index - 1].Kind == TokenKind.Identifier && ts[index - 1].End + 1 >= offset) { index--; start = ts[index].Start; }
-        int end = index < ts.Length && ts[index].Kind == TokenKind.Identifier && ts[index].Start <= offset ? ts[index].End + 1 : offset;
+        static bool IsWord(Token token) => token.Kind == TokenKind.Identifier ||
+            token.Text.Length > 0 && (char.IsLetter(token.Text[0]) || token.Text[0] == '_') &&
+            Lexer.GetKeyword(token.Text) == token.Kind;
+        if (index > 0 && IsWord(ts[index - 1]) && ts[index - 1].End + 1 >= offset) { index--; start = ts[index].Start; }
+        int end = index < ts.Length && IsWord(ts[index]) && ts[index].Start <= offset ? ts[index].End + 1 : offset;
         bool escapedPrefix = start > 0 && sources[path].Text[start - 1] == '@';
         if (escapedPrefix) start--;
         var range = replacementRange ?? Workspace.ToRange(sources[path].Span(start, end - start));

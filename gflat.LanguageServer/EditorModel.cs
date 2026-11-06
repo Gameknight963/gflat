@@ -53,6 +53,7 @@ public sealed partial class EditorModel
     private readonly Dictionary<string, SyntaxRangeIndex> contexts = new(Workspace.Paths);
     private readonly Dictionary<(string Path, int End), Syntax[]> callsByCalleeEnd = [];
     private readonly HashSet<Token> typePositionTokens = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<Token> receiverKeywordTokens = new(ReferenceEqualityComparer.Instance);
 
     public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files, CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? headerContexts = null)
@@ -99,6 +100,19 @@ public sealed partial class EditorModel
                 for (int index = TokenStartIndex(fileTokens, syntax.Span.Start);
                     index < fileTokens.Length && fileTokens[index].End < syntax.Span.Start + syntax.Span.Length; index++)
                     typePositionTokens.Add(fileTokens[index]);
+            }
+            foreach (var syntax in nodes[file.Path])
+            {
+                int start = syntax.Node switch {
+                    Parameter { IsExtensionReceiver: true } => syntax.Span.Start,
+                    PropertyDeclaration { Name: "$index" } property => property.Type.Span.Start + property.Type.Span.Length,
+                    _ => -1
+                };
+                if (start < 0) continue;
+                var fileTokens = tokens[file.Path];
+                int index = TokenStartIndex(fileTokens, start);
+                if (index < fileTokens.Length && fileTokens[index].Text == "this" &&
+                    (syntax.Node is not Parameter || fileTokens[index].Start == start)) receiverKeywordTokens.Add(fileTokens[index]);
             }
         }
         sourceIndexTiming?.Dispose();
@@ -709,7 +723,9 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "finalizer" or "at" or "ref" or "this" or "with" or "var" or "implementation" or "extension" or "explicit" or "constrained")) return false;
+        if (token.Text == "this") return receiverKeywordTokens.Contains(token);
+        if (token.Text is not ("move" or "copy" or "finalizer" or "at" or "ref" or "with" or "var" or "implementation" or "extension" or "explicit" or "constrained")) return false;
+        using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("editor.value-keyword", token.Text) : null;
         foreach (var syntax in nodes[path])
         {
             if (token.Text == "constrained" && syntax.Node is AliasDeclaration { IsConstrained: true } &&
@@ -727,9 +743,6 @@ public sealed partial class EditorModel
                 token.Start >= syntax.Span.Start && token.End < conversion.ReturnType.Span.Start) return true;
             if (token.Text == "var" && syntax.Node is VariableDeclaration { IsTypeInferred: true } &&
                 tokens[path].FirstOrDefault(t => t.Start >= syntax.Span.Start && t.Text == "var")?.Start == token.Start) return true;
-            if (token.Text == "this" && syntax.Node is Parameter { IsExtensionReceiver: true } && token.Start == syntax.Span.Start) return true;
-            if (token.Text == "this" && syntax.Node is PropertyDeclaration { Name: "$index" } indexer &&
-                tokens[path].FirstOrDefault(t => t.Start >= indexer.Type.Span.Start + indexer.Type.Span.Length)?.Start == token.Start) return true;
             if (token.Start < syntax.Span.Start || token.End >= syntax.Span.Start + syntax.Span.Length) continue;
             if (token.Text == "with" && syntax.Node is NewExpression { Collector: not null } creation &&
                 tokens[path].LastOrDefault(t => t.End < creation.Collector.Span.Start)?.Start == token.Start) return true;
@@ -752,6 +765,7 @@ public sealed partial class EditorModel
 
     private Symbol? ResolveCore(string path, int index)
     {
+        using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("editor.resolve") : null;
         var token = tokens[path][index];
         if (IsValueModelKeyword(path, token)) return null;
         if (token.Text == "at" && nodes[path].Any(n => n.Node is NewExpression placement &&

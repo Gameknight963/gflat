@@ -839,14 +839,29 @@ public sealed partial class EditorModel
     private bool InCommentOrLiteral(string path, int offset)
     {
         var ts = tokens[path];
-        var token = ts.FirstOrDefault(t => t.Start < offset && t.End >= offset);
-        if (token != null) return token.Kind is TokenKind.StringLiteral or TokenKind.CharLiteral;
+        int indexBefore = TokenStartIndex(ts, offset) - 1;
+        var token = indexBefore >= 0 ? ts[indexBefore] : null;
+        if (token != null && token.End >= offset) return token.Kind is TokenKind.StringLiteral or TokenKind.CharLiteral;
         // Comments are trivia, so inspect only the gap after the preceding token.
-        int start = ts.LastOrDefault(t => t.End < offset)?.End + 1 ?? 0;
-        string trivia = sources[path].Text[start..offset];
-        int lineComment = trivia.LastIndexOf("//", StringComparison.Ordinal);
-        if (lineComment >= 0 && !trivia[lineComment..].Contains('\n')) return true;
-        return trivia.LastIndexOf("/*", StringComparison.Ordinal) > trivia.LastIndexOf("*/", StringComparison.Ordinal);
+        int start = token?.End + 1 ?? 0;
+        var trivia = sources[path].Text.AsSpan(start, offset - start);
+        for (int index = 0; index + 1 < trivia.Length; index++)
+        {
+            if (trivia[index] != '/') continue;
+            if (trivia[index + 1] == '/')
+            {
+                int end = trivia[(index + 2)..].IndexOfAny('\r', '\n');
+                if (end < 0) return true;
+                index += end + 2;
+            }
+            else if (trivia[index + 1] == '*')
+            {
+                int end = trivia[(index + 2)..].IndexOf("*/", StringComparison.Ordinal);
+                if (end < 0) return true;
+                index += end + 3;
+            }
+        }
+        return false;
     }
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {

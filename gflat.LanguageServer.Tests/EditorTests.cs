@@ -431,11 +431,24 @@ public class EditorTests
     [Theory]
     [InlineData("int main() { // co|mment\n return 0; }")]
     [InlineData("int main() { /* co|mment */ return 0; }")]
+    [InlineData("int main() { // /* ignored */ co|mment\n return 0; }")]
+    [InlineData("int main() { /* // ignored\n co|mment */ return 0; }")]
     [InlineData("int main() { \"he|llo\"; return 0; }")]
     public void CompletionDoesNotOfferCodeInsideCommentsOrStrings(string text)
     {
         var (model, path, offset, _) = Analyze(text);
         Assert.Empty(Labels(model.Completion(path, offset)));
+    }
+
+    [Theory]
+    [InlineData("/* // */ ")]
+    [InlineData("/* /* */ ")]
+    [InlineData("// comment\r")]
+    [InlineData("/* // */ /* second */ ")]
+    public void CompletionResumesAfterTheActualCommentTerminator(string trivia)
+    {
+        var (model, path, offset, _) = Analyze("int main() { int local = 0; " + trivia + "| return local; }");
+        Assert.Contains("local", Labels(model.Completion(path, offset)));
     }
 
     [Fact]

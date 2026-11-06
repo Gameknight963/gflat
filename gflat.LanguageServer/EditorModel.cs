@@ -1010,6 +1010,11 @@ public sealed partial class EditorModel
                 .FirstOrDefault() is { } t && t.Text == a.Item2 ? t.Start : -1).ToHashSet();
         for (int i = 0; i < ts.Length; i++)
         {
+            var span = ts[i].Span;
+            int line = span.Line - 1, column = span.Column - 1;
+            // Resolve only the requested visible range. A viewport request must
+            // not bind every identifier in the rest of a large file first.
+            if (range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
             bool reinterpret = ts[i].Text == "reinterpret" && i > 0 && ts[i - 1].Kind == TokenKind.Dot;
             bool modifier = reinterpret || accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.Default or TokenKind.New or TokenKind.Delete or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Typeof or TokenKind.Nameof or TokenKind.NoThrow or TokenKind.Inline or TokenKind.Managed or TokenKind.Reflection or TokenKind.Reflect || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
@@ -1018,9 +1023,6 @@ public sealed partial class EditorModel
             if (MacroCovers(ts[i].Start)) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier && !reflectionMember) continue;
-            var span = ts[i].Span;
-            int line = span.Line - 1, column = span.Column - 1;
-            if (range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
             int kind = modifier ? Array.IndexOf(TokenTypes, "modifier") : control ? Array.IndexOf(TokenTypes, "keyword") : reflectionMember ? Array.IndexOf(TokenTypes, "property") : Array.IndexOf(TokenTypes, symbol!.Classification);
             if (kind < 0) continue;
             int modifiers = symbol?.NameSpan.Source?.Path == path && symbol.NameSpan.Start == span.Start ? 1 : 0;

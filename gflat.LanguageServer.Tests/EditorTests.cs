@@ -377,6 +377,33 @@ public class EditorTests
     }
 
     [Fact]
+    public void SemanticRangeMatchesFullClassificationAtExactBoundaries()
+    {
+        var (model, path, _, _) = Analyze("#define LIMIT 12\nstruct Item { public int Value; }\nint Read(Item* item) => item.Value + LIMIT;|");
+        var full = Decode(model.SemanticTokens(path));
+        foreach (var token in full)
+        {
+            var range = new TextRange(new(token.Line, token.Column), new(token.Line, token.Column + token.Length));
+            Assert.Equal(full.Where(item => item.Line == token.Line && item.Column >= token.Column && item.Column < token.Column + token.Length),
+                Decode(model.SemanticTokens(path, range)));
+        }
+
+        static (int Line, int Column, int Length, int Kind, int Modifiers)[] Decode(object response)
+        {
+            var data = Json(response).GetProperty("data").EnumerateArray().Select(value => value.GetInt32()).ToArray();
+            var result = new List<(int, int, int, int, int)>();
+            int line = 0, column = 0;
+            for (int index = 0; index < data.Length; index += 5)
+            {
+                line += data[index];
+                column = data[index] == 0 ? column + data[index + 1] : data[index + 1];
+                result.Add((line, column, data[index + 2], data[index + 3], data[index + 4]));
+            }
+            return result.ToArray();
+        }
+    }
+
+    [Fact]
     public void DefinitionUsesTheSelectedOverload()
     {
         var (model, path, offset, source) = Analyze("int Read(int x) => x; int Read(bool x) => 2; int main() => Re|ad(true);");

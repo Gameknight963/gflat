@@ -6,6 +6,15 @@ namespace gflat.LanguageServer.Tests;
 public sealed class FormattingTests
 {
     [Fact]
+    public void FormatsWhitespaceBeforeEscapedNamesWithoutRemovingTheirEscape()
+    {
+        var source = new SourceFile(Path.GetFullPath("format-escaped.gf"), "int F(){int    @class=1;@class=2;return @class;}");
+        string actual = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Equal("int F()\n{\n    int @class = 1;\n    @class = 2;\n    return @class;\n}\n", actual);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, actual), new()));
+    }
+
+    [Fact]
     public void SyntaxOnlySnapshotsRetainFormattingNodesWithoutRunningTheTypeChecker()
     {
         var source = new SourceFile(Path.GetFullPath("syntax-format.gf"), "Missing<int>* Read(){return absent;}");

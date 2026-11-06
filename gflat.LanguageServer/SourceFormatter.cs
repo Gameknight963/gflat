@@ -75,7 +75,12 @@ public static class SourceFormatter
             if (!protectedToken)
             {
                 int start = previous == null ? 0 : previous.End + 1;
-                int length = token.Start - start;
+                // Identifier spans exclude their source escape. Whitespace ends
+                // before that escape, so formatting can indent and space the
+                // identifier without treating '@' as part of the gap.
+                int tokenStart = token.Kind == TokenKind.Identifier && token.Start > 0 && text[token.Start - 1] == '@'
+                    ? token.Start - 1 : token.Start;
+                int length = tokenStart - start;
                 if (length >= 0)
                 {
                     string gap = text.Substring(start, length);

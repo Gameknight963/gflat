@@ -2,7 +2,8 @@
 # The installed Visual Studio SDK checks require Windows PowerShell/.NET Framework.
 param(
     [string]$Package = (Join-Path $PSScriptRoot 'bin/Release/net472/gflat.VisualStudio.vsix'),
-    [switch]$NoRestore
+    [switch]$NoRestore,
+    [switch]$PackageChecksOnly
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -129,6 +130,11 @@ try {
     }
     $editorTestArguments = @('test', (Join-Path $repoRoot 'gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj'), '-m:1', '-nodeReuse:false')
     if ($NoRestore) { $editorTestArguments += '--no-restore' }
+    if ($PackageChecksOnly) {
+        # CI's tooling matrix runs every backend assertion. This pass exercises
+        # the shipped server, grammar assets, and native hover captures instead.
+        $editorTestArguments += @('--filter', 'FullyQualifiedName~ServerTests|FullyQualifiedName~EditorGrammarTests|FullyQualifiedName~PreprocessorEditorTests')
+    }
     dotnet @editorTestArguments
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }

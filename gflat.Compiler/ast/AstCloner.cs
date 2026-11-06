@@ -227,7 +227,7 @@ namespace gflat.ast
             return type;
         }
 
-        private AttributeNode CloneAttribute(AttributeNode node) => new(node.Name, node.Arguments.Select(CloneNode).ToList(), node.Line);
+        private AttributeNode CloneAttribute(AttributeNode node) => new(node.Name, node.Arguments.Select(CloneNode).ToList(), node.Line) { Span = node.Span };
 
         public AstNode CloneNode(AstNode node)
         {

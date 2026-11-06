@@ -7,6 +7,7 @@ public sealed class EscapedIdentifierEditorTests
     [Theory]
     [InlineData("int @class;", "int @class")]
     [InlineData("void @while() {}", "void @while()")]
+    [InlineData("void @while(int @class) {}", "void @while(int @class)")]
     [InlineData("alias @alias = int;", "alias @alias = int")]
     [InlineData("class @class {}", "class @class")]
     public void HoverPreservesEscapedDeclarationNames(string text, string expected)
@@ -15,6 +16,31 @@ public sealed class EscapedIdentifierEditorTests
         var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
         var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.IndexOf('@') + 1), Protocol.JsonOptions);
         Assert.Contains(expected, hover.GetProperty("contents").GetProperty("value").GetString());
+    }
+
+    [Fact]
+    public void HoverAtEscapedTypeUseRetainsItsSourceSpelling()
+    {
+        const string text = "class @class {}\n@class* value;";
+        var source = new SourceFile(Path.GetFullPath("escaped-type-hover.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.LastIndexOf('@') + 1), Protocol.JsonOptions);
+        Assert.Contains("class @class", hover.GetProperty("contents").GetProperty("value").GetString());
+        var variable = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.IndexOf("value", StringComparison.Ordinal)), Protocol.JsonOptions);
+        Assert.Contains("@class* value", variable.GetProperty("contents").GetProperty("value").GetString());
+    }
+
+    [Theory]
+    [InlineData("readonly(int)*", "readonly(int)*")]
+    [InlineData("immutable(int)*", "readonly(int)*")]
+    [InlineData("readonly(@class)*", "readonly(@class)*")]
+    public void EscapedTypeRenderingPreservesOrdinaryTypeModifiers(string type, string expected)
+    {
+        string text = "class @class {}\n" + type + " value;";
+        var source = new SourceFile(Path.GetFullPath("escaped-modifier-hover.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, text.IndexOf("value", StringComparison.Ordinal)), Protocol.JsonOptions);
+        Assert.Contains(expected + " value", hover.GetProperty("contents").GetProperty("value").GetString());
     }
 
     [Theory]

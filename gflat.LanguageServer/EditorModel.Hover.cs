@@ -86,9 +86,14 @@ public sealed partial class EditorModel
                     ? i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon ? "namespace" : "type"
                     : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
                 Location? target = null;
+                string spelling = text[token.Start..(token.End + 1)];
+                bool escapedTypeKeyword = token.Kind != TokenKind.Identifier && char.IsLetter(token.Text.FirstOrDefault()) &&
+                    !TypeChecker.IsPrimitive(token.Text) && token.Kind != TokenKind.Ref &&
+                    !(token.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Managed &&
+                        i + 1 < tokens.Length && tokens[i + 1].Kind is TokenKind.OpenParen or TokenKind.Less);
                 if (inSplice && token.Kind == TokenKind.Identifier)
                     kind = token.Text == "this" ? "keyword" : i > 0 && tokens[i - 1].Kind == TokenKind.Dot ? "property" : "variable";
-                if (navigable && !inSplice && token.Kind == TokenKind.Identifier)
+                if (!inSplice && (navigable && token.Kind == TokenKind.Identifier || escapedTypeKeyword))
                 {
                     int first = i;
                     while (first >= 2 && tokens[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
@@ -97,8 +102,12 @@ public sealed partial class EditorModel
                     // use its proven unique declaration. Untouched aliases and
                     // generic parameters retain their declaring-source identity.
                     var declaration = shortened?.GetValueOrDefault(token.Start) ?? TypeSymbol(name, symbol);
-                    target = SymbolLocation(declaration);
-                    if (declaration != null) kind = declaration.Classification;
+                    target = navigable ? SymbolLocation(declaration) : null;
+                    if (declaration != null)
+                    {
+                        kind = declaration.Classification;
+                        if (escapedTypeKeyword) spelling = CompletionSpelling(declaration);
+                    }
                 }
                 // `>::Nested` is not an ordinary qualified-name token chain.
                 // Its checked source symbol is already known; do not recover it
@@ -108,7 +117,7 @@ public sealed partial class EditorModel
                     kind = finalType.Classification;
                     target = SymbolLocation(finalType);
                 }
-                Add(text[token.Start..(token.End + 1)], kind, target);
+                Add(spelling, kind, target);
                 if (token.Kind == TokenKind.CloseBracket && i > 0 && tokens[i - 1].Kind == TokenKind.Colon) inSplice = false;
                 cursor = token.End + 1;
             }
@@ -234,7 +243,12 @@ public sealed partial class EditorModel
                 if (parameter.IsConst) Keyword("const");
                 var originalParameter = symbol.BoundParameters != null && symbol.Syntax.Node is MethodDeclaration sourceMethod
                     ? sourceMethod.Parameters.ElementAtOrDefault(i + (symbol.BoundExtension && sourceMethod.Parameters.FirstOrDefault()?.IsExtensionReceiver == true ? 1 : 0)) : parameter;
-                Type(symbol.BoundParameters != null ? parameter.Type : snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(originalParameter == null ? null : declarations.GetValueOrDefault(originalParameter)) : null);
+                var parameterSymbol = originalParameter == null ? null : declarations.GetValueOrDefault(originalParameter);
+                string parameterName = parameterSymbol != null ? CompletionSpelling(parameterSymbol) :
+                    Lexer.GetKeyword(parameter.Name) != TokenKind.Identifier ? "@" + parameter.Name : parameter.Name;
+                Type(symbol.BoundParameters != null ? parameter.Type : snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type);
+                Add(" ");
+                Add(parameterName, "parameter", navigable ? SymbolLocation(parameterSymbol) : null);
                 if (parameter.DefaultValue != null)
                 {
                     Add(" = ", "punctuation");

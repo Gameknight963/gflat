@@ -72,7 +72,7 @@ namespace gflat.ast
             }
             List<AstNode> clonedMembers = s.Members.Select(scope.CloneNode).ToList();
             var genericParams = scope.CloneGenericParameters(s.Name, s.GenericParameters, isTypeDeclaration: true);
-            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, sourceName: s.SourceName) { BaseTypes = s.BaseTypes.Select(scope.CloneType).ToList() };
+            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, scope.CloneAttributes(s), genericParameters: genericParams, sourceName: s.SourceName) { BaseTypes = s.BaseTypes.Select(scope.CloneType).ToList() };
         }
 
         public ClassDeclaration CloneClass(ClassDeclaration c)
@@ -100,7 +100,7 @@ namespace gflat.ast
             }
             List<AstNode> clonedMembers = c.Members.Select(scope.CloneNode).ToList();
             var genericParams = scope.CloneGenericParameters(c.Name, c.GenericParameters, isTypeDeclaration: true);
-            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, sourceName: c.SourceName) { IsStatic = c.IsStatic, BaseTypes = c.BaseTypes.Select(scope.CloneType).ToList() };
+            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, scope.CloneAttributes(c), genericParameters: genericParams, sourceName: c.SourceName) { IsStatic = c.IsStatic, BaseTypes = c.BaseTypes.Select(scope.CloneType).ToList() };
         }
 
         public InterfaceDeclaration CloneInterface(InterfaceDeclaration declaration)
@@ -113,7 +113,7 @@ namespace gflat.ast
             return new InterfaceDeclaration(name, declaration.Members.Select(scope.CloneNode).ToList(),
                 declaration.Accessibility, declaration.Line, declaration.IsStatic,
                 scope.CloneGenericParameters(declaration.Name, declaration.GenericParameters, isTypeDeclaration: true))
-            { Span = declaration.Span, Attributes = declaration.Attributes.Select(scope.CloneAttribute).ToList() };
+            { Span = declaration.Span, Attributes = scope.CloneAttributes(declaration) };
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)
@@ -143,7 +143,7 @@ namespace gflat.ast
             List<Parameter> parameters = m.Parameters.Select(scope.CloneParameter).ToList();
             BlockStatement? body = m.Body != null ? (BlockStatement)scope.CloneNode(m.Body) : null;
             var genericParams = scope.CloneGenericParameters(m.Name, m.GenericParameters, isTypeDeclaration: false);
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow, isImmutable: m.IsImmutable) { ExtensionBlockParameterCount = m.ExtensionBlockParameterCount, IsExplicitConversion = m.IsExplicitConversion, ExtensionReceiverType = m.ExtensionReceiverType == null ? null : scope.CloneType(m.ExtensionReceiverType), ExtensionMemberName = m.ExtensionMemberName, InferAutoGetterReadOnly = m.InferAutoGetterReadOnly, IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, scope.CloneAttributes(m), genericParameters: genericParams, isNoThrow: m.IsNoThrow, isImmutable: m.IsImmutable) { ExtensionBlockParameterCount = m.ExtensionBlockParameterCount, IsExplicitConversion = m.IsExplicitConversion, ExtensionReceiverType = m.ExtensionReceiverType == null ? null : scope.CloneType(m.ExtensionReceiverType), ExtensionMemberName = m.ExtensionMemberName, InferAutoGetterReadOnly = m.InferAutoGetterReadOnly, IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
         }
 
         public TypeExpression CloneType(TypeExpression type)
@@ -229,6 +229,14 @@ namespace gflat.ast
 
         private AttributeNode CloneAttribute(AttributeNode node) => new(node.Name, node.Arguments.Select(CloneNode).ToList(), node.Line) { Span = node.Span };
 
+        private List<AttributeNode> CloneAttributes(AstNode node)
+        {
+            var attributes = node.Attributes;
+            var result = new List<AttributeNode>(attributes.Count);
+            foreach (var attribute in attributes) result.Add(CloneAttribute(attribute));
+            return result;
+        }
+
         public AstNode CloneNode(AstNode node)
         {
             using var context = SourceContext.Enter(node.Span);
@@ -248,7 +256,7 @@ namespace gflat.ast
             }
             if (node == null) return null!;
             AstNode clone = CloneNodeCore(node);
-            clone.Attributes = node.Attributes.Select(CloneAttribute).ToList();
+            clone.Attributes = CloneAttributes(node);
             clone.IsInline = node.IsInline;
             return clone;
         }
@@ -276,7 +284,7 @@ namespace gflat.ast
                 List<Parameter> parameters = ctor.Parameters.Select(CloneParameter).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(ctor.Body);
                 List<AstNode>? baseArgs = ctor.BaseArguments?.Select(CloneNode).ToList();
-                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst) { IsCopy = ctor.IsCopy, IsMove = ctor.IsMove, IsNoThrow = ctor.IsNoThrow };
+                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, CloneAttributes(ctor), ctor.IsConst) { IsCopy = ctor.IsCopy, IsMove = ctor.IsMove, IsNoThrow = ctor.IsNoThrow };
             }
             if (node is DestructorDeclaration dtor)
             {
@@ -306,7 +314,7 @@ namespace gflat.ast
                     property.Getter != null ? CloneMethod(property.Getter) : null,
                     property.Setter != null ? CloneMethod(property.Setter) : null,
                     property.Initializer != null ? CloneNode(property.Initializer) : null, property.Line)
-                { IsRef = property.IsRef, Expanded = property.Expanded, Attributes = property.Attributes.Select(CloneAttribute).ToList() };
+                { IsRef = property.IsRef, Expanded = property.Expanded, Attributes = CloneAttributes(property) };
             if (node is MethodDeclaration m)
             {
                 return CloneMethod(m);

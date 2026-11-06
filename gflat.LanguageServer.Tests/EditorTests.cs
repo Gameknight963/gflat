@@ -349,6 +349,37 @@ public class EditorTests
     }
 
     [Fact]
+    public void InheritanceCompletionIncludesAliasesToValidBaseTypes()
+    {
+        const string declarations = "class Base {} interface I {} static class Scope {} alias BaseAlias = Base; alias InterfaceAlias = I; alias ValueAlias = int; alias PointerAlias = Base*; alias IndirectPointerAlias = PointerAlias; alias StaticAlias = Scope;";
+        var (model, path, offset, _) = Analyze(declarations + " class Child : | {}");
+        var labels = Labels(model.Completion(path, offset));
+        Assert.Contains("BaseAlias", labels);
+        Assert.Contains("InterfaceAlias", labels);
+        Assert.DoesNotContain("ValueAlias", labels);
+        Assert.DoesNotContain("PointerAlias", labels);
+        Assert.DoesNotContain("IndirectPointerAlias", labels);
+        Assert.DoesNotContain("StaticAlias", labels);
+        var source = new SourceFile(Path.GetFullPath("alias-base-completion.gf"), declarations + " class Child : BaseAlias, InterfaceAlias {}");
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == gflat.diagnostics.DiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public void InheritanceCompletionRespectsAnAlreadyListedAliasBaseAndStructRestrictions()
+    {
+        const string declarations = "class Base {} interface I {} alias BaseAlias = Base; alias InterfaceAlias = I;";
+        foreach (string declaration in new[] { "class Child : BaseAlias, | {}", "struct Child : | {}" })
+        {
+            var (model, path, offset, _) = Analyze(declarations + declaration);
+            var labels = Labels(model.Completion(path, offset));
+            Assert.Contains("InterfaceAlias", labels);
+            Assert.DoesNotContain("Base", labels);
+            Assert.DoesNotContain("BaseAlias", labels);
+        }
+    }
+
+    [Fact]
     public void QualifiedInheritanceFiltersNamespaceMembers()
     {
         var (model, path, offset, _) = Analyze("namespace Lib { public interface I {} public struct Value {} public int Helper() => 1; } struct Child : Lib::| {}");

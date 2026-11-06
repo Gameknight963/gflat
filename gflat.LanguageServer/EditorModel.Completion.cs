@@ -69,13 +69,37 @@ public sealed partial class EditorModel
             int generic = name.IndexOf('<');
             return generic >= 0 ? name[..generic] : name;
         }).ToHashSet(StringComparer.Ordinal);
+        var aliasBases = new Dictionary<Symbol, AstNode?>();
+        AstNode? BaseDeclaration(Symbol candidate)
+        {
+            if (candidate.Syntax.Node is not AliasDeclaration) return candidate.Syntax.Node;
+            if (aliasBases.TryGetValue(candidate, out var cached)) return cached;
+            aliasBases[candidate] = null;
+            var target = candidate.Type == null ? null : snapshot.Checker?.GetSourceTypeBinding(candidate.Type) ?? candidate.Type;
+            if (target is NamedTypeExpression { Namespace: null } primitive && TypeChecker.IsPrimitive(primitive.Name)) return null;
+            AstNode? result = null;
+            if (target is NamedTypeExpression or NestedTypeExpression && !target.IsReadOnlyValue && !target.IsImmutableValue)
+            {
+                string targetName = target is NamedTypeExpression named ? named.Namespace == null ? named.Name : Join(named.Namespace, named.Name) : DisplayType(target);
+                var targetSymbol = TypeSymbol(targetName, candidate);
+                if (targetSymbol?.Syntax.Node is AliasDeclaration) result = BaseDeclaration(targetSymbol);
+                else
+                {
+                    string? owner = TypeOwner(target, candidate.NameSpan.Source?.Path ?? path, candidate.NameSpan.Start);
+                    result = symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && s.Qualified == owner)?.Syntax.Node;
+                }
+            }
+            aliasBases[candidate] = result;
+            return result;
+        }
         var visible = Visible(path, ts[declaration].Start).ToArray();
-        bool alreadyHasBase = visible.Any(s => s.Syntax.Node is ClassDeclaration && (usedDefinitions.Contains(s.Name) || usedDefinitions.Contains(s.Qualified))) ||
-            symbols.Any(s => s.Syntax.Node is ClassDeclaration && usedDefinitions.Contains(s.Qualified));
+        bool alreadyHasBase = visible.Any(s => (usedDefinitions.Contains(s.Name) || usedDefinitions.Contains(s.Qualified)) && BaseDeclaration(s) is ClassDeclaration) ||
+            symbols.Any(s => usedDefinitions.Contains(s.Qualified) && BaseDeclaration(s) is ClassDeclaration);
         var self = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == ts[declaration + 1].Start);
         return new(true, s => s.Syntax.Node is NamespaceDeclaration ||
-            (s.Syntax.Node is InterfaceDeclaration || ts[declaration].Kind == TokenKind.Class && !alreadyHasBase && s.Syntax.Node is ClassDeclaration { IsStatic: false }) &&
+            (BaseDeclaration(s) is InterfaceDeclaration || ts[declaration].Kind == TokenKind.Class && !alreadyHasBase && BaseDeclaration(s) is ClassDeclaration { IsStatic: false }) &&
             s != self && s.Qualified != self?.Qualified && !used.Contains(s.Qualified) &&
+            (self == null || BaseDeclaration(s) != self.Syntax.Node) &&
             !visible.Any(v => v == s && used.Contains(v.Name)));
     }
 }

@@ -7,6 +7,31 @@ namespace gflat.LanguageServer.Tests;
 public sealed class CastRedesignEditorTests
 {
     [Theory]
+    [InlineData("public int reinterpret;", "reinterpret", "field")]
+    [InlineData("public int @reinterpret;", "@reinterpret", "field")]
+    [InlineData("public int reinterpret { get; set; }", "reinterpret", "property")]
+    public void MembersNamedReinterpretKeepTheirClassification(string declaration, string name, string expected)
+    {
+        string text = $"struct Item {{ {declaration} }} int Read(Item* item) => item.{name};";
+        var source = new SourceFile(Path.GetFullPath("reinterpret-field.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        var data = JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path), Protocol.JsonOptions)
+            .GetProperty("data").EnumerateArray().Select(item => item.GetInt32()).ToArray();
+        int use = text.LastIndexOf(name, StringComparison.Ordinal), column = 0;
+        int? kind = null;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            Assert.Equal(0, data[i]);
+            column += data[i + 1];
+            if (column == use) kind = data[i + 3];
+        }
+        Assert.NotNull(kind);
+        Assert.Equal(expected, EditorModel.TokenTypes[kind.Value]);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void ReinterpretUsesOrdinaryKeywordClassification(bool visualStudio)

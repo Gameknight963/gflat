@@ -63,6 +63,7 @@ public class EditorGrammarTests
     [InlineData("int implementation = 1;", "implementation")]
     [InlineData("int constrained = 1;", "constrained")]
     [InlineData("return constrained;", "constrained")]
+    [InlineData("return item.reinterpret;", "reinterpret")]
     [InlineData("return extension + explicit + implementation;", "extension")]
     public void ContextualKeywordsLeaveOrdinaryLocalsUnclassifiedAsKeywords(string line, string word)
     {

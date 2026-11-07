@@ -82,6 +82,9 @@ Enumeration order is unspecified. Map iterators expose immutable Entry pointers.
 Set iterators expose immutable element pointers. Keep the owner alive and avoid
 structural changes while using an iterator.
 
+`HashSet.AsEnumerable()` supports query operators over those same borrowed
+pointers. See [querying set elements](SET_QUERIES.md) for saved-query lifetimes.
+
 Insertion and Reserve can invalidate every borrow, including when tombstones
 are compacted without increasing capacity. Removal ends borrows into that entry.
 Callbacks must not mutate the involved collection through another alias.

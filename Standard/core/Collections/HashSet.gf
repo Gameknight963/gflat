@@ -35,6 +35,14 @@ struct HashSet<T : IHashable>
     }
     public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
+    // Borrows the set object. New enumerators use its current storage.
+    public struct View
+    {
+        private immutable(HashSet<T>)* source;
+        public View(immutable(HashSet<T>)* owner) nothrow { source = owner; }
+        public immutable Enumerator GetEnumerator() => source.GetEnumerator();
+    }
+
     public immutable bool SetEquals(immutable(HashSet<T>)* other)
     {
         return this.Count == other.Count && this.IsSubsetOf(other);

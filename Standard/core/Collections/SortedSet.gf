@@ -112,6 +112,14 @@ struct SortedSet<T>
 
     public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
+    // Borrows the set object. New enumerators use its current storage.
+    public struct View
+    {
+        private immutable(SortedSet<T>)* source;
+        public View(immutable(SortedSet<T>)* owner) nothrow { source = owner; }
+        public immutable Enumerator GetEnumerator() => source.GetEnumerator();
+    }
+
     public immutable bool SetEquals(immutable(SortedSet<T>)* other)
     {
         if ((this).reinterpret<nuint>() == (other).reinterpret<nuint>()) return true;

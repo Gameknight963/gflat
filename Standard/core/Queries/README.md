@@ -52,6 +52,9 @@ on later reads.
 See the [operation reference](../../../docs/QUERIES.md#operations) for overloads,
 empty-sequence behavior, and callback rules.
 
+Hash and sorted sets also provide `AsEnumerable()`, yielding borrowed immutable
+element pointers. See [set queries](../../../docs/SET_QUERIES.md).
+
 ## Ownership
 
 Query views borrow collection storage. Iterators clean up their owned values on

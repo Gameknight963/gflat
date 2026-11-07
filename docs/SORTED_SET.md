@@ -47,6 +47,9 @@ Use `move` for noncopyable owners. Enumeration yields immutable pointers in
 comparer order. Insertion, removal, and growth can move entries, so reacquire
 borrowed pointers and iterators afterward.
 
+`AsEnumerable()` supports query operators over the same borrowed immutable
+pointers. See [querying set elements](SET_QUERIES.md).
+
 ## Borrowing the stored equivalent value
 
 Find returns the stored object, which may have different payload fields from an

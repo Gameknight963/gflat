@@ -118,11 +118,7 @@ public sealed partial class EditorModel
                         new SourceEdit(Workspace.ToRange(source.Span(close.Start, 0)), generated)));
                 }
                 var fields = symbols.Where(s => s.Owner == owner.Qualified && s.Syntax.Node is FieldDeclaration { IsStatic: false, IsConst: false, PropertyName: null }).ToArray();
-                bool requiresBaseArguments = owner.Syntax.Node is ClassDeclaration cls && snapshot.Checker is { } checker &&
-                    checker.GetClassByIdentity(cls.Name)?.BaseClass is { } baseName &&
-                    checker.GetClassByIdentity(baseName) is { Constructors.Count: > 0 } baseClass &&
-                    !baseClass.Constructors.Any(constructor => constructor.Parameters.All(parameter => parameter.DefaultValue != null));
-                if (fields.Length > 0 && !requiresBaseArguments && !symbols.Any(s => s.Owner == owner.Qualified && s.Syntax.Node is ConstructorDeclaration &&
+                if (fields.Length > 0 && CanCallImplicitBase(owner) && !symbols.Any(s => s.Owner == owner.Qualified && s.Syntax.Node is ConstructorDeclaration &&
                     s.Parameters?.Select(p => DisplayType(p.Type.WithoutValueProtection())).SequenceEqual(fields.Select(f => DisplayType(f.Type!.WithoutValueProtection()))) == true))
                 {
                     string thisParameter = "thisValue";
@@ -136,6 +132,18 @@ public sealed partial class EditorModel
             }
         }
         return actions.ToArray();
+    }
+
+    private bool CanCallImplicitBase(Symbol owner)
+    {
+        if (owner.Syntax.Node is not ClassDeclaration cls || snapshot.Checker is not { } checker ||
+            checker.GetClassByIdentity(cls.Name)?.BaseClass is not { } baseName ||
+            checker.GetClassByIdentity(baseName) is not { Constructors.Count: > 0 } baseClass) return true;
+        var eligible = baseClass.Constructors.Where(constructor => constructor.Parameters.All(parameter => parameter.DefaultValue != null)).ToArray();
+        var exact = eligible.Where(constructor => constructor.Parameters.Count == 0).ToArray();
+        var best = exact.Length > 0 ? exact : eligible;
+        if (best.Length != 1) return false;
+        return best[0].Accessibility != TokenKind.Private || NestedPrivateAccess(owner.Qualified, baseClass.Name);
     }
 
     private IEnumerable<Symbol> ContractMembers(Symbol owner, Symbol contract)

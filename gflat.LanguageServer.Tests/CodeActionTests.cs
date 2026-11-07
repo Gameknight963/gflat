@@ -9,7 +9,12 @@ public sealed class CodeActionTests
     [InlineData("class Base { public Base(int value) {} } class Item : Base { private int value; }")]
     [InlineData("class Base<T> { public Base(T value) {} } class Item : Base<int> { private int value; }")]
     [InlineData("namespace Library { public class Base { public Base(int value) {} } } class Item : Library::Base { private int value; }")]
-    public void GeneratedConstructorDoesNotOmitRequiredBaseArguments(string code)
+    [InlineData("class Base { private Base() {} } class Item : Base { private int value; }")]
+    [InlineData("class Base<T> { private Base() {} } class Item : Base<int> { private int value; }")]
+    [InlineData("class Base { public Base(int value = 1) {} public Base(double value = 1.0) {} } class Item : Base { private int value; }")]
+    [InlineData("class Base { public Base(int value = 1) {} public Base(double value = 1.0, int other = 2) {} } class Item : Base { private int value; }")]
+    [InlineData("class Base { private Base() {} public Base(int value = 1) {} } class Item : Base { private int value; }")]
+    public void GeneratedConstructorRequiresUsableImplicitBaseCall(string code)
     {
         var source = new SourceFile(Path.GetFullPath("code-action-base-arguments.gf"), code);
         var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
@@ -71,6 +76,10 @@ public sealed class CodeActionTests
     [InlineData("struct Item { private readonly(int)* value; }", "Item", "Generate constructor")]
     [InlineData("struct Item { private int[2] values; }", "Item", "Generate constructor")]
     [InlineData("class Base { public Base() {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base { protected Base() {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base<T> { protected Base() {} } class Item : Base<int> { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base { private Base() {} public class Item : Base { private int value; } }", "Item :", "Generate constructor")]
+    [InlineData("class Base { public Base() {} public Base(int value = 1) {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
     [InlineData("class Base { public Base(int value = 1) {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
     [InlineData("class Base<T> { public Base(T value = default) {} } class Item : Base<int> { private int value; }", "Item :", "Generate constructor")]
     [InlineData("struct Item { private int* value; }", "Item", "Generate constructor")]

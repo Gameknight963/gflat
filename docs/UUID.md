@@ -105,3 +105,5 @@ Linux provides `Linux::SystemRandom::TryFill`. The application selects the
 platform library or supplies its own callback.
 
 Sources: `core/Uuid.gf`, `core/UuidGenerator.gf`
+
+See [Explicit UUID text formats](UUID_FORMATS.md) for compact and wrapped forms.

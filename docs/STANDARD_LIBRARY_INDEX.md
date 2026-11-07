@@ -115,6 +115,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | APIs | Guide |
 | --- | --- |
 | `Uuid`, `UuidGenerator` | [UUID values](UUID.md) |
+| UUID `ParseExact`, `ToString(format)` | [Explicit UUID text formats](UUID_FORMATS.md) |
 | `Version` | [Dotted numeric versions](VERSION.md) |
 | Version field-count formatting and revision halves | [Formatting selected version fields](VERSION_FORMATTING.md) |
 | `IpAddress` | [Numeric IP addresses](IP_ADDRESS.md) |

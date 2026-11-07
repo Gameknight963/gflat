@@ -81,6 +81,61 @@ public struct Uuid : IEquatable<Uuid>, IComparable<Uuid>, IHashable, IFormattabl
         return true;
     }
 
+    private static char FormatCode(char format) nothrow
+    {
+        if (format >= 'a' && format <= 'z') format = (char)(format - 'a' + 'A');
+        return format;
+    }
+
+    public static bool TryParseExact(readonly(char)* text, nuint count, char format, Uuid* result) nothrow
+    {
+        format = FormatCode(format);
+        if (format == 'D') return TryParse(text, count, result);
+        if (format == 'B' || format == 'P')
+        {
+            char open = '{'; char close = '}';
+            if (format == 'P') { open = '('; close = ')'; }
+            if (count == 38 && text[0] == open && text[37] == close)
+                return TryParse(text + 1, 36, result);
+        }
+        else if (format == 'N' && count == 32)
+        {
+            Uuid parsed = new();
+            for (nuint i = 0; i < 32; i++)
+            {
+                int digit = Digit(text[i]);
+                if (digit < 0) { *result = new Uuid(); return false; }
+                if (i < 16) parsed.high = (parsed.high << 4) | (ulong)digit;
+                else parsed.low = (parsed.low << 4) | (ulong)digit;
+            }
+            *result = parsed;
+            return true;
+        }
+        *result = new Uuid();
+        return false;
+    }
+
+    public static bool TryParseExact(readonly(char)* text, char format, Uuid* result) nothrow
+    {
+        nuint count = 0;
+        while (count < 39 && text[count] != '\0') count++;
+        return TryParseExact(text, count, format, result);
+    }
+
+    public static Uuid ParseExact(readonly(char)* text, nuint count, char format)
+    {
+        Uuid result = new();
+        if (!TryParseExact(text, count, format, &result)) throw new Exception("UUID does not match the requested format");
+        return result;
+    }
+
+    public static Uuid ParseExact(readonly(char)* text, char format)
+    {
+        Uuid result = new();
+        if (!TryParseExact(text, format, &result)) throw new Exception("UUID does not match the requested format");
+        return result;
+    }
+
     public static bool TryParse(readonly(char)* text, Uuid* result) nothrow
     {
         nuint count = 0;
@@ -127,24 +182,43 @@ public struct Uuid : IEquatable<Uuid>, IComparable<Uuid>, IHashable, IFormattabl
     // Written must be separate from output and this value's storage.
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
+        return this.TryFormat(output, capacity, ref written, 'D');
+    }
+
+    public immutable bool TryFormat(char* output, nuint capacity, ref nuint written, char format) nothrow
+    {
         written = 0;
-        if (capacity < 36) return false;
+        format = FormatCode(format);
+        nuint required = 36;
+        if (format == 'N') required = 32;
+        else if (format == 'B' || format == 'P') required = 38;
+        else if (format != 'D') return false;
+        if (capacity < required) return false;
         ulong upper = high; ulong lower = low;
         readonly(char)* digits = "0123456789abcdef";
-        int digitCount = 0;
-        for (nuint i = 0; i < 36; i++)
+        nuint position = 0;
+        if (format == 'B') { output[position] = '{'; position++; }
+        if (format == 'P') { output[position] = '('; position++; }
+        for (int digitCount = 0; digitCount < 32; digitCount++)
         {
-            if (i == 8 || i == 13 || i == 18 || i == 23) output[i] = '-';
-            else
-            {
-                ulong value = upper;
-                if (digitCount >= 16) value = lower;
-                output[i] = digits[(int)((value >> ((15 - (digitCount % 16)) * 4)) & 15ul)];
-                digitCount++;
-            }
+            if (format != 'N' && (digitCount == 8 || digitCount == 12 || digitCount == 16 || digitCount == 20))
+            { output[position] = '-'; position++; }
+            ulong value = upper;
+            if (digitCount >= 16) value = lower;
+            output[position] = digits[(int)((value >> ((15 - (digitCount % 16)) * 4)) & 15ul)];
+            position++;
         }
-        written = 36;
+        if (format == 'B') output[position] = '}';
+        if (format == 'P') output[position] = ')';
+        written = required;
         return true;
+    }
+
+    public immutable void Format(ITextWriter* output, char format)
+    {
+        char[38] buffer; nuint written = 0;
+        if (!this.TryFormat(buffer, 38, ref written, format)) throw new Exception("Unsupported UUID format");
+        output.Write(buffer, written);
     }
 
     public immutable void Format(ITextWriter* output)

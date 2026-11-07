@@ -7,6 +7,23 @@ public nuint FindIndex<T>(immutable(Vector<T>)* source, bool(immutable(T)*)* pre
     return source.Count;
 }
 
+public nuint FindIndex<T>(immutable(Vector<T>)* source, nuint start, nuint count,
+    bool(immutable(T)*)* predicate)
+{
+    if (start > source.Count || count > source.Count - start)
+        throw new Exception("Vector search range out of bounds");
+    nuint end = start + count;
+    for (nuint i = start; i < end; i++)
+        if (predicate(&(*source)[i])) return i;
+    return source.Count;
+}
+
+public nuint FindIndex<T>(immutable(Vector<T>)* source, nuint start, bool(immutable(T)*)* predicate)
+{
+    if (start > source.Count) throw new Exception("Vector search range out of bounds");
+    return FindIndex<T>(source, start, source.Count - start, predicate);
+}
+
 public nuint FindLastIndex<T>(immutable(Vector<T>)* source, bool(immutable(T)*)* predicate)
 {
     nuint remaining = source.Count;
@@ -46,6 +63,12 @@ extension Vector<T>
 {
     public immutable nuint FindIndex(bool(immutable(T)*)* predicate)
         => Standard::Collections::FindIndex<T>(this, predicate);
+
+    public immutable nuint FindIndex(nuint start, bool(immutable(T)*)* predicate)
+        => Standard::Collections::FindIndex<T>(this, start, predicate);
+
+    public immutable nuint FindIndex(nuint start, nuint count, bool(immutable(T)*)* predicate)
+        => Standard::Collections::FindIndex<T>(this, start, count, predicate);
 
     public immutable nuint FindLastIndex(bool(immutable(T)*)* predicate)
         => Standard::Collections::FindLastIndex<T>(this, predicate);

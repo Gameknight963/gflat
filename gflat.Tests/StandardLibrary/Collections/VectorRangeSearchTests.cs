@@ -5,13 +5,16 @@ public sealed class VectorRangeSearchTests
     [Fact]
     public void GuideCompiles() => StandardLibraryGuideTests.CheckProgram("VECTOR_RANGE_SEARCH.md", 0);
 
+    [Fact]
+    public void PredicateGuideCompiles() => StandardLibraryGuideTests.CheckProgram("VECTOR_PREDICATE_RANGES.md", 0);
+
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
     public void EverySmallRangeReturnsAbsoluteIndicesAndValidatesBeforeCallbacks(int optimization)
     {
         var sources = StandardTestSources.Combine(StandardTestSources.Values,
-            StandardTestSources.Load("core/Collections/EqualityComparer.gf", "core/Collections/vector_search.gf"))
+            StandardTestSources.Load("core/Collections/EqualityComparer.gf", "core/Collections/vector_search.gf", "core/Collections/vector_predicates.gf"))
             .Append(new SourceFile("vector-range-search.gf", """
                 using Standard;
                 using Standard::Collections;
@@ -38,6 +41,7 @@ public sealed class VectorRangeSearchTests
                     ~Owner() { live--; }
                 }
                 bool EqualOwner(immutable(Owner)* a, immutable(Owner)* b) nothrow => a.Id == b.Id;
+                int wanted = 0;
                 int calls = 0;
                 int failAt = -1;
                 bool Equal(immutable(int)* left, immutable(int)* right)
@@ -46,6 +50,8 @@ public sealed class VectorRangeSearchTests
                     if (calls == failAt) throw new Exception("comparison failed");
                     return *left == *right;
                 }
+                bool Match(immutable(int)* value) => Equal(value, &wanted);
+                bool MatchOwner(immutable(Owner)* value) nothrow => value.Id == wanted;
                 int main()
                 {
                     for (nuint size = 0; size <= 16; size++)
@@ -64,11 +70,17 @@ public sealed class VectorRangeSearchTests
                             nuint comparisons = count;
                             if (expected != size) comparisons = expected - start + 1;
                             if ((nuint)calls != comparisons) return 2;
+                            wanted = key; calls = 0;
+                            if (source.FindIndex(start, count, Match) != expected || (nuint)calls != comparisons) return 13;
+                            if (Standard::Collections::FindIndex<int>(&source, start, count, Match) != expected) return 14;
+
                             if (source.IndexOf(&key, start, count) != expected) return 3;
                             if (Standard::Collections::IndexOf<int>(&source, &key, start, count) != expected) return 4;
                             if (count == size - start)
                             {
                                 if (source.IndexOf(&key, start) != expected || source.IndexOf(&key, start, Equal) != expected) return 5;
+                                if (source.FindIndex(start, Match) != expected) return 15;
+
                             }
                         }
                         int absent = 99;
@@ -88,6 +100,20 @@ public sealed class VectorRangeSearchTests
                             failAt = -1;
                             if (!caught || calls != 0 || source.Count != size) return 6;
                         }
+                        for (int mode = 0; mode < 3; mode++)
+                        {
+                            calls = 0; failAt = 1;
+                            bool caught = false;
+                            try
+                            {
+                                if (mode == 0) source.FindIndex(size + 1, Match);
+                                else if (mode == 1) source.FindIndex(size, 1, Match);
+                                else source.FindIndex(0, (nuint)0 - (nuint)1, Match);
+                            }
+                            catch (Exception* error) { caught = true; }
+                            failAt = -1;
+                            if (!caught || calls != 0 || source.Count != size) return 16;
+                        }
                         for (int failure = 1; failure <= (int)size; failure++)
                         {
                             calls = 0; failAt = failure;
@@ -96,6 +122,12 @@ public sealed class VectorRangeSearchTests
                             catch (Exception* error) { caught = true; }
                             failAt = -1;
                             if (!caught || calls != failure || source.Count != size) return 7;
+                            wanted = absent; calls = 0; failAt = failure; caught = false;
+                            try { source.FindIndex(0, size, Match); }
+                            catch (Exception* error) { caught = true; }
+                            failAt = -1;
+                            if (!caught || calls != failure || source.Count != size) return 17;
+
                         }
                         for (nuint i = 0; i < size; i++) if (source[i] != (int)(i % 5) - 2) return 8;
                     }
@@ -107,6 +139,10 @@ public sealed class VectorRangeSearchTests
                         deny = true;
                         if (source.IndexOf(&key, 1, EqualOwner) != 2 || source.IndexOf(&key, 1, 1, EqualOwner) != 3) return 9;
                         if (source.IndexOf(&key, 3, 0, EqualOwner) != 3 || attempts != before || live != 4) return 10;
+                        wanted = 1;
+                        if (source.FindIndex(1, MatchOwner) != 2 || source.FindIndex(1, 1, MatchOwner) != 3) return 18;
+                        if (source.FindIndex(3, 0, MatchOwner) != 3 || attempts != before || live != 4) return 19;
+
                         deny = false;
                         if (source[0].Id != 1 || source[1].Id != 2 || source[2].Id != 1) return 11;
                     }

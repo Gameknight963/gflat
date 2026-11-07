@@ -209,7 +209,8 @@ public static class Workspace
             if (!change.TryGetProperty("range", out var range)) { text = replacement; continue; }
             int start = Offset(text, range.GetProperty("start")), end = Offset(text, range.GetProperty("end"));
             if (end < start) throw new ArgumentException("Invalid edit range");
-            text = text[..start] + replacement + text[end..];
+            text = start == 0 && end == text.Length ? replacement ?? "" :
+                string.Concat(text.AsSpan(0, start), replacement.AsSpan(), text.AsSpan(end));
         }
         return text;
     }

@@ -5,6 +5,9 @@ public sealed class RationalMagnitudeTests
     [Fact]
     public void GuideCompiles() => StandardLibraryGuideTests.CheckProgram("RATIONAL_MAGNITUDE.md", 0);
 
+    [Fact]
+    public void CopySignGuideCompiles() => StandardLibraryGuideTests.CheckProgram("RATIONAL_COPY_SIGN.md", 0);
+
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
@@ -33,10 +36,13 @@ public sealed class RationalMagnitudeTests
                 }
                 public replace void Free(void* storage) nothrow { live--; free(storage); }
             }
-            Rational Apply(immutable(Rational)* value, bool reciprocal)
+            Rational Apply(immutable(Rational)* value, int mode)
             {
-                if (reciprocal) return value.Reciprocal();
-                return value.Abs();
+                if (mode == 0) return value.Abs();
+                if (mode == 1) return value.Reciprocal();
+                Rational sign = new();
+                if (mode == 2) sign = new(-1l);
+                return Rational::CopySign(value, &sign);
             }
             int Check(readonly(char)* text, readonly(char)* magnitude, readonly(char)* inverse)
             {
@@ -44,18 +50,29 @@ public sealed class RationalMagnitudeTests
                 Rational expected = Rational::Parse(magnitude);
                 Rational actual = value.Abs();
                 if (!actual.Equals(&expected)) return 1;
+                Rational positive = new(1l);
+                Rational negative = new(-1l);
+                Rational zero = new();
+                Rational signedValue = Rational::CopySign(&value, &positive);
+                if (!signedValue.Equals(&expected)) return 7;
+                signedValue = Rational::CopySign(&value, &zero);
+                if (!signedValue.Equals(&expected)) return 8;
+                Rational negativeMagnitude = expected.Negate();
+                signedValue = Rational::CopySign(&value, &negative);
+                if (!signedValue.Equals(&negativeMagnitude)) return 9;
+
                 expected = Rational::Parse(inverse);
                 actual = value.Reciprocal();
                 if (!actual.Equals(&expected)) return 2;
                 Rational restored = actual.Reciprocal();
                 if (!restored.Equals(&value)) return 3;
                 String before = value.ToString();
-                for (int mode = 0; mode < 2; mode++)
+                for (int mode = 0; mode < 4; mode++)
                 {
                     int allocations = 0;
                     {
                         int first = attempts;
-                        Rational result = Apply(&value, mode != 0);
+                        Rational result = Apply(&value, mode);
                         allocations = attempts - first;
                     }
                     for (int failure = 0; failure < allocations; failure++)
@@ -64,7 +81,7 @@ public sealed class RationalMagnitudeTests
                         int owners = live;
                         failAfter = failure;
                         bool caught = false;
-                        try { output = Apply(&value, mode != 0); }
+                        try { output = Apply(&value, mode); }
                         catch (Exception* error) { caught = true; }
                         failAfter = -1;
                         if (!caught || live != owners) return 4;
@@ -94,6 +111,10 @@ public sealed class RationalMagnitudeTests
                     Rational zero = new();
                     Rational absolute = zero.Abs();
                     if (!absolute.Equals(&zero)) return 18;
+                    Rational negativeSign = new(-1l);
+                    Rational signedZero = Rational::CopySign(&zero, &negativeSign);
+                    if (!signedZero.Equals(&zero) || signedZero.Sign != 0) return 20;
+
                     Rational target = new(99l);
                     bool caught = false;
                     try { target = zero.Reciprocal(); }

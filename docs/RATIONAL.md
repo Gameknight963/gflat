@@ -73,3 +73,5 @@ See [inspecting rational values](RATIONAL_CLASSIFICATION.md) for allocation-free
 sign, zero, one, and integer checks.
 
 See [rational bounds](RATIONAL_BOUNDS.md) for owning minimum, maximum, and clamp results.
+
+See [copying a rational sign](RATIONAL_COPY_SIGN.md) for exact `CopySign` results.

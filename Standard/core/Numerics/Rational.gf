@@ -115,6 +115,13 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         return move result;
     }
 
+    public static Rational CopySign(immutable(Rational)* value, immutable(Rational)* sign)
+    {
+        if ((value.Sign < 0) != (sign.Sign < 0)) return value.Negate();
+        Rational result = *value;
+        return move result;
+    }
+
     public immutable Rational Abs()
     {
         if (numerator.Sign < 0) return this.Negate();

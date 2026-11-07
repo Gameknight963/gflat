@@ -45,6 +45,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Vectors](../Standard/core/README.md#vectors), [Copying borrowed spans](../Standard/core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](../Standard/core/Collections/OWNING_COLLECTIONS.md) |
 | `Deque<T>` | [Deque](DEQUE.md) |
+| Queue, stack, and priority-queue `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | `PriorityQueue<T>.EnqueueDequeue`, `DequeueEnqueue` | [Replacing a priority queue root](PRIORITY_QUEUE_REPLACEMENT.md) |
 | `Span<T>.Windows` | [Sliding windows over borrowed spans](SPAN_WINDOWS.md) |
 | `Span<T>.Chunks` | [Borrowed span chunks](SPAN_CHUNKS.md) |

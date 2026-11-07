@@ -358,6 +358,11 @@ int main()
 
 Use FindIndex(false) for a free slot and the ordinary enumerator for all set bits.
 
+## Peeking without removal
+
+Queue, stack, and priority queue support optional [copying TryPeek
+extensions](../../../docs/COLLECTION_PEEK.md) for non-destructive reads.
+
 ## Priority queue
 
 `PriorityQueue<T>` owns a min-heap. A negative comparison gives the left element

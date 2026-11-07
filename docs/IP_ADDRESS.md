@@ -19,6 +19,9 @@ int main()
 
 ## Parsing
 
+For counted text views and byte buffers, see
+[address span parsing and formatting](IP_ADDRESS_SPANS.md).
+
 TryParse accepts counted text or a C string and writes an address result.
 Failure returns false and resets the result to IPv4 zero. Parse throws
 `Exception("Invalid IP address")` instead.

@@ -141,7 +141,7 @@ public sealed class IpAddressBinaryTests
     [Fact]
     public void SelectiveSourceBinaryTryContractNeedsNoStringCollectorOrLibcImplementation()
     {
-        string[] names = ["core/Net/IpAddress.gf", "core/ITextWriter.gf", "core/IFormattable.gf", "core/IEquatable.gf", "core/IComparable.gf",
+        string[] names = ["core/Memory/Span.gf", "core/Queries/Enumerable.gf", "core/Collections/IEnumerable.gf", "core/Net/IpAddress.gf", "core/ITextWriter.gf", "core/IFormattable.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))

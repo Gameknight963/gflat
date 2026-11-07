@@ -213,7 +213,7 @@ public sealed class IpAddressTests
     [Fact]
     public void SelectiveSourcesNeedNoStringOrLibcImplementationAndKeepTryOperationsNothrow()
     {
-        string[] names = ["core/Net/IpAddress.gf", "core/ITextWriter.gf", "core/IFormattable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
+        string[] names = ["core/Memory/Span.gf", "core/Queries/Enumerable.gf", "core/Collections/IEnumerable.gf", "core/Net/IpAddress.gf", "core/ITextWriter.gf", "core/IFormattable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("contract.gf", """
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;

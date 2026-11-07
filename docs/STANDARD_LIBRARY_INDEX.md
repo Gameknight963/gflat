@@ -202,6 +202,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Version field-count formatting and revision halves | [Formatting selected version fields](VERSION_FORMATTING.md) |
 | Version span parsing and formatting | [Parse and format versions through spans](VERSION_SPANS.md) |
 | `IpAddress` | [Numeric IP addresses](IP_ADDRESS.md) |
+| IP address span parsing, formatting, and byte conversion | [Parse and format address spans](IP_ADDRESS_SPANS.md) |
 | IP family conversion, loopback, and IPv6 prefixes | [Mapping and classifying IP addresses](IP_ADDRESS_MAPPING.md) |
 | `IpEndpoint` | [Numeric IP endpoints](IP_ENDPOINT.md) |
 | `IpNetwork`, `NetworkAddress`, `LastAddress` | [IP network prefixes](IP_NETWORK.md) |

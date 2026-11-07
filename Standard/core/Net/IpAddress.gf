@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Net;
 
 // Numeric address only: no port, zone, network prefix, or operating-system state.
@@ -85,6 +87,33 @@ public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashab
         }
         *result = parsed;
         return true;
+    }
+
+    public static bool TryFromBytes(Span<readonly(byte)> input, IpAddress* result) nothrow
+    {
+        if (input.Length != 4 && input.Length != 16)
+        {
+            *result = new IpAddress();
+            return false;
+        }
+        return TryFromBytes(input.Data!, input.Length, result);
+    }
+
+    public static IpAddress FromBytes(Span<readonly(byte)> input)
+    {
+        if (input.Length != 4 && input.Length != 16)
+            throw new Exception("IP address requires 4 or 16 bytes");
+        return FromBytes(input.Data!, input.Length);
+    }
+
+    public immutable bool TryWriteBytes(Span<byte> destination, ref nuint written) nothrow
+    {
+        if (destination.Length < this.ByteCount)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryWriteBytes(destination.Data!, destination.Length, ref written);
     }
 
     public static IpAddress FromBytes(readonly(byte)* input, nuint count)
@@ -260,6 +289,18 @@ public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashab
         return TryParse(text, count, result);
     }
 
+    public static bool TryParse(Span<readonly(char)> text, IpAddress* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static IpAddress Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
     public static IpAddress Parse(readonly(char)* text, nuint count)
     {
         IpAddress result = new();
@@ -309,6 +350,16 @@ public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashab
     // Counted ASCII without a terminator, at most 39 bytes. Stage the complete
     // representation before touching output, which may overlap this receiver.
     // written must be separate from output and the receiver's storage.
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;

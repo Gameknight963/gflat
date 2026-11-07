@@ -220,3 +220,5 @@ See [Choosing random items](RANDOM_ITEMS.md) for sampling into spans and owning 
 See [Generating random text](RANDOM_TEXT.md) for custom alphabets and hexadecimal strings.
 
 See [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) for signed component constructors.
+
+See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for integer endianness swaps.

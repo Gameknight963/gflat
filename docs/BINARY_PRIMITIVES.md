@@ -52,3 +52,5 @@ this marker. Freestanding programs provide it in their startup code. See
 For stream operations and their EOF/error behavior, see [binary IO](BINARY_IO.md).
 
 Source: `core/Binary/BinaryPrimitives.gf`
+
+See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for scalar byte swaps.

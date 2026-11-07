@@ -3,6 +3,42 @@ namespace Standard::Binary;
 // Unaligned, explicitly ordered integers. Counts describe readable/writable bytes.
 public static class BinaryPrimitives
 {
+    public static byte ReverseEndianness(byte value) nothrow => value;
+    public static sbyte ReverseEndianness(sbyte value) nothrow => value;
+
+    public static ushort ReverseEndianness(ushort value) nothrow
+        => (ushort)(((uint)value >> 8) | ((uint)value << 8));
+
+    public static short ReverseEndianness(short value) nothrow
+        => (short)ReverseEndianness((ushort)value);
+
+    public static uint ReverseEndianness(uint value) nothrow
+    {
+        uint swapped = ((value & 0x00ff00ffu) << 8) | ((value >> 8) & 0x00ff00ffu);
+        return (swapped << 16) | (swapped >> 16);
+    }
+
+    public static int ReverseEndianness(int value) nothrow
+        => (int)ReverseEndianness((uint)value);
+
+    public static ulong ReverseEndianness(ulong value) nothrow
+        => ((ulong)ReverseEndianness((uint)value) << 32) | (ulong)ReverseEndianness((uint)(value >> 32));
+
+    public static long ReverseEndianness(long value) nothrow
+        => (long)ReverseEndianness((ulong)value);
+
+    public static extralong ReverseEndianness(extralong value) nothrow
+        => ((extralong)ReverseEndianness((ulong)value) << 64) | (extralong)ReverseEndianness((ulong)(value >> 64));
+
+    public static nuint ReverseEndianness(nuint value) nothrow
+    {
+        static if (sizeof(nuint) == 8) return (nuint)ReverseEndianness((ulong)value);
+        else return (nuint)ReverseEndianness((uint)value);
+    }
+
+    public static nint ReverseEndianness(nint value) nothrow
+        => (nint)ReverseEndianness((nuint)value);
+
     public static bool TryReadUInt16LittleEndian(readonly(byte)* data, nuint count, ref ushort value) nothrow
     {
         if (count < 2) { value = 0; return false; }

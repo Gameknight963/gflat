@@ -58,7 +58,7 @@ public class Lexer
             {
                 int start = ++i;
                 while (i < code.Length && (char.IsAsciiLetterOrDigit(code[i]) || code[i] == '_')) i++;
-                tokens.Add(new Token(TokenKind.Identifier, line, start, i - 1, code[start..i]));
+                tokens.Add(new Token(TokenKind.Identifier, line, start, i - 1, code[start..i]) { IsEscapedIdentifier = true });
                 continue;
             }
 
@@ -237,7 +237,8 @@ public class Lexer
             Token token = tokens[t];
             int row = Array.BinarySearch(lineStarts, token.Start);
             if (row < 0) row = ~row - 1;
-            tokens[t] = new Token(token.Kind, row + 1, token.Start, token.End, token.Text, token.Start - lineStarts[row] + 1);
+            tokens[t] = new Token(token.Kind, row + 1, token.Start, token.End, token.Text, token.Start - lineStarts[row] + 1)
+                { IsEscapedIdentifier = token.IsEscapedIdentifier };
         }
         return tokens;
     }
@@ -403,7 +404,8 @@ public class Lexer
             {
                 var expressionTokens = Tokenize(source[expressionStart..i]);
                 tokens.AddRange(expressionTokens.Take(expressionTokens.Count - 1).Select(t =>
-                    new Token(t.Kind, line + t.Line - 1, expressionStart + t.Start, expressionStart + t.End, t.Text)));
+                    new Token(t.Kind, line + t.Line - 1, expressionStart + t.Start, expressionStart + t.End, t.Text)
+                        { IsEscapedIdentifier = t.IsEscapedIdentifier }));
             }
             tokens.Add(new(TokenKind.InterpolatedStringExprEnd, line, i, i));
             segmentStart = ++i;

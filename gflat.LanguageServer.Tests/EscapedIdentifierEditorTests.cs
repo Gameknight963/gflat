@@ -61,6 +61,8 @@ public sealed class EscapedIdentifierEditorTests
     [Theory]
     [InlineData("class @class {} @class* value;", "class", "class")]
     [InlineData("int Read(){int @while=0; return @while;}", "while", "variable")]
+    [InlineData("int Read(){int @move=0; return @move;}", "move", "variable")]
+    [InlineData("int Read(){int @ref=0; return @ref;}", "ref", "variable")]
     public void SemanticClassificationIncludesTheIdentifierEscape(string text, string name, string kind)
     {
         var source = new SourceFile(Path.GetFullPath("escaped-colors.gf"), text);

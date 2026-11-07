@@ -12,6 +12,7 @@ namespace gflat
         public int Start { get; }
         public int End { get; }
         public int Column { get; }
+        public bool IsEscapedIdentifier { get; internal init; }
         public SourceFile? Source { get; internal set; }
         internal int? ExpandedStart { get; init; }
         internal int? ExpandedEnd { get; init; }

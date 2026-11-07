@@ -115,7 +115,8 @@ public sealed partial class Preprocessor
                 range.Piece.Text.Length == origin.Length)
                 origin = origin.Source.Span(origin.Start + token.Start - range.Start, token.End - token.Start + 1);
             result.Add(new Token(token.Kind, origin.Line, origin.Start, origin.Start + Math.Max(1, origin.Length) - 1,
-                token.Text, origin.Column) { Source = origin.Source ?? root, ExpandedStart = token.Start, ExpandedEnd = token.End });
+                token.Text, origin.Column) { Source = origin.Source ?? root, ExpandedStart = token.Start, ExpandedEnd = token.End,
+                    IsEscapedIdentifier = token.IsEscapedIdentifier });
         }
         return result;
     }

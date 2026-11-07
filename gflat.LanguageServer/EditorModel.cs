@@ -797,6 +797,7 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
+        if (token.IsEscapedIdentifier) return false;
         if (token.Text == "this") return receiverKeywordTokens.Contains(token);
         if (token.Text is not ("move" or "copy" or "finalizer" or "at" or "ref" or "with" or "var" or "implementation" or "extension" or "explicit" or "constrained")) return false;
         using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("editor.value-keyword", token.Text) : null;

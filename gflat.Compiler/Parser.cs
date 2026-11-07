@@ -39,6 +39,9 @@ namespace gflat
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
 
+        private bool CheckContextual(string word, int offset = 0) =>
+            Peek(offset) is { Kind: TokenKind.Identifier, IsEscapedIdentifier: false } token && token.Text == word;
+
         private AstNode ParseDeclaration(Func<AstNode> parse) => RecoverSyntax(() =>
         {
             int start = _pos;
@@ -371,7 +374,7 @@ namespace gflat
             if (Check(TokenKind.Interface))
                 return Finish(ParseInterfaceDeclaration(accessibility, line, isStatic));
 
-            if (Check(TokenKind.Identifier) && Current.Text == "extension")
+            if (CheckContextual("extension"))
             {
                 if (firstAccessibility != null || isStatic || isReadonly || isConst || isAbstract || isInline ||
                     implementation != FunctionImplementationKind.Ordinary || attributes.Count != 0)
@@ -706,14 +709,14 @@ namespace gflat
             {
                 while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
                 {
-                    if (Check(TokenKind.Identifier) && Current.Text == "extension" && Peek().Kind == TokenKind.Identifier && Peek().Text == "implementation")
+                    if (CheckContextual("extension") && CheckContextual("implementation", 1))
                     {
                         Consume();
                         var implementation = ParsePrimitiveImplementation();
                         implementation.ExposesExtensions = true;
                         implementations.Add(implementation);
                     }
-                    else if (Check(TokenKind.Identifier) && Current.Text == "implementation" && Peek(2).Kind != TokenKind.OpenParen && Peek(2).Kind != TokenKind.Semicolon)
+                    else if (CheckContextual("implementation") && Peek(2).Kind != TokenKind.OpenParen && Peek(2).Kind != TokenKind.Semicolon)
                         implementations.Add(ParsePrimitiveImplementation());
                     else members.Add(ParseMember());
                 }
@@ -833,7 +836,7 @@ namespace gflat
             if (Check(TokenKind.Struct))
                 return Finish(ParseStructDeclaration(accessibility, line, attributes));
 
-            bool isFinalizer = Check(TokenKind.Identifier) && Current.Text == "finalizer" && Peek().Kind == TokenKind.Tilde;
+            bool isFinalizer = CheckContextual("finalizer") && Peek().Kind == TokenKind.Tilde;
             if (isFinalizer) Consume();
             if (Check(TokenKind.Tilde))
             {
@@ -847,7 +850,7 @@ namespace gflat
                 return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line) { IsFinalizer = isFinalizer });
             }
 
-            if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind == TokenKind.Identifier)
+            if (CheckContextual("move") && Peek().Kind == TokenKind.Identifier)
             {
                 if (isStatic || isConst || isReadonly || isVirtual || isOverride || isAbstract)
                     throw new TypeCheckException("A move constructor is an ordinary non-const instance constructor", Current.Span);
@@ -858,7 +861,7 @@ namespace gflat
                 return Finish(constructor);
             }
 
-            if (Check(TokenKind.Identifier) && Current.Text == "copy" && Peek().Kind == TokenKind.Identifier)
+            if (CheckContextual("copy") && Peek().Kind == TokenKind.Identifier)
             {
                 if (isStatic || isReadonly || isVirtual || isOverride || isAbstract)
                     RejectUnsupportedCallableModifier(modifierStart, modifierEnd, destructor: false, copy: true);
@@ -874,7 +877,7 @@ namespace gflat
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
 
-            if (Check(TokenKind.Identifier) && Current.Text == "explicit" && Peek().Kind == TokenKind.Operator)
+            if (CheckContextual("explicit") && Peek().Kind == TokenKind.Operator)
             {
                 if (!isStatic || isReadonly || isVirtual || isOverride || isAbstract ||
                     implementation != FunctionImplementationKind.Ordinary || _interfaceDepth != 0)
@@ -882,7 +885,7 @@ namespace gflat
                 return ApplyInline(ParseExplicitConversion(accessibility, line, attributes, isConst), isInline);
             }
 
-            bool isRef = Check(TokenKind.Identifier) && Current.Text == "ref";
+            bool isRef = CheckContextual("ref");
             if (isRef) Consume();
             TypeExpression type = ParseTypeExpression();
             string name;
@@ -926,7 +929,7 @@ namespace gflat
                 return Finish(ParseOperatorDeclaration(type, accessibility, true, line));
             }
 
-            if (Check(TokenKind.Identifier) && Current.Text == "this" && Peek().Kind == TokenKind.OpenBracket)
+            if (CheckContextual("this") && Peek().Kind == TokenKind.OpenBracket)
             {
                 Consume();
                 Consume();
@@ -1003,6 +1006,7 @@ namespace gflat
                 if (isImmutable && accessorReadOnly && !accessorImmutable)
                     throw new TypeCheckException("An immutable property cannot have a shallow readonly accessor", start.Span);
                 Token keyword = Expect(TokenKind.Identifier);
+                if (keyword.IsEscapedIdentifier) throw new TypeCheckException("Expected get or set accessor", keyword.Line);
                 bool getter = keyword.Text == "get";
                 if (!getter && keyword.Text != "set")
                     throw new TypeCheckException("Expected get or set accessor", keyword.Line);
@@ -1047,7 +1051,7 @@ namespace gflat
 
         private TypeExpression ParseParameterTypeCore()
         {
-            if (Check(TokenKind.Identifier) && Current.Text == "ref")
+            if (CheckContextual("ref"))
             {
                 int line = Consume().Line;
                 return new ReferenceTypeExpression(ParseTypeExpression(), line);
@@ -1060,7 +1064,7 @@ namespace gflat
         private Parameter ParseParameterCoreLocated()
         {
             int line = Current.Line;
-            bool isReceiver = Check(TokenKind.Identifier) && Current.Text == "this";
+            bool isReceiver = CheckContextual("this");
             if (isReceiver) throw new TypeCheckException("The this parameter modifier was removed; use an extension block with a borrowed instance receiver", Current.Span);
             bool isConst = Match(TokenKind.Const);
             TypeExpression paramType = ParseParameterType();
@@ -1604,7 +1608,7 @@ namespace gflat
         private bool IsVariableDeclaration(out Token? missingName)
         {
             missingName = null;
-            if (Check(TokenKind.Identifier) && Current.Text == "move") return false;
+            if (CheckContextual("move")) return false;
             // look ahead to see if this is "type name" or "type* name" etc
             int saved = _pos;
             var savedTokens = _tokens;
@@ -1638,11 +1642,11 @@ namespace gflat
 
         private bool IsConstrainedAliasModifier()
         {
-            if (!Check(TokenKind.Identifier) || Current.Text != "constrained") return false;
+            if (!CheckContextual("constrained")) return false;
             int offset = 1;
             while (Peek(offset).Kind is TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal or
                 TokenKind.Weak or TokenKind.Expect or TokenKind.Replace ||
-                Peek(offset).Kind == TokenKind.Identifier && Peek(offset).Text == "constrained") offset++;
+                CheckContextual("constrained", offset)) offset++;
             return Peek(offset).Kind == TokenKind.Alias;
         }
 
@@ -2064,18 +2068,18 @@ namespace gflat
 
         private AstNode ParsePrefixCoreLocated()
         {
-            if (Check(TokenKind.Identifier) && Current.Text == "ref")
+            if (CheckContextual("ref"))
             {
                 int refLine = Consume().Line;
                 return new UnaryExpression(ParseExpression(23), TokenKind.Ref, true, refLine);
             }
 
-            if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind != TokenKind.OpenParen)
+            if (CheckContextual("move") && Peek().Kind != TokenKind.OpenParen)
             {
                 int moveLine = Consume().Line;
                 AstNode operand = ParseExpression(23);
                 AstNode? destination = null;
-                if (Check(TokenKind.Identifier) && Current.Text == "at")
+                if (CheckContextual("at"))
                 {
                     Consume();
                     destination = ParseExpression(17);
@@ -2301,7 +2305,7 @@ namespace gflat
                 Expect(TokenKind.CloseParen);
                 AstNode? destination = null;
                 SourceSpan placementSpan = default;
-                if (Check(TokenKind.Identifier) && Current.Text == "at")
+                if (CheckContextual("at"))
                 {
                     placementSpan = Consume().Span;
                     if (!targetTyped && kind != AllocationKind.Pointer)
@@ -2311,7 +2315,7 @@ namespace gflat
                     destination = ParseExpression(17);
                 }
                 TypeExpression? collector = null;
-                if (Check(TokenKind.Identifier) && Current.Text == "with")
+                if (CheckContextual("with"))
                 {
                     Token keyword = Consume();
                     if (!targetTyped && kind != AllocationKind.Managed) throw new TypeCheckException("A collector can only be selected for new^", keyword.Span);

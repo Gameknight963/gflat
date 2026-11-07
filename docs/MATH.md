@@ -142,3 +142,6 @@ See [Choosing a rounding mode](MIDPOINT_ROUNDING.md) for midpoint and directed r
 See [Scaling by powers of two](MATH_SCALE_B.md) for ScaleB.
 
 See [Full-width integer multiplication](MATH_BIG_MUL.md) for BigMul.
+
+See [mathematical constants and angle conversion](MATH_ANGLES.md) for E, PI,
+Tau, DegreesToRadians, and RadiansToDegrees.

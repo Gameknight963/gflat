@@ -163,6 +163,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Two-bound unsigned random draws | [Unsigned random ranges](RANDOM_UNSIGNED_RANGES.md) |
 | `Span<T>.Overlaps` | [Checking span overlap](SPAN_OVERLAP.md) |
 | `Math` | [Scalar math](MATH.md) |
+| Mathematical constants and angle conversion | [Constants, degrees, and radians](MATH_ANGLES.md) |
 | Integer `Math::CopySign` | [Copying integer signs](INTEGER_COPY_SIGN.md) |
 | `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
 | `PseudoRandom` | [Deterministic pseudorandom values](PSEUDORANDOM.md) |

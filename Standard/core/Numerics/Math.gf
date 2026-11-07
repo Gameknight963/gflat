@@ -13,6 +13,22 @@ public enum MidpointRounding
 // operations require the ordinary exception/allocation support.
 public static class Math
 {
+    public static const double E = 2.71828182845904523536028747135266249775724709369995d;
+    public static const double PI = 3.14159265358979323846264338327950288419716939937510d;
+    public static const double Tau = 6.28318530717958647692528676655900576839433879875021d;
+
+    public static float DegreesToRadians(float degrees) nothrow
+        => (degrees * (float)PI) / 180.0f;
+
+    public static double DegreesToRadians(double degrees) nothrow
+        => (degrees * PI) / 180.0d;
+
+    public static float RadiansToDegrees(float radians) nothrow
+        => (radians * 180.0f) / (float)PI;
+
+    public static double RadiansToDegrees(double radians) nothrow
+        => (radians * 180.0d) / PI;
+
     public static int Sign(sbyte value) nothrow
     {
         if (value < (sbyte)0) return -1;

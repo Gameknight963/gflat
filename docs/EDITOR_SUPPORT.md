@@ -26,6 +26,10 @@ members and overrides are renamed together. Documentation references and
 `nameof` follow their declarations. Rename requires an error-free project and
 checks the edited project for errors and changed bindings.
 
+Bundled library source opens read-only in Visual Studio. Rename is unavailable
+when it would change installed library source. Project source libraries remain
+editable.
+
 - Ctrl-click `override` to open the overridden base member
 - Go to Implementation finds interface implementations and overrides
 - Type hierarchy requests show direct bases and derived types
@@ -232,6 +236,11 @@ The server uses JSON-RPC over stdin/stdout. Stderr is reserved for server logs. 
 advertises incremental synchronization and also accepts full-text replacements,
 uses UTF-16 positions, and publishes versioned diagnostics.
 
+Clients can mark library directories read-only with `readOnlySourceRoots` in
+initialization options, an array of absolute directory paths. Navigation remains
+available. Rename, formatting, and quick-action edits cannot change files under
+those directories.
+
 ## Analysis and maintenance
 
 ### Analysis lifecycle
@@ -335,5 +344,3 @@ Visual Studio's Quick Info settings include **Show language construct explanatio
 It is off by default. Other clients can set `gflat.showLanguageConstructs` to `true`.
 This enables brief keyword and directive explanations while preserving symbol hovers.
 
-Bundled library files opened from the installed extension are read-only in Visual
-Studio. Source libraries in your project remain editable.

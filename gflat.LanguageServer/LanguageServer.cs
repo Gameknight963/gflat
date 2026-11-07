@@ -164,6 +164,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                             root = Workspace.FilePath(rootUri.GetString()!);
                         else if (parameters.TryGetProperty("workspaceFolders", out var folders) && folders.ValueKind == JsonValueKind.Array && folders.GetArrayLength() > 0)
                             root = Workspace.FilePath(folders[0].GetProperty("uri").GetString()!);
+                        ConfigureReadOnlySources(parameters.TryGetProperty("initializationOptions", out var sourceOptions) ? sourceOptions : default);
                         initialized = true;
                         hierarchicalDocumentSymbols = parameters.TryGetProperty("capabilities", out var capabilities) &&
                             capabilities.TryGetProperty("textDocument", out var textDocumentCapabilities) &&
@@ -392,6 +393,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
             int offset = query.Parameters.TryGetProperty("position", out var position) ? Workspace.Offset(document.Text, position) : 0;
             if (IsFormattingRequest(query.Method))
             {
+                if (IsReadOnlySource(path)) { await Reply(query.Id, Array.Empty<SourceEdit>()); return; }
                 var settings = query.Parameters.GetProperty("options");
                 var format = new FormattingOptions(settings.GetProperty("tabSize").GetInt32(), settings.GetProperty("insertSpaces").GetBoolean(),
                     settings.TryGetProperty("gflat.bracesOnNewLine", out var placement) ? placement.GetBoolean() : bracesOnNewLine);
@@ -416,10 +418,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 "textDocument/implementation" => model.Implementations(path, offset),
                 "textDocument/codeAction" => model.CodeActions(path, range ?? new(new(0, 0), new(0, 0))).Where(action =>
                     !query.Parameters.TryGetProperty("context", out var context) || !context.TryGetProperty("only", out var only) ||
-                    only.EnumerateArray().Any(kind => action.Kind == kind.GetString() || action.Kind.StartsWith(kind.GetString() + ".", StringComparison.Ordinal))).ToArray(),
+                    only.EnumerateArray().Any(kind => action.Kind == kind.GetString() || action.Kind.StartsWith(kind.GetString() + ".", StringComparison.Ordinal))).Where(WritableCodeAction).ToArray(),
                 "textDocument/prepareTypeHierarchy" => model.PrepareTypeHierarchy(path, offset),
                 "textDocument/documentHighlight" => model.DocumentHighlights(path, offset),
-                "textDocument/prepareRename" => model.PrepareRename(path, offset),
+                "textDocument/prepareRename" => PrepareRename(model, path, offset),
                 "textDocument/rename" => RenameWorkspaceEdit(model, path, offset,
                     query.Parameters.GetProperty("newName").GetString() ?? throw new ArgumentException("newName must be a string")),
                 "textDocument/references" => model.References(path, offset,
@@ -436,7 +438,10 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
 
     private object RenameWorkspaceEdit(EditorModel model, string path, int offset, string name)
     {
-        var groups = model.Rename(path, offset, name).GroupBy(edit => edit.Path, Workspace.Paths).ToArray();
+        if (ReadOnlyDeclaration(model, path, offset)) throw new InvalidOperationException("Rename would change read-only library source.");
+        var edits = model.Rename(path, offset, name);
+        if (edits.Any(edit => IsReadOnlySource(edit.Path))) throw new InvalidOperationException("Rename would change read-only library source.");
+        var groups = edits.GroupBy(edit => edit.Path, Workspace.Paths).ToArray();
         if (!versionedWorkspaceEdits)
             return new { changes = groups.ToDictionary(group => Workspace.FileUri(group.Key),
                 group => group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()) };

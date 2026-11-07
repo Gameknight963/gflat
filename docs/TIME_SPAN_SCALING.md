@@ -62,6 +62,6 @@ Zero divided by zero produces NaN. The result can lose precision because tick
 counts are converted to double first.
 
 Successful duration arithmetic does not allocate. Selective builds add
-`Time/time_span_scaling.gf` and `Numerics/Math.gf` alongside `Time/TimeSpan.gf`
+`Time/time_span_scaling.gf` alongside `Time/TimeSpan.gf`
 to use the scaling extensions. `Duration()` is part of the base type and has
 no dependency on the scaling extension.

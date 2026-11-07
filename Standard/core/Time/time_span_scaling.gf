@@ -1,5 +1,3 @@
-using Standard::Numerics;
-
 namespace Standard::Time;
 
 namespace time_span_detail
@@ -10,6 +8,15 @@ namespace time_span_detail
         if (ticks != ticks || ticks < -limit || ticks > limit)
             throw new Exception("TimeSpan scaling overflow");
         if (ticks == limit) return TimeSpan::FromTicks(9223372036854775807l);
+        // Doubles of magnitude 2^52 or greater already represent whole ticks.
+        if (ticks > -4503599627370496d && ticks < 4503599627370496d)
+        {
+            long whole = (long)ticks;
+            double fraction = ticks - (double)whole;
+            if (fraction > 0.5d || (fraction == 0.5d && whole % 2l != 0l)) whole++;
+            if (fraction < -0.5d || (fraction == -0.5d && whole % 2l != 0l)) whole--;
+            return TimeSpan::FromTicks(whole);
+        }
         return TimeSpan::FromTicks((long)ticks);
     }
 }
@@ -29,14 +36,14 @@ extension TimeSpan
     {
         if (factor != factor) throw new Exception("TimeSpan factor must not be NaN");
         double scaled = (double)(*this).Ticks * factor;
-        return time_span_detail::FromRoundedTicks(Math::Round(scaled));
+        return time_span_detail::FromRoundedTicks(scaled);
     }
 
     public immutable TimeSpan Divide(double divisor)
     {
         if (divisor != divisor) throw new Exception("TimeSpan divisor must not be NaN");
         double scaled = (double)(*this).Ticks / divisor;
-        return time_span_detail::FromRoundedTicks(Math::Round(scaled));
+        return time_span_detail::FromRoundedTicks(scaled);
     }
 
     public immutable double Divide(TimeSpan divisor) nothrow

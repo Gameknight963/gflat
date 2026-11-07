@@ -36,7 +36,7 @@ public sealed class TimeSpanScalingTests
             }
             """;
         var sources = StandardTestSources.Combine(StandardTestSources.Values, StandardTestSources.Load(
-            "core/Time/TimeSpan.gf", "core/Time/time_span_scaling.gf", "core/Numerics/Math.gf"))
+            "core/Time/TimeSpan.gf", "core/Time/time_span_scaling.gf"))
             .Append(new SourceFile("timespan-scaling-noallocation.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"TimeSpan allocation check exit {result.ExitCode}: {result.StandardError}");
@@ -132,7 +132,7 @@ public sealed class TimeSpanScalingTests
                 }
                 """;
             var sources = StandardTestSources.Combine(StandardTestSources.Values, StandardTestSources.Load(
-                "core/Time/TimeSpan.gf", "core/Time/time_span_scaling.gf", "core/Numerics/Math.gf"))
+                "core/Time/TimeSpan.gf", "core/Time/time_span_scaling.gf"))
                 .Append(new SourceFile("timespan-scaling.gf", program));
             var result = CompilerTestHelper.Run(sources, optimization);
             Assert.True(result.ExitCode == 0, $"TimeSpan scaling exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
@@ -143,8 +143,8 @@ public sealed class TimeSpanScalingTests
     private static IEnumerable<(byte Operation, long Ticks, ulong Operand, ulong Expected, bool Valid)> Cases()
     {
         List<long> ticks = [long.MinValue, long.MinValue + 1, long.MaxValue - 1, long.MaxValue,
-            -9007199254740993, -9007199254740992, -10000001, -9, -5, -3, -2, -1,
-            0, 1, 2, 3, 5, 9, 10000001, 9007199254740992, 9007199254740993];
+            -9007199254740993, -9007199254740992, -4503599627370497, -4503599627370496, -4503599627370495, -10000001, -9, -5, -3, -2, -1,
+            0, 1, 2, 3, 5, 9, 10000001, 4503599627370495, 4503599627370496, 4503599627370497, 9007199254740992, 9007199254740993];
         List<double> factors = [0, -0.0, -1, 1, 0.5, -0.5, 1.5, -1.5, 2, -2, 3, -3,
             Math.BitDecrement(1d), Math.BitIncrement(1d), double.Epsilon, -double.Epsilon,
             1e300, -1e300, 1e-300, -1e-300, double.MaxValue, double.MinValue,

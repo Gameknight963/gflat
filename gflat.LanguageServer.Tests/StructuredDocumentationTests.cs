@@ -5,6 +5,38 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class StructuredDocumentationTests
 {
+    [Fact]
+    public void AGenericReferenceTargetsItsOuterDeclarationName()
+    {
+        const string code = "struct Item<T> {}\n/// Returns @ref Item<Item>.\nint Read()=>0;";
+        var (model, source) = Analyze(code);
+        Assert.Empty(model.DocumentationIssues);
+        var expected = model.Definition(source.Path, code.IndexOf("Item", StringComparison.Ordinal));
+        Assert.NotNull(expected);
+        Assert.Equal(expected, model.Definition(source.Path, code.IndexOf("@ref Item", StringComparison.Ordinal) + 5));
+    }
+
+    [Theory]
+    [InlineData("throws")]
+    [InlineData("throw")]
+    [InlineData("exception")]
+    public void RenamingQualifiedExceptionDocumentationPreservesItsNamespace(string tag)
+    {
+        string code = "namespace Types { public class Problem {} }\n/// @" + tag + " Types::Problem When input is invalid\nint Read()=>0;";
+        var (model, source) = Analyze(code);
+        Assert.Empty(model.DocumentationIssues);
+        var edits = model.Rename(source.Path, code.IndexOf("Problem", StringComparison.Ordinal), "Failure");
+        string changed = code;
+        foreach (var edit in edits.OrderByDescending(edit => Workspace.Offset(code, JsonSerializer.SerializeToElement(edit.Range.Start, Protocol.JsonOptions))))
+        {
+            int start = Workspace.Offset(code, JsonSerializer.SerializeToElement(edit.Range.Start, Protocol.JsonOptions));
+            int end = Workspace.Offset(code, JsonSerializer.SerializeToElement(edit.Range.End, Protocol.JsonOptions));
+            changed = changed.Remove(start, end - start).Insert(start, edit.NewText);
+        }
+        Assert.Contains("@" + tag + " Types::Failure", changed);
+        Assert.Empty(Analyze(changed).Model.DocumentationIssues);
+    }
+
     private static (EditorModel Model, SourceFile Source) Analyze(string text)
     {
         var source = new SourceFile(Path.GetFullPath("structured-documentation.gf"), text);

@@ -55,22 +55,24 @@ public sealed partial class EditorModel
             {
                 var exception = DocumentationTarget(symbol, section.Name);
                 if (exception == null || !IsType(exception.Syntax.Node)) documentationIssues.Add(new(section.NameSpan, "Unresolved exception type '" + section.Name + "'"));
-                else documentationReferences[section.NameSpan] = exception;
+                else IndexDocumentationReference(section.NameSpan, section.Name, exception);
             }
         }
         foreach (var part in documentation.Summary.Concat(documentation.Sections.SelectMany(s => s.Content)).Where(p => p.Kind == "reference"))
         {
             var target = DocumentationTarget(symbol, part.Text);
             if (target == null) documentationIssues.Add(new(part.Span, "Unresolved or ambiguous documentation reference '" + part.Text + "'"));
-            else
-            {
-                int beforeSignature = part.Text.IndexOf('(');
-                string prefix = beforeSignature < 0 ? part.Text : part.Text[..beforeSignature];
-                int name = prefix.LastIndexOf(target.Name, StringComparison.Ordinal);
-                if (name >= 0 && part.Span.Source != null && part.Span.Length == part.Text.Length)
-                    documentationReferences[part.Span.Source.Span(part.Span.Start + name, target.Name.Length)] = target;
-            }
+            else IndexDocumentationReference(part.Span, part.Text, target);
         }
+    }
+
+    private void IndexDocumentationReference(SourceSpan span, string spelling, Symbol target)
+    {
+        if (span.Source == null || span.Length != spelling.Length) return;
+        int suffix = spelling.IndexOfAny(['(', '<']);
+        string prefix = suffix < 0 ? spelling : spelling[..suffix];
+        int name = prefix.LastIndexOf(target.Name, StringComparison.Ordinal);
+        if (name >= 0) documentationReferences[span.Source.Span(span.Start + name, target.Name.Length)] = target;
     }
 
     private (SourceSpan Span, Symbol Symbol)? DocumentationReferenceAt(string path, int offset)

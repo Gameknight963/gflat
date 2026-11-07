@@ -210,4 +210,34 @@ public sealed class NativeStdioTests
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void MonotonicClockBridgeUsesTheCOnlyHostProfile(int optimization)
+    {
+        string ir = Compiler.Emit("""
+            extern "C" int __gflat_stdio_monotonic_frequency(long*? value) nothrow;
+            extern "C" int __gflat_stdio_monotonic_timestamp(long*? value) nothrow;
+            int main() nothrow
+            {
+                long frequency = 0l;
+                long previous = 0l;
+                if (__gflat_stdio_monotonic_frequency(&frequency) != 1 || frequency <= 0l) return 1;
+                if (__gflat_stdio_monotonic_timestamp(&previous) != 1) return 2;
+                for (int i = 0; i < 10000; i++)
+                {
+                    long next = 0l;
+                    if (__gflat_stdio_monotonic_timestamp(&next) != 1 || next < previous) return 3;
+                    previous = next;
+                }
+                long again = 0l;
+                if (__gflat_stdio_monotonic_frequency(&again) != 1 || again != frequency) return 4;
+                if (__gflat_stdio_monotonic_frequency(null) != 0 || __gflat_stdio_monotonic_timestamp(null) != 0) return 5;
+                return 0;
+            }
+            """, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
+        Assert.Equal((false, true), NativeToolchain.RequiredNativeRuntimes(ir));
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
 }

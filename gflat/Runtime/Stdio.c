@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <time.h>
 #ifdef _WIN32
 #include <direct.h>
 #include <io.h>
@@ -99,6 +100,36 @@ int __gflat_stdio_set_length(void* stream, int64_t length) {
     if ((int64_t)native_length != length) { errno = EOVERFLOW; return -1; }
     return ftruncate(fileno((FILE*)stream), native_length);
 #endif
+}
+
+int __gflat_stdio_monotonic_frequency(int64_t* value) {
+    if (value == NULL) return 0;
+#ifdef _WIN32
+    LARGE_INTEGER frequency;
+    if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0) return 0;
+    *value = frequency.QuadPart;
+#else
+    *value = INT64_C(1000000000);
+#endif
+    return 1;
+}
+
+int __gflat_stdio_monotonic_timestamp(int64_t* value) {
+    if (value == NULL) return 0;
+#ifdef _WIN32
+    LARGE_INTEGER timestamp;
+    if (!QueryPerformanceCounter(&timestamp)) return 0;
+    *value = timestamp.QuadPart;
+#else
+    struct timespec timestamp;
+    if (clock_gettime(CLOCK_MONOTONIC, &timestamp) != 0) return 0;
+    if (timestamp.tv_sec < 0 || timestamp.tv_nsec < 0 || timestamp.tv_nsec >= 1000000000L) return 0;
+    uint64_t seconds = (uint64_t)timestamp.tv_sec;
+    uint64_t nanoseconds = (uint64_t)timestamp.tv_nsec;
+    if (seconds > ((uint64_t)INT64_MAX - nanoseconds) / UINT64_C(1000000000)) return 0;
+    *value = (int64_t)(seconds * UINT64_C(1000000000) + nanoseconds);
+#endif
+    return 1;
 }
 
 // 1 is success, -1 requests a larger caller-owned buffer, 0 is an IO error.

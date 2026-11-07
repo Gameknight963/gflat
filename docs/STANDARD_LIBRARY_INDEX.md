@@ -170,6 +170,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |
 | Date/time component constructors | [Constructing dates and timestamps from components](TEMPORAL_CONSTRUCTION.md) |
 | Date/time `AddTicks`, `AddDays` through `AddMicroseconds` | [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) |
+| `MonotonicClock` | [Measuring system elapsed time](MONOTONIC_CLOCK.md) |
 | `Stopwatch<C>`, `IMonotonicClock` | [Measuring intervals](STOPWATCH.md) |
 | `Stopwatch<C>::GetElapsedTime`, `ElapsedMilliseconds` | [Measuring between timestamps](STOPWATCH_INTERVALS.md) |
 | Temporal `MinValue`, `MaxValue`, `TimeSpan::Zero` and tick units | [Time value limits and tick units](TEMPORAL_LIMITS.md) |

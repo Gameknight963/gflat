@@ -6,7 +6,8 @@ that implements static `IMonotonicClock` members:
 - `long GetTimestamp()` reads a counter
 - `long GetFrequency()` gives its fixed positive ticks-per-second frequency
 
-For example, use a controlled clock to test timing behavior:
+For real elapsed time, use the system [MonotonicClock](MONOTONIC_CLOCK.md).
+Use a controlled clock to test timing behavior:
 
 ```csharp
 using Standard;

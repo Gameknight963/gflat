@@ -22,6 +22,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `LinePrefixWriter` | [Prefix streamed lines](LINE_PREFIX_WRITER.md) |
 | `ITextWriter*` `WriteLine`, `WriteRepeated`, and `WriteJoin` overloads | [Text writer helpers](TEXT_WRITERS.md) |
 | `String.ReplaceLineEndings()` | [Normalize line endings](LINE_ENDINGS.md) |
+| String arguments for search and replacement | [Using owning strings as search arguments](STRING_ARGUMENTS.md) |
 | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `ReadAtLeast`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](BYTE_READERS.md) |
 | `ReadToEnd()` and `ReadToEnd(ref text)` | [Read the remaining input](READ_TO_END.md) |
 | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Binary scalar IO](BINARY_IO.md) |

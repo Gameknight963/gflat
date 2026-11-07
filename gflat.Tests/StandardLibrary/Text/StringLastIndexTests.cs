@@ -81,7 +81,7 @@ public sealed class StringLastIndexTests
         Assert.True(probe.Success);Assert.Contains("nounwind",probe.Value);
         Assert.DoesNotContain("invoke ",probe.Value);Assert.DoesNotContain("personality",probe.Value);
         string[] searches=ir.Split('\n').Where(line=>line.StartsWith("define ")&&Regex.IsMatch(line,@"\$String\$LastIndexOf(?:\$|\()")).ToArray();
-        Assert.Equal(3,searches.Length);Assert.All(searches,line=>Assert.Contains("nounwind",line));
+        Assert.Equal(4,searches.Length);Assert.All(searches,line=>Assert.Contains("nounwind",line));
         Run(code,optimization);
     }
 

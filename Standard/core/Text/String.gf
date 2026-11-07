@@ -333,6 +333,19 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return this.EndsWith(text, count);
     }
 
+    public immutable nuint IndexOf(immutable(String)* text, nuint start = 0)
+        => this.IndexOf(text.Data, text.Length, start);
+    public immutable nuint LastIndexOf(immutable(String)* text) nothrow
+        => this.LastIndexOf(text.Data, text.Length);
+    public immutable bool Contains(immutable(String)* text)
+        => this.Contains(text.Data, text.Length);
+    public immutable bool StartsWith(immutable(String)* text) nothrow
+        => this.StartsWith(text.Data, text.Length);
+    public immutable bool EndsWith(immutable(String)* text) nothrow
+        => this.EndsWith(text.Data, text.Length);
+    public void Replace(immutable(String)* oldText, immutable(String)* newText)
+        => this.Replace(oldText.Data, oldText.Length, newText.Data, newText.Length);
+
     // Removes a valid byte range in place, shifting the suffix and retaining capacity.
     public void Remove(nuint start, nuint count)
     {

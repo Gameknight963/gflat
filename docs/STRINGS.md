@@ -151,3 +151,5 @@ int main()
 
 Sources: `core/Text/String.gf`, `string_span.gf` for views, and `Text/ByteSearch.gf`
 for substring search.
+
+See [Using owning strings as search arguments](STRING_ARGUMENTS.md) for borrowed String search and replacement overloads.

@@ -4,6 +4,8 @@
 Supply a comparer returning negative, zero, or positive for key order. Zero
 identifies equivalent keys.
 
+Its borrowed [key and value collection views](MAP_COLLECTION_VIEWS.md) follow that key order.
+
 ```csharp
 using Standard;
 using Standard::Collections;

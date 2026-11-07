@@ -8,7 +8,7 @@ namespace hash_detail
 }
 
 // Owns keys and values. Keys must also implement IEquatable<K>.
-// Lookups borrow keys; insertion/Reserve can rehash and invalidate borrowed views.
+// Lookups borrow keys. Structural mutation invalidates element borrows and active iterators.
 struct HashMap<K : IHashable, V>
 {
     private Entry*? entries;
@@ -276,6 +276,44 @@ struct HashMap<K : IHashable, V>
             states![i] = 0;
         }
         count = 0; used = 0;
+    }
+
+    public KeyCollection Keys { immutable get nothrow => new KeyCollection(this); }
+    public ValueCollection Values { immutable get nothrow => new ValueCollection(this); }
+
+    // Collection views borrow the map object. New enumerators see its current storage.
+    public struct KeyCollection
+    {
+        private immutable(HashMap<K, V>)* source;
+        private KeyCollection(immutable(HashMap<K, V>)* owner) nothrow { source = owner; }
+        public nuint Count { immutable get nothrow => source.Count; }
+        public bool IsEmpty { immutable get nothrow => source.IsEmpty; }
+        public immutable KeyEnumerator GetEnumerator() => new KeyEnumerator(source.GetEnumerator());
+    }
+
+    public struct ValueCollection
+    {
+        private immutable(HashMap<K, V>)* source;
+        private ValueCollection(immutable(HashMap<K, V>)* owner) nothrow { source = owner; }
+        public nuint Count { immutable get nothrow => source.Count; }
+        public bool IsEmpty { immutable get nothrow => source.IsEmpty; }
+        public immutable ValueEnumerator GetEnumerator() => new ValueEnumerator(source.GetEnumerator());
+    }
+
+    public struct KeyEnumerator
+    {
+        private HashMap<K, V>::Enumerator iterator;
+        public KeyEnumerator(HashMap<K, V>::Enumerator source) { iterator = source; }
+        public bool MoveNext() => iterator.MoveNext();
+        public immutable(K)* Current { immutable get => iterator.Current.Key; }
+    }
+
+    public struct ValueEnumerator
+    {
+        private HashMap<K, V>::Enumerator iterator;
+        public ValueEnumerator(HashMap<K, V>::Enumerator source) { iterator = source; }
+        public bool MoveNext() => iterator.MoveNext();
+        public immutable(V)* Current { immutable get => iterator.Current.ValueImmutable; }
     }
 
     public immutable Enumerator GetEnumerator() => new Enumerator(entries, states, capacity);

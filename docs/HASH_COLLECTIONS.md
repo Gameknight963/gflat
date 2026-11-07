@@ -6,6 +6,8 @@ optional `TryGetValue` extension, or borrow it with `Find`.
 `Standard::Collections::HashMap<K,V>` owns keys and values. `HashSet<T>` owns
 unique elements.
 
+Maps expose borrowed [key and value collection views](MAP_COLLECTION_VIEWS.md).
+
 ```csharp
 using Standard::Text;
 using Standard;

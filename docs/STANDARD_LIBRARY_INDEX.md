@@ -71,6 +71,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `HashMap<K,V>`, `HashSet<T>`, query `ToHashSet` | [Hash collections](HASH_COLLECTIONS.md), [Materializing query results into a set](QUERY_HASH_SET.md) |
 | Hash-table `EnsureCapacity`, `TrimExcess` | [Reserving and trimming hash tables](HASH_CAPACITY.md) |
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
+| Map `Keys` and `Values` | [Enumerating map keys and values](MAP_COLLECTION_VIEWS.md) |
 | Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
 | Map `ContainsValue` | [Searching map values](MAP_VALUE_SEARCH.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |

@@ -176,6 +176,44 @@ struct SortedMap<K, V>
         return storage.RemoveAt(index);
     }
 
+    public KeyCollection Keys { immutable get nothrow => new KeyCollection(this); }
+    public ValueCollection Values { immutable get nothrow => new ValueCollection(this); }
+
+    // Collection views borrow the map object. New enumerators see its current storage.
+    public struct KeyCollection
+    {
+        private immutable(SortedMap<K, V>)* source;
+        private KeyCollection(immutable(SortedMap<K, V>)* owner) nothrow { source = owner; }
+        public nuint Count { immutable get nothrow => source.Count; }
+        public bool IsEmpty { immutable get nothrow => source.IsEmpty; }
+        public immutable KeyEnumerator GetEnumerator() => new KeyEnumerator(source.GetEnumerator());
+    }
+
+    public struct ValueCollection
+    {
+        private immutable(SortedMap<K, V>)* source;
+        private ValueCollection(immutable(SortedMap<K, V>)* owner) nothrow { source = owner; }
+        public nuint Count { immutable get nothrow => source.Count; }
+        public bool IsEmpty { immutable get nothrow => source.IsEmpty; }
+        public immutable ValueEnumerator GetEnumerator() => new ValueEnumerator(source.GetEnumerator());
+    }
+
+    public struct KeyEnumerator
+    {
+        private SortedMap<K, V>::Enumerator iterator;
+        public KeyEnumerator(SortedMap<K, V>::Enumerator source) { iterator = source; }
+        public bool MoveNext() => iterator.MoveNext();
+        public immutable(K)* Current { immutable get => iterator.Current.Key; }
+    }
+
+    public struct ValueEnumerator
+    {
+        private SortedMap<K, V>::Enumerator iterator;
+        public ValueEnumerator(SortedMap<K, V>::Enumerator source) { iterator = source; }
+        public bool MoveNext() => iterator.MoveNext();
+        public immutable(V)* Current { immutable get => iterator.Current.ValueImmutable; }
+    }
+
     public immutable Enumerator GetEnumerator() => new Enumerator(storage.AsImmutable());
 
     public struct Enumerator

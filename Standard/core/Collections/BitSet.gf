@@ -78,6 +78,12 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
 
     public void Clear() nothrow { this.SetAll(false); }
 
+    public void Not() nothrow
+    {
+        for (nuint i = 0; i < words; i++) data![i] = ~data![i];
+        this.MaskUnusedBits();
+    }
+
     // Shifts keep Length, discard outgoing bits, and clear the vacated positions.
     public void ShiftLeft(nuint count) nothrow
     {

@@ -47,6 +47,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Vectors](../Standard/core/README.md#vectors), [Copying borrowed spans](../Standard/core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](../Standard/core/Collections/OWNING_COLLECTIONS.md) |
+| `BitSet.Not` | [Inverting every bit](BIT_SET_COMPLEMENT.md) |
 | `Deque<T>` | [Deque](DEQUE.md) |
 | Collection `EnsureCapacity`, `TrimExcess`, `ShrinkToFit` | [Controlling collection capacity](COLLECTION_CAPACITY.md) |
 | Vector/deque `Contains`, `IndexOf`, `LastIndexOf`, `RemoveValue` | [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) |

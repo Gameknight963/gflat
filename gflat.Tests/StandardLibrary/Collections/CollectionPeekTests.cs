@@ -120,8 +120,18 @@ public sealed partial class CollectionPeekTests
                         if (queue.Count != (nuint)row[2] || stack.Count != (nuint)row[2] || priority.Count != (nuint)row[2]) return 7;
                         if (expected)
                         {
+                            if (qView.Peek() != q || sView.Peek() != s || pView.Peek() != p) return 11;
+                            if (Peek(qView) != q || Peek(sView) != s || Peek(pView) != p) return 12;
                             if (!queue.TryPeek(ref queue.Front) || !stack.TryPeek(ref stack.Top)) return 8;
                             if (queue.Front != q || stack.Top != s) return 9;
+                        }
+                        else
+                        {
+                            int caught = 0;
+                            try { queue.Peek(); } catch (Exception* error) { caught++; }
+                            try { stack.Peek(); } catch (Exception* error) { caught++; }
+                            try { priority.Peek(); } catch (Exception* error) { caught++; }
+                            if (caught != 3) return 13;
                         }
                     }
                     if (ferror(file!) != 0) return 10;

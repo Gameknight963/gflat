@@ -76,6 +76,12 @@ public sealed partial class CollectionPeekTests
                 if (!source.TryPeek(ref output) || output.Id != stored.Id || output.Text.Data == sourceText) return 2;
                 output.Text.Append("changed");
                 if (!stored.Text.Equals("owned")) return 3;
+                {
+                    Owner peeked = source.Peek();
+                    if (peeked.Id != stored.Id || peeked.Text.Data == sourceText) return 13;
+                    peeked.Text.Append("changed");
+                    if (!stored.Text.Equals("owned")) return 14;
+                }
                 readonly(char)* original = output.Text.Data!;
                 int living = live;
                 int memory = allocated - released;
@@ -83,7 +89,11 @@ public sealed partial class CollectionPeekTests
                 int code = 0;
                 try { source.TryPeek(ref output); }
                 catch (Exception* error) { code = error.GetCode(); }
+                int peekCode = 0;
+                try { source.Peek(); }
+                catch (Exception* error) { peekCode = error.GetCode(); }
                 failCopy = false;
+                if (peekCode != 17) return 15;
                 if (code != 17 || output.Text.Data != original || output.Id != stored.Id || allocated - released != memory || live != living) return 4;
                 attempts = 0;
                 if (!source.TryPeek(ref output)) return 5;
@@ -99,6 +109,12 @@ public sealed partial class CollectionPeekTests
                     catch (Exception* error) { caught = true; }
                     failAt = 0;
                     if (!caught || output.Text.Data != original || output.Id != stored.Id || allocated - released != memory || live != living) return 7;
+                    attempts = 0; failAt = failure;
+                    caught = false;
+                    try { source.Peek(); }
+                    catch (Exception* error) { caught = true; }
+                    failAt = 0;
+                    if (!caught || allocated - released != memory || live != living) return 16;
                     if (source.Count != count || stored.Text.Data != sourceText || !stored.Text.Equals("owned")) return 8;
                 }
                 failCompare = false;

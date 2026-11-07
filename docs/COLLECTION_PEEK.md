@@ -1,7 +1,7 @@
 # Copy the next collection value
 
 `Queue<T>`, `Stack<T>`, and `PriorityQueue<T>` provide optional copying
-`TryPeek(ref output)` extensions in `Standard::Collections`.
+`Peek()` and `TryPeek(ref output)` extensions in `Standard::Collections`.
 
 | Container | Copied value |
 | --- | --- |
@@ -9,7 +9,8 @@
 | `Stack<T>` | Top of the stack |
 | `PriorityQueue<T>` | Current minimum under its comparer |
 
-The method returns true after copying into initialized output. An empty
+`Peek()` returns a copy of the next element and throws if the container is empty.
+`TryPeek(ref output)` returns true after copying into initialized output. An empty
 container returns false and leaves output unchanged. No element is removed.
 
 ```csharp
@@ -23,9 +24,11 @@ int main()
     if (pending.TryPeek(ref next) || !next.Equals("previous")) return 1;
     pending.Enqueue(s"first");
     pending.Enqueue(s"second");
+    String first = pending.Peek();
+    if (!first.Equals("first")) return 4;
     if (!pending.TryPeek(ref next) || !next.Equals("first") || pending.Count != 2) return 2;
     pending.Clear();
-    if (!next.Equals("first")) return 3;
+    if (!next.Equals("first") || !first.Equals("first")) return 3;
     return 0;
 }
 ```
@@ -52,7 +55,7 @@ before copying because replacing a heap entry could invalidate its ordering.
 ## Source selection
 
 The freestanding form takes an immutable container pointer first:
-`TryPeek(&pending, ref output)`.
+`TryPeek(&pending, ref output)` or `Peek(&pending)`.
 
 Selective builds include the container and its corresponding extension:
 

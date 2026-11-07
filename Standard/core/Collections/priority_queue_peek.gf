@@ -1,5 +1,10 @@
 namespace Standard::Collections;
 
+public T Peek<T>(immutable(PriorityQueue<T>)* source)
+{
+    return source.Top;
+}
+
 public bool TryPeek<T>(immutable(PriorityQueue<T>)* source, ref T output)
 {
     if (source.IsEmpty) return false;
@@ -16,6 +21,9 @@ public bool TryPeek<T>(immutable(PriorityQueue<T>)* source, ref T output)
 
 extension PriorityQueue<T>
 {
+    public immutable T Peek()
+        => Standard::Collections::Peek<T>(this);
+
     public immutable bool TryPeek(ref T output)
         => Standard::Collections::TryPeek<T>(this, ref output);
 }

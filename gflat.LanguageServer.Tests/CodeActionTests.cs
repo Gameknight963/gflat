@@ -50,6 +50,7 @@ public sealed class CodeActionTests
 
     [Theory]
     [InlineData("interface I { int Read(int value); } struct Item : I { }", "Item :", "Implement I")]
+    [InlineData("interface I { int Read(readonly(char)* text = \"public\"); }\n#define public 99\n#define int 99\n#define readonly 99\n#define char 99\n#define Read 99\n#define throw 99\n#define new 99\n#define Exception 99\nstruct Item : I {}", "Item :", "Implement I")]
     [InlineData("interface I { int @class(int @while); } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("class @class {} interface I { @class* Read(@class* value); } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("namespace Names { public class @int {} } interface I { Names::@int* Read(Names::@int* value); } struct Item : I { }", "Item :", "Implement I")]
@@ -66,6 +67,10 @@ public sealed class CodeActionTests
     [InlineData("interface I { int Value { get; set; } } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("struct Item { private int value; }", "Item", "Generate constructor")]
     [InlineData("struct Item { private int @this; }", "Item", "Generate constructor")]
+    [InlineData("#define thisValue 99\nstruct Item { private int @this; }", "Item", "Generate constructor")]
+    [InlineData("#define thisValue1 99\nstruct Item { private int @this; private int thisValue; }", "Item", "Generate constructor")]
+    [InlineData("#define this 99\nstruct Item { private int value; }", "Item", "Generate constructor")]
+    [InlineData("struct Item\n{\nprivate int value;\n#define value 99\n#define Item 99\n#define public 99\n#define int 99\n#define move 99\n}\n", "Item", "Generate constructor")]
     [InlineData("struct Item { private int @this; private int thisValue; }", "Item", "Generate constructor")]
     [InlineData("struct Item { private readonly(int) value; }", "Item", "Generate constructor")]
     [InlineData("alias Frozen = readonly(int); struct Item { private Frozen value; }", "Item", "Generate constructor")]

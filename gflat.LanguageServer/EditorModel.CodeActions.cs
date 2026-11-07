@@ -10,7 +10,14 @@ public sealed record EditorCodeAction(string Title, string Kind, ActionWorkspace
 public sealed partial class EditorModel
 {
     private EditorCodeAction Action(string title, string kind, string path, params SourceEdit[] edits)
-        => new(title, kind, new(new() { [Workspace.FileUri(path)] = edits }));
+    {
+        for (int index = 0; index < edits.Length; index++)
+        {
+            string text = ProtectGeneratedCode(edits[index].NewText);
+            if (!ReferenceEquals(text, edits[index].NewText)) edits[index] = edits[index] with { NewText = text };
+        }
+        return new(title, kind, new(new() { [Workspace.FileUri(path)] = edits }));
+    }
 
     public EditorCodeAction[] CodeActions(string path, TextRange range)
     {

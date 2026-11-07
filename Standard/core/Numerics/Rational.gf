@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Numerics;
 
 // Exact canonical fraction: positive denominator, coprime parts, zero is 0/1.
@@ -229,6 +231,37 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         nuint count = 0;
         while (text[count] != '\0') count++;
         return Parse(text, count);
+    }
+
+    // Output and written must be disjoint from each other, this owner, and its numeric storage.
+    public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
+    {
+        written = 0;
+        nuint top = 0;
+        if (!numerator.TryGetDecimalLength(capacity, ref top)) return false;
+        bool fraction = !denominator.IsOne;
+        nuint bottom = 0;
+        if (fraction)
+        {
+            if (top == capacity) return false;
+            if (!denominator.TryGetDecimalLength(capacity - top - 1, ref bottom)) return false;
+        }
+        nuint part = 0;
+        numerator.TryFormat(output, top, ref part);
+        written = top;
+        if (fraction)
+        {
+            output[top] = '/';
+            denominator.TryFormat(output + top + 1, bottom, ref part);
+            written += bottom + 1;
+        }
+        return true;
+    }
+
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty) { written = 0; return false; }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
     }
 
     public immutable void Format(ITextWriter* output)

@@ -44,7 +44,10 @@ public sealed class BigIntegerTryFormatTests
         string[] rows = values.Select(value => value.ToString(CultureInfo.InvariantCulture)).ToArray();
         string data = string.Join('|', rows) + "|";
         string program = $$"""
-            using Standard; using Standard::Numerics;
+            using Standard;
+            using Standard::Numerics;
+            using Standard::Memory;
+
             extern "C" void*? malloc(nuint count); extern "C" void free(void* value);
             int attempts=0; int allocated=0; int released=0; bool deny=false;
             namespace Memory {
@@ -54,8 +57,12 @@ public sealed class BigIntegerTryFormatTests
                 }
                 public replace void Free(void* value)nothrow{released++;free(value);}
             }
+            bool useSpan = false;
             bool Probe(immutable(BigInteger)* value,char* output,nuint capacity,ref nuint written)nothrow
-                =>value.TryFormat(output,capacity,ref written);
+            {
+                if (useSpan) return value.TryFormat(new Span<char>(output, capacity), ref written);
+                return value.TryFormat(output, capacity, ref written);
+            }
             int main(){
                 {
                     readonly(char)* data="{{data}}"; nuint offset=0;
@@ -68,6 +75,8 @@ public sealed class BigIntegerTryFormatTests
                         if(Probe(deep,nowhere!,0,ref written)||written!=0)return 1;
                         char[704] bytes;
                         for(nuint capacity=0;capacity<=count+1;capacity++){
+                            for(int form=0;form<2;form++){
+                            useSpan = form != 0;
                             for(nuint i=0;i<704;i++)bytes[i]='#';
                             written=123;bool okay=Probe(deep,&bytes[1],capacity,ref written);
                             nuint expectedWritten=0;if(okay)expectedWritten=count;
@@ -81,6 +90,7 @@ public sealed class BigIntegerTryFormatTests
                             written=123;
                             if(!shallow.TryFormat(&bytes[1],count,ref written)||written!=count)return 4;
                             for(nuint i=0;i<count;i++)if(bytes[i+1]!=data[offset+i])return 5;
+                            }
                         }
                         if(attempts!=before||allocated-released!=live||!value.Equals(&saved)||value.GetHashCode()!=hash)return 6;
                         deny=false;offset+=count+1;

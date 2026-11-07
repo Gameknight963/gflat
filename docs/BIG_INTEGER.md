@@ -267,3 +267,6 @@ and native-sized destination types.
 
 Use the [span parsing overloads](BIG_INTEGER_SPAN_PARSING.md) to parse a
 counted text view without creating a String.
+
+Use [bounded and span numeric formatting](RATIONAL_TRY_FORMAT.md) to write
+into caller-owned storage without allocating temporary text.

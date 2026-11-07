@@ -13,6 +13,11 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <AssemblyName>gflat.VisualStudio</AssemblyName>
+    <!-- Stable template-wizard identity. This newly generated source-controlled
+         strong-name key has never been used to grant trust or authenticate releases.
+         https://learn.microsoft.com/dotnet/standard/library-guidance/strong-naming -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>gflat.VisualStudio.snk</AssemblyOriginatorKeyFile>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
     <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
@@ -51,12 +56,16 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="EnvDTE"><HintPath>$(VSInstallRoot)/Common7/IDE/PublicAssemblies/envdte.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Microsoft.VisualStudio.TemplateWizardInterface"><HintPath>$(VSInstallRoot)/Common7/IDE/PublicAssemblies/Microsoft.VisualStudio.TemplateWizardInterface.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="PresentationCore" />
     <Reference Include="WindowsBase" />
     <Compile Include="GflatLanguageClient.cs" />
     <Compile Include="GflatEditorPackage.cs" />
     <Compile Include="GflatOptions.cs" />
+    <Compile Include="GflatSourceFileWizard.cs" />
+    <Compile Include="SourceFileTemplate.cs" />
     <Compile Include="GflatEditorMessages.cs" />
     <Compile Include="HoverIcons.cs" />
     <Compile Include="HoverConnection.cs" />

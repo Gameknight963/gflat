@@ -69,6 +69,8 @@ try {
     }
     [gflat.PackageTests.ThemeColorCheck]::Run($themeType)
     [gflat.PackageTests.ThemeColorCheck]::RunLibraryProtection($client)
+    [gflat.PackageTests.ThemeColorCheck]::RunSourceFileWizard($client, (Join-Path ([IO.Path]::GetDirectoryName($CatalogPath)) 'item-wizard-check'))
+    Write-Host 'Packaged source file wizard passed folder, filename, and preference checks using the installed VS automation interfaces.'
     $textMate = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.TextMate.Core'])
     [gflat.PackageTests.ThemeColorCheck]::RunTextMateTheme($textMate, (Join-Path $PackageDirectory 'Grammars/gflat.tmLanguage.json'))
     [gflat.PackageTests.ThemeColorCheck]::RunTextMateEnter($textMate, (Join-Path $PackageDirectory 'gflat-language-configuration.json'))

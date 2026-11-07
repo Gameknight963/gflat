@@ -1,10 +1,14 @@
 <VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
   <TemplateData>
     <Name>G&#x266D; source file</Name>
-    <Description>An empty G&#x266D; source file.</Description>
+    <Description>A G&#x266D; source file with a folder-based namespace and a class for PascalCase filenames.</Description>
     <ProjectType>gflat</ProjectType>
     <DefaultName>Source.gf</DefaultName>
     <SortOrder>10</SortOrder>
   </TemplateData>
   <TemplateContent><ProjectItem ReplaceParameters="true" TargetFileName="$fileinputname$.gf">Source.gf</ProjectItem></TemplateContent>
+  <WizardExtension>
+    <Assembly>gflat.VisualStudio, Version=0.13.0.0, Culture=neutral, PublicKeyToken=713bdf3498d214ef</Assembly>
+    <FullClassName>gflat.VisualStudio.GflatSourceFileWizard</FullClassName>
+  </WizardExtension>
 </VSTemplate>

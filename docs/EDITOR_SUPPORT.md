@@ -45,6 +45,25 @@ interface members, and generate constructors for instance fields.
 Clients supporting versioned workspace edits receive the unsaved document version.
 Other clients receive range edits.
 
+## New source files
+
+Visual Studio's **G♭ source file** item template uses the filename and its destination
+folder. `World/Player.gf` creates a `Player` class in the project's default namespace
+followed by `World`. `World/integer_parsing.gf` creates the namespace without a type.
+Existing files are not changed when opened or added to a project.
+
+The language's **IntelliSense** options include **Generate a class for PascalCase
+filenames** and **Generate a namespace**, both on by default. Class generation requires
+an ASCII name starting with an uppercase letter and containing only letters and digits.
+Generated braces follow **Opening braces on a new line**, and indentation follows
+the language's tabs and indentation settings.
+
+Project properties include **Default namespace** (`RootNamespace`, initially the
+project name) and **Namespace root directory** (`GflatNamespaceRoot`, initially the
+project directory). Set the root directory to `src` to omit that folder from generated
+namespaces. Namespace prefixes accept `::` or dots. Invalid identifier characters
+become underscores, and keyword names are escaped with `@`.
+
 ## Hovers
 
 Hovers show signatures with source type names. Literal hovers show the checked

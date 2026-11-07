@@ -33,6 +33,50 @@ namespace gflat.PackageTests
         private static T Interface<T>(Func<IMethodCallMessage, object> call)
         { return (T)new Proxy(typeof(T), call).GetTransparentProxy(); }
 
+        public static void RunSourceFileWizard(Assembly assembly, string directory)
+        {
+            // The CLI host supplies the main thread that VS supplies in production.
+            var threadHelper = Type.GetType("Microsoft.VisualStudio.Shell.ThreadHelper, Microsoft.VisualStudio.Shell.Framework", true);
+            threadHelper.GetMethod("SetUIThread", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
+            var wizardType = assembly.GetType("gflat.VisualStudio.GflatSourceFileWizard", true);
+            var optionsType = assembly.GetType("gflat.VisualStudio.GflatOptions", true);
+            if (!Array.Exists(wizardType.GetInterfaces(), t => t.FullName == "Microsoft.VisualStudio.TemplateWizard.IWizard"))
+                throw new Exception("Source file wizard must implement the installed template wizard interface");
+            var generate = wizardType.GetMethod("ProjectItemFinishedGenerating");
+            var itemType = generate.GetParameters()[0].ParameterType;
+            var projectType = itemType.GetProperty("ContainingProject").PropertyType;
+            var propertiesType = projectType.GetProperty("Properties").PropertyType;
+            var propertyType = propertiesType.GetMethod("Item").ReturnType;
+            string projectFile = System.IO.Path.Combine(directory, "Game.gfproj");
+            var properties = new Proxy(propertiesType, m => {
+                string value = (string)m.Args[0] == "RootNamespace" ? "Game" : "src";
+                return new Proxy(propertyType, p => p.MethodName == "get_Value" ? value : null).GetTransparentProxy();
+            }).GetTransparentProxy();
+            var project = new Proxy(projectType, m => m.MethodName == "get_FullName" ? (object)projectFile : properties).GetTransparentProxy();
+            foreach (bool enabled in new[] { true, false })
+            foreach (string name in new[] { "Player.gf", "integer_parsing.gf" })
+            {
+                string file = System.IO.Path.Combine(directory, "src", "World", name);
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file));
+                System.IO.File.WriteAllText(file, "");
+                var item = new Proxy(itemType, m => m.MethodName == "get_ContainingProject" ? project : (object)file).GetTransparentProxy();
+                // DialogPage's constructor requires a running shell settings service.
+                var options = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(optionsType);
+                GC.SuppressFinalize(options);
+                optionsType.GetProperty("GenerateClassFromFileName").SetValue(options, enabled);
+                optionsType.GetProperty("GenerateNamespace").SetValue(options, enabled);
+                optionsType.GetProperty("BracesOnNewLine").SetValue(options, true);
+                if ((bool)optionsType.GetProperty("ShowLanguageConstructs").GetValue(options))
+                    throw new Exception("Language explanations must remain opt-in");
+                var wizard = Activator.CreateInstance(wizardType);
+                wizardType.GetField("options", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(wizard, options);
+                generate.Invoke(wizard, new[] { item });
+                string source = System.IO.File.ReadAllText(file);
+                if (source.Contains("namespace Game::World") != enabled || source.Contains("class Player") != (enabled && name == "Player.gf"))
+                    throw new Exception("Wizard ignored destination folders, filename, or new-file preferences: " + source);
+            }
+        }
+
         public static void RunTextMateEnter(Assembly assembly, string configurationPath)
         {
             var configurationType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.LanguageConfiguration.LanguageConfigurationContract", true);

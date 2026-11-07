@@ -5,6 +5,7 @@
     <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..'))</GflatSdkRoot>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <RootNamespace Condition="'$(RootNamespace)' == ''">$(MSBuildProjectName)</RootNamespace>
     <NoStdLib Condition="'$(NoStdLib)' == ''">false</NoStdLib>
     <NoBuiltins Condition="'$(NoBuiltins)' == ''">false</NoBuiltins>
     <OutputType Condition="'$(OutputType)' == ''">Executable</OutputType>

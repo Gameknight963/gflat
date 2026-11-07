@@ -8,6 +8,14 @@ namespace gflat.VisualStudio;
 [Guid("A48BDF16-DAF5-4E05-92BC-F9F89C923A91")]
 public sealed class GflatOptions : DialogPage
 {
+    [Category("New files"), DisplayName("Generate a class for PascalCase filenames"), DefaultValue(true)]
+    [Description("Create a class matching a PascalCase source filename. Snake_case filenames create no type declaration.")]
+    public bool GenerateClassFromFileName { get; set; } = true;
+
+    [Category("New files"), DisplayName("Generate a namespace"), DefaultValue(true)]
+    [Description("Use the project's default namespace and the new file's folders relative to its namespace root.")]
+    public bool GenerateNamespace { get; set; } = true;
+
     [Category("Quick Info"), DisplayName("Show known exceptions"), DefaultValue(false)]
     [Description("Show exceptions identified by analysis in method tooltips. The list is not exhaustive.")]
     public bool ShowKnownExceptions { get; set; }

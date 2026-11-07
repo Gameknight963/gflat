@@ -10,6 +10,16 @@ foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Rules/Gen
 if (-not ($manifest.PackageManifest.Assets.Asset | Where-Object { $_.Type -eq 'Microsoft.VisualStudio.ProjectTemplate' -and $_.Path -eq 'ProjectTemplates' })) {
     throw 'VSIX must register its native project templates'
 }
+if (-not ($manifest.PackageManifest.Assets.Asset | Where-Object { $_.Type -eq 'Microsoft.VisualStudio.Assembly' -and $_.Path -eq 'gflat.VisualStudio.dll' })) {
+    throw 'VSIX must register the item-template wizard assembly for template loading'
+}
+[xml]$itemTemplate = Get-Content -Raw -LiteralPath (Join-Path $PackageDirectory 'ItemTemplates/gflat-source/SourceFile.vstemplate')
+$identity = [Reflection.AssemblyName]::GetAssemblyName((Join-Path $PackageDirectory 'gflat.VisualStudio.dll'))
+if ($itemTemplate.VSTemplate.WizardExtension.Assembly -ne $identity.FullName -or
+    $itemTemplate.VSTemplate.WizardExtension.FullClassName -ne 'gflat.VisualStudio.GflatSourceFileWizard') {
+    throw 'Source file template must reference the packaged wizard assembly identity'
+}
+if ($identity.GetPublicKeyToken().Length -eq 0) { throw 'Template wizard assembly must have a strong name' }
 $templateManifests = @(Get-ChildItem -LiteralPath (Join-Path $PackageDirectory 'ProjectTemplates') -Filter '*.vstman')
 if ($templateManifests.Count -eq 0) { throw 'VSSDK did not generate a project template discovery manifest' }
 $catalog = ($templateManifests | ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }) -join "`n"

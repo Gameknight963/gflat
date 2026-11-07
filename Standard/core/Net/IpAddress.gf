@@ -8,6 +8,22 @@ public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashab
     private bool ipv4;
 
     public IpAddress() nothrow { high = 0ul; low = 0ul; ipv4 = true; }
+    private static IpAddress WellKnown(bool isIpv4, ulong bits) nothrow
+    {
+        IpAddress result = new();
+        result.ipv4 = isIpv4;
+        result.low = bits;
+        return result;
+    }
+
+    public static IpAddress Any { get nothrow => new IpAddress(); }
+    public static IpAddress Loopback { get nothrow => WellKnown(true, 0x7f000001ul); }
+    public static IpAddress Broadcast { get nothrow => WellKnown(true, 0xfffffffful); }
+    public static IpAddress None { get nothrow => IpAddress::Broadcast; }
+    public static IpAddress Ipv6Any { get nothrow => WellKnown(false, 0ul); }
+    public static IpAddress Ipv6Loopback { get nothrow => WellKnown(false, 1ul); }
+    public static IpAddress Ipv6None { get nothrow => IpAddress::Ipv6Any; }
+
     public bool IsIpv4 { immutable get nothrow => ipv4; }
 
     public bool IsIpv6 { immutable get nothrow => !ipv4; }

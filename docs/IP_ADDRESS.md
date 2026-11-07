@@ -65,3 +65,6 @@ Formatting follows [RFC 5952](https://www.rfc-editor.org/rfc/rfc5952.html#sectio
 Source: `core/Net/IpAddress.gf`
 
 See [Mapping and classifying IP addresses](IP_ADDRESS_MAPPING.md) for family conversion and IPv6 prefixes.
+
+See [common IP address values](IP_ADDRESS_WELL_KNOWN.md) for wildcard, loopback,
+and broadcast properties.

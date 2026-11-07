@@ -145,12 +145,32 @@ public sealed partial class EditorModel
     {
         if (owner.Syntax.Node is not ClassDeclaration cls || snapshot.Checker is not { } checker ||
             checker.GetClassByIdentity(cls.Name)?.BaseClass is not { } baseName ||
-            checker.GetClassByIdentity(baseName) is not { Constructors.Count: > 0 } baseClass) return true;
-        var eligible = baseClass.Constructors.Where(constructor => constructor.Parameters.All(parameter => parameter.DefaultValue != null)).ToArray();
-        var exact = eligible.Where(constructor => constructor.Parameters.Count == 0).ToArray();
-        var best = exact.Length > 0 ? exact : eligible;
-        if (best.Length != 1) return false;
-        return best[0].Accessibility != TokenKind.Private || NestedPrivateAccess(owner.Qualified, baseClass.Name);
+            checker.GetClassByIdentity(baseName) is not { } baseClass) return true;
+        string SourceOwner(TypeChecker.ClassInfo type) => type.Declaration is { } declaration &&
+            sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var source) ? source.Qualified : type.Name;
+        string caller = owner.Qualified;
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        while (visited.Add(baseClass.Name))
+        {
+            if (baseClass.Constructors.Count > 0)
+            {
+                var eligible = baseClass.Constructors.Where(constructor => constructor.Parameters.All(parameter => parameter.DefaultValue != null)).ToArray();
+                var exact = eligible.Where(constructor => constructor.Parameters.Count == 0).ToArray();
+                var best = exact.Length > 0 ? exact : eligible;
+                if (best.Length != 1) return false;
+                return best[0].Accessibility != TokenKind.Private || NestedPrivateAccess(caller, SourceOwner(baseClass));
+            }
+            try
+            {
+                foreach (var field in baseClass.FieldDeclarations)
+                    if (!field.IsStatic && field.Initializer == null && !checker.CanDefaultInitialize(field.Type)) return false;
+            }
+            catch (gflat.CompileExceptions.TypeCheckException) { return false; }
+            if (baseClass.BaseClass is not { } parent || checker.GetClassByIdentity(parent) is not { } parentClass) return true;
+            caller = SourceOwner(baseClass);
+            baseClass = parentClass;
+        }
+        return false;
     }
 
     private IEnumerable<Symbol> ContractMembers(Symbol owner, Symbol contract)

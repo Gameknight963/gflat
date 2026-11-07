@@ -14,6 +14,14 @@ public sealed class CodeActionTests
     [InlineData("class Base { public Base(int value = 1) {} public Base(double value = 1.0) {} } class Item : Base { private int value; }")]
     [InlineData("class Base { public Base(int value = 1) {} public Base(double value = 1.0, int other = 2) {} } class Item : Base { private int value; }")]
     [InlineData("class Base { private Base() {} public Base(int value = 1) {} } class Item : Base { private int value; }")]
+    [InlineData("struct Resource { public Resource(int value) {} } class Base { public Resource Value; } class Item : Base { private int value; }")]
+    [InlineData("class Resource { public Resource(int value) {} } class Base { public Resource Value; } class Item : Base { private int value; }")]
+    [InlineData("class Base { public int* Value; } class Item : Base { private int value; }")]
+    [InlineData("class Base { public int* Value { get; set; } } class Item : Base { private int value; }")]
+    [InlineData("class Root { public Root(int value) {} } class Base : Root {} class Item : Base { private int value; }")]
+    [InlineData("class Root { private Root() {} } class Base : Root {} class Item : Base { private int value; }")]
+    [InlineData("class Root { public int* Value; } class Base : Root {} class Item : Base { private int value; }")]
+    [InlineData("struct Resource { public Resource(int value) {} } class Base<T> { public T Value; } class Item : Base<Resource> { private int value; }")]
     public void GeneratedConstructorRequiresUsableImplicitBaseCall(string code)
     {
         var source = new SourceFile(Path.GetFullPath("code-action-base-arguments.gf"), code);
@@ -86,6 +94,13 @@ public sealed class CodeActionTests
     [InlineData("class Base { private Base() {} public class Item : Base { private int value; } }", "Item :", "Generate constructor")]
     [InlineData("class Base { public Base() {} public Base(int value = 1) {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
     [InlineData("class Base { public Base(int value = 1) {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("struct Resource { public Resource(int value) {} } class Base { public Resource Value = new Resource(1); } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base { public int*? Value; } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("abstract class Base { public int Value; } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Root { private Root() {} public class Base : Root {} } class Item : Root::Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("namespace N { public class Root { private Root() {} public class Base : Root {} } } class Item : N::Root::Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base<T> { public T Value; } class Item : Base<int> { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("namespace N { public class Root { public class Base { private Base() {} public class Item : Base { private int value; } } } }", "Item :", "Generate constructor")]
     [InlineData("class Base<T> { public Base(T value = default) {} } class Item : Base<int> { private int value; }", "Item :", "Generate constructor")]
     [InlineData("struct Item { private int* value; }", "Item", "Generate constructor")]
     [InlineData("struct Item { private int @class; }", "Item", "Generate constructor")]

@@ -133,3 +133,6 @@ Compute routes between fully qualified paths with
 
 Selective builds include IO/PathStyle.gf, IO/Paths.gf, String, and Span with its
 collection/query contracts. Ordinary Standard projects include them.
+
+See [multi-component joins](../../../docs/PATH_MULTI_COMPONENT.md) for Join and
+Combine overloads that reserve their result once.

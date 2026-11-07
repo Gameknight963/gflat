@@ -262,6 +262,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | APIs | Guide |
 | --- | --- |
 | `Paths`, `PathStyle` | [Lexical paths](../Standard/core/IO/PATHS.md) |
+| Three- and four-component path joins | [Join several components](PATH_MULTI_COMPONENT.md) |
 | `Paths.HasExtension` | [Checking for a path extension](PATH_EXTENSION_TEST.md) |
 | `Paths.GetRelativePath` | [Computing a relative path](PATH_RELATIVE.md) |
 | `Paths.Combine` | [Combining path components](PATH_COMBINE.md) |

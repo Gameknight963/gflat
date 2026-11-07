@@ -209,6 +209,72 @@ public static class Paths
         return Paths::Join(left, right, style);
     }
 
+    public static String Join(readonly(char)* first, readonly(char)* second, readonly(char)* third, PathStyle style)
+    {
+        Span<readonly(char)>[3] parts = [
+            new Span<readonly(char)>(first, Paths::Length(first)),
+            new Span<readonly(char)>(second, Paths::Length(second)),
+            new Span<readonly(char)>(third, Paths::Length(third))
+        ];
+        return Paths::JoinParts(&parts[0], 3, style);
+    }
+
+    public static String Join(Span<readonly(char)> first, Span<readonly(char)> second, Span<readonly(char)> third, PathStyle style)
+    {
+        Span<readonly(char)>[3] parts = [first, second, third];
+        return Paths::JoinParts(&parts[0], 3, style);
+    }
+
+    public static String Join(readonly(char)* first, readonly(char)* second, readonly(char)* third, readonly(char)* fourth, PathStyle style)
+    {
+        Span<readonly(char)>[4] parts = [
+            new Span<readonly(char)>(first, Paths::Length(first)),
+            new Span<readonly(char)>(second, Paths::Length(second)),
+            new Span<readonly(char)>(third, Paths::Length(third)),
+            new Span<readonly(char)>(fourth, Paths::Length(fourth))
+        ];
+        return Paths::JoinParts(&parts[0], 4, style);
+    }
+
+    public static String Join(Span<readonly(char)> first, Span<readonly(char)> second, Span<readonly(char)> third, Span<readonly(char)> fourth, PathStyle style)
+    {
+        Span<readonly(char)>[4] parts = [first, second, third, fourth];
+        return Paths::JoinParts(&parts[0], 4, style);
+    }
+
+    public static String Combine(readonly(char)* first, readonly(char)* second, readonly(char)* third, PathStyle style)
+    {
+        Span<readonly(char)>[3] parts = [
+            new Span<readonly(char)>(first, Paths::Length(first)),
+            new Span<readonly(char)>(second, Paths::Length(second)),
+            new Span<readonly(char)>(third, Paths::Length(third))
+        ];
+        return Paths::CombineParts(&parts[0], 3, style);
+    }
+
+    public static String Combine(Span<readonly(char)> first, Span<readonly(char)> second, Span<readonly(char)> third, PathStyle style)
+    {
+        Span<readonly(char)>[3] parts = [first, second, third];
+        return Paths::CombineParts(&parts[0], 3, style);
+    }
+
+    public static String Combine(readonly(char)* first, readonly(char)* second, readonly(char)* third, readonly(char)* fourth, PathStyle style)
+    {
+        Span<readonly(char)>[4] parts = [
+            new Span<readonly(char)>(first, Paths::Length(first)),
+            new Span<readonly(char)>(second, Paths::Length(second)),
+            new Span<readonly(char)>(third, Paths::Length(third)),
+            new Span<readonly(char)>(fourth, Paths::Length(fourth))
+        ];
+        return Paths::CombineParts(&parts[0], 4, style);
+    }
+
+    public static String Combine(Span<readonly(char)> first, Span<readonly(char)> second, Span<readonly(char)> third, Span<readonly(char)> fourth, PathStyle style)
+    {
+        Span<readonly(char)>[4] parts = [first, second, third, fourth];
+        return Paths::CombineParts(&parts[0], 4, style);
+    }
+
     // Resolves dot segments and repeated separators against a fully qualified base.
     // Windows drive-relative and device paths are rejected.
     public static String GetFullPath(readonly(char)* path, readonly(char)* basePath, PathStyle style)
@@ -452,23 +518,75 @@ public static class Paths
         return letter && path[1] == ':' && Paths::IsSeparator(path[2], style);
     }
 
+    private static String CombineParts(Span<readonly(char)>* parts, nuint count, PathStyle style)
+    {
+        if (style != PathStyle::Unix && style != PathStyle::Windows)
+            throw new Exception("Invalid path style");
+        nuint first = 0;
+        nuint remaining = count;
+        while (remaining != 0)
+        {
+            remaining--;
+            if (Paths::IsRooted(parts[remaining], style)) { first = remaining; break; }
+        }
+        return Paths::JoinParts(parts + first, count - first, style);
+    }
+
+    private static String JoinParts(Span<readonly(char)>* parts, nuint count, PathStyle style)
+    {
+        nuint required = 0;
+        nuint maximum = (nuint)0 - 2;
+        bool lastSeparator = false;
+        for (nuint i = 0; i < count; i++)
+        {
+            Span<readonly(char)> part = parts[i];
+            if (part.IsEmpty) continue;
+            bool firstSeparator = Paths::IsSeparator(part[0], style);
+            nuint addition = part.Length;
+            if (required != 0)
+            {
+                if (lastSeparator && firstSeparator) addition--;
+                else if (!lastSeparator && !firstSeparator)
+                {
+                    if (required == maximum) throw new Exception("Path join length overflow");
+                    required++;
+                }
+            }
+            if (addition > maximum - required) throw new Exception("Path join length overflow");
+            required += addition;
+            lastSeparator = Paths::IsSeparator(part[part.Length - 1], style);
+        }
+        String result = new();
+        result.Reserve(required);
+        for (nuint i = 0; i < count; i++)
+        {
+            Span<readonly(char)> part = parts[i];
+            if (part.IsEmpty) continue;
+            nuint start = 0;
+            if (!result.IsEmpty)
+            {
+                bool leftSeparator = Paths::IsSeparator(result.Data[result.Length - 1], style);
+                bool rightSeparator = Paths::IsSeparator(part[0], style);
+                if (leftSeparator && rightSeparator) start = 1;
+                else if (!leftSeparator && !rightSeparator)
+                {
+                    if (style == PathStyle::Windows) result.Append('\\');
+                    else result.Append('/');
+                }
+            }
+            result.AppendLiteral(part.Data! + start, part.Length - start);
+        }
+        return move result;
+    }
+
     private static String JoinCore(readonly(char)* left, nuint leftLength,
         readonly(char)* right, nuint rightLength, PathStyle style)
     {
-        if (leftLength == 0) return String::From(right, rightLength);
-        String result = String::From(left, leftLength);
-        if (rightLength == 0) return move result;
-        bool leftSeparator = Paths::IsSeparator(left[leftLength - 1], style);
-        bool rightSeparator = Paths::IsSeparator(right[0], style);
-        nuint start = 0;
-        if (leftSeparator && rightSeparator) start = 1;
-        if (!leftSeparator && !rightSeparator)
-        {
-            if (style == PathStyle::Windows) result.AppendLiteral("\\", 1);
-            else result.AppendLiteral("/", 1);
-        }
-        result.AppendLiteral(right + start, rightLength - start);
-        return move result;
+        Span<readonly(char)>[2] parts = [
+            new Span<readonly(char)>(left, leftLength),
+            new Span<readonly(char)>(right, rightLength)
+        ];
+        return Paths::JoinParts(&parts[0], 2, style);
     }
 
     private static nuint Length(readonly(char)* text) nothrow

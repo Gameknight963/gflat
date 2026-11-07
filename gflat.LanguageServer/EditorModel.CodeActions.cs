@@ -123,10 +123,13 @@ public sealed partial class EditorModel
                     checker.GetClassByIdentity(baseName) is { Constructors.Count: > 0 } baseClass &&
                     !baseClass.Constructors.Any(constructor => constructor.Parameters.All(parameter => parameter.DefaultValue != null));
                 if (fields.Length > 0 && !requiresBaseArguments && !symbols.Any(s => s.Owner == owner.Qualified && s.Syntax.Node is ConstructorDeclaration &&
-                    s.Parameters?.Select(p => DisplayType(p.Type)).SequenceEqual(fields.Select(f => DisplayType(f.Type!))) == true))
+                    s.Parameters?.Select(p => DisplayType(p.Type.WithoutValueProtection())).SequenceEqual(fields.Select(f => DisplayType(f.Type!.WithoutValueProtection()))) == true))
                 {
-                    string generated = newline + indent + "public " + CompletionSpelling(owner) + "(" + string.Join(", ", fields.Select(f => SourceTypeSpelling(f.Type!, f) + " " + CompletionSpelling(f))) + ")" +
-                        newline + indent + "{" + newline + string.Join(newline, fields.Select(f => indent + "    this." + CompletionSpelling(f) + " = move " + CompletionSpelling(f) + ";")) +
+                    string thisParameter = "thisValue";
+                    for (int suffix = 1; fields.Any(field => field.Name == thisParameter); suffix++) thisParameter = "thisValue" + suffix;
+                    string ParameterName(Symbol field) => field.Name == "this" ? thisParameter : CompletionSpelling(field);
+                    string generated = newline + indent + "public " + CompletionSpelling(owner) + "(" + string.Join(", ", fields.Select(f => SourceTypeSpelling(f.Type!.WithoutValueProtection(), f) + " " + ParameterName(f))) + ")" +
+                        newline + indent + "{" + newline + string.Join(newline, fields.Select(f => indent + "    this." + CompletionSpelling(f) + " = move " + ParameterName(f) + ";")) +
                         newline + indent + "}" + newline;
                     actions.Add(Action("Generate constructor", "refactor.rewrite", path, new SourceEdit(Workspace.ToRange(source.Span(close.Start, 0)), generated)));
                 }

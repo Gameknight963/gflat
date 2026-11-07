@@ -60,6 +60,16 @@ public sealed class CodeActionTests
     [InlineData("interface I<T> { T Read(T value); } struct Item : I<int> { }", "Item :", "Implement I")]
     [InlineData("interface I { int Value { get; set; } } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("struct Item { private int value; }", "Item", "Generate constructor")]
+    [InlineData("struct Item { private int @this; }", "Item", "Generate constructor")]
+    [InlineData("struct Item { private int @this; private int thisValue; }", "Item", "Generate constructor")]
+    [InlineData("struct Item { private readonly(int) value; }", "Item", "Generate constructor")]
+    [InlineData("alias Frozen = readonly(int); struct Item { private Frozen value; }", "Item", "Generate constructor")]
+    [InlineData("struct Item { private immutable(int) value; }", "Item", "Generate constructor")]
+    [InlineData("struct Value {} struct Item { private readonly(Value) value; }", "Item", "Generate constructor")]
+    [InlineData("struct Value {} alias Frozen = readonly(Value); struct Item { private Frozen value; }", "Item", "Generate constructor")]
+    [InlineData("struct Item<T> { private readonly(T) value; } int main() { Item<int> item = new Item<int>(42); return 0; }", "Item", "Generate constructor")]
+    [InlineData("struct Item { private readonly(int)* value; }", "Item", "Generate constructor")]
+    [InlineData("struct Item { private int[2] values; }", "Item", "Generate constructor")]
     [InlineData("class Base { public Base() {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
     [InlineData("class Base { public Base(int value = 1) {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
     [InlineData("class Base<T> { public Base(T value = default) {} } class Item : Base<int> { private int value; }", "Item :", "Generate constructor")]
@@ -94,7 +104,13 @@ public sealed class CodeActionTests
             int end = Workspace.Offset(code, JsonSerializer.SerializeToElement(edit.Range.End, Protocol.JsonOptions));
             changed = changed.Remove(start, end - start).Insert(start, edit.NewText);
         }
-        var checkedChange = new AnalysisSnapshot([new SourceFile(source.Path, changed), support], new() { NoStdLib = true });
+        var changedSource = new SourceFile(source.Path, changed);
+        var checkedChange = new AnalysisSnapshot([changedSource, support], new() { NoStdLib = true });
         Assert.DoesNotContain(checkedChange.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        if (title == "Generate constructor")
+        {
+            var changedModel = new EditorModel(checkedChange, [changedSource, support]);
+            Assert.DoesNotContain(changedModel.CodeActions(source.Path, range), action => action.Title == "Generate constructor");
+        }
     }
 }

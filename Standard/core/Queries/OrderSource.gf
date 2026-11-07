@@ -9,6 +9,8 @@ struct OrderSource<T, Source, Iterator>
     private int(immutable(T)*, immutable(T)*)* compare;
     public OrderSource(Source input, int(immutable(T)*, immutable(T)*)* comparison)
     { source = move input; compare = comparison; }
+    internal Source InputView() => source;
+    internal int(immutable(T)*, immutable(T)*)* Comparison() => compare;
     public Enumerator GetEnumerator() => new Enumerator(source, compare);
 
     // Concrete foreach/query pattern, like Span: Current borrows a buffered value.

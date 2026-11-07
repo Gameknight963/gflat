@@ -51,7 +51,7 @@ on later reads.
 - Summarize with `Count`, [Sum](../../../docs/QUERY_SUM.md), `Aggregate`, `Min`, and `Max`
 - Summarize groups with `CountBy` and [AggregateBy](../../../docs/QUERY_AGGREGATE_BY.md)
 - Order by selected keys with [OrderBy, ThenBy, and their descending forms](../../../docs/QUERY_ORDER_BY.md)
-- Order with `Order`, `Reverse`, `TakeLast`, and `SkipLast`
+- Order with `Order`, `OrderDescending`, `Reverse`, `TakeLast`, and `SkipLast`
 - Collect results with `ToVector`, `ToHashSet`, `ToHashMap`, and `ToLookup`
 
 See the [operation reference](../../../docs/QUERIES.md#operations) for overloads,

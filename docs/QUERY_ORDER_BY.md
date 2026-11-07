@@ -89,8 +89,8 @@ int main()
 }
 ```
 
-These methods apply directly to an `OrderBy` or `OrderByDescending` result, or
-another `ThenBy` result. Apply them before operators such as `Where` or `Take`,
+These methods apply directly to an `Order`, `OrderDescending`, `OrderBy`, or
+`OrderByDescending` result, or another `ThenBy` result. Apply them before operators such as `Where` or `Take`,
 which return ordinary query views. Freestanding forms accept the ordered query
 first, for example `ThenBy(query, selector, compare)`.
 
@@ -140,5 +140,6 @@ throws before the first successful move, after completion, or after failure.
 Selective builds load `Queries/OrderKey.gf`, `Queries/OrderBySource.gf`, and
 `Queries/enumerable_order_by.gf`, plus the normal Enumerable, Vector, and Span
 sources. Secondary ordering also loads `Queries/ThenOrderKey.gf` and
-`Queries/enumerable_then_by.gf`. Default comparisons also need `Collections/Comparer.gf` and the key's
+`Queries/enumerable_then_by.gf`. For secondary ordering after value-based
+`Order`, see its [source dependencies](QUERY_ORDER.md#reading-results). Default comparisons also need `Collections/Comparer.gf` and the key's
 comparison implementation.

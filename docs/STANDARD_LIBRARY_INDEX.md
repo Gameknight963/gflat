@@ -96,7 +96,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `UnionBy`, `ExceptBy`, `IntersectBy` | [Query set operations by key](QUERY_SET_OPERATIONS_BY.md) |
 | `DistinctBy(selector)` | [Lazy distinct values by key](QUERY_DISTINCT_BY.md) |
 | `OrderBy(selector)`, `OrderByDescending(selector)`, `ThenBy`, `ThenByDescending` | [Ordering query elements by key](QUERY_ORDER_BY.md) |
-| `Order()` / `Order(compare)` | [Order a buffered query](QUERY_ORDER.md) |
+| `Order()`, `OrderDescending()` and explicit-comparison overloads | [Order a buffered query](QUERY_ORDER.md) |
 | `Concat(other)` | [Concatenating queries](QUERY_CONCAT.md) |
 | `TakeLast(count)` | [Taking a finite sequence's tail](QUERY_TAKE_LAST.md) |
 | `SkipLast(count)` | [Streaming without a trailing suffix](QUERY_SKIP_LAST.md) |

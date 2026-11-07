@@ -67,7 +67,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `TakeLast(count)` | Yield the final at most count elements, buffering a bounded tail on each iterator's first move. |
 | `SkipLast(count)` | Omit a trailing suffix using bounded streaming lookahead. |
 | `OrderBy(selector)` / `OrderByDescending(selector)`, `ThenBy` / `ThenByDescending` | [Stable ordering by cached keys](QUERY_ORDER_BY.md), with default or explicit comparisons. |
-| `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
+| `Order()` / `OrderDescending()` and explicit-comparison overloads | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order. Each enumeration owns a hash set. |
 | `DistinctBy(selector)` | Yield the first whole value for each selected key, in encounter order. |
 | `Union`, `Except`, `Intersect` | Combine distinct values using [query set operations](QUERY_SET_OPERATIONS.md). |
@@ -155,7 +155,7 @@ value once. `Any` and `Contains` stop at the first match. See
 | `Reverse` | A vector filled on the first move |
 | `TakeLast` | A bounded deque filled on the first move |
 | `SkipLast` | A bounded lookahead buffer |
-| `Order` | Buffered input plus StableSort's two index buffers |
+| `Order`, `OrderDescending` | Buffered input plus two index buffers |
 
 The iterator owns its buffers. Copies of elements, custom sources, and callbacks
 have their own allocation behavior.
@@ -181,7 +181,7 @@ iterator is destroyed.
 Buffering and materialization currently require mutable stored element types.
 For a readonly integer source, select an ordinary stored value explicitly:
 `.Select((readonly(int) value) => (int)value).ToVector()`.
-This restriction also applies to `Reverse`, `Order`, `TakeLast`, and `SkipLast`.
+This restriction also applies to `Reverse`, `Order`, `OrderDescending`, `TakeLast`, and `SkipLast`.
 
 Ref-output terminals require writable destinations. Value-returning terminals
 such as `First()` and `ElementAt()` can initialize a local from a qualified view.

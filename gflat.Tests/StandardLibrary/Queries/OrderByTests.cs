@@ -6,7 +6,10 @@ public sealed partial class OrderByTests
 {
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Combine(StandardTestSources.Values,
         StandardTestSources.Load("core/Collections/Comparer.gf", "core/Queries/OrderBySource.gf",
-            "core/Queries/OrderKey.gf", "core/Queries/ThenOrderKey.gf", "core/Queries/enumerable_then_by.gf",
+            "core/Queries/OrderKey.gf", "core/Queries/OrderValueKey.gf",
+            "core/Queries/OrderSource.gf", "core/Queries/enumerable_order.gf",
+            "core/Collections/stable_sort.gf", "core/Queries/enumerable_to_vector.gf",
+            "core/Queries/enumerable_order_descending.gf", "core/Queries/enumerable_order_then_by.gf", "core/Queries/ThenOrderKey.gf", "core/Queries/enumerable_then_by.gf",
             "core/Queries/enumerable_order_by.gf", "core/Queries/enumerable_slice.gf",
             "core/Queries/SliceSource.gf"))
         .Append(new SourceFile("query-order-by.gf", code));

@@ -60,9 +60,11 @@ public sealed partial class OrderByTests
             """, optimization);
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void ChainedDirectionsBranchingAndPrimaryResetMatchLinq(int optimization)
+    [InlineData(false, 0)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 2)]
+    public void ChainedDirectionsBranchingAndPrimaryResetMatchLinq(bool valueOrdering, int optimization)
     {
         var random = new Random(817395);
         var cases = Enumerable.Range(0, 65).Select(length => Enumerable.Range(0, length)
@@ -99,6 +101,12 @@ public sealed partial class OrderByTests
                 if (*left > *right) return 2147483647;
                 return 0;
             }
+            int ComparePrimary(immutable(int)* left, immutable(int)* right)
+            {
+                int a = *left / 64 % 4;
+                int b = *right / 64 % 4;
+                return Compare(&a, &b);
+            }
             int Digit(char value)
             {
                 if (value <= '9') return value - '0';
@@ -133,11 +141,11 @@ public sealed partial class OrderByTests
                     for (nuint i = 0; i < count; i++) third[i] = Read(data, ref at);
                     for (nuint i = 0; i < count; i++) fourth[i] = Read(data, ref at);
                     var source = new Span<int>(&input[0], count).AsEnumerable();
-                    var root = source.OrderBy(Primary);
+                    var root = source.{{(valueOrdering ? "Order(ComparePrimary)" : "OrderBy(Primary)")}};
                     var a = Standard::Queries::ThenByDescending(root, Secondary).ThenBy(Third, Compare);
                     var b = Standard::Queries::ThenBy(root, Secondary, Compare).ThenByDescending(Third);
                     var c = Standard::Queries::ThenByDescending(
-                        source.OrderByDescending(Primary).ThenBy(Secondary, Compare), Third, Compare);
+                        source.{{(valueOrdering ? "OrderDescending(ComparePrimary)" : "OrderByDescending(Primary)")}}.ThenBy(Secondary, Compare), Third, Compare);
                     var d = Standard::Queries::ThenBy(root, Secondary).OrderBy(Third);
                     for (int pass = 0; pass < 2; pass++)
                     {
@@ -152,10 +160,10 @@ public sealed partial class OrderByTests
                             if (!ai.MoveNext() || !bi.MoveNext() || !ci.MoveNext() || !di.MoveNext()) return 2;
                             if (ai.Current != first[i] || bi.Current != second[i]
                                 || ci.Current != third[i] || di.Current != fourth[i]) return 3;
-                            if (ai.Current != ai.Current || calls != (int)count * 12) return 4;
+                            if (ai.Current != ai.Current || calls != (int)count * {{(valueOrdering ? 8 : 12)}}) return 4;
                         }
                         if (ai.MoveNext() || bi.MoveNext() || ci.MoveNext() || di.MoveNext()) return 5;
-                        if (calls != (int)count * 12) return 6;
+                        if (calls != (int)count * {{(valueOrdering ? 8 : 12)}}) return 6;
                     }
                 }
                 if (at != {{hex.Length}}) return 7;

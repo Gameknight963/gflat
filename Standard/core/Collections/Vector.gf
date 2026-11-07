@@ -61,6 +61,19 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         this.RelocateStorage(requested);
     }
 
+    public nuint EnsureCapacity(nuint requested)
+    {
+        this.Reserve(requested);
+        return capacity;
+    }
+
+    // Skip relocation unless Count is below the rounded-down 90% threshold.
+    public void TrimExcess()
+    {
+        nuint threshold = (capacity / 10) * 9 + ((capacity % 10) * 9) / 10;
+        if (count < threshold) this.ShrinkToFit();
+    }
+
     // Reduces Capacity to Count, releasing an empty buffer.
     // Relocation invalidates borrows. Allocation failure preserves the original buffer.
     public void ShrinkToFit()

@@ -19,6 +19,8 @@ struct PriorityQueue<T>
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.Count == 0; }
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
+    public nuint EnsureCapacity(nuint requested) => storage.EnsureCapacity(requested);
+    public void TrimExcess() { storage.TrimExcess(); }
     public void ShrinkToFit() { storage.ShrinkToFit(); }
     public void Clear() { storage.Clear(); }
 

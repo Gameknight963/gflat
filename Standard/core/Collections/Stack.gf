@@ -14,6 +14,8 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
     public bool IsEmpty { immutable get nothrow => storage.Count == 0; }
 
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
+    public nuint EnsureCapacity(nuint requested) => storage.EnsureCapacity(requested);
+    public void TrimExcess() { storage.TrimExcess(); }
     public void ShrinkToFit() { storage.ShrinkToFit(); }
     public void Push(T value) { storage.Add(move value); }
     public T Pop() => storage.Pop();

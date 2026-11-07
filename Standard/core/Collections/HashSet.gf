@@ -9,6 +9,9 @@ struct HashSet<T : IHashable>
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }
     public void Reserve(nuint count) { storage.Reserve(count); }
+    public nuint EnsureCapacity(nuint requested) => storage.EnsureCapacity(requested);
+    public void TrimExcess() { storage.TrimExcess(); }
+    public void TrimExcess(nuint requested) { storage.TrimExcess(requested); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
     public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
     // Borrows the stored equivalent value, or null when absent.

@@ -94,6 +94,32 @@ struct HashMap<K : IHashable, V>
         this.Rehash(size);
     }
 
+    public nuint EnsureCapacity(nuint requested)
+    {
+        this.Reserve(requested);
+        return capacity / 2;
+    }
+
+    public void TrimExcess() { this.TrimExcess(count); }
+
+    public void TrimExcess(nuint requested)
+    {
+        if (requested < count) throw new Exception("HashMap trim capacity is below Count");
+        if (requested >= capacity / 2) return;
+        if (requested == 0)
+        {
+            if (entries != null) global::Memory::Free(entries!);
+            entries = null;
+            states = null;
+            capacity = 0;
+            used = 0;
+            return;
+        }
+        nuint size = requested * 2;
+        if (size < 8) size = 8;
+        if (size < capacity) this.Rehash(size);
+    }
+
     private void Rehash(nuint size)
     {
         nuint stride = (nuint)sizeof(Entry);

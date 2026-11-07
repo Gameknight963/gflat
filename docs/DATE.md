@@ -100,3 +100,6 @@ Equality, ordering, and hashing use the day number. Sources:
 `core/Time/Date.gf` and `core/Time/DayOfWeek.gf`, with their interface
 dependencies. Calendar behavior follows [.NET DateOnly](https://learn.microsoft.com/en-us/dotnet/api/system.dateonly)
 and [ISOWeek](https://learn.microsoft.com/en-us/dotnet/api/system.globalization.isoweek).
+
+Use [Deconstruct](TEMPORAL_DECONSTRUCTION.md) to read several components in
+one method call.

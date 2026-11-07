@@ -197,6 +197,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `TimeOfDay` | [Time of day](TIME_OF_DAY.md) |
 | Clock `AddHours`, `AddMinutes`, `AddTicks` | [Adding units to a clock value](CLOCK_UNIT_ADDITION.md) |
 | Direct date/time components and clock-duration conversion | [Date and clock components](TEMPORAL_COMPONENTS.md) |
+| Date and clock `Deconstruct` | [Read components together](TEMPORAL_DECONSTRUCTION.md) |
 | `DateTime` | [Date and time](DATE_TIME.md) |
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |
 | Temporal `UnixEpoch`, offset tick construction, and `ToUniversalTime` | [Unix epochs and zero-offset timestamps](TEMPORAL_EPOCH.md) |

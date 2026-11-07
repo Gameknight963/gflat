@@ -84,6 +84,17 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         day = remaining + 1;
     }
 
+    public immutable void Deconstruct(ref int year, ref int month, ref int day) nothrow
+    {
+        int y = 0;
+        int m = 0;
+        int d = 0;
+        this.GetParts(ref y, ref m, ref d);
+        year = y;
+        month = m;
+        day = d;
+    }
+
     public int Year
     {
         immutable get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return year; }

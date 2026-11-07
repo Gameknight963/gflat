@@ -63,3 +63,6 @@ Arithmetic follows [TimeOnly.Add](https://learn.microsoft.com/en-us/dotnet/api/s
 and [TimeOnly.IsBetween](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.isbetween).
 
 See [Adding units to a clock value](CLOCK_UNIT_ADDITION.md) for hour, minute, and tick additions.
+
+Use [Deconstruct](TEMPORAL_DECONSTRUCTION.md) to read several components in
+one method call.

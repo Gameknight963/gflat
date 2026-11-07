@@ -41,6 +41,40 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
     public int Microsecond { immutable get nothrow => (int)(ticks / 10l % 1000l); }
     public int Nanosecond { immutable get nothrow => (int)(ticks % 10l * 100l); }
 
+    public immutable void Deconstruct(ref int hour, ref int minute) nothrow
+    {
+        long value = ticks;
+        hour = (int)(value / 36000000000l % 24l);
+        minute = (int)(value / 600000000l % 60l);
+    }
+
+    public immutable void Deconstruct(ref int hour, ref int minute, ref int second) nothrow
+    {
+        long value = ticks;
+        hour = (int)(value / 36000000000l % 24l);
+        minute = (int)(value / 600000000l % 60l);
+        second = (int)(value / 10000000l % 60l);
+    }
+
+    public immutable void Deconstruct(ref int hour, ref int minute, ref int second, ref int millisecond) nothrow
+    {
+        long value = ticks;
+        hour = (int)(value / 36000000000l % 24l);
+        minute = (int)(value / 600000000l % 60l);
+        second = (int)(value / 10000000l % 60l);
+        millisecond = (int)(value / 10000l % 1000l);
+    }
+
+    public immutable void Deconstruct(ref int hour, ref int minute, ref int second, ref int millisecond, ref int microsecond) nothrow
+    {
+        long value = ticks;
+        hour = (int)(value / 36000000000l % 24l);
+        minute = (int)(value / 600000000l % 60l);
+        second = (int)(value / 10000000l % 60l);
+        millisecond = (int)(value / 10000l % 1000l);
+        microsecond = (int)(value / 10l % 1000l);
+    }
+
     public static TimeOfDay FromTimeSpan(TimeSpan value) => FromTicks(value.Ticks);
     public immutable TimeSpan ToTimeSpan() nothrow => TimeSpan::FromTicks(ticks);
 

@@ -56,6 +56,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
 | Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |
+| Set `TryGetValue`, sorted-set `Min`/`Max` | [Retrieve stored set values](SET_VALUE_LOOKUP.md) |
 | Sorted-set equality, subset/superset checks, overlap | [Comparing sorted sets](SORTED_SET_RELATIONS.md) |
 | Sorted-set algebra and `RemoveWhere` | [Mutating sorted sets](SORTED_SET_ALGEBRA.md) |
 | `DisjointSet` | [Disjoint sets](DISJOINT_SET.md) |

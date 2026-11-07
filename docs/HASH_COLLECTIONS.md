@@ -1,5 +1,8 @@
 # Hash collections
 
+Sets can [copy their stored representative](SET_VALUE_LOOKUP.md) with the
+optional `TryGetValue` extension, or borrow it with `Find`.
+
 `Standard::Collections::HashMap<K,V>` owns keys and values. `HashSet<T>` owns
 unique elements.
 

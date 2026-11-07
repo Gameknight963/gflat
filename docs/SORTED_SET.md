@@ -30,6 +30,8 @@ int main()
 | `Add(value)` | Inserts, or returns false and destroys the duplicate argument |
 | `Contains(&query)` | Tests for a comparer-equivalent value |
 | `Find(&query)` | Immutable pointer to the stored equivalent value, or null |
+| `Min`, `Max` | [Borrow the endpoint values](SET_VALUE_LOOKUP.md#sorted-endpoints) in comparer order, throwing when empty |
+| `TryGetValue` | Optional [copy of the stored representative](SET_VALUE_LOOKUP.md) |
 | `Remove(&query)` | Destroys the stored value, returning false when absent |
 | `Clear()` | Destroys values and retains capacity |
 | `Reserve(count)` | Reserves entry capacity |

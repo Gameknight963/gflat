@@ -11,6 +11,22 @@ struct SortedSet<T>
     public nuint Count { immutable get nothrow => storage.Count; }
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }
+    public ref immutable(T) Min
+    {
+        immutable get
+        {
+            if (storage.IsEmpty) throw new Exception("Cannot get the minimum of an empty sorted set");
+            return *storage.KeyAt(0);
+        }
+    }
+    public ref immutable(T) Max
+    {
+        immutable get
+        {
+            if (storage.IsEmpty) throw new Exception("Cannot get the maximum of an empty sorted set");
+            return *storage.KeyAt(storage.Count - 1);
+        }
+    }
     public void Reserve(nuint count) { storage.Reserve(count); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
     public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);

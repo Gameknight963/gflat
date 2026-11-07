@@ -113,6 +113,9 @@ public struct MemoryStream : IByteReader, ITextWriter
         return take;
     }
 
+    public nuint Read(byte* data, nuint count)
+        => this.Read(data.reinterpret<char*>(), count);
+
     public int ReadByte()
     {
         int value = this.PeekByte();
@@ -164,6 +167,11 @@ public struct MemoryStream : IByteReader, ITextWriter
             for (nuint index = 0; index < count; index++) destination[index] = data[index];
         position = end;
     }
+
+    public void Write(readonly(byte)* data, nuint count)
+        => this.Write(data.reinterpret<readonly(char)*>(), count);
+
+    public void WriteByte(byte value) => this.Write(&value, 1);
 
     public void WriteByte(char value) { this.Write(&value, 1); }
 

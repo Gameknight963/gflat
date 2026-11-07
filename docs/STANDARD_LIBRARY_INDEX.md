@@ -255,6 +255,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Paths.GetRelativePath` | [Computing a relative path](PATH_RELATIVE.md) |
 | `Paths.Combine` | [Combining path components](PATH_COMBINE.md) |
 | `MemoryStream` | [Owning byte streams](../Standard/core/IO/MEMORY_STREAM.md) |
+| Memory-stream byte-buffer overloads | [Use binary buffers directly](MEMORY_STREAM_BYTE_BUFFERS.md) |
 | `MemoryStream.WriteTo` | [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) |
 | `MemoryStream.ToBytes` | [Taking an owning snapshot](MEMORY_STREAM_BYTES.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |

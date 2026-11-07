@@ -13,9 +13,29 @@ public struct Stopwatch<C : IMonotonicClock>
     public Stopwatch()
     {
         start = 0l; accumulated = 0l; frequency = 0l; running = false;
+        frequency = CheckedFrequency();
+    }
+
+    private static long CheckedFrequency()
+    {
         long selected = C::GetFrequency();
         if (selected <= 0l) throw new Exception("Clock frequency must be positive");
-        frequency = selected;
+        return selected;
+    }
+
+    public static long Frequency { get => CheckedFrequency(); }
+    public static long GetTimestamp() => C::GetTimestamp();
+
+    public static TimeSpan GetElapsedTime(long startingTimestamp)
+        => GetElapsedTime(startingTimestamp, GetTimestamp());
+
+    public static TimeSpan GetElapsedTime(long startingTimestamp, long endingTimestamp)
+    {
+        long selected = CheckedFrequency();
+        bool negative = endingTimestamp < startingTimestamp;
+        ulong magnitude = (ulong)endingTimestamp - (ulong)startingTimestamp;
+        if (negative) magnitude = (ulong)startingTimestamp - (ulong)endingTimestamp;
+        return TimeSpan::FromTicks(ScaleTicks(magnitude, negative, selected, DurationTicksPerSecond));
     }
 
     public static Stopwatch<C> StartNew()
@@ -61,6 +81,10 @@ public struct Stopwatch<C : IMonotonicClock>
     // Raw provider counter units, not the 100 ns units used by TimeSpan.
     public long ElapsedTicks { immutable get => this.ReadTotal(); }
     public double ElapsedSeconds { immutable get => (double)this.ReadTotal() / (double)frequency; }
+    public long ElapsedMilliseconds
+    {
+        immutable get => ScaleTicks((ulong)this.ReadTotal(), false, frequency, 1000l);
+    }
 
     // floor(part * 10^7 / divisor), where part < divisor <= long maximum.
     // Reduce after doubling AND after addition, so neither step reaches 2^64.
@@ -81,18 +105,26 @@ public struct Stopwatch<C : IMonotonicClock>
         return quotient;
     }
 
+    // units is either milliseconds or TimeSpan ticks per second. Dividing the
+    // exact truncated fraction again preserves truncation at the coarser unit.
+    private static long ScaleTicks(ulong magnitude, bool negative, long divisor, long units)
+    {
+        ulong limit = (ulong)MaximumTicks;
+        if (negative) limit++;
+        ulong whole = magnitude / (ulong)divisor;
+        if (whole > limit / (ulong)units) throw new Exception("Stopwatch duration overflow");
+        ulong ticks = whole * (ulong)units;
+        ulong fraction = ScaleFraction(magnitude % (ulong)divisor, (ulong)divisor) /
+            (ulong)(DurationTicksPerSecond / units);
+        if (fraction > limit - ticks) throw new Exception("Stopwatch duration overflow");
+        ticks += fraction;
+        if (!negative) return (long)ticks;
+        if (ticks == (ulong)MaximumTicks + 1ul) return -MaximumTicks - 1l;
+        return -(long)ticks;
+    }
+
     public TimeSpan Elapsed
     {
-        immutable get
-        {
-            long total = this.ReadTotal();
-            long whole = total / frequency;
-            if (whole > MaximumTicks / DurationTicksPerSecond)
-                throw new Exception("Stopwatch duration overflow");
-            long ticks = whole * DurationTicksPerSecond;
-            long fraction = (long)ScaleFraction((ulong)(total % frequency), (ulong)frequency);
-            if (fraction > MaximumTicks - ticks) throw new Exception("Stopwatch duration overflow");
-            return TimeSpan::FromTicks(ticks + fraction);
-        }
+        immutable get => TimeSpan::FromTicks(ScaleTicks((ulong)this.ReadTotal(), false, frequency, DurationTicksPerSecond));
     }
 }

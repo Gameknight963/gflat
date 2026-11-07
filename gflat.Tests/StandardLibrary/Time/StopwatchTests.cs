@@ -153,6 +153,8 @@ public sealed class StopwatchTests
                 static class Clock:Standard::Time::IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}
                 bool ResetProbe(Standard::Time::Stopwatch<Clock>* value)nothrow{value.Reset();return value.IsRunning;}
                 Standard::Time::TimeSpan Observe(immutable(Standard::Time::Stopwatch<Clock>)* value)=>value.Elapsed;
+                Standard::Time::TimeSpan Interval(long start,long end)=>Standard::Time::Stopwatch<Clock>::GetElapsedTime(start,end);
+                long Milliseconds(immutable(Standard::Time::Stopwatch<Clock>)* value)=>value.ElapsedMilliseconds;
                 namespace __gflat_runtime { public void*? Allocate(nuint bytes) => global::Memory::Allocate(bytes); public void Free(void* storage) nothrow => global::Memory::Free(storage); }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});

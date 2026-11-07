@@ -161,6 +161,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Date/time component constructors | [Constructing dates and timestamps from components](TEMPORAL_CONSTRUCTION.md) |
 | Date/time `AddTicks`, `AddDays` through `AddMicroseconds` | [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) |
 | `Stopwatch<C>`, `IMonotonicClock` | [Measuring intervals](STOPWATCH.md) |
+| `Stopwatch<C>::GetElapsedTime`, `ElapsedMilliseconds` | [Measuring between timestamps](STOPWATCH_INTERVALS.md) |
 
 ### Text and Unicode
 

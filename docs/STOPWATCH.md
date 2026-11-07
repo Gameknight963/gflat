@@ -49,12 +49,16 @@ earlier time. `StartNew()` constructs and starts a timer in one call.
 | `IsRunning` | Current running state |
 | `ElapsedTicks` | Accumulated provider counter ticks |
 | `ElapsedSeconds` | Approximate double seconds |
+| `ElapsedMilliseconds` | Elapsed whole milliseconds as a long |
 | `Elapsed` | TimeSpan rounded down to complete 100-nanosecond ticks |
 
 Each elapsed property reads the clock once while running and uses stored state
 while stopped. Provider ticks can differ from TimeSpan ticks. Exact TimeSpan
 conversion can overflow even when ElapsedTicks still fits. ElapsedSeconds
 remains available in that case.
+
+For timestamp-based measurements without a timer instance, use
+[`GetTimestamp`, `Frequency`, and `GetElapsedTime`](STOPWATCH_INTERVALS.md).
 
 ## Providers and errors
 

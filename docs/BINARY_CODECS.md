@@ -94,6 +94,9 @@ separate from any storage the writer may modify.
 
 # Component percent encoding
 
+Optional [percent-encoding span helpers](PERCENT_ENCODING_SPANS.md) accept
+counted views and writable destination spans.
+
 `PercentEncoding` escapes URI component bytes as uppercase `%HH`. ASCII letters,
 digits, `-`, `.`, `_`, and `~` pass through. Existing percent escapes are escaped
 again. Supply UTF-8 bytes when encoding Unicode text.

@@ -269,6 +269,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `CsvReader`, `CsvReaderText`, `CsvParseException` | [CSV reader](CSV_READER.md) |
 | `CsvWriter`, borrowed String-row `WriteRecord` | [CSV writer](CSV_WRITER.md) |
 | `PercentEncoding`, optional String conveniences | [Component percent encoding](BINARY_CODECS.md#component-percent-encoding) |
+| Span percent encoding and decoding | [Percent-encode span data](PERCENT_ENCODING_SPANS.md) |
 
 ### Paths, bits, and binary data
 

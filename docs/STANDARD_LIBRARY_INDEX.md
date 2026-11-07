@@ -47,6 +47,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `TextLines` | [Borrowed text lines](TEXT_LINES.md) |
 | `Span<immutable(String)>.Join` | [Joining borrowed Strings](STRING_JOIN.md) |
 | String enumerable `Join` | [Join a sequence of strings](ENUMERABLE_STRING_JOIN.md) |
+| Enumerable `ITextWriter.WriteJoin` | [Stream a joined sequence](ENUMERABLE_WRITER_JOIN.md) |
 | `UnicodeText` | [Owning Unicode conversions](UNICODE_TEXT.md) |
 
 ### Collections and queries

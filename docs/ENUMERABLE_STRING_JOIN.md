@@ -41,3 +41,6 @@ reserve the complete output size.
 Selective builds include `Text/enumerable_string_join.gf` with the usual String
 and enumerable dependencies. The freestanding forms take the sequence first:
 `Standard::Text::Join(values, separator[, separatorCount])`.
+
+To send the result directly to a writer, use
+[enumerable WriteJoin](ENUMERABLE_WRITER_JOIN.md).

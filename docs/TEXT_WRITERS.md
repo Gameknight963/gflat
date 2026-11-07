@@ -49,6 +49,8 @@ use [CountingWriter](COUNTING_WRITER.md). To add a prefix per line, use
 ## Write joined Strings
 
 `WriteJoin` streams a span of Strings, inserting a separator between entries.
+An optional [enumerable overload](ENUMERABLE_WRITER_JOIN.md) streams a sequence
+without first collecting its strings or building a complete joined result.
 Empty entries still count as entries. String bytes and counted separators retain
 embedded NULs. The C-string separator overload stops at its first NUL.
 

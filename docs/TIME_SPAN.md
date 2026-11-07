@@ -20,12 +20,14 @@ int main()
 
 ## Units and components
 
-FromTicks accepts an exact long. FromMilliseconds, FromSeconds, FromMinutes,
-FromHours, and FromDays accept whole signed units and throw if the scaled
-tick count overflows.
+FromTicks accepts an exact long. FromMicroseconds, FromMilliseconds, FromSeconds,
+FromMinutes, FromHours, and FromDays accept whole signed units and throw if the
+scaled tick count overflows. Their double overloads accept [fractional
+intervals](TIME_SPAN_FRACTIONAL.md) and truncate sub-tick fractions toward zero.
 
 Days, Hours, Minutes, Seconds, and Milliseconds expose signed components.
 Division truncates toward zero, so minus 25 hours has Days = -1 and Hours = -1.
+Microseconds and Nanoseconds expose the remaining submillisecond components.
 TotalMilliseconds, TotalSeconds, TotalMinutes, TotalHours, and TotalDays return
 the complete duration as a double, including fractions:
 
@@ -42,7 +44,8 @@ int main()
 ```
 
 Large totals can lose tick precision. Use Ticks for exact storage and
-arithmetic. Add, Subtract, and Negate throw if their result exceeds the signed
+arithmetic. TotalMicroseconds and TotalNanoseconds also return approximate
+double totals. Add, Subtract, and Negate throw if their result exceeds the signed
 tick range. Negating the minimum tick value therefore throws.
 
 ## Formatting

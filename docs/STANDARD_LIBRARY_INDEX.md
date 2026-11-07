@@ -100,6 +100,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `IpNetwork`, `NetworkAddress`, `LastAddress` | [IP network prefixes](IP_NETWORK.md) |
 | `Date` | [Calendar dates](DATE.md) |
 | `TimeSpan` | [Time intervals](TIME_SPAN.md) |
+| Fractional `TimeSpan` factories, microsecond and nanosecond components/totals | [Fractional time intervals](TIME_SPAN_FRACTIONAL.md) |
 | `TimeOfDay` | [Time of day](TIME_OF_DAY.md) |
 | `DateTime` | [Date and time](DATE_TIME.md) |
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |

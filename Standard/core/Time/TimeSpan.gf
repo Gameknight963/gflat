@@ -22,11 +22,30 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
         return FromTicks(value * scale);
     }
 
+    public static TimeSpan FromMicroseconds(long value) => FromScaled(value, 10l);
     public static TimeSpan FromMilliseconds(long value) => FromScaled(value, 10000l);
     public static TimeSpan FromSeconds(long value) => FromScaled(value, 10000000l);
     public static TimeSpan FromMinutes(long value) => FromScaled(value, 600000000l);
     public static TimeSpan FromHours(long value) => FromScaled(value, 36000000000l);
     public static TimeSpan FromDays(long value) => FromScaled(value, 864000000000l);
+
+    private static TimeSpan FromScaled(double value, double scale)
+    {
+        if (value != value) throw new Exception("TimeSpan value must not be NaN");
+        double scaled = value * scale;
+        double limit = 9223372036854775808d;
+        if (scaled < -limit || scaled > limit) throw new Exception("TimeSpan factory overflow");
+        // MaxTicks rounds to 2^63 as a double. Handle that endpoint before casting.
+        if (scaled == limit) return FromTicks(MaximumTicks);
+        return FromTicks((long)scaled);
+    }
+
+    public static TimeSpan FromMicroseconds(double value) => FromScaled(value, 10d);
+    public static TimeSpan FromMilliseconds(double value) => FromScaled(value, 10000d);
+    public static TimeSpan FromSeconds(double value) => FromScaled(value, 10000000d);
+    public static TimeSpan FromMinutes(double value) => FromScaled(value, 600000000d);
+    public static TimeSpan FromHours(double value) => FromScaled(value, 36000000000d);
+    public static TimeSpan FromDays(double value) => FromScaled(value, 864000000000d);
 
     public long Ticks { immutable get nothrow => ticks; }
     public int Days { immutable get nothrow => (int)(ticks / 864000000000l); }
@@ -34,11 +53,15 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
     public int Minutes { immutable get nothrow => (int)(ticks / 600000000l % 60l); }
     public int Seconds { immutable get nothrow => (int)(ticks / 10000000l % 60l); }
     public int Milliseconds { immutable get nothrow => (int)(ticks / 10000l % 1000l); }
+    public int Microseconds { immutable get nothrow => (int)(ticks / 10l % 1000l); }
+    public int Nanoseconds { immutable get nothrow => (int)(ticks % 10l * 100l); }
     public double TotalSeconds { immutable get nothrow => (double)ticks / 10000000d; }
     public double TotalMilliseconds { immutable get nothrow => (double)ticks / 10000d; }
     public double TotalMinutes { immutable get nothrow => (double)ticks / 600000000d; }
     public double TotalHours { immutable get nothrow => (double)ticks / 36000000000d; }
     public double TotalDays { immutable get nothrow => (double)ticks / 864000000000d; }
+    public double TotalMicroseconds { immutable get nothrow => (double)ticks / 10d; }
+    public double TotalNanoseconds { immutable get nothrow => (double)ticks * 100d; }
 
     private static bool ReadTwoDigits(readonly(char)* text, nuint count, ref nuint position, ref int value) nothrow
     {

@@ -233,6 +233,18 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         return Parse(text, count);
     }
 
+    public static Rational Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
+    public static bool TryParse(Span<readonly(char)> text, ref Rational result)
+    {
+        if (text.IsEmpty) return TryParse("", 0, ref result);
+        return TryParse(text.Data!, text.Length, ref result);
+    }
+
     // Output and written must be disjoint from each other, this owner, and its numeric storage.
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {

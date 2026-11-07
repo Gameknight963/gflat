@@ -80,3 +80,6 @@ See [exact rational rounding](RATIONAL_ROUNDING.md) for all MidpointRounding mod
 
 Use [bounded and span numeric formatting](RATIONAL_TRY_FORMAT.md) to write
 into caller-owned storage without allocating temporary text.
+
+Use the [span parsing overloads](RATIONAL_SPAN_PARSING.md) for counted text
+views without constructing an intermediate String.

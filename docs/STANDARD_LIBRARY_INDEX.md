@@ -179,6 +179,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Math::BigMul` | [Full-width integer multiplication](MATH_BIG_MUL.md) |
 | `Rational` | [Exact rational values](RATIONAL.md) |
 | Bounded rational and span numeric formatting | [Format into caller storage](RATIONAL_TRY_FORMAT.md) |
+| Rational span parsing | [Parse counted fraction text](RATIONAL_SPAN_PARSING.md) |
 | `Interlocked` | [Atomic integer operations](INTERLOCKED.md) |
 | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md) |
 | `TryParseBool`, `ParseBool` | [Boolean parsing](BOOLEAN_PARSING.md) |

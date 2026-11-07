@@ -23,10 +23,15 @@ public sealed class RationalParsingTests
         String ReadText(readonly(char)* text,ref nuint at){int low=ReadByte(text,ref at);nuint count=(nuint)(low|(ReadByte(text,ref at)<<8));String result=new();result.Resize(count);Span<char> output=result.AsSpan();for(nuint i=0;i<count;i++)output[i]=(char)ReadByte(text,ref at);return move result;}
         """;
 
+    [Fact]
+    public void SpanGuideCompiles() => StandardLibraryGuideTests.CheckProgram("RATIONAL_SPAN_PARSING.md", 0);
+
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void CountedCStringAndThrowingParsersMatchIndependentCanonicalFractionOracles(int optimization)
+    [InlineData(false, 0)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 2)]
+    public void CountedCStringAndThrowingParsersMatchIndependentCanonicalFractionOracles(bool spans, int optimization)
     {
         List<string> inputs=["0","-000","+000","1","-1","+00123","-0006/+0008","-12/-18","1/-9223372036854775808",
             "-9223372036854775808/-1","0/-999","0001/0001",new string('0',90)+"1/-"+new string('0',80)+"2"];
@@ -57,13 +62,15 @@ public sealed class RationalParsingTests
                 }
                 if(at!={{{hex.Length}}})return 7;return 0;
             }
-            """,optimization);
+            """,optimization, spans);
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void MalformedCountedBytesResetOnlyOnFalseAndOwnedLimbInputStaysReadableUntilCommit(int optimization)
+    [InlineData(false, 0)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 2)]
+    public void MalformedCountedBytesResetOnlyOnFalseAndOwnedLimbInputStaysReadableUntilCommit(bool spans, int optimization)
     {
         string[] invalid=["","+","-","/","1/","/2","1//2","1/2/3","1.0","1/2.0"," 1","1 ","1 /2","1/ 2","1_0","0x10","++1","1/-","1/+","1/0","0/-000","1/+000",
             "\u0661/2","1/\u00ff","1/2\0suffix","+000\0/0","1\0/2","\0"];
@@ -114,13 +121,15 @@ public sealed class RationalParsingTests
                 }
                 if(at!={{{hex.Length}}})return 18;return 0;
             }
-            """,optimization);
+            """,optimization, spans);
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void EveryMeasuredValidAndInvalidParseAllocationFailurePreservesOldResultAndInputAndReleasesScratch(int optimization)
+    [InlineData(false, 0)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 2)]
+    public void EveryMeasuredValidAndInvalidParseAllocationFailurePreservesOldResultAndInputAndReleasesScratch(bool spans, int optimization)
         =>Run(Support+"""
             int main(){
                 readonly(char)*[6] texts=["12345678901234567890/-24691357802469135780","000","bad","1/0","","12345678901234567890/invalid"];
@@ -147,7 +156,7 @@ public sealed class RationalParsingTests
                 }
                 if(allocated!=released)return 6;return 0;
             }
-            """,optimization);
+            """,optimization, spans);
 
     private readonly record struct Fraction(BigInteger N,BigInteger D){public string Text=>D.IsOne?N.ToString(CultureInfo.InvariantCulture):N.ToString(CultureInfo.InvariantCulture)+"/"+D.ToString(CultureInfo.InvariantCulture);}
     private static Fraction Canonical(BigInteger numerator,BigInteger denominator){if(denominator.Sign<0){numerator=-numerator;denominator=-denominator;}BigInteger gcd=BigInteger.GreatestCommonDivisor(numerator,denominator);return new(numerator/gcd,denominator/gcd);}
@@ -157,8 +166,22 @@ public sealed class RationalParsingTests
     private static void WriteText(BinaryWriter writer,string text){byte[] bytes=Encoding.UTF8.GetBytes(text);writer.Write((ushort)bytes.Length);writer.Write(bytes);}
     private static IEnumerable<SourceFile> Sources(string program)
         =>StandardTestSources.Numerics.Append(new SourceFile("rational-parsing.gf",program));
-    private static void Run(string program,int optimization)
+    private static void Run(string program,int optimization,bool spans)
     {
+        if (spans)
+        {
+            program = program.Replace("Rational::TryParse(", "TryRational(").Replace("Rational::Parse(", "ParseRational(");
+            program += "\n" + """
+                bool TryRational(readonly(char)* text, nuint count, ref Rational result)
+                    => Rational::TryParse(new Span<readonly(char)>(text, count), ref result);
+                bool TryRational(readonly(char)* text, ref Rational result)
+                    => Rational::TryParse(text, ref result);
+                Rational ParseRational(readonly(char)* text, nuint count)
+                    => Rational::Parse(new Span<readonly(char)>(text, count));
+                Rational ParseRational(readonly(char)* text)
+                    => Rational::Parse(text);
+                """;
+        }
         var result=CompilerTestHelper.Run(Sources(program),optimization);Assert.True(result.ExitCode==0,$"Rational parsing exit {result.ExitCode}: {result.StandardError}");
     }
 }

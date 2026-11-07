@@ -10,6 +10,12 @@ the argument type. Clamp includes both bounds and throws if minimum exceeds
 maximum. Signed Abs throws for the type's minimum value, whose positive
 counterpart does not fit.
 
+`Sign(value)` returns an `int`: -1 for a negative value, 0 for zero, and 1 for
+a positive value. It accepts all integer types listed above and both `float`
+and `double`. Integer overloads are `nothrow` and handle signed minimum values.
+Floating-point overloads treat both signed zeros as zero, accept infinities,
+and throw `Exception("NaN has no sign")` for NaN.
+
 ### Common divisors and multiples
 
 For a quotient and remainder together, use [DivRem and TryDivRem](MATH_DIVREM.md).

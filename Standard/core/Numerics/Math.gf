@@ -4,6 +4,94 @@ namespace Standard::Numerics;
 // operations require the ordinary exception/allocation support.
 public static class Math
 {
+    public static int Sign(sbyte value) nothrow
+    {
+        if (value < (sbyte)0) return -1;
+        if (value > (sbyte)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(byte value) nothrow
+    {
+        if (value > (byte)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(short value) nothrow
+    {
+        if (value < (short)0) return -1;
+        if (value > (short)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(ushort value) nothrow
+    {
+        if (value > (ushort)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(int value) nothrow
+    {
+        if (value < (int)0) return -1;
+        if (value > (int)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(uint value) nothrow
+    {
+        if (value > (uint)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(long value) nothrow
+    {
+        if (value < (long)0) return -1;
+        if (value > (long)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(ulong value) nothrow
+    {
+        if (value > (ulong)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(extralong value) nothrow
+    {
+        if (value < (extralong)0) return -1;
+        if (value > (extralong)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(nint value) nothrow
+    {
+        if (value < (nint)0) return -1;
+        if (value > (nint)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(nuint value) nothrow
+    {
+        if (value > (nuint)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(float value)
+    {
+        if (value != value) throw new Exception("NaN has no sign");
+        if (value < (float)0) return -1;
+        if (value > (float)0) return 1;
+        return 0;
+    }
+
+    public static int Sign(double value)
+    {
+        if (value != value) throw new Exception("NaN has no sign");
+        if (value < (double)0) return -1;
+        if (value > (double)0) return 1;
+        return 0;
+    }
+
     public static sbyte Min(sbyte a, sbyte b) nothrow { if (a < b) return a; return b; }
     public static sbyte Max(sbyte a, sbyte b) nothrow { if (a > b) return a; return b; }
     public static sbyte Clamp(sbyte value, sbyte minimum, sbyte maximum)

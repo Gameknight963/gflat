@@ -73,6 +73,10 @@ boundaries lack one or removing one duplicated boundary separator. A rooted
 right component is still joined to the left. Other separators and dot segments
 are preserved. Both C-string and span pairs return a String.
 
+[`Combine(left, right, style)`](../../../docs/PATH_COMBINE.md) replaces the left
+component when the right is rooted. It otherwise joins relative components
+without resolving dot segments or querying the filesystem.
+
 | Test | Unix | Windows |
 | --- | --- | --- |
 | `IsSeparator` | `/` | `/` or `\` |

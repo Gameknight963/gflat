@@ -191,6 +191,24 @@ public static class Paths
         return Paths::JoinCore(leftData, left.Length, rightData, right.Length, style);
     }
 
+    // A rooted right component replaces the left, including Windows drive-relative paths.
+    public static String Combine(readonly(char)* left, readonly(char)* right, PathStyle style)
+    {
+        if (style != PathStyle::Unix && style != PathStyle::Windows)
+            throw new Exception("Invalid path style");
+        nuint rightLength = Paths::Length(right);
+        if (Paths::IsRootedCore(right, rightLength, style)) return String::From(right, rightLength);
+        return Paths::JoinCore(left, Paths::Length(left), right, rightLength, style);
+    }
+
+    public static String Combine(Span<readonly(char)> left, Span<readonly(char)> right, PathStyle style)
+    {
+        if (style != PathStyle::Unix && style != PathStyle::Windows)
+            throw new Exception("Invalid path style");
+        if (Paths::IsRooted(right, style)) return String::From(right.Data!, right.Length);
+        return Paths::Join(left, right, style);
+    }
+
     // Resolves dot segments and repeated separators against a fully qualified base.
     // Windows drive-relative and device paths are rejected.
     public static String GetFullPath(readonly(char)* path, readonly(char)* basePath, PathStyle style)

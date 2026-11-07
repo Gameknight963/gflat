@@ -74,6 +74,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `Index()` | Pair each item with its zero-based position as an [Indexed value](QUERY_INDEX.md). |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Concat(other)` | Yield the complete first query, then the second, with inline cursor state. |
+| `SelectMany(selector)` | [Flatten projected queries](QUERY_SELECT_MANY.md) in outer-then-inner order. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements. Counts are `nuint`. |
 | `TakeWhile(predicate)` | Yield the initial matching prefix. Stop permanently at the first false result. |
 | `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
@@ -139,6 +140,7 @@ value once. `Any` and `Contains` stop at the first match. See
 | Operators | Internal storage |
 | --- | --- |
 | `Where`, `Select`, `Zip`, `Concat`, `Take`, `Skip`, `TakeWhile`, `SkipWhile` | Inline source and cursor state |
+| `SelectMany` | One heap-owned active inner query and iterator |
 | `Distinct`, `DistinctBy` | A hash set grown during iteration |
 | `Union`, `Except`, `Intersect` | A hash set per enumerator, with the buffering rules in [query set operations](QUERY_SET_OPERATIONS.md) |
 | `UnionBy`, `ExceptBy`, `IntersectBy` | A key set per enumerator, with the buffering rules in [query set operations by key](QUERY_SET_OPERATIONS_BY.md) |

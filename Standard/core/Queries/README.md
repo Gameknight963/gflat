@@ -38,6 +38,7 @@ on later reads.
 - Compute numeric and projected means with [Average](../../../docs/QUERY_AVERAGE.md)
 
 - Filter and project with `Where` and `Select`
+- Flatten projected sequences with [SelectMany](../../../docs/QUERY_SELECT_MANY.md)
 - Retain positions with [Index](../../../docs/QUERY_INDEX.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`

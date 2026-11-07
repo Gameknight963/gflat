@@ -180,4 +180,40 @@ public struct BinaryBufferWriter
         if (!BinaryPrimitives::TryWriteDoubleBigEndian(data! + position, capacity - position, value)) return false;
         position += 8; return true;
     }
+    public bool TryWriteNIntLittleEndian(nint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nint);
+        if (capacity - position < width) return false;
+        if (!BinaryPrimitives::TryWriteNIntLittleEndian(data! + position, capacity - position, value)) return false;
+        position += width;
+        return true;
+    }
+
+    public bool TryWriteNIntBigEndian(nint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nint);
+        if (capacity - position < width) return false;
+        if (!BinaryPrimitives::TryWriteNIntBigEndian(data! + position, capacity - position, value)) return false;
+        position += width;
+        return true;
+    }
+
+    public bool TryWriteNUIntLittleEndian(nuint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nuint);
+        if (capacity - position < width) return false;
+        if (!BinaryPrimitives::TryWriteNUIntLittleEndian(data! + position, capacity - position, value)) return false;
+        position += width;
+        return true;
+    }
+
+    public bool TryWriteNUIntBigEndian(nuint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nuint);
+        if (capacity - position < width) return false;
+        if (!BinaryPrimitives::TryWriteNUIntBigEndian(data! + position, capacity - position, value)) return false;
+        position += width;
+        return true;
+    }
+
 }

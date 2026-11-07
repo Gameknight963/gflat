@@ -229,4 +229,40 @@ public struct BinaryBufferReader : IByteReader
         if (!BinaryPrimitives::TryReadDoubleBigEndian(data! + position, length - position, ref value)) return false;
         position += 8; return true;
     }
+    public bool TryReadNIntLittleEndian(ref nint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nint);
+        if (length - position < width) { value = (nint)0; return false; }
+        if (!BinaryPrimitives::TryReadNIntLittleEndian(data! + position, length - position, ref value)) return false;
+        position += width;
+        return true;
+    }
+
+    public bool TryReadNIntBigEndian(ref nint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nint);
+        if (length - position < width) { value = (nint)0; return false; }
+        if (!BinaryPrimitives::TryReadNIntBigEndian(data! + position, length - position, ref value)) return false;
+        position += width;
+        return true;
+    }
+
+    public bool TryReadNUIntLittleEndian(ref nuint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nuint);
+        if (length - position < width) { value = (nuint)0; return false; }
+        if (!BinaryPrimitives::TryReadNUIntLittleEndian(data! + position, length - position, ref value)) return false;
+        position += width;
+        return true;
+    }
+
+    public bool TryReadNUIntBigEndian(ref nuint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nuint);
+        if (length - position < width) { value = (nuint)0; return false; }
+        if (!BinaryPrimitives::TryReadNUIntBigEndian(data! + position, length - position, ref value)) return false;
+        position += width;
+        return true;
+    }
+
 }

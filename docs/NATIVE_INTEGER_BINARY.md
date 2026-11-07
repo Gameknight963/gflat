@@ -31,3 +31,32 @@ read must refer to initialized writable native-integer storage.
 Native width varies between targets. Use explicit Int32, UInt32, Int64, or
 UInt64 codecs when a persisted or network format needs a fixed width.
 Selective builds need `Binary/BinaryPrimitives.gf`.
+
+## Cursor-based buffers
+
+`BinaryBufferReader` and `BinaryBufferWriter` expose the same four read and
+write methods without pointer/count arguments. Success advances Position by
+`sizeof(nint)`. Insufficient remaining capacity returns false without advancing
+Position. Failed reads also clear the result to zero, and failed writes leave
+all bytes unchanged. Default empty cursors fail without accessing storage.
+Copies retain independent positions over the same borrowed bytes.
+
+```csharp
+using Standard::Binary;
+
+int main()
+{
+    byte[16] storage;
+    BinaryBufferWriter writer = new(&storage[0], 16);
+    if (!writer.TryWriteNIntBigEndian((nint)-123)) return 1;
+    BinaryBufferReader reader = new(&storage[0], writer.Position);
+    nint value = 0;
+    if (!reader.TryReadNIntBigEndian(ref value) || value != (nint)-123) return 2;
+    if (reader.Remaining != 0) return 3;
+    return 0;
+}
+```
+
+Cursor builds additionally include `Binary/BinaryBufferReader.gf`,
+`Binary/BinaryBufferWriter.gf`, `IO/IByteReader.gf`, and `Memory/bytes.gf`.
+Native-width cursor operations are allocation-free and `nothrow`.

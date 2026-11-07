@@ -3,6 +3,8 @@
 For a sequence instead of a known span, see
 [enumerable string Join](ENUMERABLE_STRING_JOIN.md).
 
+To extend an existing string, use [AppendJoin](STRING_APPEND_JOIN.md).
+
 `Join` combines a span of Strings with a separator:
 
 ```csharp

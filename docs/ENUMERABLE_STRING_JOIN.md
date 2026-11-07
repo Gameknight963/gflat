@@ -44,3 +44,5 @@ and enumerable dependencies. The freestanding forms take the sequence first:
 
 To send the result directly to a writer, use
 [enumerable WriteJoin](ENUMERABLE_WRITER_JOIN.md).
+
+To extend an existing string, use [AppendJoin](STRING_APPEND_JOIN.md).

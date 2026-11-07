@@ -110,7 +110,9 @@ public static class SourceFormatter
             }
             return count;
         }
-        string Indent(int depth) => string.Concat(Enumerable.Repeat(options.InsertSpaces ? new string(' ', options.TabSize) : "\t", Math.Max(0, depth)));
+        string Indent(int depth) => options.InsertSpaces
+            ? new string(' ', options.TabSize * Math.Max(0, depth))
+            : new string('\t', Math.Max(0, depth));
         void Edit(int start, int length, string replacement)
         {
             if (start < lower && start + length >= lower && replacement.AsSpan().IndexOfAny('\r', '\n') >= 0 &&

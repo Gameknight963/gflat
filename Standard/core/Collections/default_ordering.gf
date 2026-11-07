@@ -47,3 +47,21 @@ public nuint FindUnsortedIndex<T : IComparable<T>>(Span<immutable(T)> values)
 
 public bool Includes<T : IComparable<T>>(Span<immutable(T)> values, Span<immutable(T)> required)
     => Standard::Collections::Includes<T>(values, required, Comparer<T>::Compare);
+
+public nuint IndexOfAnyInRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* lower, immutable(T)* upper)
+    => Standard::Collections::IndexOfAnyInRange<T>(values, lower, upper, Comparer<T>::Compare);
+
+public nuint LastIndexOfAnyInRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* lower, immutable(T)* upper)
+    => Standard::Collections::LastIndexOfAnyInRange<T>(values, lower, upper, Comparer<T>::Compare);
+
+public nuint IndexOfAnyExceptInRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* lower, immutable(T)* upper)
+    => Standard::Collections::IndexOfAnyExceptInRange<T>(values, lower, upper, Comparer<T>::Compare);
+
+public nuint LastIndexOfAnyExceptInRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* lower, immutable(T)* upper)
+    => Standard::Collections::LastIndexOfAnyExceptInRange<T>(values, lower, upper, Comparer<T>::Compare);
+
+public bool ContainsAnyInRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* lower, immutable(T)* upper)
+    => Standard::Collections::ContainsAnyInRange<T>(values, lower, upper, Comparer<T>::Compare);
+
+public bool ContainsAnyExceptInRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* lower, immutable(T)* upper)
+    => Standard::Collections::ContainsAnyExceptInRange<T>(values, lower, upper, Comparer<T>::Compare);

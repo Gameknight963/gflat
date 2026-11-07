@@ -7,6 +7,7 @@ public sealed partial class EditorModel
     public string? MacroInspection(string path, int offset)
     {
         path = CanonicalQueryPath(path);
+        offset = SymbolQueryOffset(path, offset);
         var macro = MacroAt(path, offset);
         if (macro?.Expansion == null || macro.Definition) return null;
         var result = new StringBuilder(macro.Signature).AppendLine().AppendLine();

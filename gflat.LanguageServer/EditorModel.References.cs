@@ -10,6 +10,7 @@ public sealed partial class EditorModel
     {
         if (!sources.TryGetValue(path, out var source)) return [];
         path = source.Path;
+        offset = SymbolQueryOffset(path, offset);
         int index = TokenAt(source.Path, offset);
         var symbol = DocumentationReferenceAt(path, offset)?.Symbol ?? (index < 0 ? null : Resolve(source.Path, index));
         if (symbol?.NameSpan.Source is not { } declaration || declaration.Path.StartsWith('<')) return [];
@@ -27,6 +28,7 @@ public sealed partial class EditorModel
     public Location[] References(string path, int offset, bool includeDeclaration)
     {
         path = CanonicalQueryPath(path);
+        offset = SymbolQueryOffset(path, offset);
         int index = TokenAt(path, offset);
         var symbol = DocumentationReferenceAt(path, offset)?.Symbol ?? (index < 0 ? null : Resolve(path, index));
         if (symbol?.NameSpan.Source is not { } source || source.Path.StartsWith('<')) return [];

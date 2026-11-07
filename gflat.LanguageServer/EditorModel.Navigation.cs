@@ -10,6 +10,7 @@ public sealed partial class EditorModel
     private Symbol? NavigationSymbol(string path, int offset)
     {
         path = CanonicalQueryPath(path);
+        offset = SymbolQueryOffset(path, offset);
         int index = TokenAt(path, offset);
         return index < 0 ? null : Resolve(path, index);
     }

@@ -17,6 +17,7 @@ public sealed partial class EditorModel
         path = CanonicalQueryPath(path);
         var source = sources[path];
         int offset = Workspace.Offset(source.Text, System.Text.Json.JsonSerializer.SerializeToElement(range.Start, Protocol.JsonOptions));
+        offset = SymbolQueryOffset(path, offset);
         var actions = new List<EditorCodeAction>();
         actions.AddRange(MacroActions(path, offset));
         if (ExportDocumentation().Length > 0)

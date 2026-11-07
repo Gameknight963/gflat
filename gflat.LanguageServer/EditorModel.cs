@@ -1072,6 +1072,7 @@ public sealed partial class EditorModel
     public object? Definition(string path, int offset)
     {
         path = CanonicalQueryPath(path);
+        offset = SymbolQueryOffset(path, offset);
         using var queryTiming = PipelineTimings.Measure("editor.query.definition");
         if (DocumentationReferenceAt(path, offset) is { } documentation) return NavigationLocation(documentation.Symbol);
         if (OverriddenMember(path, offset) is { } overridden) return NavigationLocation(overridden);

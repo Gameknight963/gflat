@@ -142,7 +142,10 @@ public sealed partial class EditorModel
             cancellationToken.ThrowIfCancellationRequested();
             var (name, kind, classification, type) = Describe(entry.Node);
             if (name == null) continue;
-            var parents = Parents(entry).ToArray();
+            ScopeEnvironment? containerScope = entry.Parent is { Node: CompilationUnit or NamespaceDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration } container &&
+                scopeEnvironments.TryGetValue(container, out var environment) ? environment : null;
+            var parents = containerScope != null && entry.Node is FieldDeclaration or PropertyDeclaration or ExternDeclaration or MethodDeclaration { StaticConstructorName: null }
+                ? [] : Parents(entry).ToArray();
             if (entry.Node is ConstructorDeclaration or MethodDeclaration { StaticConstructorName: not null })
             {
                 var containingType = parents.FirstOrDefault(parent => IsType(parent.Node));
@@ -150,8 +153,6 @@ public sealed partial class EditorModel
                 classification = containingType?.Node is StructDeclaration ? "struct" : "class";
             }
             if (name.Contains('$')) continue;
-            ScopeEnvironment? containerScope = entry.Parent is { Node: CompilationUnit or NamespaceDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration } container &&
-                scopeEnvironments.TryGetValue(container, out var environment) ? environment : null;
             string ns = entry.Parent?.Node is ExtensionDeclaration ? Namespace(parents)
                 : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? containerScope?.Namespace ?? Namespace(parents);
             string? owner = containerScope is { } scopeEnvironment ? scopeEnvironment.Owner : Owner(parents);

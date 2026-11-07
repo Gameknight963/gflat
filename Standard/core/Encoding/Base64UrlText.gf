@@ -27,6 +27,9 @@ public static class Base64UrlText
         return move result;
     }
 
+    public static String Encode(readonly(byte)* data, nuint count)
+        => Base64UrlText::Encode(data.reinterpret<readonly(char)*>(), count);
+
     public static String Decode(readonly(char)* text, nuint count)
     {
         nuint length = 0;

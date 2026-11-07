@@ -101,6 +101,14 @@ public static class Base64Url
         return true;
     }
 
+    public static bool TryEncode(readonly(byte)* data, nuint count, char* output, nuint capacity,
+        ref nuint written) nothrow
+        => Base64Url::TryEncode(data.reinterpret<readonly(char)*>(), count, output, capacity, ref written);
+
+    public static bool TryDecode(readonly(char)* text, nuint count, byte* output, nuint capacity,
+        ref nuint written) nothrow
+        => Base64Url::TryDecode(text, count, output.reinterpret<char*>(), capacity, ref written);
+
     private static int Digit(char value) nothrow
     {
         if (value >= 'A' && value <= 'Z') return (int)value - 65;

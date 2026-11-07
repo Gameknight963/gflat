@@ -25,6 +25,9 @@ public static class Base64Text
         return move result;
     }
 
+    public static String Encode(readonly(byte)* data, nuint count)
+        => Base64Text::Encode(data.reinterpret<readonly(char)*>(), count);
+
     public static String Decode(readonly(char)* text, nuint count)
     {
         nuint length = 0;

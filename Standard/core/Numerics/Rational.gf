@@ -89,6 +89,32 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         BigInteger bottom = denominator;
         return new Rational(move top, move bottom);
     }
+    public static Rational Min(immutable(Rational)* first, immutable(Rational)* second)
+    {
+        immutable(Rational)* selected = first;
+        if (first.CompareTo(second) > 0) selected = second;
+        Rational result = *selected;
+        return move result;
+    }
+
+    public static Rational Max(immutable(Rational)* first, immutable(Rational)* second)
+    {
+        immutable(Rational)* selected = first;
+        if (first.CompareTo(second) < 0) selected = second;
+        Rational result = *selected;
+        return move result;
+    }
+
+    public static Rational Clamp(immutable(Rational)* value, immutable(Rational)* minimum, immutable(Rational)* maximum)
+    {
+        if (minimum.CompareTo(maximum) > 0) throw new Exception("Rational minimum exceeds maximum");
+        immutable(Rational)* selected = value;
+        if (value.CompareTo(minimum) < 0) selected = minimum;
+        else if (value.CompareTo(maximum) > 0) selected = maximum;
+        Rational result = *selected;
+        return move result;
+    }
+
     public immutable Rational Abs()
     {
         if (numerator.Sign < 0) return this.Negate();

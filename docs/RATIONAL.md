@@ -71,3 +71,5 @@ See [exact rational powers](RATIONAL_POW.md) for signed integer exponents.
 
 See [inspecting rational values](RATIONAL_CLASSIFICATION.md) for allocation-free
 sign, zero, one, and integer checks.
+
+See [rational bounds](RATIONAL_BOUNDS.md) for owning minimum, maximum, and clamp results.

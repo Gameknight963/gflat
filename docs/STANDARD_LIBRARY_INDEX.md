@@ -141,6 +141,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `BitOperations::ReverseEndianness` | [Reversing integer byte order](INTEGER_ENDIANNESS.md) |
 | Signed-exponent `BigInteger.Pow` | [BigInteger powers with signed exponents](BIG_INTEGER_SIGNED_POW.md) |
 | Rational value classification | [Inspecting rational values](RATIONAL_CLASSIFICATION.md) |
+| Rational `Min`, `Max`, `Clamp` | [Rational bounds](RATIONAL_BOUNDS.md) |
 | `Rational.Pow` | [Exact rational powers](RATIONAL_POW.md) |
 | Rational `Abs`, `Reciprocal` | [Rational magnitude and reciprocals](RATIONAL_MAGNITUDE.md) |
 | Rational `Truncate`, `Floor`, `Ceiling` | [Exact rational integral values](RATIONAL_INTEGRAL.md) |

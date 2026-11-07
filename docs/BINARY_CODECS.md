@@ -12,6 +12,9 @@ Base64, Base64Url, Hex, and PercentEncoding expose four buffer operations:
 | `TryGetDecodedLength(text, count, ref length)` | Decoded size after validating input |
 | `TryDecode(text, count, output, capacity, ref written)` | Decoded bytes after validating input and capacity |
 
+Optional [Base64 span helpers](BASE64_SPANS.md) and
+[hex span helpers](HEX_SPANS.md) accept counted views without pointer/count pairs.
+
 Counts and capacities measure bytes. Results omit a terminator. Empty input
 succeeds. Any failure sets the output count to zero and preserves the output
 buffer. Encoding requires separate input and output. Decoding also permits

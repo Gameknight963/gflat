@@ -36,6 +36,7 @@ int main()
 | `TryAdd(key, value)` | Inserts, or returns false for a duplicate |
 | `Set(key, value)` | Inserts or replaces the mapped value, retaining the original key |
 | `Find`, `FindReadOnly`, `FindImmutable` | Mutable, shallow readonly, or deep immutable value pointer |
+| `TryGetValue`, `GetValueOrDefault` | Optional [copying lookup conveniences](MAP_VALUE_LOOKUP.md) |
 | Ref indexer | Borrows a value, throwing when absent |
 | `Remove(key)` | Destroys the pair, returning false when absent |
 | `Extract(key)` | Removes and returns an owning Entry, throwing when absent |

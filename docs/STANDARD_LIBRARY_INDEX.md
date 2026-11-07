@@ -52,6 +52,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Unique<T>` | [Unique ownership](UNIQUE.md) |
 | `HashMap<K,V>`, `HashSet<T>`, query `ToHashSet` | [Hash collections](HASH_COLLECTIONS.md), [Materializing query results into a set](QUERY_HASH_SET.md) |
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
+| Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |
 | `DisjointSet` | [Disjoint sets](DISJOINT_SET.md) |
 | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Equality, hashing, and ordering](HASHING.md) |

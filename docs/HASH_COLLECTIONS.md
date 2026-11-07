@@ -30,6 +30,7 @@ directly. Hash and equality must remain consistent and stable while stored.
 | `Find(&key)` | Mutable value pointer, or null |
 | `FindReadOnly(&key)` | Shallow readonly value pointer, or null |
 | `FindImmutable(&key)` | Deep immutable value pointer, or null |
+| `TryGetValue`, `GetValueOrDefault` | Optional [copying lookup conveniences](MAP_VALUE_LOOKUP.md) |
 | Ref indexer | Borrows a value, throwing when absent |
 | `Remove(&key)` | Destroys the entry, returning false when absent |
 | `Clear()` | Destroys entries and retains capacity |

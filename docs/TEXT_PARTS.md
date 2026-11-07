@@ -56,3 +56,5 @@ and `fast=checked`. Use it when the remainder is one value.
 
 Sources in `core/Text`: `TextParts.gf`, `text_parts_span.gf`, `string_split.gf`,
 and `text_trim_span.gf`.
+
+See [Splitting on an exact byte pattern](TEXT_PATTERN_SPLIT.md) for multi-byte separators.

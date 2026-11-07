@@ -230,3 +230,5 @@ See [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) for borrowed e
 See [Formatting selected version fields](VERSION_FORMATTING.md) for field counts and revision halves.
 
 See [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) for cursor-preserving WriteTo.
+
+See [Splitting on an exact byte pattern](TEXT_PATTERN_SPLIT.md) for multi-byte separators.

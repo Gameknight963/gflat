@@ -10,6 +10,9 @@ the argument type. Clamp includes both bounds and throws if minimum exceeds
 maximum. Signed Abs throws for the type's minimum value, whose positive
 counterpart does not fit.
 
+[Integer `CopySign`](INTEGER_COPY_SIGN.md) combines one value's magnitude with
+another's sign, with checked overflow for an unrepresentable positive result.
+
 `Sign(value)` returns an `int`: -1 for a negative value, 0 for zero, and 1 for
 a positive value. It accepts all integer types listed above and both `float`
 and `double`. Integer overloads are `nothrow` and handle signed minimum values.

@@ -557,6 +557,54 @@ public static class Math
         return result;
     }
 
+    public static sbyte CopySign(sbyte value, sbyte sign)
+    {
+        if ((value < (sbyte)0) == (sign < (sbyte)0)) return value;
+        sbyte minimum = (sbyte)-128;
+        if (value == minimum) throw new Exception("Copy sign overflow");
+        return (sbyte)(-value);
+    }
+
+    public static short CopySign(short value, short sign)
+    {
+        if ((value < (short)0) == (sign < (short)0)) return value;
+        short minimum = (short)-32768;
+        if (value == minimum) throw new Exception("Copy sign overflow");
+        return (short)(-value);
+    }
+
+    public static int CopySign(int value, int sign)
+    {
+        if ((value < (int)0) == (sign < (int)0)) return value;
+        int minimum = -2147483647 - 1;
+        if (value == minimum) throw new Exception("Copy sign overflow");
+        return (int)(-value);
+    }
+
+    public static long CopySign(long value, long sign)
+    {
+        if ((value < (long)0) == (sign < (long)0)) return value;
+        long minimum = -9223372036854775807l - 1l;
+        if (value == minimum) throw new Exception("Copy sign overflow");
+        return (long)(-value);
+    }
+
+    public static extralong CopySign(extralong value, extralong sign)
+    {
+        if ((value < (extralong)0) == (sign < (extralong)0)) return value;
+        extralong minimum = (extralong)1 << 127;
+        if (value == minimum) throw new Exception("Copy sign overflow");
+        return (extralong)(-value);
+    }
+
+    public static nint CopySign(nint value, nint sign)
+    {
+        if ((value < (nint)0) == (sign < (nint)0)) return value;
+        nint minimum = (nint)((nuint)1 << ((int)sizeof(nint) * 8 - 1));
+        if (value == minimum) throw new Exception("Copy sign overflow");
+        return (nint)(-value);
+    }
+
     public static sbyte Abs(sbyte value)
     {
         sbyte minimum = (sbyte)-128;

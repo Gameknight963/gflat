@@ -168,6 +168,68 @@ public static class BitOperations
     public static nuint RoundUpToPowerOfTwo(nuint value) nothrow
         => (nuint)RoundUpToPowerOfTwo((ulong)value);
 
+    public static int PopCount(int value) nothrow => PopCount((uint)value);
+    public static int LeadingZeroCount(int value) nothrow => LeadingZeroCount((uint)value);
+    public static int TrailingZeroCount(int value) nothrow => TrailingZeroCount((uint)value);
+    public static int RotateLeft(int value, int offset) nothrow => (int)RotateLeft((uint)value, offset);
+    public static int RotateRight(int value, int offset) nothrow => (int)RotateRight((uint)value, offset);
+
+    public static int PopCount(long value) nothrow => PopCount((ulong)value);
+    public static int LeadingZeroCount(long value) nothrow => LeadingZeroCount((ulong)value);
+    public static int TrailingZeroCount(long value) nothrow => TrailingZeroCount((ulong)value);
+    public static long RotateLeft(long value, int offset) nothrow => (long)RotateLeft((ulong)value, offset);
+    public static long RotateRight(long value, int offset) nothrow => (long)RotateRight((ulong)value, offset);
+
+    public static int PopCount(nint value) nothrow => PopCount((nuint)value);
+    public static int LeadingZeroCount(nint value) nothrow => LeadingZeroCount((nuint)value);
+    public static int TrailingZeroCount(nint value) nothrow => TrailingZeroCount((nuint)value);
+    public static nint RotateLeft(nint value, int offset) nothrow => (nint)RotateLeft((nuint)value, offset);
+    public static nint RotateRight(nint value, int offset) nothrow => (nint)RotateRight((nuint)value, offset);
+
+    public static int PopCount(extralong value) nothrow
+        => PopCount((ulong)value) + PopCount((ulong)(value >> 64));
+
+    public static int LeadingZeroCount(extralong value) nothrow
+    {
+        ulong upper = (ulong)(value >> 64);
+        if (upper != 0ul) return LeadingZeroCount(upper);
+        return 64 + LeadingZeroCount((ulong)value);
+    }
+
+    public static int TrailingZeroCount(extralong value) nothrow
+    {
+        ulong lower = (ulong)value;
+        if (lower != 0ul) return TrailingZeroCount(lower);
+        return 64 + TrailingZeroCount((ulong)(value >> 64));
+    }
+
+    public static extralong RotateLeft(extralong value, int offset) nothrow
+    {
+        int shift = offset & 127;
+        ulong lower = (ulong)value;
+        ulong upper = (ulong)(value >> 64);
+        if (shift >= 64)
+        {
+            ulong temporary = lower;
+            lower = upper;
+            upper = temporary;
+            shift -= 64;
+        }
+        if (shift != 0)
+        {
+            ulong nextLower = (lower << shift) | (upper >> (64 - shift));
+            upper = (upper << shift) | (lower >> (64 - shift));
+            lower = nextLower;
+        }
+        return ((extralong)upper << 64) | (extralong)lower;
+    }
+
+    public static extralong RotateRight(extralong value, int offset) nothrow
+        => RotateLeft(value, (128 - (offset & 127)) & 127);
+
+    public static bool IsPowerOfTwo(extralong value) nothrow
+        => value > (extralong)0 && PopCount(value) == 1;
+
     public static bool IsPowerOfTwo(int value) nothrow
         => value > 0 && IsPowerOfTwo((uint)value);
 

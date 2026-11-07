@@ -34,3 +34,7 @@ interpretation. The operation is independent of host byte order.
 All methods are `nothrow`. Source: `core/Numerics/BitOperations.gf`.
 
 See [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) for pointer-sized masks and signed power checks.
+
+Signed counts and rotations also accept `int`, `long`, `nint`, and `extralong`.
+See [signed bit operations](SIGNED_BIT_OPERATIONS.md) for two's-complement
+semantics and 128-bit examples.

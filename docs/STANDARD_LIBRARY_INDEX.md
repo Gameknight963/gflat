@@ -209,6 +209,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |
 | Native-width masks and signed power checks | [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) |
 | `BitOperations.Log2`, `Math.ILogB` | [Integer base-two logarithms](INTEGER_LOGARITHMS.md) |
+| Signed `BitOperations` counts and rotations | [Bit operations on signed integers](SIGNED_BIT_OPERATIONS.md) |
 | `BitConverter` | [Floating-point representation](BIT_CONVERTER.md) |
 | `BinaryPrimitives` | [Binary scalar buffers](BINARY_PRIMITIVES.md) |
 | Integer `ReverseEndianness` | [Reversing integer byte order](REVERSE_ENDIANNESS.md) |

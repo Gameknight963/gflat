@@ -264,3 +264,6 @@ See [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) for Min, Max, Clamp, an
 
 See [checked integer conversions](BIG_INTEGER_NARROW_CONVERSIONS.md) for smaller
 and native-sized destination types.
+
+Use the [span parsing overloads](BIG_INTEGER_SPAN_PARSING.md) to parse a
+counted text view without creating a String.

@@ -1037,6 +1037,18 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return BigInteger::TryParse(text, count, ref result);
     }
 
+    public static BigInteger Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
+    public static bool TryParse(Span<readonly(char)> text, ref BigInteger result)
+    {
+        if (text.IsEmpty) return TryParse("", 0, ref result);
+        return TryParse(text.Data!, text.Length, ref result);
+    }
+
     // Output and written must be disjoint from this owner, its limbs, and each other.
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {

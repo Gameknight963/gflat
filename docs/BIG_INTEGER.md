@@ -259,3 +259,5 @@ dependencies.
 See [BigInteger byte conversion](BIG_INTEGER_BYTES.md) for signed, unsigned, and endian-aware binary interchange.
 
 See [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) for allocation-free zero, one, and parity checks.
+
+See [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) for Min, Max, Clamp, and CopySign.

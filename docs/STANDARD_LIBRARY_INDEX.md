@@ -110,6 +110,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `BigInteger` | [BigInteger](BIG_INTEGER.md) |
 | BigInteger byte conversion | [BigInteger byte conversion](BIG_INTEGER_BYTES.md) |
 | BigInteger `IsZero`, `IsOne`, `IsEven` | [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) |
+| BigInteger `Min`, `Max`, `Clamp`, `CopySign` | [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) |
 | `Math` | [Scalar math](MATH.md) |
 | `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
 | `PseudoRandom` | [Deterministic pseudorandom values](PSEUDORANDOM.md) |

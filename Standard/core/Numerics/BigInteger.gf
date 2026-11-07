@@ -247,6 +247,43 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return sign * BigInteger::CompareMagnitude(this, other);
     }
 
+    public static BigInteger Min(immutable(BigInteger)* first, immutable(BigInteger)* second)
+    {
+        immutable(BigInteger)* selected = first;
+        if (first.CompareTo(second) > 0) selected = second;
+        BigInteger result = *selected;
+        return move result;
+    }
+
+    public static BigInteger Max(immutable(BigInteger)* first, immutable(BigInteger)* second)
+    {
+        immutable(BigInteger)* selected = first;
+        if (first.CompareTo(second) < 0) selected = second;
+        BigInteger result = *selected;
+        return move result;
+    }
+
+    public static BigInteger Clamp(immutable(BigInteger)* value, immutable(BigInteger)* minimum, immutable(BigInteger)* maximum)
+    {
+        if (minimum.CompareTo(maximum) > 0) throw new Exception("BigInteger minimum exceeds maximum");
+        immutable(BigInteger)* selected = value;
+        if (value.CompareTo(minimum) < 0) selected = minimum;
+        else if (value.CompareTo(maximum) > 0) selected = maximum;
+        BigInteger result = *selected;
+        return move result;
+    }
+
+    public static BigInteger CopySign(immutable(BigInteger)* value, immutable(BigInteger)* sign)
+    {
+        BigInteger result = *value;
+        if (result.sign != 0)
+        {
+            result.sign = 1;
+            if (sign.sign < 0) result.sign = -1;
+        }
+        return move result;
+    }
+
     public immutable bool Equals(immutable(BigInteger)* other) => this.CompareTo(other) == 0;
     public immutable nuint GetHashCode()
     {

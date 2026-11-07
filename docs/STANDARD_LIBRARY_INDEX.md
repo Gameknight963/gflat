@@ -33,6 +33,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `ReadVarUInt32/64`, `ReadZigZagInt32/64`, and matching writer extensions | [Borrowed stream varints](STREAM_VARINT.md) |
 | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`TrySplitLastOnce`/`Trim` | [Borrowed text splitting](TEXT_PARTS.md), [Split a borrowed key and value](TEXT_SPLIT_ONCE.md), [Split borrowed text once on a byte-sequence delimiter](TEXT_SPLIT_PATTERN.md) |
 | `TextPartsAny`, String/Span `SplitAny` | [Splitting on a byte set](TEXT_PARTS_ANY.md) |
+| `TextPartsPattern`, String/Span pattern `Split` | [Splitting on an exact byte pattern](TEXT_PATTERN_SPLIT.md) |
 | Span `StartsWith`, `EndsWith` | [Borrowed text prefix and suffix checks](TEXT_MATCH_SPAN.md) |
 | `TextLines` | [Borrowed text lines](TEXT_LINES.md) |
 | `Span<immutable(String)>.Join` | [Joining borrowed Strings](STRING_JOIN.md) |
@@ -45,6 +46,9 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Vectors](../Standard/core/README.md#vectors), [Copying borrowed spans](../Standard/core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](../Standard/core/Collections/OWNING_COLLECTIONS.md) |
 | `Deque<T>` | [Deque](DEQUE.md) |
+| Collection `EnsureCapacity`, `TrimExcess`, `ShrinkToFit` | [Controlling collection capacity](COLLECTION_CAPACITY.md) |
+| Vector/deque `Contains`, `IndexOf`, `LastIndexOf`, `RemoveValue` | [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) |
+| Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | Queue, stack, and priority-queue `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | `PriorityQueue<T>.EnqueueDequeue`, `DequeueEnqueue` | [Replacing a priority queue root](PRIORITY_QUEUE_REPLACEMENT.md) |
 | `Span<T>.Windows` | [Sliding windows over borrowed spans](SPAN_WINDOWS.md) |
@@ -53,6 +57,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Linked-list `Find`, `FindLast`, `Contains`, `RemoveValue` | [Search linked-list values](LINKED_LIST_SEARCH.md) |
 | `Unique<T>` | [Unique ownership](UNIQUE.md) |
 | `HashMap<K,V>`, `HashSet<T>`, query `ToHashSet` | [Hash collections](HASH_COLLECTIONS.md), [Materializing query results into a set](QUERY_HASH_SET.md) |
+| Hash-table `EnsureCapacity`, `TrimExcess` | [Reserving and trimming hash tables](HASH_CAPACITY.md) |
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
 | Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |
@@ -79,7 +84,8 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `ToHashMap` | [Materialize a query as a hash map](QUERY_TO_HASH_MAP.md) |
 | `ToLookup` | [Materialize ordered groups](QUERY_LOOKUP.md) |
 | `DefaultIfEmpty(value)` | [Default value for an empty query](QUERY_DEFAULT_IF_EMPTY.md) |
-| `Sum()` | [Integer query sums](QUERY_SUM.md) |
+| `Sum()` / `Sum(selector)` | [Integer, floating, and projected sums](QUERY_SUM.md) |
+| `Average()` / `Average(selector)` | [Sequence averages](QUERY_AVERAGE.md) |
 | `IntRange`, `FilteredIntRange` | [Integer sequences](../Standard/core/README.md#integer-sequences) |
 | `Repeated<T>` | [Repeated values](REPEATED_VALUES.md) |
 
@@ -89,7 +95,16 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Integer parsing](INTEGER_PARSING.md) |
 | `BigInteger` | [BigInteger](BIG_INTEGER.md) |
+| `Math` | [Scalar math](MATH.md) |
+| `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
+| `PseudoRandom` | [Deterministic pseudorandom values](PSEUDORANDOM.md) |
+| `PseudoRandom.GetItems` | [Choosing random items](RANDOM_ITEMS.md) |
+| `PseudoRandom.GetString`, `GetHexString` | [Generating random text](RANDOM_TEXT.md) |
 | `Math` floating-point classification | [Classifying floating-point values](FLOATING_CLASSIFICATION.md) |
+| `Math::Clamp`, `MinMagnitude`, `MaxMagnitude` for floating values | [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) |
+| `Math::Round(value, MidpointRounding)` | [Choosing a rounding mode](MIDPOINT_ROUNDING.md) |
+| `Math::ScaleB` | [Scaling by powers of two](MATH_SCALE_B.md) |
+| `Math::BigMul` | [Full-width integer multiplication](MATH_BIG_MUL.md) |
 | `Rational` | [Exact rational values](RATIONAL.md) |
 | `Interlocked` | [Atomic integer operations](INTERLOCKED.md) |
 | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md) |
@@ -101,17 +116,20 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `Uuid`, `UuidGenerator` | [UUID values](UUID.md) |
 | `Version` | [Dotted numeric versions](VERSION.md) |
+| Version field-count formatting and revision halves | [Formatting selected version fields](VERSION_FORMATTING.md) |
 | `IpAddress` | [Numeric IP addresses](IP_ADDRESS.md) |
 | `IpEndpoint` | [Numeric IP endpoints](IP_ENDPOINT.md) |
 | `IpNetwork`, `NetworkAddress`, `LastAddress` | [IP network prefixes](IP_NETWORK.md) |
 | `Date` | [Calendar dates](DATE.md) |
 | `TimeSpan` | [Time intervals](TIME_SPAN.md) |
+| Signed component `TimeSpan` constructors | [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) |
 | Fractional `TimeSpan` factories, microsecond and nanosecond components/totals | [Fractional time intervals](TIME_SPAN_FRACTIONAL.md) |
 | `TimeSpan.Duration`, `Multiply`, `Divide` | [Scaling time intervals](TIME_SPAN_SCALING.md) |
 | `TimeOfDay` | [Time of day](TIME_OF_DAY.md) |
 | Direct date/time components and clock-duration conversion | [Date and clock components](TEMPORAL_COMPONENTS.md) |
 | `DateTime` | [Date and time](DATE_TIME.md) |
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |
+| Date/time `AddTicks`, `AddDays` through `AddMicroseconds` | [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) |
 | `Stopwatch<C>`, `IMonotonicClock` | [Measuring intervals](STOPWATCH.md) |
 
 ### Text and Unicode
@@ -153,12 +171,14 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `Paths`, `PathStyle` | [Lexical paths](../Standard/core/IO/PATHS.md) |
 | `MemoryStream` | [Owning byte streams](../Standard/core/IO/MEMORY_STREAM.md) |
-| `Math`, `PseudoRandom` | [Scalar math](MATH.md), [Deterministic pseudorandom values](PSEUDORANDOM.md) |
-| `Math::DivRem`, `Math::TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
+| `MemoryStream.WriteTo` | [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |
+| Native-width masks and signed power checks | [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) |
 | `BitOperations.Log2`, `Math.ILogB` | [Integer base-two logarithms](INTEGER_LOGARITHMS.md) |
 | `BitConverter` | [Floating-point representation](BIT_CONVERTER.md) |
 | `BinaryPrimitives` | [Binary scalar buffers](BINARY_PRIMITIVES.md) |
+| Integer `ReverseEndianness` | [Reversing integer byte order](REVERSE_ENDIANNESS.md) |
+| Buffer `TryReverseEndianness`, span `ReverseEndianness` | [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) |
 | `BinaryBufferReader::TryReadTo` | [Bounded delimiter fields](../Standard/core/Binary/BINARY_READ_TO.md) |
 | `BitPrimitives`, `BitOrder` | [Bit fields in byte buffers](BIT_FIELDS.md) |
 | `VarInt` | [Variable-length integers](VARINT.md) |
@@ -202,43 +222,3 @@ See [host runtime APIs](HOST_RUNTIME.md) and
 
 The [example index](../examples/README.md) lists command-line programs using
 these APIs, with build commands and sample input.
-
-See [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) for exact and fractional additions.
-
-See [Controlling collection capacity](COLLECTION_CAPACITY.md) for reservation and trimming.
-
-See [Reserving and trimming hash tables](HASH_CAPACITY.md) for hash table capacity management.
-
-See [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) for borrowed membership checks.
-
-See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Clamp and magnitude selection.
-
-See [Sequence averages](QUERY_AVERAGE.md) for numeric and projected Average queries.
-
-See [Choosing random items](RANDOM_ITEMS.md) for sampling into spans and owning vectors.
-
-See [Generating random text](RANDOM_TEXT.md) for custom alphabets and hexadecimal strings.
-
-See [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) for signed component constructors.
-
-See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for integer endianness swaps.
-
-See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.
-
-See [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) for borrowed equality searches and value removal.
-
-See [Formatting selected version fields](VERSION_FORMATTING.md) for field counts and revision halves.
-
-See [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) for cursor-preserving WriteTo.
-
-See [Splitting on an exact byte pattern](TEXT_PATTERN_SPLIT.md) for multi-byte separators.
-
-See [Choosing a rounding mode](MIDPOINT_ROUNDING.md) for midpoint and directed rounding.
-
-See [Summing numeric sequences](QUERY_SUM.md) for integer, floating, and projected sums.
-
-See [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) for pointer-sized masks and signed power checks.
-
-See [Scaling by powers of two](MATH_SCALE_B.md) for ScaleB.
-
-See [Full-width integer multiplication](MATH_BIG_MUL.md) for BigMul.

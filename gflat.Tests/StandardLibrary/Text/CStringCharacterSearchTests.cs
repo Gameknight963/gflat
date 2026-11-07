@@ -78,6 +78,7 @@ public sealed class CStringCharacterSearchTests
     private static void Run(string program, int optimization, bool minimal)
     {
         SourceFile[] sources = [
+            new("ByteSearch.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ByteSearch.gf"))),
             new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf"))),
             new("character-search.gf", program)
         ];

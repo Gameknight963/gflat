@@ -259,8 +259,9 @@ public sealed class PseudoRandomLongTests
     private static void Run(string program, int optimization)
     {
         var source = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/PseudoRandom.gf")));
+        var search = new SourceFile("ByteSearch.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ByteSearch.gf")));
         var strings = new SourceFile("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf")));
-        var result = CompilerTestHelper.Run([source, strings, new SourceFile("pseudo-random-long.gf", program)], optimization);
+        var result = CompilerTestHelper.Run([source, search, strings, new SourceFile("pseudo-random-long.gf", program)], optimization);
         Assert.True(result.ExitCode == 0, $"NextLong exit {result.ExitCode}: {result.StandardError}");
     }
 }

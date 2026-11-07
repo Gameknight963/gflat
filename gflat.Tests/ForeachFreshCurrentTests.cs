@@ -63,6 +63,7 @@ public sealed class ForeachFreshCurrentTests
             """;
         SourceFile[] sources =
         [
+            new("ByteSearch.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ByteSearch.gf"))),
             new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf"))),
             new("foreach-fresh-current.gf", source)
         ];

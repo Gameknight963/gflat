@@ -45,6 +45,34 @@ public static class CString
         return result;
     }
 
+    public static nuint IndexOf(readonly(char)* text, readonly(char)* pattern) nothrow
+    {
+        nuint count = Length(pattern);
+        if (count == 0) return 0;
+        nuint length = Length(text);
+        nuint found = ByteSearch::IndexOf(text.reinterpret<readonly(byte)*>(), length,
+            pattern.reinterpret<readonly(byte)*>(), count);
+        if (found == length) return NotFound;
+        return found;
+    }
+
+    public static nuint LastIndexOf(readonly(char)* text, readonly(char)* pattern) nothrow
+    {
+        nuint count = Length(pattern);
+        nuint length = Length(text);
+        if (count == 0) return length;
+        nuint found = ByteSearch::LastIndexOf(text.reinterpret<readonly(byte)*>(), length,
+            pattern.reinterpret<readonly(byte)*>(), count);
+        if (found == length) return NotFound;
+        return found;
+    }
+
+    public static bool Contains(readonly(char)* text, char value) nothrow
+        => IndexOf(text, value) != NotFound;
+
+    public static bool Contains(readonly(char)* text, readonly(char)* pattern) nothrow
+        => IndexOf(text, pattern) != NotFound;
+
     // Finds a zero within capacity bytes and returns its offset through length.
     // A missing terminator returns false and sets length to zero. Zero capacity reads no bytes.
     public static bool TryGetLength(readonly(char)* text, nuint capacity, ref nuint length) nothrow

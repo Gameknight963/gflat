@@ -23,6 +23,8 @@ bool empty = CString::IsNullOrEmpty(null);
 
 Empty prefixes and suffixes match every string.
 
+For substring searches and `Contains`, see [searching C strings](CSTRING_SEARCH.md).
+
 ## Character search
 
 `IndexOf(text, value)` and `LastIndexOf(text, value)` return the first or last
@@ -100,6 +102,6 @@ preserves the destination. An unterminated destination fails before reading
 The input scan is bounded by the remaining destination space. Appending the
 destination to itself, or appending one of its suffixes, is supported.
 
-Source: `core/Text/CString.gf`. For a freestanding build, use `NoBuiltins` to
+Sources: `core/Text/CString.gf` and `core/Text/ByteSearch.gf`. For a freestanding build, use `NoBuiltins` to
 prevent LLVM from replacing length loops with `strlen`. See
 [freestanding startup and linking](FREESTANDING_CORE.md).

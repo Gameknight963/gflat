@@ -422,7 +422,7 @@ public sealed class LimitedWriterTests
     {
         string[] names = ["core/Exception.gf", "core/ITextWriter.gf", "core/IO/IOException.gf",
             "core/Text/LimitedWriter.gf", "core/Text/BufferedWriter.gf", "core/Text/CountingWriter.gf",
-            "core/Text/CString.gf", "core/Text/BufferTooSmallException.gf",
+            "core/Text/ByteSearch.gf", "core/Text/CString.gf", "core/Text/BufferTooSmallException.gf",
             "libc/Memory/allocation.gf", "libc/Exceptions/unhandled.gf"];
         if (base64) names = [.. names, "core/Encoding/Base64.gf", "core/Encoding/Base64Encoder.gf"];
         var sources = names.Select(name => new SourceFile(name,

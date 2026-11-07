@@ -84,6 +84,7 @@ public sealed class CStringCopyTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = [
+            new("ByteSearch.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/ByteSearch.gf"))),
             new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Text/CString.gf"))),
             new("main.gf", program)
         ];

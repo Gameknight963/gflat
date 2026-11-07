@@ -13,6 +13,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](STRINGS.md), [Strings and formatting](../Standard/core/README.md#strings-and-formatting) |
 | Primitive and borrowed `IFormattable` `ToString()` extensions | [Convert a value to an owning String](STRING_CONVERSION.md) |
+| CString substring search and `Contains` | [Searching borrowed C strings](CSTRING_SEARCH.md) |
 | `CString` | [Borrowed C strings](CSTRING.md) |
 | `BufferWriter` | [Caller-owned text output](BUFFER_WRITER.md) |
 | `CountingWriter` | [Measure writer output](COUNTING_WRITER.md) |

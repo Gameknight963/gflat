@@ -20,16 +20,24 @@ public partial class TypeChecker
         public void Dispose() => action();
     }
 
+    private sealed class NullableIsolation(TypeChecker checker, HashSet<NullableBinding> facts,
+        HashSet<NullableBinding> escaped, Dictionary<AstNode, NullableCondition> conditions,
+        Stack<HashSet<NullableBinding>> cleanups, HashSet<AstNode> storage, HashSet<NullableBinding>? deferred) : IDisposable
+    {
+        public void Dispose()
+        {
+            checker.nullableFacts = facts; checker.nullableEscaped = escaped; checker.nullableConditions = conditions;
+            checker.nullableCleanups = cleanups; checker.nullableStorageReads = storage; checker.nullableDeferredWrites = deferred;
+        }
+    }
+
     private IDisposable IsolateNullableFlow()
     {
-        var facts = nullableFacts; var escaped = nullableEscaped; var conditions = nullableConditions;
-        var cleanups = nullableCleanups; var storage = nullableStorageReads; var deferred = nullableDeferredWrites;
+        var isolation = new NullableIsolation(this, nullableFacts, nullableEscaped, nullableConditions,
+            nullableCleanups, nullableStorageReads, nullableDeferredWrites);
         nullableFacts = new(); nullableEscaped = new(); nullableConditions = new();
         nullableCleanups = new(); nullableStorageReads = new(); nullableDeferredWrites = null;
-        return new NullableAction(() => {
-            nullableFacts = facts; nullableEscaped = escaped; nullableConditions = conditions;
-            nullableCleanups = cleanups; nullableStorageReads = storage; nullableDeferredWrites = deferred;
-        });
+        return isolation;
     }
 
     private NullableBinding? NullableLocal(AstNode node)

@@ -26,7 +26,8 @@ for highest-set-bit indexing and floating-point exponent extraction.
 
 ## Byte order
 
-`ReverseEndianness` accepts `short`, `ushort`, `int`, `uint`, `long`, and `ulong`.
+`ReverseEndianness` accepts all integer types, including native-width integers
+and `extralong`. See [integer byte order](INTEGER_ENDIANNESS.md) for details.
 It reverses byte order while retaining the type and bit pattern. For example,
 `0x12345678u` becomes `0x78563412u`. Signed results use two's-complement
 interpretation. The operation is independent of host byte order.

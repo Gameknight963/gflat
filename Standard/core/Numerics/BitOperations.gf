@@ -7,6 +7,25 @@ public static class BitOperations
     public static int Log2(ulong value) nothrow => 63 - LeadingZeroCount(value | 1ul);
     public static int Log2(nuint value) nothrow => Log2((ulong)value);
 
+    public static byte ReverseEndianness(byte value) nothrow => value;
+    public static sbyte ReverseEndianness(sbyte value) nothrow => value;
+
+    public static nuint ReverseEndianness(nuint value) nothrow
+    {
+        static if (sizeof(nuint) == 8) return (nuint)ReverseEndianness((ulong)value);
+        else return (nuint)ReverseEndianness((uint)value);
+    }
+
+    public static nint ReverseEndianness(nint value) nothrow
+        => (nint)ReverseEndianness((nuint)value);
+
+    public static extralong ReverseEndianness(extralong value) nothrow
+    {
+        ulong lower = ReverseEndianness((ulong)value);
+        ulong upper = ReverseEndianness((ulong)(value >> 64));
+        return ((extralong)lower << 64) | (extralong)upper;
+    }
+
     public static ushort ReverseEndianness(ushort value) nothrow
         => (ushort)(((uint)value >> 8) | ((uint)value << 8));
 

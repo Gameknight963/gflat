@@ -145,6 +145,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `IntRange`, `FilteredIntRange` | [Integer sequences](../Standard/core/README.md#integer-sequences) |
 | `Repeated<T>` | [Repeated values](REPEATED_VALUES.md) |
 | Query `SelectMany` | [Flattening projected sequences](QUERY_SELECT_MANY.md) |
+| Indexed query `SelectMany` | [Flatten with the outer index](QUERY_INDEXED_SELECT_MANY.md) |
 
 ### Numbers and parsing
 

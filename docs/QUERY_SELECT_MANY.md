@@ -1,5 +1,8 @@
 # Flattening projected sequences
 
+For a selector that also receives the outer index, see
+[indexed SelectMany](QUERY_INDEXED_SELECT_MANY.md).
+
 `SelectMany(selector)` projects each outer element into an `Enumerable` and
 yields that sequence's elements before advancing the outer sequence. Empty
 inner sequences contribute no elements. Generic arguments are inferred from

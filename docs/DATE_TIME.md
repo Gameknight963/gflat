@@ -6,6 +6,8 @@ when the value must identify a UTC instant.
 
 Direct calendar and clock properties such as `Year`, `Hour`, and `Microsecond`
 are covered in [date and clock components](TEMPORAL_COMPONENTS.md).
+`DateTime::UnixEpoch` supplies the civil epoch reading. See
+[Unix epochs](TEMPORAL_EPOCH.md) for its distinction from an offset timestamp.
 
 ```csharp
 using Standard::Text;

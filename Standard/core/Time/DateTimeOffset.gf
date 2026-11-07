@@ -11,6 +11,7 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
 
     public DateTimeOffset() nothrow { clock = new(); offsetTicks = 0l; }
 
+    public static DateTimeOffset UnixEpoch { get nothrow => Create(Standard::Time::DateTime::UnixEpoch, 0l); }
     public static DateTimeOffset MinValue { get nothrow => new DateTimeOffset(); }
     public static DateTimeOffset MaxValue { get nothrow => Create(Standard::Time::DateTime::MaxValue, 0l); }
     private static bool ValidOffset(long offset) nothrow
@@ -25,6 +26,16 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     {
         DateTimeOffset result = new(); result.clock = value; result.offsetTicks = offset; return result;
     }
+    // ticks describe the displayed clock, not the UTC instant.
+    public DateTimeOffset(long ticks, TimeSpan offset)
+    {
+        clock = Standard::Time::DateTime::FromTicks(ticks);
+        offsetTicks = 0l;
+        if (!ValidOffset(offset.Ticks)) throw new Exception("UTC offset must be whole minutes within 14 hours");
+        if (!Valid(clock, offset.Ticks)) throw new Exception("UTC date is outside years 1 through 9999");
+        offsetTicks = offset.Ticks;
+    }
+
     public DateTimeOffset(Standard::Time::DateTime value, TimeSpan offset)
     {
         clock = new(); offsetTicks = 0l;
@@ -71,6 +82,9 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     public int Nanosecond { immutable get nothrow => clock.Nanosecond; }
     public Standard::Time::DateTime UtcDateTime { immutable get => Standard::Time::DateTime::FromTicks(this.GetUtcTicks()); }
     public TimeSpan Offset { immutable get nothrow => TimeSpan::FromTicks(offsetTicks); }
+
+    public immutable DateTimeOffset ToUniversalTime() nothrow
+        => Create(Standard::Time::DateTime::FromTicks(this.GetUtcTicks()), 0l);
 
     public immutable DateTimeOffset ToOffset(TimeSpan offset)
     {

@@ -48,3 +48,6 @@ For the ordinary overload and lifetime rules, see
 `Queries/IndexedSelectManySource.gf`, `Queries/enumerable_indexed_select_many.gf`,
 and `Memory/Unique.gf`, with the usual query dependencies. The free form is
 `SelectMany(source, selector)`.
+
+To combine each inner element with its outer value, use the
+[indexed result-selector overload](QUERY_INDEXED_SELECT_MANY_RESULT.md).

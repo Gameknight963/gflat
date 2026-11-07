@@ -146,6 +146,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Repeated<T>` | [Repeated values](REPEATED_VALUES.md) |
 | Query `SelectMany` | [Flattening projected sequences](QUERY_SELECT_MANY.md) |
 | Indexed query `SelectMany` | [Flatten with the outer index](QUERY_INDEXED_SELECT_MANY.md) |
+| Indexed result-selector `SelectMany` | [Flatten indexed selections into results](QUERY_INDEXED_SELECT_MANY_RESULT.md) |
 
 ### Numbers and parsing
 

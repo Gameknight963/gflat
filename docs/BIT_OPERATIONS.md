@@ -5,6 +5,7 @@
 | Method | Result |
 | --- | --- |
 | `PopCount` | Number of set bits |
+| `Log2` | Floor of the base-two logarithm, returning zero for zero |
 | `LeadingZeroCount` | Zero bits before the highest set bit |
 | `TrailingZeroCount` | Zero bits after the lowest set bit |
 | `RotateLeft(value, offset)` | Rotate bits left with wraparound |
@@ -19,6 +20,9 @@ by -1 is equivalent to rotating it right by 1.
 RoundUpToPowerOfTwo returns zero for zero or overflow. Exact powers stay
 unchanged. For capacity calculations, check that a nonzero request produced
 a nonzero result before allocating.
+
+`Log2` also accepts `nuint`. See [integer base-two logarithms](INTEGER_LOGARITHMS.md)
+for highest-set-bit indexing and floating-point exponent extraction.
 
 ## Byte order
 

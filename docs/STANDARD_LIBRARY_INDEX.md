@@ -149,6 +149,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Math`, `PseudoRandom` | [Scalar math](MATH.md), [Deterministic pseudorandom values](PSEUDORANDOM.md) |
 | `Math::DivRem`, `Math::TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |
+| `BitOperations.Log2`, `Math.ILogB` | [Integer base-two logarithms](INTEGER_LOGARITHMS.md) |
 | `BitConverter` | [Floating-point representation](BIT_CONVERTER.md) |
 | `BinaryPrimitives` | [Binary scalar buffers](BINARY_PRIMITIVES.md) |
 | `BinaryBufferReader::TryReadTo` | [Bounded delimiter fields](../Standard/core/Binary/BINARY_READ_TO.md) |

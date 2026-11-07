@@ -600,6 +600,18 @@ public static class Math
     public static float Sqrt(float value) nothrow
         => __llvm_module<float>("declare float @llvm.sqrt.f32(float)\ndefine float @root(float %value) alwaysinline nounwind {\n%result = call float @llvm.sqrt.f32(float %value)\nret float %result\n}", "root", value);
 
+    public static int ILogB(float value) nothrow
+    {
+        uint magnitude = value.reinterpret<uint>() & 0x7fffffffu;
+        int exponent = (int)(magnitude >> 23);
+        if (exponent == 255) return 2147483647;
+        if (exponent != 0) return exponent - 127;
+        if (magnitude == 0u) return -2147483647 - 1;
+        int result = -126;
+        while ((magnitude & 0x00800000u) == 0u) { magnitude = magnitude << 1; result--; }
+        return result;
+    }
+
     public static bool IsNaN(float value) nothrow => value != value;
     public static bool IsFinite(float value) nothrow
     {
@@ -742,6 +754,18 @@ public static class Math
 
     public static double Sqrt(double value) nothrow
         => __llvm_module<double>("declare double @llvm.sqrt.f64(double)\ndefine double @root(double %value) alwaysinline nounwind {\n%result = call double @llvm.sqrt.f64(double %value)\nret double %result\n}", "root", value);
+
+    public static int ILogB(double value) nothrow
+    {
+        ulong magnitude = value.reinterpret<ulong>() & 0x7ffffffffffffffful;
+        int exponent = (int)(magnitude >> 52);
+        if (exponent == 2047) return 2147483647;
+        if (exponent != 0) return exponent - 1023;
+        if (magnitude == 0ul) return -2147483647 - 1;
+        int result = -1022;
+        while ((magnitude & 0x0010000000000000ul) == 0ul) { magnitude = magnitude << 1; result--; }
+        return result;
+    }
 
     public static bool IsNaN(double value) nothrow => value != value;
     public static bool IsFinite(double value) nothrow

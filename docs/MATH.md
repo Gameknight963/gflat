@@ -69,6 +69,10 @@ Both `float` and `double` support the following `nothrow` methods:
 | `Min`, `Max` | Select by numeric order with the NaN and zero rules below |
 | `BitIncrement`, `BitDecrement` | Step to an adjacent representable value |
 | `Sqrt` | Compute square root |
+| `ILogB` | Extract the integer binary exponent of the absolute value |
+
+See [integer base-two logarithms](INTEGER_LOGARITHMS.md) for `ILogB` results
+on zero, subnormals, infinities, and NaNs.
 
 ### NaNs and signed zero
 

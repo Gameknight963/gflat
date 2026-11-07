@@ -3,6 +3,10 @@ namespace Standard::Numerics;
 // Integer bit utilities with defined zero and masked-rotation behavior.
 public static class BitOperations
 {
+    public static int Log2(uint value) nothrow => 31 - LeadingZeroCount(value | 1u);
+    public static int Log2(ulong value) nothrow => 63 - LeadingZeroCount(value | 1ul);
+    public static int Log2(nuint value) nothrow => Log2((ulong)value);
+
     public static ushort ReverseEndianness(ushort value) nothrow
         => (ushort)(((uint)value >> 8) | ((uint)value << 8));
 

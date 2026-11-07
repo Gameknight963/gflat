@@ -146,6 +146,37 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         return move result;
     }
 
+    public void RemoveRange(nuint start, nuint length)
+    {
+        if (start > count || length > count - start)
+            throw new Exception("Deque removal range out of bounds");
+        if (length == 0) return;
+        nuint end = start + length;
+        nuint remaining = end;
+        while (remaining > start)
+        {
+            remaining--;
+            (data! + this.Physical(remaining)).~T();
+        }
+        if (start < count - end)
+        {
+            nuint source = start;
+            while (source != 0)
+            {
+                source--;
+                move *(data! + this.Physical(source)) at data! + this.Physical(source + length);
+            }
+            head = this.Physical(length);
+        }
+        else
+        {
+            for (nuint source = end; source < count; source++)
+                move *(data! + this.Physical(source)) at data! + this.Physical(source - length);
+        }
+        count -= length;
+        if (count == 0) head = 0;
+    }
+
     public T RemoveFirst()
     {
         if (count == 0) throw new Exception("Cannot remove from an empty deque");

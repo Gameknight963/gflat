@@ -1000,6 +1000,40 @@ public static class Math
         return whole;
     }
 
+    public static float Round(float value, int digits)
+        => Round(value, digits, MidpointRounding::ToEven);
+
+    public static double Round(double value, int digits)
+        => Round(value, digits, MidpointRounding::ToEven);
+
+    private static void ValidateRoundingMode(MidpointRounding mode)
+    {
+        if (mode != MidpointRounding::ToEven && mode != MidpointRounding::AwayFromZero &&
+            mode != MidpointRounding::ToZero && mode != MidpointRounding::ToNegativeInfinity &&
+            mode != MidpointRounding::ToPositiveInfinity)
+            throw new Exception("Invalid midpoint rounding mode");
+    }
+
+    public static float Round(float value, int digits, MidpointRounding mode)
+    {
+        if (digits < 0 || digits > 6) throw new Exception("Float rounding digits must be between 0 and 6");
+        ValidateRoundingMode(mode);
+        if (Abs(value) >= 100000000.0f || IsNaN(value)) return value;
+        float factor = 1.0f;
+        for (int i = 0; i < digits; i++) factor *= 10.0f;
+        return Round(value * factor, mode) / factor;
+    }
+
+    public static double Round(double value, int digits, MidpointRounding mode)
+    {
+        if (digits < 0 || digits > 15) throw new Exception("Double rounding digits must be between 0 and 15");
+        ValidateRoundingMode(mode);
+        if (Abs(value) >= 10000000000000000.0d || IsNaN(value)) return value;
+        double factor = 1.0d;
+        for (int i = 0; i < digits; i++) factor *= 10.0d;
+        return Round(value * factor, mode) / factor;
+    }
+
     public static float ScaleB(float value, int exponent) nothrow
     {
         uint bits = value.reinterpret<uint>();

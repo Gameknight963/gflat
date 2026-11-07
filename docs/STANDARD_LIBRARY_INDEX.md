@@ -126,6 +126,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Math` floating-point classification | [Classifying floating-point values](FLOATING_CLASSIFICATION.md) |
 | `Math::Clamp`, `MinMagnitude`, `MaxMagnitude` for floating values | [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) |
 | `Math::Round(value, MidpointRounding)` | [Choosing a rounding mode](MIDPOINT_ROUNDING.md) |
+| `Math::Round(value, digits)` | [Rounding to decimal places](DECIMAL_ROUNDING.md) |
 | `Math::ScaleB` | [Scaling by powers of two](MATH_SCALE_B.md) |
 | `Math::BigMul` | [Full-width integer multiplication](MATH_BIG_MUL.md) |
 | `Rational` | [Exact rational values](RATIONAL.md) |

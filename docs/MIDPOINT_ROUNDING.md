@@ -29,3 +29,7 @@ The overload without a mode remains ties-to-even. Negative zero is preserved
 when rounding produces zero. NaN remains NaN and infinities remain unchanged.
 Invalid enum values throw before a result is returned, including for nonfinite
 inputs. Successful calls allocate no storage.
+
+Use `Math::Round(value, digits, mode)` to apply the same modes to fractional
+decimal places. See [rounding to decimal places](DECIMAL_ROUNDING.md) for digit
+limits and binary floating-point behavior.

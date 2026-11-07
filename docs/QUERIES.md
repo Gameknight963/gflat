@@ -76,6 +76,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `Concat(other)` | Yield the complete first query, then the second, with inline cursor state. |
 | `SelectMany(selector)` and `SelectMany(selector, resultSelector)` | [Flatten projected queries](QUERY_SELECT_MANY.md), optionally combining outer and inner values. |
 | `Join(inner, outerKey, innerKey, resultSelector)` | [Join matching keys](QUERY_JOIN.md), preserving outer and inner order. |
+| `GroupJoin(inner, outerKey, innerKey, resultSelector)` | [Group matching inner values](QUERY_GROUP_JOIN.md) for every outer value, including unmatched ones. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements. Counts are `nuint`. |
 | `TakeWhile(predicate)` | Yield the initial matching prefix. Stop permanently at the first false result. |
 | `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
@@ -143,6 +144,7 @@ value once. `Any` and `Contains` stop at the first match. See
 | `Where`, `Select`, `Zip`, `Concat`, `Take`, `Skip`, `TakeWhile`, `SkipWhile` | Inline source and cursor state |
 | `SelectMany` | One heap-owned active inner query and iterator |
 | `Join` | A hash map of inner groups and one reusable outer-value slot |
+| `GroupJoin` | A hash map of shared groups and one reusable outer-value slot; escaped groups retain their values |
 | `Distinct`, `DistinctBy` | A hash set grown during iteration |
 | `Union`, `Except`, `Intersect` | A hash set per enumerator, with the buffering rules in [query set operations](QUERY_SET_OPERATIONS.md) |
 | `UnionBy`, `ExceptBy`, `IntersectBy` | A key set per enumerator, with the buffering rules in [query set operations by key](QUERY_SET_OPERATIONS_BY.md) |

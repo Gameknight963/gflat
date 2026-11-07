@@ -107,6 +107,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `ToHashMap` | [Materialize a query as a hash map](QUERY_TO_HASH_MAP.md) |
 | `ToLookup` | [Materialize ordered groups](QUERY_LOOKUP.md) |
 | Query `Join` | [Joining queries by key](QUERY_JOIN.md) |
+| Query `GroupJoin`, `Group<T>` | [Grouping matches for each outer value](QUERY_GROUP_JOIN.md) |
 | `DefaultIfEmpty(value)` | [Default value for an empty query](QUERY_DEFAULT_IF_EMPTY.md) |
 | `Sum()` / `Sum(selector)` | [Integer, floating, and projected sums](QUERY_SUM.md) |
 | `Average()` / `Average(selector)` | [Sequence averages](QUERY_AVERAGE.md) |

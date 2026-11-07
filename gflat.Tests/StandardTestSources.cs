@@ -229,6 +229,7 @@ internal static class StandardTestSources
     ]);
 
     public static IEnumerable<SourceFile> Queries => Load([.. foundation,
+        "core/Threading/Interlocked.gf",
         "core/Collections/Deque.gf",
         "core/Collections/Comparer.gf",
         "core/Collections/EqualityComparer.gf",
@@ -252,6 +253,8 @@ internal static class StandardTestSources
         "core/Queries/IntRange.gf",
         "core/Queries/OrderSource.gf",
         "core/Queries/JoinSource.gf",
+        "core/Queries/Group.gf",
+        "core/Queries/GroupJoinSource.gf",
         "core/Queries/Repeated.gf",
         "core/Queries/ReverseSource.gf",
         "core/Queries/SelectSource.gf",
@@ -282,6 +285,7 @@ internal static class StandardTestSources
         "core/Queries/enumerable_indexed_where.gf",
         "core/Queries/enumerable_order.gf",
         "core/Queries/enumerable_join.gf",
+        "core/Queries/enumerable_group_join.gf",
         "core/Queries/enumerable_predicates.gf",
         "core/Queries/enumerable_reverse.gf",
         "core/Queries/enumerable_select.gf",

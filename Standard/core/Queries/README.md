@@ -40,6 +40,7 @@ on later reads.
 - Filter and project with `Where` and `Select`
 - Flatten projected sequences with [SelectMany](../../../docs/QUERY_SELECT_MANY.md)
 - Join sequences by key with [Join](../../../docs/QUERY_JOIN.md)
+- Retain each outer value and its shared matches with [GroupJoin](../../../docs/QUERY_GROUP_JOIN.md)
 - Retain positions with [Index](../../../docs/QUERY_INDEX.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`

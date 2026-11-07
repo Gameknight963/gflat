@@ -178,6 +178,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | APIs | Guide |
 | --- | --- |
 | `Paths`, `PathStyle` | [Lexical paths](../Standard/core/IO/PATHS.md) |
+| `Paths.HasExtension` | [Checking for a path extension](PATH_EXTENSION_TEST.md) |
 | `MemoryStream` | [Owning byte streams](../Standard/core/IO/MEMORY_STREAM.md) |
 | `MemoryStream.WriteTo` | [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |

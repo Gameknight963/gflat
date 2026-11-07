@@ -75,6 +75,22 @@ public static class Paths
         return String::From(path, end);
     }
 
+    public static bool HasExtension(readonly(char)* path, PathStyle style) nothrow
+    {
+        nuint length = Paths::Length(path);
+        nuint start = Paths::FileNameStart(path, length, style);
+        nuint dot = Paths::ExtensionStart(path, start, length);
+        return dot != length && dot + 1 != length;
+    }
+
+    public static bool HasExtension(Span<readonly(char)> path, PathStyle style) nothrow
+    {
+        if (path.IsEmpty) return false;
+        nuint start = Paths::FileNameStart(path.Data!, path.Length, style);
+        nuint dot = Paths::ExtensionStart(path.Data!, start, path.Length);
+        return dot != path.Length && dot + 1 != path.Length;
+    }
+
     public static String GetExtension(readonly(char)* path, PathStyle style)
     {
         nuint length = Paths::Length(path);

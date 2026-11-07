@@ -55,6 +55,14 @@ public static class Hex
         return true;
     }
 
+    public static bool TryEncode(readonly(byte)* data, nuint count, char* output, nuint capacity,
+        ref nuint written, bool uppercase = true) nothrow
+        => TryEncode(data.reinterpret<readonly(char)*>(), count, output, capacity, ref written, uppercase);
+
+    public static bool TryDecode(readonly(char)* text, nuint count, byte* output, nuint capacity,
+        ref nuint written) nothrow
+        => TryDecode(text, count, output.reinterpret<char*>(), capacity, ref written);
+
     private static int Digit(char value) nothrow
     {
         if (value >= '0' && value <= '9') return (int)value - 48;

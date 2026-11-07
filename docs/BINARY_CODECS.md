@@ -103,3 +103,6 @@ These rules follow [RFC 3986 sections 2.1–2.4](https://www.rfc-editor.org/rfc/
 
 Sources are in `core/Encoding`: each codec has a matching `.gf` file, owning
 helpers use the `Text.gf` suffix, and writer hex output is in `hex_writer.gf`.
+
+See [hexadecimal byte buffers](HEX_BYTE_BUFFERS.md) for direct byte-pointer
+encoding and decoding overloads.

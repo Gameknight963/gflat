@@ -21,6 +21,9 @@ public static class HexText
         return move result;
     }
 
+    public static String Encode(readonly(byte)* data, nuint count, bool uppercase = true)
+        => HexText::Encode(data.reinterpret<readonly(char)*>(), count, uppercase);
+
     public static String Decode(readonly(char)* text, nuint count)
     {
         nuint length = 0;

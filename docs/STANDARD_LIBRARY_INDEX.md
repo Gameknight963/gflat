@@ -206,6 +206,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | APIs | Guide |
 | --- | --- |
 | `Base64`, unpadded `Base64Url`, `Hex`. Owning `Base64Text`, `Base64UrlText`, `HexText` helpers and writer `WriteHex` | [Base64](BINARY_CODECS.md) |
+| Hex codecs with byte pointers | [Hexadecimal byte buffers](HEX_BYTE_BUFFERS.md) |
 | `Deflate::Decompress` | [Raw DEFLATE](../Standard/core/Compression/DEFLATE.md) |
 | `Gzip::DecompressMember` | [Gzip members](../Standard/core/Compression/GZIP.md) |
 | `Zlib::Decompress` | [Zlib streams](../Standard/core/Compression/ZLIB.md) |

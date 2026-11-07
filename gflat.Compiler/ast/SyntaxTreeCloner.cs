@@ -46,7 +46,11 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
             var constructor = type.GetConstructor(Type.EmptyTypes) ?? throw new NotSupportedException("Syntax list constructor");
             var clone = (IList)constructor.Invoke(null);
             copies[value] = clone;
-            foreach (var item in list) clone.Add(item == null ? null : Copy(item));
+            for (int index = 0; index < list.Count; index++)
+            {
+                var item = list[index];
+                clone.Add(item == null ? null : Copy(item));
+            }
             return clone;
         }
         if (value is IDictionary dictionary)

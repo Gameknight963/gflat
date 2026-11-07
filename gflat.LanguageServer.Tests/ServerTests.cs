@@ -343,7 +343,7 @@ public sealed partial class ServerTests
         {
             await Send(new { jsonrpc = "2.0", id = "initialize", method = "initialize", @params = new { rootUri = Workspace.FileUri(Root), capabilities = clientCapabilities ?? new { }, initializationOptions } });
             var response = await Receive(x => x.TryGetProperty("id", out var id) && id.GetString() == "initialize");
-            Assert.Equal(1, response.GetProperty("result").GetProperty("capabilities").GetProperty("textDocumentSync").GetProperty("change").GetInt32());
+            Assert.Equal(2, response.GetProperty("result").GetProperty("capabilities").GetProperty("textDocumentSync").GetProperty("change").GetInt32());
             await Notify("initialized", new { });
         }
         public Task Open(string name, string text) => Notify("textDocument/didOpen", new { textDocument = new { uri = Uri(name), languageId = "gflat", version = 1, text } });

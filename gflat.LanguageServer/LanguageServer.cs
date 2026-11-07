@@ -188,7 +188,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                         UpdateFormattingOptions(options);
                         await Reply(id, new { capabilities = new {
                             positionEncoding = "utf-16",
-                            textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
+                            textDocumentSync = new { openClose = true, change = 2, save = new { includeText = true } },
                             completionProvider = new { triggerCharacters = new[] { ".", ":", "/", "\\", "\"", "<" } },
                             hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true, documentHighlightProvider = true,
                             renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,

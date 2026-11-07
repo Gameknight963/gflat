@@ -228,3 +228,5 @@ See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlap
 See [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) for borrowed equality searches and value removal.
 
 See [Formatting selected version fields](VERSION_FORMATTING.md) for field counts and revision halves.
+
+See [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) for cursor-preserving WriteTo.

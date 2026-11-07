@@ -71,3 +71,5 @@ invalidates removed ranges.
 Selective builds include `IO/MemoryStream.gf`, `IO/SeekOrigin.gf`, `IO/IOException.gf`,
 `IO/IByteReader.gf`, `Collections/Vector.gf`, `Collections/vector_resize.gf`, and
 the Vector/Span collection and query contracts.
+
+See [Writing an entire memory stream](../../../docs/MEMORY_STREAM_WRITE_TO.md) for WriteTo.

@@ -73,6 +73,19 @@ public struct MemoryStream : IByteReader, ITextWriter
         position = 0l;
     }
 
+    // Writes all stored bytes without advancing this stream's cursor.
+    public immutable void WriteTo(ITextWriter* output)
+    {
+        if (buffer.Count == 0)
+        {
+            char empty = '\0';
+            output.Write(&empty, 0);
+            return;
+        }
+        Span<immutable(char)> bytes = buffer.AsImmutable();
+        output.Write(bytes.Data!, bytes.Length);
+    }
+
     public void Flush() nothrow { }
 
     // Growth can relocate storage. Length changes invalidate removed ranges.

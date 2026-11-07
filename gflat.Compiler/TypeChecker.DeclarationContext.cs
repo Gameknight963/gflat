@@ -1,30 +1,77 @@
 using gflat.ast;
-
+using gflat.comptime;
 
 namespace gflat;
 
 public partial class TypeChecker
 {
-    private IDisposable IsolateDeclarationContext()
+    private DeclarationIsolation IsolateDeclarationContext() => new(this);
+
+    private sealed class DeclarationIsolation : IDisposable
     {
-        static T[] Save<T>(Stack<T> stack) { var saved = stack.ToArray(); stack.Clear(); return saved; }
-        static void Restore<T>(Stack<T> stack, T[] saved) { stack.Clear(); foreach (var item in saved.Reverse()) stack.Push(item); }
-        var variables = Save(_scopes); var aliases = Save(_localAliases); var enums = Save(_localEnums);
-        var constants = Save(localConstants);
-        var boundaries = Save(_lambdaScopeBoundaries); var statics = Save(_lambdaStaticStack); var returns = Save(_actualReturnTypes);
-        var function = _currentFunction; var constructor = _currentConstructor;
-        var queryOwner = typeQueryOwner;
-        int loop = _loopDepth; bool defer = _inDefer;
-        _currentFunction = null; _currentConstructor = null; _loopDepth = 0; _inDefer = false;
-        typeQueryOwner = null;
+        private readonly TypeChecker owner;
+        private readonly Dictionary<string, TypeExpression>[] variables;
+        private readonly Dictionary<string, TypeExpression>[] aliases;
+        private readonly Dictionary<string, EnumInfo>[] enums;
+        private readonly Dictionary<string, (ConstValue Value, VariableDeclaration Declaration)>[] constants;
+        private readonly int[] boundaries;
+        private readonly bool[] statics;
+        private readonly List<TypeExpression>[] returns;
+        private readonly AstNode? function;
+        private readonly ConstructorDeclaration? constructor;
+        private readonly TypeExpression? queryOwner;
+        private readonly int loop;
+        private readonly bool defer;
 
-        return new NullableAction(() => {
-            Restore(_scopes, variables); Restore(_localAliases, aliases); Restore(_localEnums, enums);
-            Restore(localConstants, constants);
-            Restore(_lambdaScopeBoundaries, boundaries); Restore(_lambdaStaticStack, statics); Restore(_actualReturnTypes, returns);
-            _currentFunction = function; _currentConstructor = constructor; _loopDepth = loop; _inDefer = defer;
-            typeQueryOwner = queryOwner;
-        });
+        public DeclarationIsolation(TypeChecker owner)
+        {
+            this.owner = owner;
+            variables = Save(owner._scopes);
+            aliases = Save(owner._localAliases);
+            enums = Save(owner._localEnums);
+            constants = Save(owner.localConstants);
+            boundaries = Save(owner._lambdaScopeBoundaries);
+            statics = Save(owner._lambdaStaticStack);
+            returns = Save(owner._actualReturnTypes);
+            function = owner._currentFunction;
+            constructor = owner._currentConstructor;
+            queryOwner = owner.typeQueryOwner;
+            loop = owner._loopDepth;
+            defer = owner._inDefer;
+            owner._currentFunction = null;
+            owner._currentConstructor = null;
+            owner._loopDepth = 0;
+            owner._inDefer = false;
+            owner.typeQueryOwner = null;
+        }
+
+        private static T[] Save<T>(Stack<T> stack)
+        {
+            var saved = stack.ToArray();
+            stack.Clear();
+            return saved;
+        }
+
+        private static void Restore<T>(Stack<T> stack, T[] saved)
+        {
+            stack.Clear();
+            for (int index = saved.Length - 1; index >= 0; index--) stack.Push(saved[index]);
+        }
+
+        public void Dispose()
+        {
+            Restore(owner._scopes, variables);
+            Restore(owner._localAliases, aliases);
+            Restore(owner._localEnums, enums);
+            Restore(owner.localConstants, constants);
+            Restore(owner._lambdaScopeBoundaries, boundaries);
+            Restore(owner._lambdaStaticStack, statics);
+            Restore(owner._actualReturnTypes, returns);
+            owner._currentFunction = function;
+            owner._currentConstructor = constructor;
+            owner._loopDepth = loop;
+            owner._inDefer = defer;
+            owner.typeQueryOwner = queryOwner;
+        }
     }
-
 }

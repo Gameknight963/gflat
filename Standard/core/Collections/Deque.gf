@@ -219,6 +219,27 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         }
     }
 
+    public void Reverse() => this.Reverse(0, count);
+
+    public void Reverse(nuint start, nuint length)
+    {
+        if (start > count || length > count - start)
+            throw new Exception("Deque reverse range out of bounds");
+        nuint left = start;
+        nuint right = start + length;
+        while (right > left)
+        {
+            right--;
+            if (left == right) break;
+            T* first = data! + this.Physical(left);
+            T* last = data! + this.Physical(right);
+            T temporary = move *first;
+            move *last at first;
+            move temporary at last;
+            left++;
+        }
+    }
+
     public void Clear()
     {
         while (count != 0)

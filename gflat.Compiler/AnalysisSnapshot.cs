@@ -51,27 +51,41 @@ public sealed class AnalysisSnapshot
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
             using (PipelineTimings.Measure("editor.syntax.capture")) Capture(compilation.Unit, null);
             var aliases = nodes.Select(n => n.Node).OfType<AliasDeclaration>().Select(a => a.Name).ToHashSet();
-            var cloner = new AstCloner(new());
-            foreach (var entry in nodes)
+            if (aliases.Count > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                TypeExpression? type = entry.Node switch {
-                    MethodDeclaration m => m.ReturnType, ExternDeclaration e => e.ReturnType,
-                    Parameter p => p.Type, FieldDeclaration f => f.Type,
-                    PropertyDeclaration p => p.Type, VariableDeclaration v => v.Type, _ => null
+                var cloner = new AstCloner(new());
+                foreach (var entry in nodes)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    TypeExpression? type = entry.Node switch {
+                        MethodDeclaration m => m.ReturnType, ExternDeclaration e => e.ReturnType,
+                        Parameter p => p.Type, FieldDeclaration f => f.Type,
+                        PropertyDeclaration p => p.Type, VariableDeclaration v => v.Type, _ => null
+                    };
+                    if (type != null && ContainsAlias(type)) declaredTypes[entry.Node] = cloner.CloneType(type);
+                }
+                bool AliasName(string name)
+                {
+                    int separator = name.LastIndexOf("::", StringComparison.Ordinal);
+                    return aliases.Contains(separator < 0 ? name : name[(separator + 2)..]);
+                }
+                bool AnyAliases(List<TypeExpression> types)
+                {
+                    foreach (var type in types)
+                        if (ContainsAlias(type)) return true;
+                    return false;
+                }
+                bool ContainsAlias(TypeExpression type) => type switch {
+                    NamedTypeExpression n => AliasName(n.Name) || AnyAliases(n.TypeArguments),
+                    NestedTypeExpression n => aliases.Contains(n.Member) || ContainsAlias(n.Parent) || AnyAliases(n.TypeArguments),
+                    PointerTypeExpression p => ContainsAlias(p.Inner),
+                    ManagedTypeExpression p => ContainsAlias(p.Inner) || p.Collector != null && ContainsAlias(p.Collector),
+                    ReferenceTypeExpression r => ContainsAlias(r.Inner),
+                    ArrayTypeExpression a => ContainsAlias(a.ElementType),
+                    FunctionPointerTypeExpression f => ContainsAlias(f.ReturnType) || AnyAliases(f.ParameterTypes),
+                    _ => false
                 };
-                if (type != null && ContainsAlias(type)) declaredTypes[entry.Node] = cloner.CloneType(type);
             }
-            bool ContainsAlias(TypeExpression type) => type switch {
-                NamedTypeExpression n => aliases.Contains(n.Name.Split("::").Last()) || n.TypeArguments.Any(ContainsAlias),
-                NestedTypeExpression n => aliases.Contains(n.Member) || ContainsAlias(n.Parent) || n.TypeArguments.Any(ContainsAlias),
-                PointerTypeExpression p => ContainsAlias(p.Inner),
-                ManagedTypeExpression p => ContainsAlias(p.Inner) || p.Collector != null && ContainsAlias(p.Collector),
-                ReferenceTypeExpression r => ContainsAlias(r.Inner),
-                ArrayTypeExpression a => ContainsAlias(a.ElementType),
-                FunctionPointerTypeExpression f => ContainsAlias(f.ReturnType) || f.ParameterTypes.Any(ContainsAlias),
-                _ => false
-            };
             cancellationToken.ThrowIfCancellationRequested();
             if (checkTypes)
             {

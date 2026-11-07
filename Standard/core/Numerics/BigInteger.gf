@@ -548,6 +548,12 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    public immutable BigInteger Pow(int exponent)
+    {
+        if (exponent < 0) throw new Exception("BigInteger exponent must not be negative");
+        return this.Pow((uint)exponent);
+    }
+
     public immutable BigInteger Pow(uint exponent)
     {
         if (exponent == 0u) return new BigInteger(1l);

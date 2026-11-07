@@ -51,6 +51,11 @@ public sealed class BigIntegerPowerTests
                             BigInteger saved=source;nuint hash=source.GetHashCode();immutable(BigInteger)* view=&source;
                             BigInteger result=view.Pow(exponent);String actual=result.ToString();
                             if(!actual.Equals(&expected)||!source.Equals(&saved)||source.GetHashCode()!=hash)return 1;
+                            if(exponent<=2147483647u){
+                                int signedExponent=(int)exponent;BigInteger signedResult=view.Pow(signedExponent);
+                                String signedText=signedResult.ToString();if(!signedText.Equals(&expected))return 8;
+                            }
+
                             String unchanged=source.ToString();if(!unchanged.Equals(&original))return 2;
                             result=new(73);if(!source.Equals(&saved))return 3;
                         }
@@ -141,6 +146,46 @@ public sealed class BigIntegerPowerTests
                 """,[manifest],optimization);
         });
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task NegativeSignedExponentsRejectWithoutReplacingOrChangingOwners(int optimization)
+        => await WithDirectory(directory => Run(directory, Counters + """
+            int main()
+            {
+                {
+                    BigInteger source=BigInteger::Parse("-123456789012345678901234567890");
+                    BigInteger saved=source;
+                    BigInteger output=new(99l);
+                    int[3] exponents=[-1,-2,-2147483647-1];
+                    for(nuint i=0;i<3;i++)
+                    {
+                        int live=allocated-released;
+                        bool caught=false;
+                        deny=true;
+                        try {output=source.Pow(exponents[i]);}
+                        catch(Exception* error)
+                        {
+                            caught=true;
+                            if(!CString::Equals(error.GetMessage(),"BigInteger exponent must not be negative"))return 1;
+                        }
+                        deny=false;
+                        if(!caught||allocated-released!=live||!source.Equals(&saved)||output.ToLong()!=99l)return 2;
+                    }
+                    BigInteger zero=new();
+                    int positive=2147483647;
+                    int before=attempts;
+                    deny=true;
+                    {BigInteger result=zero.Pow(positive);if(!result.IsZero||attempts!=before)return 3;}
+                    deny=false;
+                }
+                return allocated-released;
+            }
+            """, [], optimization));
+
+    [Fact]
+    public void SignedExponentGuideCompiles() => StandardLibraryGuideTests.CheckProgram("BIG_INTEGER_SIGNED_POW.md", 0);
 
     private const string Counters="""
         using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Numerics; using Standard::Collections;

@@ -155,6 +155,10 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
     }
 
     public int Sign { immutable get nothrow => sign; }
+    public bool IsZero { immutable get nothrow => sign == 0; }
+    public bool IsOne { immutable get nothrow => sign == 1 && limbs.Count == 1 && limbs[0] == 1u; }
+    public bool IsEven { immutable get nothrow => sign == 0 || limbs[0] % 2u == 0u; }
+
 
     private immutable bool TryMagnitude(ulong limit, ref ulong result) nothrow
     {

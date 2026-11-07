@@ -257,3 +257,5 @@ Source: `core/Numerics/BigInteger.gf`, with Vector, String, and interface
 dependencies.
 
 See [BigInteger byte conversion](BIG_INTEGER_BYTES.md) for signed, unsigned, and endian-aware binary interchange.
+
+See [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) for allocation-free zero, one, and parity checks.

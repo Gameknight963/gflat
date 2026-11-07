@@ -26,11 +26,7 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         denominator = source.denominator;
     }
 
-    private static bool IsOne(immutable(BigInteger)* value) nothrow
-    {
-        long converted = 0l;
-        return value.TryToLong(ref converted) && converted == 1l;
-    }
+    private static bool IsOne(immutable(BigInteger)* value) nothrow => value.IsOne;
     // Called only while constructing a new owner, never on an exposed value.
     private void Normalize()
     {

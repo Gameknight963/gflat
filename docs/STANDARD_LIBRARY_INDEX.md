@@ -138,6 +138,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Rational `Abs`, `Reciprocal` | [Rational magnitude and reciprocals](RATIONAL_MAGNITUDE.md) |
 | Rational `Truncate`, `Floor`, `Ceiling` | [Exact rational integral values](RATIONAL_INTEGRAL.md) |
 | Two-bound unsigned random draws | [Unsigned random ranges](RANDOM_UNSIGNED_RANGES.md) |
+| `Span<T>.Overlaps` | [Checking span overlap](SPAN_OVERLAP.md) |
 | `Math` | [Scalar math](MATH.md) |
 | Integer `Math::CopySign` | [Copying integer signs](INTEGER_COPY_SIGN.md) |
 | `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |

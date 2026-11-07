@@ -46,7 +46,7 @@ on later reads.
 - Process batches with [owning Chunk groups](../../../docs/QUERY_CHUNK.md)
 - Select prefixes with [indexed TakeWhile and SkipWhile](../../../docs/QUERY_INDEXED_WHILE.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
-- Combine with `Zip`, `Concat`, `Append`, and `Prepend`
+- Combine with [Zip](../../../docs/QUERY_ZIP_PAIRS.md), `Concat`, `Append`, and `Prepend`
 - Combine distinct values with [Union, Except, and Intersect](../../../docs/QUERY_SET_OPERATIONS.md)
 - Combine records by key with [UnionBy, ExceptBy, and IntersectBy](../../../docs/QUERY_SET_OPERATIONS_BY.md)
 - Search with `Any`, `All`, `Contains`, `First`, `Last`, and `ElementAt`

@@ -229,7 +229,7 @@ dotnet /absolute/path/to/gflat.LanguageServer/bin/Debug/net10.0/gflat.LanguageSe
 
 Use language ID `gflat`, file extension `.gf`, and the source directory as the root.
 The server uses JSON-RPC over stdin/stdout. Stderr is reserved for server logs. It
-advertises full-document synchronization, accepts incremental updates as well,
+advertises incremental synchronization and also accepts full-text replacements,
 uses UTF-16 positions, and publishes versioned diagnostics.
 
 ## Analysis and maintenance

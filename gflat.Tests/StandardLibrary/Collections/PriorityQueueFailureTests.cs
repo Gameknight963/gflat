@@ -1,6 +1,6 @@
 namespace gflat.Tests.Std.Collections;
 
-public sealed class PriorityQueueFailureTests
+public sealed partial class PriorityQueueFailureTests
 {
     private const string Prelude = """
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;

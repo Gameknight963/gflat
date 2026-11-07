@@ -92,6 +92,49 @@ struct PriorityQueue<T>
         return result;
     }
 
+    public T EnqueueDequeue(T value)
+    {
+        if (storage.Count == 0) return value;
+        if (compare(&value, &storage[0]) <= 0) return value;
+        return this.ReplaceTop(move value);
+    }
+
+    public T DequeueEnqueue(T value)
+    {
+        if (storage.Count == 0) throw new Exception("Cannot dequeue an empty priority queue");
+        return this.ReplaceTop(move value);
+    }
+
+    private T ReplaceTop(T value)
+    {
+        nuint count = storage.Count;
+        Span<T> elements = storage.AsSpan();
+        T* data = elements.Data!;
+        nuint[64] path;
+        nuint depth = 0;
+        nuint hole = 0;
+        // Complete comparisons before moving either the root or its replacement.
+        while (hole < count / 2)
+        {
+            nuint child = hole * 2 + 1;
+            if (child + 1 < count && compare(data + child + 1, data + child) < 0) child++;
+            if (compare(data + child, &value) >= 0) break;
+            path[depth] = child;
+            depth++;
+            hole = child;
+        }
+        T result = move *data;
+        hole = 0;
+        for (nuint i = 0; i < depth; i++)
+        {
+            nuint child = path[i];
+            move *(data + child) at data + hole;
+            hole = child;
+        }
+        move value at data + hole;
+        return result;
+    }
+
     public bool TryDequeue(ref T result)
     {
         if (storage.Count == 0) return false;

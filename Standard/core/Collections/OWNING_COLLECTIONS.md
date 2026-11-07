@@ -387,6 +387,9 @@ int main()
 Enqueue, Dequeue, and TryDequeue use the queue ownership rules above. Top borrows
 `ref immutable(T)`. Repeated removal produces priority order.
 
+Use [EnqueueDequeue and DequeueEnqueue](../../../docs/PRIORITY_QUEUE_REPLACEMENT.md)
+to replace the root without growing storage, including fixed-size candidate heaps.
+
 Insertion and removal compare the complete path before relocating existing
 values. Comparator or allocation failure therefore preserves contents and heap
 order. Comparators must leave the queue and its values unchanged.

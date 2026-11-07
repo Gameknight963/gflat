@@ -48,6 +48,27 @@ public partial class TypeChecker
         return EnterSignatureContext(method, found ? owner : null, isClass);
     }
 
+    private sealed class SignatureContext(TypeChecker checker, IDisposable declarations, IDisposable nullable,
+        IDisposable exceptions, SourceContext.Scope source) : IDisposable
+    {
+        private readonly NamespaceScope previousNamespace = checker._currentNamespace;
+        private readonly string previousPath = checker._currentNamespacePath;
+        private readonly ClassInfo? previousClass = checker._currentClass;
+        private readonly StructInfo? previousStruct = checker._currentStruct;
+
+        public void Dispose()
+        {
+            checker._currentNamespace = previousNamespace;
+            checker._currentNamespacePath = previousPath;
+            checker._currentClass = previousClass;
+            checker._currentStruct = previousStruct;
+            source.Dispose();
+            exceptions.Dispose();
+            nullable.Dispose();
+            declarations.Dispose();
+        }
+    }
+
     private IDisposable EnterSignatureContext(AstNode declaration, string? owner, bool isClass)
     {
         // Generic declarations can be inspected while a caller instantiates
@@ -56,10 +77,7 @@ public partial class TypeChecker
         var nullable = IsolateNullableFlow();
         var exceptions = IsolateExceptionHandlers();
         var source = SourceContext.Enter(declaration.Span);
-        var previousNamespace = _currentNamespace;
-        var previousPath = _currentNamespacePath;
-        var previousClass = _currentClass;
-        var previousStruct = _currentStruct;
+        var context = new SignatureContext(this, declarations, nullable, exceptions, source);
         try
         {
             string ns = declarationNamespaces.GetValueOrDefault(declaration) ?? "";
@@ -68,20 +86,8 @@ public partial class TypeChecker
             _currentClass = owner != null && isClass ? _classes.GetValueOrDefault(owner) : null;
             _currentStruct = owner != null && !isClass ? _structs.GetValueOrDefault(owner) : null;
             typeQueryOwner = DeclarationTypeQueryOwner(declaration, owner);
-            return new NullableAction(Restore);
+            return context;
         }
-        catch { Restore(); throw; }
-
-        void Restore()
-        {
-            _currentNamespace = previousNamespace;
-            _currentNamespacePath = previousPath;
-            _currentClass = previousClass;
-            _currentStruct = previousStruct;
-            source.Dispose();
-            exceptions.Dispose();
-            nullable.Dispose();
-            declarations.Dispose();
-        }
+        catch { context.Dispose(); throw; }
     }
 }

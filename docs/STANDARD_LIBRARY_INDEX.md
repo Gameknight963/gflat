@@ -222,3 +222,5 @@ See [Generating random text](RANDOM_TEXT.md) for custom alphabets and hexadecima
 See [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) for signed component constructors.
 
 See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for integer endianness swaps.
+
+See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.

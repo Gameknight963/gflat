@@ -54,3 +54,5 @@ For stream operations and their EOF/error behavior, see [binary IO](BINARY_IO.md
 Source: `core/Binary/BinaryPrimitives.gf`
 
 See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for scalar byte swaps.
+
+See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.

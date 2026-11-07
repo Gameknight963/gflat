@@ -39,6 +39,215 @@ public static class BinaryPrimitives
     public static nint ReverseEndianness(nint value) nothrow
         => (nint)ReverseEndianness((nuint)value);
 
+    public static bool TryReverseEndianness(readonly(byte)* source, nuint count, byte* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(sbyte)* source, nuint count, sbyte* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(ushort)* source, nuint count, ushort* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(short)* source, nuint count, short* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(uint)* source, nuint count, uint* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(int)* source, nuint count, int* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(ulong)* source, nuint count, ulong* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(long)* source, nuint count, long* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(nuint)* source, nuint count, nuint* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(nint)* source, nuint count, nint* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
+    public static bool TryReverseEndianness(readonly(extralong)* source, nuint count, extralong* destination, nuint capacity) nothrow
+    {
+        if (capacity < count) return false;
+        if (count == 0) return true;
+        if (destination.reinterpret<nuint>() > source.reinterpret<nuint>())
+        {
+            while (count != 0)
+            {
+                count--;
+                destination[count] = ReverseEndianness(source[count]);
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < count; i++) destination[i] = ReverseEndianness(source[i]);
+        }
+        return true;
+    }
+
     public static bool TryReadUInt16LittleEndian(readonly(byte)* data, nuint count, ref ushort value) nothrow
     {
         if (count < 2) { value = 0; return false; }

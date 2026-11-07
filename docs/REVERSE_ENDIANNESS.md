@@ -27,3 +27,5 @@ returns the original value.
 The operation is independent of the machine's byte order. It always swaps,
 so use the explicitly ordered read/write methods when accessing serialized
 buffers. All overloads are `nothrow` and allocate no storage.
+
+See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.

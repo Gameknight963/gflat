@@ -49,6 +49,16 @@ public sealed class BitSetSearchTests
                         set = start;
                         if (start == special) set++;
                     }
+                    nuint lastSet = length;
+                    nuint lastClear = length;
+                    for (nuint end = start; end != 0; end--) {
+                        if ((*bits)[end - 1] && lastSet == length) lastSet = end - 1;
+                        if (!(*bits)[end - 1] && lastClear == length) lastClear = end - 1;
+                    }
+                    if (bits.FindLastIndex(true, start) != lastSet) return false;
+                    if (bits.FindLastIndex(false, start) != lastClear) return false;
+                    if (start == length && (bits.FindLastIndex(true) != lastSet ||
+                        bits.FindLastIndex(false) != lastClear)) return false;
                     if (bits.FindIndex(true, start) != set) return false;
                     if (bits.FindIndex(false, start) != clear) return false;
                 }
@@ -185,6 +195,15 @@ public sealed class BitSetSearchTests
                         nuint hash = bits.GetHashCode();
                         deny = true;
                         for (nuint start = 0; start <= length; start++) {
+                            nuint lastSet = length;
+                            nuint lastClear = length;
+                            for (nuint end = start; end != 0; end--) {
+                                if (expected[end - 1] && lastSet == length) lastSet = end - 1;
+                                if (!expected[end - 1] && lastClear == length) lastClear = end - 1;
+                            }
+                            if (bits.FindLastIndex(true, start) != lastSet ||
+                                bits.FindLastIndex(false, start) != lastClear) return 21;
+
                             nuint set = ReadSize(packet, ref position);
                             nuint clear = ReadSize(packet, ref position);
                             if (bits.FindIndex(true, start) != set || bits.FindIndex(false, start) != clear) return 3;
@@ -209,6 +228,15 @@ public sealed class BitSetSearchTests
                         }
                         if (!caught || result != 99 || bits.Length != length || bits.GetHashCode() != hash) return 7;
                         if (allocations - releases != live) return 8;
+                        caught = false;
+                        try { result = bits.FindLastIndex(mode % 2 == 0, invalid); }
+                        catch (ref Exception error) {
+                            if (!CString::Equals(error.GetMessage(), "BitSet search end out of range")) return 22;
+                            caught = true;
+                        }
+                        if (!caught || result != 99 || bits.Length != length || bits.GetHashCode() != hash) return 23;
+                        if (allocations - releases != live) return 24;
+
                     }
                 }
                 if (position != {{{hex.Length}}} || allocations != releases) return 9;
@@ -216,6 +244,9 @@ public sealed class BitSetSearchTests
             }
             """, optimization);
     }
+
+    [Fact]
+    public void BackwardSearchGuideCompiles() => StandardLibraryGuideTests.CheckProgram("BIT_SET_SEARCH.md", 0);
 
     private static int Find(BitArray bits, bool value, int start)
     {

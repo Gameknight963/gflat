@@ -205,6 +205,36 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
         return length;
     }
 
+    public immutable nuint FindLastIndex(bool value)
+        => this.FindLastIndex(value, length);
+
+    // Last matching bit before endExclusive; Length means no match.
+    public immutable nuint FindLastIndex(bool value, nuint endExclusive)
+    {
+        if (endExclusive > length) throw new Exception("BitSet search end out of range");
+        nuint remaining = endExclusive;
+        while (remaining != 0)
+        {
+            nuint wordIndex = (remaining - 1) / 32;
+            nuint beginning = wordIndex * 32;
+            uint bits = data![wordIndex];
+            if (!value) bits = bits ^ 0xffffffffu;
+            bits = bits & BitSet::RangeMask(0, remaining - beginning);
+            if (bits != 0u)
+            {
+                nuint bit = 0;
+                if ((bits >> 16) != 0u) { bits = bits >> 16; bit += 16; }
+                if ((bits >> 8) != 0u) { bits = bits >> 8; bit += 8; }
+                if ((bits >> 4) != 0u) { bits = bits >> 4; bit += 4; }
+                if ((bits >> 2) != 0u) { bits = bits >> 2; bit += 2; }
+                if ((bits >> 1) != 0u) bit++;
+                return beginning + bit;
+            }
+            remaining = beginning;
+        }
+        return length;
+    }
+
     public immutable nuint CountSetBits() nothrow
     {
         nuint total = 0;

@@ -236,3 +236,5 @@ See [Splitting on an exact byte pattern](TEXT_PATTERN_SPLIT.md) for multi-byte s
 See [Choosing a rounding mode](MIDPOINT_ROUNDING.md) for midpoint and directed rounding.
 
 See [Summing numeric sequences](QUERY_SUM.md) for integer, floating, and projected sums.
+
+See [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) for pointer-sized masks and signed power checks.

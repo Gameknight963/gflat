@@ -32,3 +32,5 @@ It reverses byte order while retaining the type and bit pattern. For example,
 interpretation. The operation is independent of host byte order.
 
 All methods are `nothrow`. Source: `core/Numerics/BitOperations.gf`.
+
+See [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) for pointer-sized masks and signed power checks.

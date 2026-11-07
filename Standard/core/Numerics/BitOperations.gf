@@ -140,4 +140,41 @@ public static class BitOperations
         return value + 1ul;
     }
 
+    public static int PopCount(nuint value) nothrow => PopCount((ulong)value);
+
+    public static int LeadingZeroCount(nuint value) nothrow
+        => LeadingZeroCount((ulong)value) - (64 - (int)sizeof(nuint) * 8);
+
+    public static int TrailingZeroCount(nuint value) nothrow
+    {
+        if (value == 0) return (int)sizeof(nuint) * 8;
+        return TrailingZeroCount((ulong)value);
+    }
+
+    public static nuint RotateLeft(nuint value, int offset) nothrow
+    {
+        static if (sizeof(nuint) == 8) return (nuint)RotateLeft((ulong)value, offset);
+        else return (nuint)RotateLeft((uint)value, offset);
+    }
+
+    public static nuint RotateRight(nuint value, int offset) nothrow
+    {
+        static if (sizeof(nuint) == 8) return (nuint)RotateRight((ulong)value, offset);
+        else return (nuint)RotateRight((uint)value, offset);
+    }
+
+    public static bool IsPowerOfTwo(nuint value) nothrow => IsPowerOfTwo((ulong)value);
+
+    public static nuint RoundUpToPowerOfTwo(nuint value) nothrow
+        => (nuint)RoundUpToPowerOfTwo((ulong)value);
+
+    public static bool IsPowerOfTwo(int value) nothrow
+        => value > 0 && IsPowerOfTwo((uint)value);
+
+    public static bool IsPowerOfTwo(long value) nothrow
+        => value > 0l && IsPowerOfTwo((ulong)value);
+
+    public static bool IsPowerOfTwo(nint value) nothrow
+        => value > 0 && IsPowerOfTwo((nuint)value);
+
 }

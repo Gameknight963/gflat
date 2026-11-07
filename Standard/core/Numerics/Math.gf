@@ -114,6 +114,279 @@ public static class Math
         return value;
     }
 
+    // Integer division truncates toward zero. The remainder has the dividend's sign.
+    // DivRem leaves the remainder unchanged on failure. TryDivRem clears both outputs.
+    public static sbyte DivRem(sbyte dividend, sbyte divisor, ref sbyte remainder)
+    {
+        if (divisor == (sbyte)0) throw new Exception("Division by zero");
+        sbyte minimum = (sbyte)-128;
+        if (dividend == minimum && divisor == (sbyte)-1) throw new Exception("Division overflow");
+        sbyte quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(sbyte dividend, sbyte divisor, ref sbyte quotient, ref sbyte remainder) nothrow
+    {
+        sbyte minimum = (sbyte)-128;
+        if (divisor == (sbyte)0 || (dividend == minimum && divisor == (sbyte)-1))
+        {
+            quotient = (sbyte)0;
+            remainder = (sbyte)0;
+            return false;
+        }
+        sbyte divided = dividend / divisor;
+        sbyte remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static byte DivRem(byte dividend, byte divisor, ref byte remainder)
+    {
+        if (divisor == (byte)0) throw new Exception("Division by zero");
+        byte quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(byte dividend, byte divisor, ref byte quotient, ref byte remainder) nothrow
+    {
+        if (divisor == (byte)0)
+        {
+            quotient = (byte)0;
+            remainder = (byte)0;
+            return false;
+        }
+        byte divided = dividend / divisor;
+        byte remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static short DivRem(short dividend, short divisor, ref short remainder)
+    {
+        if (divisor == (short)0) throw new Exception("Division by zero");
+        short minimum = (short)-32768;
+        if (dividend == minimum && divisor == (short)-1) throw new Exception("Division overflow");
+        short quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(short dividend, short divisor, ref short quotient, ref short remainder) nothrow
+    {
+        short minimum = (short)-32768;
+        if (divisor == (short)0 || (dividend == minimum && divisor == (short)-1))
+        {
+            quotient = (short)0;
+            remainder = (short)0;
+            return false;
+        }
+        short divided = dividend / divisor;
+        short remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static ushort DivRem(ushort dividend, ushort divisor, ref ushort remainder)
+    {
+        if (divisor == (ushort)0) throw new Exception("Division by zero");
+        ushort quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(ushort dividend, ushort divisor, ref ushort quotient, ref ushort remainder) nothrow
+    {
+        if (divisor == (ushort)0)
+        {
+            quotient = (ushort)0;
+            remainder = (ushort)0;
+            return false;
+        }
+        ushort divided = dividend / divisor;
+        ushort remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static int DivRem(int dividend, int divisor, ref int remainder)
+    {
+        if (divisor == (int)0) throw new Exception("Division by zero");
+        int minimum = -2147483647 - 1;
+        if (dividend == minimum && divisor == (int)-1) throw new Exception("Division overflow");
+        int quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(int dividend, int divisor, ref int quotient, ref int remainder) nothrow
+    {
+        int minimum = -2147483647 - 1;
+        if (divisor == (int)0 || (dividend == minimum && divisor == (int)-1))
+        {
+            quotient = (int)0;
+            remainder = (int)0;
+            return false;
+        }
+        int divided = dividend / divisor;
+        int remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static uint DivRem(uint dividend, uint divisor, ref uint remainder)
+    {
+        if (divisor == (uint)0) throw new Exception("Division by zero");
+        uint quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(uint dividend, uint divisor, ref uint quotient, ref uint remainder) nothrow
+    {
+        if (divisor == (uint)0)
+        {
+            quotient = (uint)0;
+            remainder = (uint)0;
+            return false;
+        }
+        uint divided = dividend / divisor;
+        uint remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static long DivRem(long dividend, long divisor, ref long remainder)
+    {
+        if (divisor == (long)0) throw new Exception("Division by zero");
+        long minimum = -9223372036854775807l - 1l;
+        if (dividend == minimum && divisor == (long)-1) throw new Exception("Division overflow");
+        long quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(long dividend, long divisor, ref long quotient, ref long remainder) nothrow
+    {
+        long minimum = -9223372036854775807l - 1l;
+        if (divisor == (long)0 || (dividend == minimum && divisor == (long)-1))
+        {
+            quotient = (long)0;
+            remainder = (long)0;
+            return false;
+        }
+        long divided = dividend / divisor;
+        long remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static ulong DivRem(ulong dividend, ulong divisor, ref ulong remainder)
+    {
+        if (divisor == (ulong)0) throw new Exception("Division by zero");
+        ulong quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(ulong dividend, ulong divisor, ref ulong quotient, ref ulong remainder) nothrow
+    {
+        if (divisor == (ulong)0)
+        {
+            quotient = (ulong)0;
+            remainder = (ulong)0;
+            return false;
+        }
+        ulong divided = dividend / divisor;
+        ulong remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static extralong DivRem(extralong dividend, extralong divisor, ref extralong remainder)
+    {
+        if (divisor == (extralong)0) throw new Exception("Division by zero");
+        extralong minimum = (extralong)1 << 127;
+        if (dividend == minimum && divisor == (extralong)-1) throw new Exception("Division overflow");
+        extralong quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(extralong dividend, extralong divisor, ref extralong quotient, ref extralong remainder) nothrow
+    {
+        extralong minimum = (extralong)1 << 127;
+        if (divisor == (extralong)0 || (dividend == minimum && divisor == (extralong)-1))
+        {
+            quotient = (extralong)0;
+            remainder = (extralong)0;
+            return false;
+        }
+        extralong divided = dividend / divisor;
+        extralong remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static nint DivRem(nint dividend, nint divisor, ref nint remainder)
+    {
+        if (divisor == (nint)0) throw new Exception("Division by zero");
+        nint minimum = (nint)((nuint)1 << ((int)sizeof(nint) * 8 - 1));
+        if (dividend == minimum && divisor == (nint)-1) throw new Exception("Division overflow");
+        nint quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(nint dividend, nint divisor, ref nint quotient, ref nint remainder) nothrow
+    {
+        nint minimum = (nint)((nuint)1 << ((int)sizeof(nint) * 8 - 1));
+        if (divisor == (nint)0 || (dividend == minimum && divisor == (nint)-1))
+        {
+            quotient = (nint)0;
+            remainder = (nint)0;
+            return false;
+        }
+        nint divided = dividend / divisor;
+        nint remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
+    public static nuint DivRem(nuint dividend, nuint divisor, ref nuint remainder)
+    {
+        if (divisor == (nuint)0) throw new Exception("Division by zero");
+        nuint quotient = dividend / divisor;
+        remainder = dividend % divisor;
+        return quotient;
+    }
+
+    public static bool TryDivRem(nuint dividend, nuint divisor, ref nuint quotient, ref nuint remainder) nothrow
+    {
+        if (divisor == (nuint)0)
+        {
+            quotient = (nuint)0;
+            remainder = (nuint)0;
+            return false;
+        }
+        nuint divided = dividend / divisor;
+        nuint remaining = dividend % divisor;
+        quotient = divided;
+        remainder = remaining;
+        return true;
+    }
+
     public static uint GreatestCommonDivisor(uint a, uint b) nothrow
     {
         while (b != 0u) { uint remainder = a % b; a = b; b = remainder; }

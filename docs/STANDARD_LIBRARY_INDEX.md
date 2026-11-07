@@ -139,6 +139,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Paths`, `PathStyle` | [Lexical paths](../Standard/core/IO/PATHS.md) |
 | `MemoryStream` | [Owning byte streams](../Standard/core/IO/MEMORY_STREAM.md) |
 | `Math`, `PseudoRandom` | [Scalar math](MATH.md), [Deterministic pseudorandom values](PSEUDORANDOM.md) |
+| `Math::DivRem`, `Math::TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |
 | `BitConverter` | [Floating-point representation](BIT_CONVERTER.md) |
 | `BinaryPrimitives` | [Binary scalar buffers](BINARY_PRIMITIVES.md) |

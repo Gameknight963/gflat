@@ -12,6 +12,8 @@ counterpart does not fit.
 
 ### Common divisors and multiples
 
+For a quotient and remainder together, use [DivRem and TryDivRem](MATH_DIVREM.md).
+
 GCD and LCM accept matching `uint`, `ulong`, or `nuint` arguments.
 
 ```csharp

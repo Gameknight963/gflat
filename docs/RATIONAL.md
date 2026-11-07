@@ -64,3 +64,5 @@ Sources: `Numerics/Rational.gf`, BigInteger dependencies, and
 
 See [exact rational integral values](RATIONAL_INTEGRAL.md) for `Truncate`,
 `Floor`, and `Ceiling` without floating-point conversion.
+
+See [rational magnitude and reciprocals](RATIONAL_MAGNITUDE.md) for `Abs` and `Reciprocal`.

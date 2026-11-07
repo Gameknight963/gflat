@@ -84,6 +84,18 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         BigInteger bottom = denominator;
         return new Rational(move top, move bottom);
     }
+    public immutable Rational Abs()
+    {
+        if (numerator.Sign < 0) return this.Negate();
+        return *this;
+    }
+
+    public immutable Rational Reciprocal()
+    {
+        if (numerator.IsZero) throw new Exception("Rational reciprocal of zero");
+        return new Rational(denominator, numerator);
+    }
+
     public immutable BigInteger Truncate() => numerator.Divide(&denominator);
 
     private immutable BigInteger IntegralBound(bool upper)

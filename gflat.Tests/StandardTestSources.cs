@@ -230,6 +230,7 @@ internal static class StandardTestSources
 
     public static IEnumerable<SourceFile> Queries => Load([.. foundation,
         "core/Threading/Interlocked.gf",
+        "core/Memory/SharedStorage.gf",
         "core/Collections/Deque.gf",
         "core/Collections/Comparer.gf",
         "core/Collections/EqualityComparer.gf",

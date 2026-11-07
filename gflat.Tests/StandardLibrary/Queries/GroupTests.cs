@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Queries;
 public sealed class GroupTests
 {
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Combine(StandardTestSources.Values,
-        StandardTestSources.Load("core/Collections/HashMap.gf", "core/Threading/Interlocked.gf",
+        StandardTestSources.Load("core/Collections/HashMap.gf", "core/Threading/Interlocked.gf", "core/Memory/SharedStorage.gf",
             "core/Queries/Group.gf", "core/Queries/GroupJoinSource.gf", "core/Queries/enumerable_group_join.gf",
             "core/Queries/IntRange.gf", "core/Queries/FilteredIntRange.gf", "core/Queries/enumerable_elements.gf"))
         .Append(new SourceFile("shared-group.gf", code));

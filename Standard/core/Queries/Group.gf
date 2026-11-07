@@ -1,49 +1,21 @@
 using Standard::Collections;
-using Standard::Threading;
+using Standard::Memory;
 
 namespace Standard::Queries;
 
 // Copies share immutable values. Iterators retain their own share of the storage.
 public struct Group<T> : IEnumerable<T, Group<T>::Enumerator>
 {
-    private struct State
-    {
-        public long References;
-        public Vector<T> Values;
-        public State() nothrow
-        {
-            References = 1l;
-            Values = new();
-        }
-    }
+    private SharedStorage<Vector<T>> storage;
 
-    private State*? state;
-
-    public Group() nothrow { state = null; }
-
-    public copy Group(immutable(Group<T>)* source)
-    {
-        state = null;
-        // Only the reference count changes after the values have been published.
-        State*? shared = (State*?)source.state;
-        if (shared == null) return;
-        long references = Interlocked::Read(ref shared!.References);
-        while (true)
-        {
-            if (references == 9223372036854775807l) throw new Exception("Group reference count overflow");
-            long observed = Interlocked::CompareExchange(ref shared!.References, references + 1l, references);
-            if (observed == references) break;
-            references = observed;
-        }
-        state = shared;
-    }
+    public Group() nothrow { storage = new(); }
 
     public nuint Count
     {
         immutable get nothrow
         {
-            if (state == null) return 0;
-            return state!.Values.Count;
+            if (storage.IsEmpty) return 0;
+            return storage.ValueImmutable.Count;
         }
     }
 
@@ -51,10 +23,10 @@ public struct Group<T> : IEnumerable<T, Group<T>::Enumerator>
 
     internal void Add(T value)
     {
-        if (state == null) state = new* State();
-        else if (Interlocked::Read(ref state!.References) != 1l)
+        if (storage.IsEmpty) storage = new SharedStorage<Vector<T>>(new Vector<T>());
+        else if (!storage.IsUnique)
             throw new Exception("Cannot append to a shared group");
-        state!.Values.Add(move value);
+        storage.Value.Add(move value);
     }
 
     public immutable Enumerator GetEnumerator() => new Enumerator(*this);
@@ -89,15 +61,8 @@ public struct Group<T> : IEnumerable<T, Group<T>::Enumerator>
             immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
-                return owner.state!.Values[position - 1];
+                return owner.storage.ValueImmutable[position - 1];
             }
         }
-    }
-
-    ~Group()
-    {
-        State*? released = state;
-        state = null;
-        if (released != null && Interlocked::Decrement(ref released!.References) == 0l) delete released!;
     }
 }

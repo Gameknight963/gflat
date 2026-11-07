@@ -8,7 +8,7 @@ public sealed class GroupJoinTests
     public void GuideExamplesCompile(int index) => StandardLibraryGuideTests.CheckProgram("QUERY_GROUP_JOIN.md", index);
 
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Combine(StandardTestSources.Values,
-        StandardTestSources.Load("core/Collections/HashMap.gf", "core/Threading/Interlocked.gf",
+        StandardTestSources.Load("core/Collections/HashMap.gf", "core/Threading/Interlocked.gf", "core/Memory/SharedStorage.gf",
             "core/Queries/Group.gf", "core/Queries/GroupJoinSource.gf", "core/Queries/enumerable_group_join.gf",
             "core/Queries/IntRange.gf", "core/Queries/FilteredIntRange.gf",
             "core/Queries/enumerable_elements.gf", "core/Queries/enumerable_count.gf"))

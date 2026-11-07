@@ -30,7 +30,8 @@ int main()
 The free function `GroupJoin(outer, inner, outerKey, innerKey, resultSelector)`
 accepts the same arguments. Generic arguments are inferred. Load
 `Queries/Group.gf`, `Queries/GroupJoinSource.gf`, and
-`Queries/enumerable_group_join.gf` with `Threading/Interlocked.gf`, `HashMap`,
+`Queries/enumerable_group_join.gf` with `Memory/SharedStorage.gf`,
+`Threading/Interlocked.gf`, `HashMap`,
 `Vector`, and their ordinary dependencies.
 
 ## Retaining groups

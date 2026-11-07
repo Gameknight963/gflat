@@ -135,3 +135,59 @@ nuint LastIndexOfIgnoreCase(readonly(char)* data, nuint length,
         start--;
     }
 }
+
+// Empty patterns match without reading either pointer.
+bool StartsWithIgnoreCase(readonly(char)* data, nuint length,
+    readonly(char)* pattern, nuint count) nothrow
+{
+    if (count == 0) return true;
+    if (count > length) return false;
+    return EqualsIgnoreCase(data, count, pattern, count);
+}
+
+bool EndsWithIgnoreCase(readonly(char)* data, nuint length,
+    readonly(char)* pattern, nuint count) nothrow
+{
+    if (count == 0) return true;
+    if (count > length) return false;
+    return EqualsIgnoreCase(data + length - count, count, pattern, count);
+}
+
+bool ContainsIgnoreCase(readonly(char)* data, nuint length,
+    readonly(char)* pattern, nuint count) nothrow
+{
+    if (count == 0) return true;
+    return IndexOfIgnoreCase(data, length, pattern, count) != length;
+}
+
+bool StartsWithIgnoreCase(readonly(char)* data, readonly(char)* pattern) nothrow
+{
+    nuint i = 0;
+    while (pattern[i] != '\0')
+    {
+        if (ToUpper(data[i]) != ToUpper(pattern[i])) return false;
+        i++;
+    }
+    return true;
+}
+
+private nuint PatternByteLength(readonly(char)* text) nothrow
+{
+    nuint length = 0;
+    while (text[length] != '\0') length++;
+    return length;
+}
+
+bool EndsWithIgnoreCase(readonly(char)* data, readonly(char)* pattern) nothrow
+{
+    nuint count = PatternByteLength(pattern);
+    if (count == 0) return true;
+    return EndsWithIgnoreCase(data, PatternByteLength(data), pattern, count);
+}
+
+bool ContainsIgnoreCase(readonly(char)* data, readonly(char)* pattern) nothrow
+{
+    nuint count = PatternByteLength(pattern);
+    if (count == 0) return true;
+    return ContainsIgnoreCase(data, PatternByteLength(data), pattern, count);
+}

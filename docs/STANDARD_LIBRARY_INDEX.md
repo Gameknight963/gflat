@@ -191,6 +191,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 codec](UTF8.md), [Incremental UTF-8 decoding](UTF8_DECODER.md), [Iterating UTF-8 scalar values](UTF8_SCALARS.md) |
 | `Rune` | [Unicode scalar values](RUNE.md) |
 | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Strict UTF-16 code-unit helpers](UTF16.md), [Borrowed UTF-16 scalar iteration](UTF16_SCALARS.md), [Counted Unicode transcoding](UNICODE_TRANSCODING.md) |
+| ASCII `StartsWithIgnoreCase`, `EndsWithIgnoreCase`, `ContainsIgnoreCase` | [ASCII text predicates](ASCII_TEXT_PREDICATES.md) |
 | `Ascii` classification, comparison, case conversion, and case-insensitive hashing | [ASCII byte utilities](ASCII.md) |
 
 ### Encodings, compression, and formats

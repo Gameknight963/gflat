@@ -15,7 +15,7 @@ public sealed class AsciiSubstringSearchTests
             ("baaaab"u8.ToArray(), "AAAc"u8.ToArray()), ("AAAaaa"u8.ToArray(), "aAa"u8.ToArray()),
             ([255, 128, 0, 65], [255, 128, 0, 97]), ([97, 98], [98, 165])];
         var random = new Random(829151);
-        for (int row = 0; row < 24; row++)
+        for (int row = 0; row < 128; row++)
         {
             byte[] data = new byte[random.Next(0, 41)]; random.NextBytes(data);
             byte[] pattern;
@@ -36,6 +36,12 @@ public sealed class AsciiSubstringSearchTests
             int last = ((ReadOnlySpan<byte>)data).LastIndexOf((ReadOnlySpan<byte>)pattern);
             if (first < 0) first = data.Length; if (last < 0) last = data.Length;
             packet.AddRange([(byte)data.Length, (byte)pattern.Length, (byte)first, (byte)last]);
+            byte[] cdata = data.TakeWhile(value => value != 0).ToArray();
+            byte[] cpattern = pattern.TakeWhile(value => value != 0).ToArray();
+            bool[] matches = [data.AsSpan().StartsWith(pattern), data.AsSpan().EndsWith(pattern),
+                data.AsSpan().IndexOf(pattern) >= 0, cdata.AsSpan().StartsWith(cpattern),
+                cdata.AsSpan().EndsWith(cpattern), cdata.AsSpan().IndexOf(cpattern) >= 0];
+            packet.AddRange(matches.Select(value => value ? (byte)1 : (byte)0));
             packet.AddRange(row.Data); packet.AddRange(row.Pattern);
         }
         string hex = Convert.ToHexString(packet.ToArray());
@@ -50,13 +56,27 @@ public sealed class AsciiSubstringSearchTests
                 for (int row = 0; row < {{cases.Count}}; row++) {
                     nuint length = (nuint)ReadByte(packet, ref at); nuint count = (nuint)ReadByte(packet, ref at);
                     nuint first = (nuint)ReadByte(packet, ref at); nuint last = (nuint)ReadByte(packet, ref at);
+                    bool starts = ReadByte(packet, ref at) != 0;
+                    bool ends = ReadByte(packet, ref at) != 0;
+                    bool contains = ReadByte(packet, ref at) != 0;
+                    bool cstarts = ReadByte(packet, ref at) != 0;
+                    bool cends = ReadByte(packet, ref at) != 0;
+                    bool ccontains = ReadByte(packet, ref at) != 0;
                     char[64] data; char[64] pattern; char[64] savedData; char[64] savedPattern;
                     for (nuint i = 0; i < 64; i++) { data[i] = (char)165; pattern[i] = (char)109; }
                     for (nuint i = 0; i < length; i++) data[i + 3] = (char)ReadByte(packet, ref at);
                     for (nuint i = 0; i < count; i++) pattern[i + 2] = (char)ReadByte(packet, ref at);
+                    data[length + 3] = (char)0; pattern[count + 2] = (char)0;
                     for (nuint i = 0; i < 64; i++) { savedData[i] = data[i]; savedPattern[i] = pattern[i]; }
                     if (Ascii::IndexOfIgnoreCase(&data[3], length, &pattern[2], count) != first) return 1;
                     if (Ascii::LastIndexOfIgnoreCase(&data[3], length, &pattern[2], count) != last) return 2;
+                    if (Ascii::StartsWithIgnoreCase(&data[3], length, &pattern[2], count) != starts) return 5;
+                    if (Ascii::EndsWithIgnoreCase(&data[3], length, &pattern[2], count) != ends) return 6;
+                    if (Ascii::ContainsIgnoreCase(&data[3], length, &pattern[2], count) != contains) return 7;
+                    if (Ascii::StartsWithIgnoreCase(&data[3], &pattern[2]) != cstarts) return 8;
+                    if (Ascii::EndsWithIgnoreCase(&data[3], &pattern[2]) != cends) return 9;
+                    if (Ascii::ContainsIgnoreCase(&data[3], &pattern[2]) != ccontains) return 10;
+
                     for (nuint i = 0; i < 64; i++) if (data[i] != savedData[i] || pattern[i] != savedPattern[i]) return 3;
                 }
                 if (at != {{hex.Length}}) return 4;
@@ -81,6 +101,15 @@ public sealed class AsciiSubstringSearchTests
                 if (Ascii::IndexOfIgnoreCase(nowhere, 0, nowhere, maximum) != 0 || Ascii::LastIndexOfIgnoreCase(nowhere, 0, nowhere, maximum) != 0) return 3;
                 if (Ascii::IndexOfIgnoreCase(nowhere, 1, nowhere, maximum) != 1 || Ascii::LastIndexOfIgnoreCase(nowhere, 1, nowhere, maximum) != 1) return 4;
                 if (Ascii::IndexOfIgnoreCase(nowhere, maximum - 1, nowhere, maximum) != maximum - 1 || Ascii::LastIndexOfIgnoreCase(nowhere, maximum - 1, nowhere, maximum) != maximum - 1) return 5;
+
+                if (!Ascii::StartsWithIgnoreCase(nowhere, maximum, nowhere, 0) ||
+                    !Ascii::EndsWithIgnoreCase(nowhere, maximum, nowhere, 0) ||
+                    !Ascii::ContainsIgnoreCase(nowhere, maximum, nowhere, 0)) return 14;
+                if (Ascii::StartsWithIgnoreCase(nowhere, 1, nowhere, maximum) ||
+                    Ascii::EndsWithIgnoreCase(nowhere, 1, nowhere, maximum) ||
+                    Ascii::ContainsIgnoreCase(nowhere, 1, nowhere, maximum)) return 15;
+                if (!Ascii::StartsWithIgnoreCase(nowhere, "") || !Ascii::EndsWithIgnoreCase(nowhere, "") ||
+                    !Ascii::ContainsIgnoreCase(nowhere, "")) return 16;
                 byte[256] toggled = [{{toggled}}];
                 for (nuint i = 0; i < 256; i++) {
                     char value = (char)i; char pattern = (char)((uint)i ^ 32u); char savedPatternByte = pattern;
@@ -99,6 +128,9 @@ public sealed class AsciiSubstringSearchTests
             }
             """, optimization);
     }
+
+    [Fact]
+    public void PredicateGuideCompiles() => StandardLibraryGuideTests.CheckProgram("ASCII_TEXT_PREDICATES.md", 0);
 
     private static byte Fold(byte value) => value is >= 97 and <= 122 ? (byte)(value - 32) : value;
 

@@ -126,3 +126,6 @@ Matching uses the comparison rules above. The searches take O(`length * count`)
 time in the worst case and constant working storage.
 
 Source: `core/Text/ascii.gf`
+
+See [ASCII text predicates](ASCII_TEXT_PREDICATES.md) for prefix, suffix, and
+containment checks with the same case-folding rules.

@@ -57,3 +57,6 @@ equivalent query. Duplicate insertion keeps that original object. Keep its owner
 alive and retain the pointer only while that entry stays in place.
 
 Source: `core/Collections/SortedSet.gf`
+
+Use the optional [CopyTo and TryCopyTo helpers](SORTED_SET_COPY.md) to copy
+values into an initialized span in comparer order.

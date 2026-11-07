@@ -1,18 +1,41 @@
 namespace gflat.Tests.Std.Collections;
 
-public sealed class HashSetCopyTests
+public sealed class SetCopyTests
 {
-    private static void Run(string program, int optimization)
+    private static void Run(string program, string kind, bool descending, int optimization)
     {
+        if (kind == "SortedSet")
+        {
+            program = program.Replace("HashSet<Key>", "SortedSet<Key>")
+                .Replace("source = new();", "source = new(Compare);");
+            string compare = $$"""
+                int Compare(immutable(Key)* a, immutable(Key)* b)
+                {
+                    if (!callbacks) throw new Exception("compare");
+                    int result = 0;
+                    if (a.Id < b.Id) result = -1;
+                    else if (a.Id > b.Id) result = 1;
+                    return result * {{(descending ? -1 : 1)}};
+                }
+                """;
+            program = program.Replace("int main()", compare + "\nint main()");
+            string expectedOrder = descending ? "(int)((size - i) * 2 - 1)" : "(int)(i * 2 + 1)";
+            program = program.Replace("if (index != size) return 1;", "if (index != size) return 1;\n"
+                + "for (nuint i = 0; i < size; i++) if (expected[i] != " + expectedOrder + ") return 14;");
+        }
         var sources = StandardTestSources.Combine(StandardTestSources.Values,
-            StandardTestSources.Load("core/Collections/HashMap.gf", "core/Collections/HashSet.gf", "core/Collections/hash_set_copy.gf"))
-            .Append(new SourceFile("hash-set-copy.gf", program));
+            StandardTestSources.Load("core/Collections/HashMap.gf", "core/Collections/HashSet.gf", "core/Collections/hash_set_copy.gf",
+                "core/Collections/SortedMap.gf", "core/Collections/SortedSet.gf", "core/Collections/sorted_set_copy.gf"))
+            .Append(new SourceFile("set-copy.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Set copy exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }
 
     [Fact]
     public void GuideCompiles() => StandardLibraryGuideTests.CheckProgram("HASH_SET_COPY.md", 0);
+
+    [Fact]
+    public void SortedGuideCompiles() => StandardLibraryGuideTests.CheckProgram("SORTED_SET_COPY.md", 0);
 
     private const string Prelude = """
         using Standard;
@@ -46,9 +69,13 @@ public sealed class HashSetCopyTests
         """;
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void TombstonesBoundsAndEntireStorageOverlapAreCheckedWithoutCallbacksOrAllocation(int optimization)
+    [InlineData("HashSet", false, 0)]
+    [InlineData("HashSet", false, 2)]
+    [InlineData("SortedSet", false, 0)]
+    [InlineData("SortedSet", false, 2)]
+    [InlineData("SortedSet", true, 0)]
+    [InlineData("SortedSet", true, 2)]
+    public void TombstonesBoundsAndEntireStorageOverlapAreCheckedWithoutCallbacksOrAllocation(string kind, bool descending, int optimization)
         => Run(Prelude + """
             struct Key : IHashable, IEquatable<Key>
             {
@@ -144,12 +171,16 @@ public sealed class HashSetCopyTests
                 }
                 return live;
             }
-            """, optimization);
+            """, kind, descending, optimization);
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void OwningCopiesKeepCompletedPrefixAndPreserveFailingSlotAndSource(int optimization)
+    [InlineData("HashSet", false, 0)]
+    [InlineData("HashSet", false, 2)]
+    [InlineData("SortedSet", false, 0)]
+    [InlineData("SortedSet", false, 2)]
+    [InlineData("SortedSet", true, 0)]
+    [InlineData("SortedSet", true, 2)]
+    public void OwningCopiesKeepCompletedPrefixAndPreserveFailingSlotAndSource(string kind, bool descending, int optimization)
         => Run(Prelude + """
             int copies = 0;
             int failCopy = 0;
@@ -256,11 +287,15 @@ public sealed class HashSetCopyTests
                 }
                 return live;
             }
-            """, optimization);
+            """, kind, descending, optimization);
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void OptionalCopyModulePreservesNoncopyableBorrowedSetOperations(int optimization)
+    [InlineData("HashSet", false, 0)]
+    [InlineData("HashSet", false, 2)]
+    [InlineData("SortedSet", false, 0)]
+    [InlineData("SortedSet", false, 2)]
+    [InlineData("SortedSet", true, 0)]
+    [InlineData("SortedSet", true, 2)]
+    public void OptionalCopyModulePreservesNoncopyableBorrowedSetOperations(string kind, bool descending, int optimization)
         => Run(Prelude + """
             int owners = 0;
             struct Key : IHashable, IEquatable<Key>
@@ -283,6 +318,6 @@ public sealed class HashSetCopyTests
                 if (owners != 0) return 3;
                 return live;
             }
-            """, optimization);
+            """, kind, descending, optimization);
 
 }

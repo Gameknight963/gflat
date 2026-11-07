@@ -21,6 +21,18 @@ struct SortedMap<K, V>
     public void ShrinkToFit() { storage.ShrinkToFit(); }
     public void Clear() { storage.Clear(); }
 
+    internal immutable bool CopyKeyDestinationOverlaps(K* output, nuint length) nothrow
+    {
+        if (length == 0 || storage.Count == 0) return false;
+        nuint start = (storage.AsImmutable().Data!).reinterpret<nuint>();
+        nuint target = output.reinterpret<nuint>();
+        nuint bytes = storage.Capacity * (nuint)sizeof(Entry);
+        if (target >= start) return target - start < bytes;
+        nuint stride = (nuint)sizeof(K);
+        if (stride == 0) stride = 1;
+        return (start - target) / stride < length;
+    }
+
     public struct Entry
     {
         private K key;

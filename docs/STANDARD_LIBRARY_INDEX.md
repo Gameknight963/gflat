@@ -99,6 +99,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
 | Map `ContainsValue` | [Searching map values](MAP_VALUE_SEARCH.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |
+| Sorted-set `CopyTo`, `TryCopyTo` | [Copy values in comparer order](SORTED_SET_COPY.md) |
 | Set `TryGetValue`, sorted-set `Min`/`Max` | [Retrieve stored set values](SET_VALUE_LOOKUP.md) |
 | Sorted-set equality, subset/superset checks, overlap | [Comparing sorted sets](SORTED_SET_RELATIONS.md) |
 | Sorted-set algebra and `RemoveWhere` | [Mutating sorted sets](SORTED_SET_ALGEBRA.md) |

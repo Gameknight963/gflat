@@ -36,6 +36,9 @@ struct SortedSet<T>
     // Borrows the stored comparison-equivalent value, or null when absent.
     public immutable immutable(T)*? Find(immutable(T)* value) => storage.FindKey(value);
     public bool Remove(immutable(T)* value) => storage.Remove(value);
+    internal immutable bool CopyDestinationOverlaps(T* output, nuint length) nothrow
+        => storage.CopyKeyDestinationOverlaps(output, length);
+
     public void Clear() { storage.Clear(); }
 
     public void ExceptWith(immutable(SortedSet<T>)* other)

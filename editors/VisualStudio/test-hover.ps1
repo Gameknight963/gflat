@@ -72,7 +72,7 @@ try {
     $textMate = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.TextMate.Core'])
     [gflat.PackageTests.ThemeColorCheck]::RunTextMateTheme($textMate, (Join-Path $PackageDirectory 'Grammars/gflat.tmLanguage.json'))
     [gflat.PackageTests.ThemeColorCheck]::RunTextMateEnter($textMate, (Join-Path $PackageDirectory 'gflat-language-configuration.json'))
-    Write-Host 'Installed Visual Studio Enter rule indents between braces without adding another newline.'
+    Write-Host 'Native Visual Studio Enter indentation passed for closing braces and body caret columns at three nesting levels.'
     Write-Host 'Installed Visual Studio TextMate loader selected the packaged theme and its native classification mappings.'
     Write-Host 'Roslyn theme synchronization copies actual foreground brushes and preserves tooltip font, size, background, and bold formatting.'
     # LSP content-type inheritance alone leaves shell preferences on Plain Text,

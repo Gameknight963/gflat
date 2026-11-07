@@ -39,61 +39,110 @@ namespace gflat.PackageTests
             var json = Type.GetType("Newtonsoft.Json.JsonConvert, Newtonsoft.Json", true);
             var configuration = json.GetMethod("DeserializeObject", new[] { typeof(string), typeof(Type) })
                 .Invoke(null, new object[] { System.IO.File.ReadAllText(configurationPath), configurationType });
-            var rules = (System.Collections.IEnumerable)configurationType.GetProperty("OnEnterRules").GetValue(configuration);
             var helperType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.Editor.LanguageConfiguration.Indentation.IndentationHelperService", true);
             var helper = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(helperType);
             var managerField = helperType.GetField("_indentationManagerService", BindingFlags.NonPublic | BindingFlags.Instance);
-            var manager = new Proxy(managerField.FieldType, m => {
+            managerField.SetValue(helper, new Proxy(managerField.FieldType, m => {
                 if (m.MethodName != "GetIndentation") throw new Exception("Unexpected indentation option query: " + m.MethodName);
                 var arguments = m.Args;
                 arguments[2] = true; arguments[3] = 4; arguments[4] = 4;
                 return new ReturnMessage(null, arguments, arguments.Length, m.LogicalCallContext, m);
-            }).GetTransparentProxy();
-            managerField.SetValue(helper, manager);
-            const string document = "{\r\n}";
+            }).GetTransparentProxy());
+            var baseType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.LanguageConfiguration.Impl.LanguageConfigurationBase", true);
+            var aggregatorField = baseType.GetField("BufferTagAggregatorService", BindingFlags.NonPublic | BindingFlags.Instance);
+            aggregatorField.SetValue(helper, new Proxy(aggregatorField.FieldType, m => {
+                var tagType = m.MethodBase.GetGenericArguments()[0];
+                var aggregatorType = typeof(ITagAggregator<>).MakeGenericType(tagType);
+                return new Proxy(aggregatorType, call => call.MethodName == "GetTags"
+                    ? Array.CreateInstance(typeof(IMappingTagSpan<>).MakeGenericType(tagType), 0) : null).GetTransparentProxy();
+            }).GetTransparentProxy());
+            foreach (string newline in new[] { "\r\n", "\n" })
+            foreach (int outerIndent in new[] { 0, 4, 8 })
+            {
+                string prefix = new string(' ', outerIndent);
+                // Ordinary Enter first splits the auto-completed pair. The native
+                // smart indenter must leave this closing-brace line at outerIndent.
+                CheckNativeIndentation(assembly, helperType, helper, configuration,
+                    prefix + "{" + newline + prefix + "}", 1, outerIndent);
+                // Brace completion then inserts the body line before the closer.
+                // Its caret query must indent that empty body by exactly one level.
+                CheckNativeIndentation(assembly, helperType, helper, configuration,
+                    prefix + "{" + newline + newline + prefix + "}", 1, outerIndent + 4);
+            }
+        }
+
+        private static void CheckNativeIndentation(Assembly assembly, Type helperType, object helper,
+            object configuration, string document, int targetLine, int expectedColumn)
+        {
             Microsoft.VisualStudio.Text.ITextSnapshot snapshot = null;
-            Microsoft.VisualStudio.Text.ITextSnapshotLine line = null, closer = null;
+            Microsoft.VisualStudio.Text.ITextBuffer buffer = null;
+            var lines = new List<Microsoft.VisualStudio.Text.ITextSnapshotLine>();
+            var starts = new List<int>();
+            int position = 0;
+            foreach (string text in document.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                int start = position, end = start + text.Length, number = lines.Count;
+                int breakEnd = end < document.Length ? end + (document[end] == '\r' ? 2 : 1) : end;
+                starts.Add(start);
+                lines.Add(Interface<Microsoft.VisualStudio.Text.ITextSnapshotLine>(m => {
+                    switch (m.MethodName) {
+                        case "GetText": return text;
+                        case "GetLineBreakText": return document.Substring(end, breakEnd - end);
+                        case "get_Length": return text.Length;
+                        case "get_LengthIncludingLineBreak": return breakEnd - start;
+                        case "get_LineBreakLength": return breakEnd - end;
+                        case "get_Snapshot": return snapshot;
+                        case "get_LineNumber": return number;
+                        case "get_Extent": return new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, start, text.Length);
+                        case "get_ExtentIncludingLineBreak": return new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, start, breakEnd - start);
+                        case "get_Start": return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, start);
+                        case "get_End": return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, end);
+                        case "get_EndIncludingLineBreak": return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, breakEnd);
+                        default: throw new Exception("Unexpected Enter line operation: " + m.MethodName);
+                    }
+                }));
+                position = breakEnd;
+            }
             snapshot = Interface<Microsoft.VisualStudio.Text.ITextSnapshot>(m => {
-                if (m.MethodName == "get_Length") return document.Length;
-                if (m.MethodName == "get_LineCount") return 2;
-                if (m.MethodName == "get_Item") return document[(int)m.Args[0]];
-                if (m.MethodName == "GetLineFromLineNumber") return (int)m.Args[0] == 0 ? line : closer;
-                if (m.MethodName == "GetText") {
-                    if (m.Args.Length == 0) return document;
-                    if (m.Args.Length == 2) return document.Substring((int)m.Args[0], (int)m.Args[1]);
-                    var span = (Microsoft.VisualStudio.Text.Span)m.Args[0];
-                    return document.Substring(span.Start, span.Length);
+                switch (m.MethodName) {
+                    case "get_Length": return document.Length;
+                    case "get_LineCount": return lines.Count;
+                    case "get_TextBuffer": return buffer;
+                    case "get_Item": return document[(int)m.Args[0]];
+                    case "GetLineFromLineNumber": return lines[(int)m.Args[0]];
+                    case "GetLineNumberFromPosition":
+                    case "GetLineFromPosition":
+                        int index = starts.FindLastIndex(p => p <= (int)m.Args[0]);
+                        return m.MethodName == "GetLineFromPosition" ? (object)lines[index] : index;
+                    case "GetText":
+                        if (m.Args.Length == 0) return document;
+                        if (m.Args.Length == 2) return document.Substring((int)m.Args[0], (int)m.Args[1]);
+                        var span = (Microsoft.VisualStudio.Text.Span)m.Args[0];
+                        return document.Substring(span.Start, span.Length);
+                    default: throw new Exception("Unexpected Enter snapshot operation: " + m.MethodName);
                 }
-                throw new Exception("Unexpected Enter snapshot operation: " + m.MethodName);
             });
-            Func<bool, Microsoft.VisualStudio.Text.ITextSnapshotLine> makeLine = closing => Interface<Microsoft.VisualStudio.Text.ITextSnapshotLine>(m => {
-                int start = closing ? 3 : 0, end = start + 1, breakEnd = closing ? 4 : 3;
-                if (m.MethodName == "GetText") return closing ? "}" : "{";
-                if (m.MethodName == "get_Snapshot") return snapshot;
-                if (m.MethodName == "get_LineNumber") return closing ? 1 : 0;
-                if (m.MethodName == "get_Extent") return new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, start, 1);
-                if (m.MethodName == "get_ExtentIncludingLineBreak") return new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, start, breakEnd - start);
-                if (m.MethodName == "get_Start") return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, start);
-                if (m.MethodName == "get_End") return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, end);
-                if (m.MethodName == "get_EndIncludingLineBreak") return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, breakEnd);
-                throw new Exception("Unexpected Enter line operation: " + m.MethodName);
-            });
-            line = makeLine(false); closer = makeLine(true);
-            var buffer = Interface<Microsoft.VisualStudio.Text.ITextBuffer>(m => {
-                if (m.MethodName == "CreateEdit") throw new Exception("Enter indentation attempted a second buffer edit after brace completion");
+            buffer = Interface<Microsoft.VisualStudio.Text.ITextBuffer>(m => {
+                if (m.MethodName == "get_CurrentSnapshot") return snapshot;
+                if (m.MethodName == "CreateEdit") throw new Exception("Smart indentation inserted an extra newline");
                 throw new Exception("Unexpected Enter buffer operation: " + m.MethodName);
             });
             var view = Interface<Microsoft.VisualStudio.Text.Editor.ITextView>(m => m.MethodName == "get_TextBuffer" ? buffer : null);
-            var apply = helperType.GetMethod("ApplyOnEnterRule", BindingFlags.NonPublic | BindingFlags.Instance);
-            int checkedRules = 0;
-            foreach (var rule in rules)
-            {
-                var result = apply.Invoke(helper, new[] { (object)view, line, rule });
-                if (!Equals(result.GetType().GetField("Item2").GetValue(result), 4))
-                    throw new Exception("Enter between braces must indent the body by one level: " + result);
-                checkedRules++;
-            }
-            if (checkedRules == 0) throw new Exception("No brace Enter rule was tested");
+            var rangeType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.LanguageConfiguration.LanguageConfigurationRange", true);
+            var range = Activator.CreateInstance(rangeType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                null, new object[] { new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, 0, document.Length), configuration }, null);
+            var enter = Array.Find(helperType.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance),
+                m => m.Name == "GetIndentationOnEnterInternalAsync" && m.GetParameters().Length == 5);
+            var task = (System.Threading.Tasks.Task)enter.Invoke(helper, new object[] {
+                view, lines[targetLine - 1].End, range, false, System.Threading.CancellationToken.None });
+            task.GetAwaiter().GetResult();
+            var result = task.GetType().GetProperty("Result").GetValue(task);
+            var desired = Array.Find(helperType.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance),
+                m => m.Name == "GetDesiredIndentation" && m.GetParameters().Length == 3);
+            var column = desired.Invoke(helper, new object[] { buffer, lines[targetLine], result });
+            if (!Equals(column, expectedColumn))
+                throw new Exception("Native Enter indentation: expected column " + expectedColumn + ", got " + column
+                    + " in " + document.Replace("\r\n", "|"));
         }
 
         public static void RunLibraryProtection(Assembly assembly)

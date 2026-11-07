@@ -351,7 +351,10 @@ public class EditorGrammarTests
     [InlineData("struct Item\n{", "    }", true)]
     public void BracePairEnterRuleOnlyInsertsAnOutdentForASameLineCloser(string before, string after, bool expected)
     {
-        using var config = JsonDocument.Parse(File.ReadAllText(Asset("gflat-language-configuration.json")));
+        // VS Code uses this rule. Visual Studio delegates the pair to its native
+        // brace session, exercised by test-hover.ps1 against the installed SDK.
+        using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory, "EditorAssets", "gflat-language-configuration.json")));
         var rule = config.RootElement.GetProperty("onEnterRules")[0];
         bool matches = Regex.IsMatch(before.Split('\n')[^1], rule.GetProperty("beforeText").GetString()!) &&
             Regex.IsMatch(after, rule.GetProperty("afterText").GetString()!);

@@ -422,7 +422,10 @@ public partial class TypeChecker
 
     public MethodDeclaration ReflectionComptimeCallTarget(CallExpression call, MethodDeclaration method)
     {
-        if (reflectionOwnerCallTargets.TryGetValue(ReflectionEffectiveCall(call), out var ownerProof)) return ownerProof;
+        var effectiveCall = ReflectionEffectiveCall(call);
+        // Owner proofs belong to the statically selected method.
+        if (reflectionOwnerCallTargets.TryGetValue(effectiveCall, out var ownerProof) &&
+            (ReferenceEquals(method, ownerProof) || ReferenceEquals(method, GetResolvedCall(effectiveCall)))) return ownerProof;
         if (GetGenericMethodDefinition(method) is not MethodDeclaration definition ||
             GetGenericCallTypeArguments(call) is not { } arguments || !arguments.Any(ContainsAliasContract)) return method;
         string view = string.Join(";", arguments.Select(AliasContractArgumentKey));

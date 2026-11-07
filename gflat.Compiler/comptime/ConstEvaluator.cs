@@ -874,6 +874,7 @@ namespace gflat.comptime
         private void ExecuteClassConstructor(TypeChecker.ClassInfo info, ConstructorDeclaration? ctor,
             List<ConstValue> args, ConstValue.ClassInstance instance, int line)
         {
+            bool wasConstructing = constructionClasses.TryGetValue(instance, out var previousConstructionClass);
             if (ctor != null && _context is TypeChecker checker) checker.EnsureCompileTimeConstructorBody(ctor, info.Name);
             CheckSteps(line);
             if (_callDepth >= MaxCallDepth)
@@ -906,6 +907,7 @@ namespace gflat.comptime
                         }
                     ExecuteClassConstructor(baseInfo, baseCtor, baseArgs, instance, line);
                 }
+                constructionClasses[instance] = info.Name;
                 // Initializers are bound in the class scope, outside constructor parameters.
                 var parameterScope = _scopes.Pop();
                 PushScope();
@@ -925,6 +927,8 @@ namespace gflat.comptime
             }
             finally
             {
+                if (wasConstructing) constructionClasses[instance] = previousConstructionClass!;
+                else constructionClasses.Remove(instance);
                 _scopes.Clear();
                 foreach (var scope in callerScopes) _scopes.Push(scope);
                 _hasReturned = returned;
@@ -969,6 +973,8 @@ namespace gflat.comptime
                 extensionCall.Accept(this);
                 return;
             }
+            if (_context is TypeChecker interfaceChecker && interfaceChecker.TryGetInterfaceCall(node, out _))
+                throw new ConstEvalException("Interface calls are not supported during constant evaluation", node.Line);
             CheckSteps(node.Line);
 
             if (_callDepth >= MaxCallDepth)
@@ -978,7 +984,7 @@ namespace gflat.comptime
 
             string? funcName = null;
             MethodDeclaration? method = null;
-            ConstValue.Struct? thisReceiver = null;
+            ConstValue? thisReceiver = null;
 
             if (node.Callee is IdentifierExpression ident)
             {
@@ -998,7 +1004,9 @@ namespace gflat.comptime
             else if (node.Callee is MemberAccessExpression memberAccess)
             {
                 memberAccess.Object.Accept(this);
-                ConstValue targetObj = _currentValue!;
+                ConstValue? targetObj = AggregateReceiver(_currentValue);
+                funcName = memberAccess.Member;
+                thisReceiver = targetObj;
                 if (targetObj is ConstValue.Struct sVal)
                 {
                     TypeChecker.StructInfo? sInfo = _context.GetStruct(sVal.StructName);
@@ -1009,18 +1017,30 @@ namespace gflat.comptime
                         thisReceiver = sVal;
                     }
                 }
+                else if (targetObj is ConstValue.ClassInstance instance &&
+                    _context.GetClass(instance.ClassName)?.Methods.TryGetValue(memberAccess.Member, out var entry) == true)
+                    method = entry.Method;
             }
 
             if (_context is TypeChecker checker)
             {
                 var selected = checker.GetResolvedCall(node);
-                if (selected is MethodDeclaration selectedMethod) method = checker.ReflectionComptimeCallTarget(node, selectedMethod);
+                if (selected is MethodDeclaration selectedMethod) method = selectedMethod;
                 else if (selected is ExternDeclaration external)
                 {
                     string declarationNamespace = checker.DeclarationNamespace(external) ?? "";
                     funcName = declarationNamespace.Length == 0 ? external.Name : declarationNamespace + "::" + external.Name;
                 }
+                if (method != null && !method.IsStatic && node.Callee is IdentifierExpression &&
+                    checker.TryGetMethodOwner(method, out _, out _) && TryGetVariable("this", out var receiver))
+                    thisReceiver = AggregateReceiver(receiver);
+                if (method != null)
+                {
+                    method = ConstantDispatchTarget(checker, node, method, thisReceiver);
+                    method = checker.ReflectionComptimeCallTarget(node, method);
+                }
             }
+            if (method?.IsStatic == true) thisReceiver = null;
 
             if (method == null)
             {

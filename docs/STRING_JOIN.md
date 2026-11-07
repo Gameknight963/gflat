@@ -1,5 +1,8 @@
 # Joining borrowed Strings
 
+For a sequence instead of a known span, see
+[enumerable string Join](ENUMERABLE_STRING_JOIN.md).
+
 `Join` combines a span of Strings with a separator:
 
 ```csharp

@@ -46,6 +46,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Span `StartsWith`, `EndsWith` | [Borrowed text prefix and suffix checks](TEXT_MATCH_SPAN.md) |
 | `TextLines` | [Borrowed text lines](TEXT_LINES.md) |
 | `Span<immutable(String)>.Join` | [Joining borrowed Strings](STRING_JOIN.md) |
+| String enumerable `Join` | [Join a sequence of strings](ENUMERABLE_STRING_JOIN.md) |
 | `UnicodeText` | [Owning Unicode conversions](UNICODE_TEXT.md) |
 
 ### Collections and queries

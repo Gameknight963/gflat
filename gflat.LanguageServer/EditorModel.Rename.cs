@@ -1,5 +1,6 @@
 using gflat.ast;
 using gflat.diagnostics;
+using System.Text;
 
 namespace gflat.LanguageServer;
 
@@ -73,7 +74,7 @@ public sealed partial class EditorModel
             var ordered = group.OrderBy(span => span.Start).ToArray();
             int[] prefix = new int[ordered.Length + 1];
             for (int i = 0; i < ordered.Length; i++) prefix[i + 1] = prefix[i] + newName.Length - ordered[i].Length;
-            return (Starts: ordered.Select(span => span.Start).ToArray(), Prefix: prefix);
+            return (Spans: ordered, Starts: ordered.Select(span => span.Start).ToArray(), Prefix: prefix);
         }, Workspace.Paths);
         int Map(string sourcePath, int originalOffset)
         {
@@ -82,10 +83,16 @@ public sealed partial class EditorModel
             return originalOffset + map.Prefix[index < 0 ? ~index : index];
         }
         var changedSources = sources.Values.Where(source => !source.Path.StartsWith('<')).Select(source => {
-            string text = source.Text;
-            foreach (var span in spans.Where(span => Workspace.Paths.Equals(span.Source!.Path, source.Path)).OrderByDescending(span => span.Start))
-                text = text.Remove(span.Start, span.Length).Insert(span.Start, newName);
-            return new SourceFile(source.Path, text);
+            if (!offsets.TryGetValue(source.Path, out var edits)) return source;
+            var text = new StringBuilder(source.Text.Length + edits.Prefix[^1]);
+            int cursor = 0;
+            foreach (var span in edits.Spans)
+            {
+                text.Append(source.Text, cursor, span.Start - cursor).Append(newName);
+                cursor = span.Start + span.Length;
+            }
+            text.Append(source.Text, cursor, source.Text.Length - cursor);
+            return new SourceFile(source.Path, text.ToString());
         }).ToArray();
         var changedFiles = changedSources.ToDictionary(file => Path.GetFullPath(file.Path), Workspace.Paths);
         var changedOptions = snapshot.Options with { DependencyObserver = null,

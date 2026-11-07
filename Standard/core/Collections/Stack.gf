@@ -32,6 +32,15 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
         result = storage.Pop();
         return true;
     }
+    internal immutable bool ContainsBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        for (nuint remaining = storage.Count; remaining != 0; remaining--)
+        {
+            if (equal(&storage[remaining - 1], key)) return true;
+        }
+        return false;
+    }
+
     public void Clear() { storage.Clear(); }
 
     // Borrows the top element instead of copying an owning value.

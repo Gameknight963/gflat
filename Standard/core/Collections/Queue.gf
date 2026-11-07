@@ -126,6 +126,18 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
         }
     }
 
+    internal immutable bool ContainsBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        nuint position = head;
+        for (nuint i = 0; i < count; i++)
+        {
+            if (equal(data! + position, key)) return true;
+            position++;
+            if (position == capacity) position = 0;
+        }
+        return false;
+    }
+
     public void Clear()
     {
         while (count != 0)

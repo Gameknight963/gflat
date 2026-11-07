@@ -165,6 +165,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `PseudoRandom.GetString`, `GetHexString` | [Generating random text](RANDOM_TEXT.md) |
 | `Math` floating-point classification | [Classifying floating-point values](FLOATING_CLASSIFICATION.md) |
 | `Math::Clamp`, `MinMagnitude`, `MaxMagnitude` for floating values | [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) |
+| Floating-point `MinNumber`, `MaxNumber`, and magnitude variants | [Select numeric extrema](FLOATING_NUMBER_EXTREMA.md) |
 | `Math::Round(value, MidpointRounding)` | [Choosing a rounding mode](MIDPOINT_ROUNDING.md) |
 | `Math::Round(value, digits)` | [Rounding to decimal places](DECIMAL_ROUNDING.md) |
 | `Math::ScaleB` | [Scaling by powers of two](MATH_SCALE_B.md) |

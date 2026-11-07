@@ -1024,6 +1024,62 @@ public static class Math
         return Max(a, b);
     }
 
+    public static float MinNumber(float a, float b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return Min(a, b);
+    }
+
+    public static float MaxNumber(float a, float b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return Max(a, b);
+    }
+
+    public static float MinMagnitudeNumber(float a, float b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return MinMagnitude(a, b);
+    }
+
+    public static float MaxMagnitudeNumber(float a, float b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return MaxMagnitude(a, b);
+    }
+
+    public static double MinNumber(double a, double b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return Min(a, b);
+    }
+
+    public static double MaxNumber(double a, double b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return Max(a, b);
+    }
+
+    public static double MinMagnitudeNumber(double a, double b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return MinMagnitude(a, b);
+    }
+
+    public static double MaxMagnitudeNumber(double a, double b) nothrow
+    {
+        if (b != b) return a;
+        if (a != a) return b;
+        return MaxMagnitude(a, b);
+    }
+
     public static float Round(float value, MidpointRounding mode)
     {
         if (mode == MidpointRounding::ToEven) return Round(value);

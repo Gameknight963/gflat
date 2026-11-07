@@ -28,3 +28,6 @@ On equal magnitudes, minimum favors the negative value and maximum favors the
 positive value, including signed zero and opposite infinities. If either input
 is NaN, the result is NaN. NaN payload propagation is not specified.
 Both magnitude methods are `nothrow`. Successful calls do not allocate.
+
+Use the [number-selecting variants](FLOATING_NUMBER_EXTREMA.md) when a numeric
+operand should take precedence over a NaN operand.

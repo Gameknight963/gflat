@@ -7,6 +7,18 @@ public sealed partial class EditorModel
 {
     private readonly Dictionary<SourceSpan, string> documentationFiles = [];
     private DocumentationEntry[]? exportedDocumentation;
+    private bool? hasExportableDocumentation;
+
+    private IEnumerable<Symbol> ExportableDocumentationSymbols()
+    {
+        if (declarationDocumentation.Count == 0) return [];
+        var paths = snapshot.RootSources.Select(s => s.Path).Concat(snapshot.PreprocessorDependencies).ToHashSet(Workspace.Paths);
+        return symbols.Where(s => !s.IsTypeParameter && s.Scope == null && s.NameSpan.Source != null && paths.Contains(s.NameSpan.Source.Path) &&
+            StructuredDocumentation(s) != null && NavigationLocation(s) != null).DistinctBy(s => s.NameSpan);
+    }
+
+    private bool HasExportableDocumentation => exportedDocumentation is { } entries
+        ? entries.Length > 0 : hasExportableDocumentation ??= ExportableDocumentationSymbols().Any();
 
     private string DocumentationId(Symbol symbol) => symbol.Syntax.Node.GetType().Name + ":" + symbol.Qualified +
         (symbol.Parameters == null ? "" : "(" + string.Join(",", symbol.Parameters.Select(p => DisplayType(p.Type))) + ")");
@@ -14,9 +26,7 @@ public sealed partial class EditorModel
     public DocumentationEntry[] ExportDocumentation()
     {
         if (exportedDocumentation != null) return exportedDocumentation;
-        var paths = snapshot.RootSources.Select(s => s.Path).Concat(snapshot.PreprocessorDependencies).ToHashSet(Workspace.Paths);
-        return exportedDocumentation = symbols.Where(s => !s.IsTypeParameter && s.Scope == null && s.NameSpan.Source != null && paths.Contains(s.NameSpan.Source.Path) &&
-            StructuredDocumentation(s) != null && NavigationLocation(s) != null).DistinctBy(s => s.NameSpan).Select(symbol =>
+        return exportedDocumentation = ExportableDocumentationSymbols().Select(symbol =>
         {
             var documentation = StructuredDocumentation(symbol)!;
             DocumentationText[] Parts(IEnumerable<DocumentationInline> parts) => parts.Select(part => new DocumentationText(part.Kind, part.Text,

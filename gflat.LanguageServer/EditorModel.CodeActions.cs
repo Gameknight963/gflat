@@ -20,7 +20,7 @@ public sealed partial class EditorModel
         offset = SymbolQueryOffset(path, offset);
         var actions = new List<EditorCodeAction>();
         actions.AddRange(MacroActions(path, offset));
-        if (ExportDocumentation().Length > 0)
+        if (HasExportableDocumentation)
             actions.Add(new("Generate documentation manual", "source", Command:
                 new("Generate documentation manual", "gflat.generateDocumentation", [Workspace.FileUri(path)])));
         var contexts = HeaderContexts(path);

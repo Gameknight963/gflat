@@ -136,6 +136,19 @@ public sealed class StructuredDocumentationTests
         Assert.DoesNotContain("<strong>", html);
     }
 
+    [Theory]
+    [InlineData("/// A value.\nstruct Item {}", true)]
+    [InlineData("// A value.\nstruct Item {}", false)]
+    [InlineData("int Read() {\n/// A local.\nint value = 1; return value; }", false)]
+    public void ManualActionAvailabilityMatchesExportBeforeAndAfterExport(string code, bool expected)
+    {
+        var (model, source) = Analyze(code);
+        var range = Workspace.ToRange(source.Span(0, 0));
+        Assert.Equal(expected, model.CodeActions(source.Path, range).Any(action => action.Command?.Command == "gflat.generateDocumentation"));
+        Assert.Equal(expected, model.ExportDocumentation().Length > 0);
+        Assert.Equal(expected, model.CodeActions(source.Path, range).Any(action => action.Command?.Command == "gflat.generateDocumentation"));
+    }
+
     [Fact]
     public void QualifiedReferencesAndTypeParametersResolveInDeclarationScope()
     {

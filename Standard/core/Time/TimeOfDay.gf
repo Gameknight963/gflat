@@ -7,6 +7,17 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
     private static const long TicksPerDay = 864000000000l;
 
     public TimeOfDay() nothrow { ticks = 0l; }
+
+    public static TimeOfDay MinValue { get nothrow => new TimeOfDay(); }
+    public static TimeOfDay MaxValue
+    {
+        get nothrow
+        {
+            TimeOfDay result = new();
+            result.ticks = TicksPerDay - 1l;
+            return result;
+        }
+    }
     public TimeOfDay(int hour, int minute, int second = 0, int millisecond = 0, int microsecond = 0)
     {
         ticks = 0l;

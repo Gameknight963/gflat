@@ -7,9 +7,21 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
     private static const long MinimumTicks = -9223372036854775807l - 1l;
     private static const long MaximumTicks = 9223372036854775807l;
 
+    public static const long NanosecondsPerTick = 100l;
+    public static const long TicksPerMicrosecond = 10l;
+    public static const long TicksPerMillisecond = 10000l;
+    public static const long TicksPerSecond = 10000000l;
+    public static const long TicksPerMinute = 600000000l;
+    public static const long TicksPerHour = 36000000000l;
+    public static const long TicksPerDay = 864000000000l;
+
     public TimeSpan() nothrow { ticks = 0l; }
 
     public TimeSpan(long ticks) nothrow { this.ticks = ticks; }
+
+    public static TimeSpan Zero { get nothrow => new TimeSpan(0l); }
+    public static TimeSpan MinValue { get nothrow => new TimeSpan(MinimumTicks); }
+    public static TimeSpan MaxValue { get nothrow => new TimeSpan(MaximumTicks); }
 
     public TimeSpan(int hours, int minutes, int seconds)
     {

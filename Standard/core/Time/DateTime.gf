@@ -11,6 +11,9 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
     public DateTime() nothrow { date = new(); time = new(); }
     public DateTime(Date date, TimeOfDay time) nothrow { this.date = date; this.time = time; }
 
+    public static DateTime MinValue { get nothrow => new DateTime(); }
+    public static DateTime MaxValue { get nothrow => new DateTime(Date::MaxValue, TimeOfDay::MaxValue); }
+
     public DateTime(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0, int microsecond = 0)
     {
         date = new Date(year, month, day);

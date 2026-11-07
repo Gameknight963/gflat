@@ -8,6 +8,17 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
 
     public Date() nothrow { dayNumber = 0; }
 
+    public static Date MinValue { get nothrow => new Date(); }
+    public static Date MaxValue
+    {
+        get nothrow
+        {
+            Date result = new();
+            result.dayNumber = MaximumDayNumber;
+            return result;
+        }
+    }
+
     private static bool Leap(int year) nothrow
         => year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
 

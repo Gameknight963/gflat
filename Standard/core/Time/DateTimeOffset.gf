@@ -10,6 +10,9 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     private static const long MaximumTicks = 3155378975999999999l;
 
     public DateTimeOffset() nothrow { clock = new(); offsetTicks = 0l; }
+
+    public static DateTimeOffset MinValue { get nothrow => new DateTimeOffset(); }
+    public static DateTimeOffset MaxValue { get nothrow => Create(Standard::Time::DateTime::MaxValue, 0l); }
     private static bool ValidOffset(long offset) nothrow
         => offset >= -MaximumOffset && offset <= MaximumOffset && offset % MinuteTicks == 0l;
     private static bool Valid(Standard::Time::DateTime value, long offset) nothrow

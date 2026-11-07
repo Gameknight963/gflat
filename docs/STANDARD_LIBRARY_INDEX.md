@@ -108,6 +108,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Integer parsing](INTEGER_PARSING.md) |
 | `BigInteger` | [BigInteger](BIG_INTEGER.md) |
+| BigInteger byte conversion | [BigInteger byte conversion](BIG_INTEGER_BYTES.md) |
 | `Math` | [Scalar math](MATH.md) |
 | `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
 | `PseudoRandom` | [Deterministic pseudorandom values](PSEUDORANDOM.md) |

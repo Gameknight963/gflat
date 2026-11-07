@@ -1,5 +1,6 @@
 using Standard::Text;
 using Standard::Collections;
+using Standard::Memory;
 
 namespace Standard::Numerics;
 
@@ -44,6 +45,103 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         {
             result.limbs.Add((uint)(value % Radix));
             value /= Radix;
+        }
+        return move result;
+    }
+
+    // Used with factors 1 and 256. Every intermediate fits in ulong.
+    private void MultiplyAddSmall(uint factor, uint addend)
+    {
+        ulong carry = (ulong)addend;
+        for (nuint i = 0; i < limbs.Count; i++)
+        {
+            ulong current = (ulong)limbs[i] * (ulong)factor + carry;
+            limbs[i] = (uint)(current % Radix);
+            carry = current / Radix;
+        }
+        while (carry != 0ul)
+        {
+            limbs.Add((uint)(carry % Radix));
+            carry /= Radix;
+        }
+        if (limbs.Count != 0) sign = 1;
+    }
+
+    public static BigInteger FromBytes(readonly(byte)* data, nuint count,
+        bool isUnsigned = false, bool isBigEndian = false)
+    {
+        BigInteger result = new();
+        if (count == 0) return move result;
+        nuint top = count - 1;
+        if (isBigEndian) top = 0;
+        bool negative = !isUnsigned && data[top] >= (byte)128;
+        for (nuint i = 0; i < count; i++)
+        {
+            nuint index = count - i - 1;
+            if (isBigEndian) index = i;
+            uint value = (uint)data[index];
+            if (negative) value = 255u - value;
+            result.MultiplyAddSmall(256u, value);
+        }
+        if (negative)
+        {
+            result.MultiplyAddSmall(1u, 1u);
+            result.sign = -1;
+        }
+        return move result;
+    }
+
+    public static BigInteger FromBytes(Span<readonly(byte)> data,
+        bool isUnsigned = false, bool isBigEndian = false)
+    {
+        if (data.IsEmpty) return new BigInteger();
+        return FromBytes(data.Data!, data.Length, isUnsigned, isBigEndian);
+    }
+
+    public immutable Vector<byte> ToBytes(bool isUnsigned = false, bool isBigEndian = false)
+    {
+        if (isUnsigned && sign < 0) throw new Exception("Negative BigInteger has no unsigned byte representation");
+        Vector<byte> result = new();
+        if (sign == 0) { result.Add((byte)0); return move result; }
+        Vector<uint> working = new();
+        working.Reserve(limbs.Count);
+        for (nuint i = 0; i < limbs.Count; i++) working.Add(limbs[i]);
+        while (working.Count != 0)
+        {
+            ulong remainder = 0ul;
+            nuint index = working.Count;
+            while (index != 0)
+            {
+                index--;
+                ulong current = remainder * Radix + (ulong)working[index];
+                working[index] = (uint)(current / 256ul);
+                remainder = current % 256ul;
+            }
+            result.Add((byte)remainder);
+            while (working.Count != 0 && working[working.Count - 1] == 0u)
+                working.Truncate(working.Count - 1);
+        }
+        if (sign < 0)
+        {
+            uint carry = 1u;
+            for (nuint i = 0; i < result.Count; i++)
+            {
+                uint value = 255u - (uint)result[i] + carry;
+                result[i] = (byte)value;
+                carry = value >> 8;
+            }
+            if (result[result.Count - 1] < (byte)128) result.Add((byte)255);
+        }
+        else if (!isUnsigned && result[result.Count - 1] >= (byte)128) result.Add((byte)0);
+        if (isBigEndian)
+        {
+            for (nuint i = 0; i < result.Count / 2; i++)
+            {
+                nuint opposite = result.Count - i - 1;
+                byte temporary = result[i];
+                result[i] = result[opposite];
+                result[opposite] = temporary;
+            }
         }
         return move result;
     }

@@ -255,3 +255,5 @@ O((m-n+1)*n + m+n) work for an m-limb dividend and n-limb divisor.
 
 Source: `core/Numerics/BigInteger.gf`, with Vector, String, and interface
 dependencies.
+
+See [BigInteger byte conversion](BIG_INTEGER_BYTES.md) for signed, unsigned, and endian-aware binary interchange.

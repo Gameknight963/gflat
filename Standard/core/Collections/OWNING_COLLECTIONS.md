@@ -365,6 +365,9 @@ extensions](../../../docs/COLLECTION_PEEK.md) for non-destructive reads.
 
 ## Priority queue
 
+Use [UnorderedItems](../../../docs/PRIORITY_QUEUE_ITEMS.md) to inspect borrowed
+items without removing them. Its iteration order does not imply priority order.
+
 `PriorityQueue<T>` owns a min-heap. A negative comparison gives the left element
 higher removal priority. Equal-priority order is unstable. Keep priorities and
 comparison behavior consistent while stored:

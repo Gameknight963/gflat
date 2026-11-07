@@ -18,6 +18,47 @@ struct PriorityQueue<T>
     public nuint Count { immutable get nothrow => storage.Count; }
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.Count == 0; }
+    public UnorderedItemsCollection UnorderedItems { immutable get nothrow => new UnorderedItemsCollection(this); }
+
+    // Borrows the queue object. New iterators capture its current heap storage.
+    public struct UnorderedItemsCollection
+    {
+        private immutable(PriorityQueue<T>)* source;
+        private UnorderedItemsCollection(immutable(PriorityQueue<T>)* owner) nothrow { source = owner; }
+        public nuint Count { immutable get nothrow => source.Count; }
+        public bool IsEmpty { immutable get nothrow => source.IsEmpty; }
+        public immutable UnorderedEnumerator GetEnumerator() => new UnorderedEnumerator(source.storage.AsImmutable());
+    }
+
+    public struct UnorderedEnumerator
+    {
+        private Span<immutable(T)> elements;
+        private nuint position;
+        private bool valid;
+        public UnorderedEnumerator(Span<immutable(T)> source)
+        {
+            elements = source;
+            position = 0;
+            valid = false;
+        }
+        public bool MoveNext()
+        {
+            valid = false;
+            if (position == elements.Length) return false;
+            position++;
+            valid = true;
+            return true;
+        }
+        public immutable(T)* Current
+        {
+            immutable get
+            {
+                if (!valid) throw new Exception("Enumerator has no current priority queue item");
+                return &elements[position - 1];
+            }
+        }
+    }
+
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
     public nuint EnsureCapacity(nuint requested) => storage.EnsureCapacity(requested);
     public void TrimExcess() { storage.TrimExcess(); }

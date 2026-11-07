@@ -443,3 +443,13 @@ public nuint Partition<T>(Span<T> values, bool(immutable(T)*)* predicate)
     }
     return boundary;
 }
+
+// Counts matching borrowed elements without copying values or keys.
+public nuint Count<T>(Span<immutable(T)> values, immutable(T)* key,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    nuint count = 0;
+    for (nuint i = 0; i < values.Length; i++)
+        if (equal(&values[i], key)) count++;
+    return count;
+}

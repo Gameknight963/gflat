@@ -343,6 +343,158 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return result;
     }
 
+    public immutable bool TryToSByte(ref sbyte result) nothrow
+    {
+        long converted = 0l;
+        if (!this.TryToLong(ref converted) || converted < -128l || converted > 127l)
+        {
+            result = (sbyte)0;
+            return false;
+        }
+        result = (sbyte)converted;
+        return true;
+    }
+
+    public immutable sbyte ToSByte()
+    {
+        sbyte result = (sbyte)0;
+        if (!this.TryToSByte(ref result)) throw new Exception("BigInteger does not fit in sbyte");
+        return result;
+    }
+
+    public immutable bool TryToByte(ref byte result) nothrow
+    {
+        ulong converted = 0ul;
+        if (!this.TryToULong(ref converted) || converted > 255ul)
+        {
+            result = (byte)0;
+            return false;
+        }
+        result = (byte)converted;
+        return true;
+    }
+
+    public immutable byte ToByte()
+    {
+        byte result = (byte)0;
+        if (!this.TryToByte(ref result)) throw new Exception("BigInteger does not fit in byte");
+        return result;
+    }
+
+    public immutable bool TryToShort(ref short result) nothrow
+    {
+        long converted = 0l;
+        if (!this.TryToLong(ref converted) || converted < -32768l || converted > 32767l)
+        {
+            result = (short)0;
+            return false;
+        }
+        result = (short)converted;
+        return true;
+    }
+
+    public immutable short ToShort()
+    {
+        short result = (short)0;
+        if (!this.TryToShort(ref result)) throw new Exception("BigInteger does not fit in short");
+        return result;
+    }
+
+    public immutable bool TryToUShort(ref ushort result) nothrow
+    {
+        ulong converted = 0ul;
+        if (!this.TryToULong(ref converted) || converted > 65535ul)
+        {
+            result = (ushort)0;
+            return false;
+        }
+        result = (ushort)converted;
+        return true;
+    }
+
+    public immutable ushort ToUShort()
+    {
+        ushort result = (ushort)0;
+        if (!this.TryToUShort(ref result)) throw new Exception("BigInteger does not fit in ushort");
+        return result;
+    }
+
+    public immutable bool TryToInt(ref int result) nothrow
+    {
+        long converted = 0l;
+        if (!this.TryToLong(ref converted) || converted < -2147483648l || converted > 2147483647l)
+        {
+            result = (int)0;
+            return false;
+        }
+        result = (int)converted;
+        return true;
+    }
+
+    public immutable int ToInt()
+    {
+        int result = (int)0;
+        if (!this.TryToInt(ref result)) throw new Exception("BigInteger does not fit in int");
+        return result;
+    }
+
+    public immutable bool TryToUInt(ref uint result) nothrow
+    {
+        ulong converted = 0ul;
+        if (!this.TryToULong(ref converted) || converted > 4294967295ul)
+        {
+            result = (uint)0;
+            return false;
+        }
+        result = (uint)converted;
+        return true;
+    }
+
+    public immutable uint ToUInt()
+    {
+        uint result = (uint)0;
+        if (!this.TryToUInt(ref result)) throw new Exception("BigInteger does not fit in uint");
+        return result;
+    }
+
+    public immutable bool TryToNInt(ref nint result) nothrow
+    {
+        long converted = 0l;
+        if (!this.TryToLong(ref converted) || converted < (long)(nint)((nuint)1 << ((int)sizeof(nint) * 8 - 1)) || converted > (long)(((nuint)0 - (nuint)1) >> 1))
+        {
+            result = (nint)0;
+            return false;
+        }
+        result = (nint)converted;
+        return true;
+    }
+
+    public immutable nint ToNInt()
+    {
+        nint result = (nint)0;
+        if (!this.TryToNInt(ref result)) throw new Exception("BigInteger does not fit in nint");
+        return result;
+    }
+
+    public immutable bool TryToNUInt(ref nuint result) nothrow
+    {
+        ulong converted = 0ul;
+        if (!this.TryToULong(ref converted) || converted > (ulong)((nuint)0 - (nuint)1))
+        {
+            result = (nuint)0;
+            return false;
+        }
+        result = (nuint)converted;
+        return true;
+    }
+
+    public immutable nuint ToNUInt()
+    {
+        nuint result = (nuint)0;
+        if (!this.TryToNUInt(ref result)) throw new Exception("BigInteger does not fit in nuint");
+        return result;
+    }
+
     private void Normalize()
     {
         while (limbs.Count != 0 && limbs[limbs.Count - 1] == 0u) limbs.Truncate(limbs.Count - 1);

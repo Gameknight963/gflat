@@ -48,6 +48,7 @@ public sealed class CodeActionTests
     [InlineData("interface I<T> { T Read(T value); } struct Item : I<int> { }", "Item :", "Implement I")]
     [InlineData("interface I { int Value { get; set; } } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("struct Item { private int value; }", "Item", "Generate constructor")]
+    [InlineData("class Base { public Base() {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
     [InlineData("struct Item { private int* value; }", "Item", "Generate constructor")]
     [InlineData("struct Item { private int @class; }", "Item", "Generate constructor")]
     [InlineData("class @class {} struct Item { private @class* value; }", "Item", "Generate constructor")]

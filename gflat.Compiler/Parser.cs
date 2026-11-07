@@ -1407,8 +1407,7 @@ namespace gflat
                 }
                 else if (Check(TokenKind.OpenParen))
                 {
-                    int saved = _pos;
-                    var savedTokens = new List<Token>(_tokens);
+                    using var probe = new TokenProbe(this);
                     int diagMark = _diagnostics.Count;
                     bool isFnPtr = false;
                     List<TypeExpression> paramTypes = new();
@@ -1448,13 +1447,13 @@ namespace gflat
 
                     if (isFnPtr && _diagnostics.Count == diagMark)
                     {
+                        probe.Commit();
                         type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line, signature);
                     }
                     else
                     {
                         _diagnostics.ClearSince(diagMark);
-                        _pos = saved;
-                        _tokens = savedTokens;
+                        probe.Rollback();
                         break;
                     }
                 }
@@ -2116,19 +2115,18 @@ namespace gflat
             // static lambda
             if (Check(TokenKind.Static))
             {
-                int saved = _pos;
-                var savedTokens = new List<Token>(_tokens);
+                using var probe = new TokenProbe(this);
                 Consume(); // 'static'
                 if (Check(TokenKind.OpenParen))
                 {
                     LambdaExpression? lambda = TryParseLambda(true);
                     if (lambda != null)
                     {
+                        probe.Commit();
                         return lambda;
                     }
                 }
-                _pos = saved;
-                _tokens = savedTokens;
+                probe.Rollback();
             }
 
             // lambda expression
@@ -2144,8 +2142,7 @@ namespace gflat
             // cast or parenthesized expression
             if (Check(TokenKind.OpenParen))
             {
-                int saved = _pos;
-                var savedTokens = new List<Token>(_tokens);
+                using var probe = new TokenProbe(this);
                 int diagMark = _diagnostics.Count;
                 bool isCast = false;
                 TypeExpression? castType = null;
@@ -2173,14 +2170,14 @@ namespace gflat
 
                 if (isCast && castType != null && _diagnostics.Count == diagMark)
                 {
+                    probe.Commit();
                     AstNode operand = ParseExpression(22);
                     return new CastExpression(castType, operand, line);
                 }
 
                 // fallback to parenthesized expression
                 _diagnostics.ClearSince(diagMark);
-                _pos = saved;
-                _tokens = savedTokens;
+                probe.Rollback();
                 Consume(); // '('
                 AstNode expr = ParseExpression();
                 Expect(TokenKind.CloseParen);
@@ -2400,8 +2397,7 @@ namespace gflat
 
         private LambdaExpression? TryParseLambdaCoreLocated(bool isStatic)
         {
-            int saved = _pos;
-            var savedTokens = new List<Token>(_tokens);
+            using var probe = new TokenProbe(this);
             int diagMark = _diagnostics.Count;
             try
             {
@@ -2421,8 +2417,6 @@ namespace gflat
                 if (!Match(TokenKind.EqualsGreater) || _diagnostics.Count > diagMark)
                 {
                     _diagnostics.ClearSince(diagMark);
-                    _pos = saved;
-                    _tokens = savedTokens;
                     return null;
                 }
 
@@ -2439,13 +2433,13 @@ namespace gflat
                     isExpressionBody = true;
                 }
 
-                return new LambdaExpression(isStatic, parameters, body, isExpressionBody, line);
+                var lambda = new LambdaExpression(isStatic, parameters, body, isExpressionBody, line);
+                probe.Commit();
+                return lambda;
             }
             catch
             {
                 _diagnostics.ClearSince(diagMark);
-                _pos = saved;
-                _tokens = savedTokens;
                 return null;
             }
         }

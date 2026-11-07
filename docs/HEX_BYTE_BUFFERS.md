@@ -4,6 +4,9 @@
 `Hex::TryDecode` accepts a `byte*` destination. Counts and capacities are bytes,
 with encoded output requiring two characters per input byte.
 
+For counted views, use the optional
+[hex span extensions](HEX_SPANS.md).
+
 ```csharp
 using Standard::Encoding;
 using Standard::Text;

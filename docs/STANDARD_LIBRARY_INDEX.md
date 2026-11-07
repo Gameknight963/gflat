@@ -250,6 +250,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Streaming codec byte input | [Streaming codec byte input](STREAMING_CODEC_BYTES.md) |
 | Base64 codecs with byte pointers | [Base64 byte buffers](BASE64_BYTE_BUFFERS.md) |
 | Hex codecs with byte pointers | [Hexadecimal byte buffers](HEX_BYTE_BUFFERS.md) |
+| Span hex encoding and decoding | [Convert hex through spans](HEX_SPANS.md) |
 | `Deflate::Decompress` | [Raw DEFLATE](../Standard/core/Compression/DEFLATE.md) |
 | `Gzip::DecompressMember` | [Gzip members](../Standard/core/Compression/GZIP.md) |
 | `Zlib::Decompress` | [Zlib streams](../Standard/core/Compression/ZLIB.md) |

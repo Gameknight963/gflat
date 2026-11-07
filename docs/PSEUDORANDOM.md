@@ -61,3 +61,4 @@ the state unchanged.
 
 The algorithm follows the [SplitMix64 reference](https://prng.di.unimi.it/splitmix64.c).
 Seed zero's first output is `0xe220a8397b1dcdaf`.
+`GetItems` samples into existing spans or owning vectors. See [Choosing random items](RANDOM_ITEMS.md).

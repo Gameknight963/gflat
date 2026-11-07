@@ -214,3 +214,5 @@ See [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) for borrowed membershi
 See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Clamp and magnitude selection.
 
 See [Sequence averages](QUERY_AVERAGE.md) for numeric and projected Average queries.
+
+See [Choosing random items](RANDOM_ITEMS.md) for sampling into spans and owning vectors.

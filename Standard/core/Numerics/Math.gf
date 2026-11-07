@@ -999,4 +999,74 @@ public static class Math
         if (Abs(value - whole) >= 0.5d) return whole + CopySign(1.0d, value);
         return whole;
     }
+
+    public static float ScaleB(float value, int exponent) nothrow
+    {
+        uint bits = value.reinterpret<uint>();
+        uint sign = bits & 0x80000000u;
+        uint significand = bits & 0x7fffffu;
+        long encoded = (long)((bits >> 23) & (uint)255);
+        if (encoded == 255l || (encoded == 0l && significand == 0u)) return value;
+        if (encoded == 0l)
+        {
+            encoded = 1l;
+            while (significand < 0x800000u) { significand = significand << 1; encoded--; }
+        }
+        else significand = significand | 0x800000u;
+        long scaled = encoded + (long)exponent;
+        if (scaled >= 255l)
+        {
+            uint infinity = sign | 0x7f800000u;
+            return infinity.reinterpret<float>();
+        }
+        if (scaled > 0l)
+        {
+            uint normal = sign | ((uint)scaled << 23) | (significand & 0x7fffffu);
+            return normal.reinterpret<float>();
+        }
+        long distance = 1l - scaled;
+        if (distance > 24l) return sign.reinterpret<float>();
+        int shift = (int)distance;
+        uint rounded = significand >> shift;
+        uint tail = significand & ((1u << shift) - 1u);
+        uint halfway = 1u << (shift - 1);
+        if (tail > halfway || (tail == halfway && (rounded & 1u) != 0u)) rounded++;
+        uint result = sign | rounded;
+        return result.reinterpret<float>();
+    }
+
+    public static double ScaleB(double value, int exponent) nothrow
+    {
+        ulong bits = value.reinterpret<ulong>();
+        ulong sign = bits & 0x8000000000000000ul;
+        ulong significand = bits & 0xffffffffffffful;
+        long encoded = (long)((bits >> 52) & (ulong)2047);
+        if (encoded == 2047l || (encoded == 0l && significand == 0ul)) return value;
+        if (encoded == 0l)
+        {
+            encoded = 1l;
+            while (significand < 0x10000000000000ul) { significand = significand << 1; encoded--; }
+        }
+        else significand = significand | 0x10000000000000ul;
+        long scaled = encoded + (long)exponent;
+        if (scaled >= 2047l)
+        {
+            ulong infinity = sign | 0x7ff0000000000000ul;
+            return infinity.reinterpret<double>();
+        }
+        if (scaled > 0l)
+        {
+            ulong normal = sign | ((ulong)scaled << 52) | (significand & 0xffffffffffffful);
+            return normal.reinterpret<double>();
+        }
+        long distance = 1l - scaled;
+        if (distance > 53l) return sign.reinterpret<double>();
+        int shift = (int)distance;
+        ulong rounded = significand >> shift;
+        ulong tail = significand & ((1ul << shift) - 1ul);
+        ulong halfway = 1ul << (shift - 1);
+        if (tail > halfway || (tail == halfway && (rounded & 1ul) != 0ul)) rounded++;
+        ulong result = sign | rounded;
+        return result.reinterpret<double>();
+    }
 }

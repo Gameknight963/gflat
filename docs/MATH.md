@@ -135,3 +135,5 @@ when only a floating-point helper is used.
 See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Clamp and magnitude selection.
 
 See [Choosing a rounding mode](MIDPOINT_ROUNDING.md) for midpoint and directed rounding.
+
+See [Scaling by powers of two](MATH_SCALE_B.md) for ScaleB.

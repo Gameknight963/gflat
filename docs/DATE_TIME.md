@@ -58,3 +58,5 @@ output. Keep `written` separate from receiver and output.
 Source: `Time/DateTime.gf`, with Date and TimeOfDay dependencies.
 
 See [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) for exact and fractional additions.
+
+See [Constructing dates and timestamps from components](TEMPORAL_CONSTRUCTION.md) for component constructors.

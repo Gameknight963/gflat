@@ -28,6 +28,27 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
         if (!Valid(value, offset.Ticks)) throw new Exception("DateTimeOffset clock or offset is out of range");
         clock = value; offsetTicks = offset.Ticks;
     }
+    public DateTimeOffset(int year, int month, int day, int hour, int minute, int second, TimeSpan offset)
+    {
+        clock = new Standard::Time::DateTime(year, month, day, hour, minute, second);
+        offsetTicks = 0l;
+        if (!Valid(clock, offset.Ticks)) throw new Exception("DateTimeOffset clock or offset is out of range");
+        offsetTicks = offset.Ticks;
+    }
+    public DateTimeOffset(int year, int month, int day, int hour, int minute, int second, int millisecond, TimeSpan offset)
+    {
+        clock = new Standard::Time::DateTime(year, month, day, hour, minute, second, millisecond);
+        offsetTicks = 0l;
+        if (!Valid(clock, offset.Ticks)) throw new Exception("DateTimeOffset clock or offset is out of range");
+        offsetTicks = offset.Ticks;
+    }
+    public DateTimeOffset(int year, int month, int day, int hour, int minute, int second, int millisecond, int microsecond, TimeSpan offset)
+    {
+        clock = new Standard::Time::DateTime(year, month, day, hour, minute, second, millisecond, microsecond);
+        offsetTicks = 0l;
+        if (!Valid(clock, offset.Ticks)) throw new Exception("DateTimeOffset clock or offset is out of range");
+        offsetTicks = offset.Ticks;
+    }
     private immutable long GetUtcTicks() nothrow => clock.Ticks - offsetTicks;
     public Standard::Time::DateTime DateTime { immutable get nothrow => clock; }
     public Date Date { immutable get nothrow => clock.Date; }

@@ -11,6 +11,12 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
     public DateTime() nothrow { date = new(); time = new(); }
     public DateTime(Date date, TimeOfDay time) nothrow { this.date = date; this.time = time; }
 
+    public DateTime(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0, int microsecond = 0)
+    {
+        date = new Date(year, month, day);
+        time = new TimeOfDay(hour, minute, second, millisecond, microsecond);
+    }
+
     public Date Date { immutable get nothrow => date; }
     public TimeOfDay TimeOfDay { immutable get nothrow => time; }
     public int Year { immutable get nothrow => date.Year; }

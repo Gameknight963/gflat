@@ -110,3 +110,5 @@ receiver.
 Source: `Time/DateTimeOffset.gf`, with DateTime and TimeSpan dependencies.
 
 See [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) for exact and fractional additions.
+
+See [Constructing dates and timestamps from components](TEMPORAL_CONSTRUCTION.md) for component constructors.

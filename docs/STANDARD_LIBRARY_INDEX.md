@@ -134,6 +134,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Direct date/time components and clock-duration conversion | [Date and clock components](TEMPORAL_COMPONENTS.md) |
 | `DateTime` | [Date and time](DATE_TIME.md) |
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |
+| Date/time component constructors | [Constructing dates and timestamps from components](TEMPORAL_CONSTRUCTION.md) |
 | Date/time `AddTicks`, `AddDays` through `AddMicroseconds` | [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) |
 | `Stopwatch<C>`, `IMonotonicClock` | [Measuring intervals](STOPWATCH.md) |
 

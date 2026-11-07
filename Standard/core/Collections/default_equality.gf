@@ -3,6 +3,24 @@ using Standard::Memory;
 namespace Standard::Collections;
 
 // Optional equality-contract conveniences; explicit callback APIs stay independent.
+public void Replace<T : IEquatable<T>>(Span<T> values, T oldValue, T newValue)
+    => Standard::Collections::Replace<T>(values, move oldValue, move newValue, EqualityComparer<T>::Equals);
+
+public void Replace<T : IEquatable<T>>(Span<immutable(T)> source, Span<T> destination, T oldValue, T newValue)
+    => Standard::Collections::Replace<T>(source, destination, move oldValue, move newValue, EqualityComparer<T>::Equals);
+
+extension Span<T : IEquatable<T>>
+{
+    public readonly void Replace(T oldValue, T newValue)
+        => Standard::Collections::Replace<T>(*this, move oldValue, move newValue);
+}
+
+extension Span<immutable(T) : IEquatable<T>>
+{
+    public immutable void Replace(Span<T> destination, T oldValue, T newValue)
+        => Standard::Collections::Replace<T>(*this, destination, move oldValue, move newValue);
+}
+
 public bool SequenceEqual<T : IEquatable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
     => Standard::Collections::SequenceEqual<T>(first, second, EqualityComparer<T>::Equals);
 

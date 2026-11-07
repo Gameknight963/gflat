@@ -56,6 +56,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Vector/deque `Contains`, `IndexOf`, `LastIndexOf`, `RemoveValue` | [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) |
 | `Vector<T>.GetRange` | [Copying a vector range](VECTOR_GET_RANGE.md) |
 | `Vector<T>.CopyTo`, `TryCopyTo` | [Copying vector elements into existing storage](VECTOR_COPY.md) |
+| `Span<T>.Replace` | [Replacing span elements](SPAN_REPLACE.md) |
 | `HashSet<T>.AsEnumerable`, `SortedSet<T>.AsEnumerable` | [Querying set elements](SET_QUERIES.md) |
 | `Vector<T>.ConvertAll` | [Converting every vector element](VECTOR_CONVERT_ALL.md) |
 | Vector predicate searches | [Searching vectors with a predicate](VECTOR_PREDICATES.md) |

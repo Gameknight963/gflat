@@ -37,13 +37,20 @@ Keep ordering consistent throughout an operation. Callbacks must leave input
 storage and keys alive and structurally unchanged. Callback exceptions propagate.
 Effects performed by the callback itself remain visible after failure.
 
-Read-only searches inspect elements through borrowed addresses. Mutating
-algorithms relocate initialized values, including noncopyable owners. Relocation
+Read-only searches inspect elements through borrowed addresses. Ordering and
+partitioning algorithms relocate initialized values, including noncopyable owners. Relocation
 changes which value occupies a slot, so pointers to a slot can observe a different
 value afterward. Indirect pointers stored inside an element retain their addresses.
 
 Allocation and comparison counts are listed where they affect algorithm choice.
 Callbacks and managed-reference bookkeeping retain their own costs.
+
+## Replacing values
+
+`Replace` copies a replacement into matching elements, either in place or while
+copying into a destination span. It supports default equality and borrowed
+callbacks. See [replacing span elements](../../../docs/SPAN_REPLACE.md) for
+overlap restrictions, argument snapshots, and copy-failure behavior.
 
 ## Swapping values
 

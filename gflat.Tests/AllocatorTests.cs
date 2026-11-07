@@ -112,22 +112,6 @@ int main()
         }
 
         [Fact]
-        public void Directive_NoDefaultAllocator_MissingCustom_ReportsDiagnostic()
-        {
-            string code = @"
-#no_default_allocator
-
-int main()
-{
-    return 0;
-}
-";
-            (gflat.ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
-            Assert.True(checker.Diagnostics.HasErrors);
-            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("obsolete"));
-        }
-
-        [Fact]
         public void CustomAllocator_BlockBodies_Succeeds()
         {
             string code = @"

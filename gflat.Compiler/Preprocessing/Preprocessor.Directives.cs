@@ -87,7 +87,6 @@ public sealed partial class Preprocessor
                     break;
                 case "error": throw Error("#error " + string.Join(" ", arguments.Select(p => p.Text)), location);
                 case "warning": diagnostics.Report(new DiagnosticDescriptor("GFPP0002", "Preprocessor warning", "{0}", DiagnosticSeverity.Warning, "Preprocessor"), location, string.Join(" ", arguments.Select(p => p.Text))); break;
-                case "no_default_allocator": throw Error("#no_default_allocator is obsolete; use replace on Memory::Allocate and Memory::Free", location);
                 default: throw Error($"Unknown directive '#{directive}'", location);
             }
         }

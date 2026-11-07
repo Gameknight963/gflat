@@ -170,23 +170,6 @@ namespace gflat
             List<NamespaceDeclaration> namespaces = new();
             List<AstNode> members = new();
 
-            // Check for compiler directives (#no_default_allocator, etc.) before anything else
-            while (Check(TokenKind.Hash))
-            {
-                Consume(); // #
-                if (Current.Kind == TokenKind.Identifier && Current.Text == "no_default_allocator")
-                {
-                    Consume();
-                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, "#no_default_allocator is obsolete; use replace on Memory::Allocate and Memory::Free");
-                }
-                else
-                {
-                    string directiveName = Current.Kind == TokenKind.Identifier ? Current.Text : Current.Kind.ToString();
-                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, 0, null, $"Unknown compiler directive '#{directiveName}'");
-                    Consume();
-                }
-            }
-
             while (Check(TokenKind.Using))
                 usings.Add(ParseUsingDirective());
 

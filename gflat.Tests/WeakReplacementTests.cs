@@ -124,7 +124,5 @@ public class WeakReplacementTests
         Assert.DoesNotContain("call void @free", ir);
     }
 
-    [Fact]
-    public void LegacyHookGivesMigrationDiagnostic()
-        => Assert.Contains("replace Memory::Allocate", Assert.Throws<TypeCheckException>(() => Compiler.Check("void*? __gflat_alloc(ulong size) => null; int main() => 0;")).Message);
+
 }

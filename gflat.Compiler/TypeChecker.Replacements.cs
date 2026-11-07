@@ -88,12 +88,8 @@ public partial class TypeChecker
                     // discard a weak body, while preserving later editor analysis.
                     if (method.IsReadOnly && (owner == null && method.ExtensionReceiverType == null || method.IsStatic))
                         AnalyzeSafely(() => throw new TypeCheckException("Readonly methods require an instance receiver", method.Span));
-                    if (owner == null && scope == _globalScope && method.Name is "__gflat_alloc" or "__gflat_free")
-                        throw new TypeCheckException("Legacy allocator hooks are no longer supported; replace Memory::Allocate and Memory::Free together", method.Line);
                     if (method.StringLiteralPrefix == null) entries.Add(new(method, members, scope, owner));
                 }
-                else if (node is ExternDeclaration ext && owner == null && scope == _globalScope && ext.Name is "__gflat_alloc" or "__gflat_free")
-                    throw new TypeCheckException("Legacy allocator hooks are no longer supported; replace Memory::Allocate and Memory::Free together", ext.Line);
                 else if (node is NamespaceDeclaration ns) Collect(ns.Members, _namespaceScopes[ns], null);
                 else if (node is ClassDeclaration cls) Collect(cls.Members, scope, cls);
                 else if (node is StructDeclaration str) Collect(str.Members, scope, str);

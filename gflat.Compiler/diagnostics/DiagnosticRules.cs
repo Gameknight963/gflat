@@ -62,32 +62,5 @@ namespace gflat.diagnostics
             "GF3002", "Duplicate Variable", "Variable '{0}' already declared in this scope",
             DiagnosticSeverity.Error, "Variables");
 
-        // 4000 - 4999: Memory, destructors, lifecycles
-        public static readonly DiagnosticDescriptor GF4001_NonCopyableDestructorAssign = new DiagnosticDescriptor(
-            "GF4001", "Non-Copyable Type Assignment", "Cannot assign to '{0}': types with destructors cannot be copied or reassigned by value",
-            DiagnosticSeverity.Error, "Memory");
-
-        public static readonly DiagnosticDescriptor GF4002_NonCopyableDestructorCopyInit = new DiagnosticDescriptor(
-            "GF4002", "Non-Copyable Type Initialization", "Cannot copy value of type '{0}' because it defines a destructor. Pass by pointer, or use an explicit method if available.",
-            DiagnosticSeverity.Error, "Memory");
-
-        public static readonly DiagnosticDescriptor GF4003_NonCopyableDestructorPassByValue = new DiagnosticDescriptor(
-            "GF4003", "Non-Copyable Parameter", "Parameter '{0}' cannot have type '{1}' because types with destructors cannot be passed by value. Use a pointer instead ('{1}*').",
-            DiagnosticSeverity.Error, "Memory");
-
-        public static readonly DiagnosticDescriptor GF4004_NonCopyableDestructorForeach = new DiagnosticDescriptor(
-            "GF4004", "Non-Copyable Foreach", "Foreach iteration variable '{0}' cannot have type '{1}' because types with destructors cannot be copied by value. Use a pointer instead ('{1}*').",
-            DiagnosticSeverity.Error, "Memory");
-
-        // 1010: Allocator hooks
-        public static readonly DiagnosticDescriptor GF1010_MissingCustomAllocator = new DiagnosticDescriptor(
-            "GF1010", "Missing Custom Allocator",
-            "'#no_default_allocator' is set but '{0}' was not defined. Define 'void* __gflat_alloc(ulong size)' and 'void __gflat_free(void* ptr)'.",
-            DiagnosticSeverity.Error, "Memory");
-
-        public static readonly DiagnosticDescriptor GF1011_InvalidAllocatorSignature = new DiagnosticDescriptor(
-            "GF1011", "Invalid Allocator Signature",
-            "Allocator hook '{0}' has an invalid signature: {1}",
-            DiagnosticSeverity.Error, "Memory");
     }
 }

@@ -44,3 +44,21 @@ public nuint Count<T : IEquatable<T>>(Span<immutable(T)> values, immutable(T)* k
 
 public nuint Count<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> pattern)
     => Standard::Collections::Count<T>(values, pattern, EqualityComparer<T>::Equals);
+
+public nuint IndexOfAny<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> candidates)
+    => Standard::Collections::IndexOfAny<T>(values, candidates, EqualityComparer<T>::Equals);
+
+public nuint LastIndexOfAny<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> candidates)
+    => Standard::Collections::LastIndexOfAny<T>(values, candidates, EqualityComparer<T>::Equals);
+
+public nuint IndexOfAnyExcept<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> candidates)
+    => Standard::Collections::IndexOfAnyExcept<T>(values, candidates, EqualityComparer<T>::Equals);
+
+public nuint LastIndexOfAnyExcept<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> candidates)
+    => Standard::Collections::LastIndexOfAnyExcept<T>(values, candidates, EqualityComparer<T>::Equals);
+
+public bool ContainsAny<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> candidates)
+    => Standard::Collections::ContainsAny<T>(values, candidates, EqualityComparer<T>::Equals);
+
+public bool ContainsAnyExcept<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> candidates)
+    => Standard::Collections::ContainsAnyExcept<T>(values, candidates, EqualityComparer<T>::Equals);

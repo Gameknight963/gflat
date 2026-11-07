@@ -41,3 +41,6 @@ throws.
 Selective builds include `Collections/vector_add_enumerable_range.gf` with
 the usual vector and enumerable dependencies. The freestanding form uses
 `AddRange(ref target, source)`.
+
+To place a batch before an existing element, use
+[enumerable InsertRange](VECTOR_ENUMERABLE_INSERT_RANGE.md).

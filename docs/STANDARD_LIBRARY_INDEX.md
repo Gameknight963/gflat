@@ -76,6 +76,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | `Queue<T>.EnqueueRange` | [Enqueue a FIFO batch](QUEUE_RANGE.md) |
 | Enumerable `Vector<T>.AddRange` | [Append an enumerable to a vector](VECTOR_ENUMERABLE_RANGE.md) |
+| Enumerable `Vector<T>.InsertRange` | [Insert an enumerable into a vector](VECTOR_ENUMERABLE_INSERT_RANGE.md) |
 | Queue, stack, and priority-queue `Peek`, `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | Priority-queue `EnqueueRange` | [Enqueue batches with staged input](PRIORITY_QUEUE_RANGE.md) |
 | Deque `PeekFirst`, `PeekLast`, and try-peek helpers | [Copy deque endpoints](DEQUE_PEEK.md) |

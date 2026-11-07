@@ -199,6 +199,13 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
         return FromTicks(-ticks);
     }
 
+    public immutable TimeSpan Duration()
+    {
+        if (ticks == MinimumTicks) throw new Exception("TimeSpan duration overflow");
+        if (ticks < 0l) return FromTicks(-ticks);
+        return FromTicks(ticks);
+    }
+
     public immutable bool Equals(immutable(TimeSpan)* other) nothrow => ticks == other.ticks;
     public immutable int CompareTo(immutable(TimeSpan)* other) nothrow
     {

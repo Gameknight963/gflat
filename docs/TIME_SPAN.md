@@ -48,6 +48,10 @@ arithmetic. TotalMicroseconds and TotalNanoseconds also return approximate
 double totals. Add, Subtract, and Negate throw if their result exceeds the signed
 tick range. Negating the minimum tick value therefore throws.
 
+`Duration()` returns the nonnegative magnitude and also rejects the minimum
+tick value. See [scaling time intervals](TIME_SPAN_SCALING.md) for `Multiply`,
+scalar `Divide`, duration ratios, and their rounding rules.
+
 ## Formatting
 
 TryFormat writes `[-][d.]hh:mm:ss[.fffffff]` as counted ASCII bytes. Zero days

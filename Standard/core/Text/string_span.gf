@@ -40,3 +40,75 @@ extension String
     public immutable Span<readonly(char)> AsImmutable()
     => Standard::Text::AsImmutable(ref *this);
 }
+
+public Span<char> AsSpan(ref String value, nuint start)
+{
+    Span<char> whole = Standard::Text::AsSpan(ref value);
+    return whole.Slice(start);
+}
+
+extension String
+{
+    public Span<char> AsSpan(nuint start)
+        => Standard::Text::AsSpan(ref *this, start);
+}
+
+public Span<char> AsSpan(ref String value, nuint start, nuint count)
+{
+    Span<char> whole = Standard::Text::AsSpan(ref value);
+    return whole.Slice(start, count);
+}
+
+extension String
+{
+    public Span<char> AsSpan(nuint start, nuint count)
+        => Standard::Text::AsSpan(ref *this, start, count);
+}
+
+public Span<readonly(char)> AsReadOnly(ref readonly(String) value, nuint start)
+{
+    Span<readonly(char)> whole = Standard::Text::AsReadOnly(ref value);
+    return whole.Slice(start);
+}
+
+extension String
+{
+    public readonly Span<readonly(char)> AsReadOnly(nuint start)
+        => Standard::Text::AsReadOnly(ref *this, start);
+}
+
+public Span<readonly(char)> AsReadOnly(ref readonly(String) value, nuint start, nuint count)
+{
+    Span<readonly(char)> whole = Standard::Text::AsReadOnly(ref value);
+    return whole.Slice(start, count);
+}
+
+extension String
+{
+    public readonly Span<readonly(char)> AsReadOnly(nuint start, nuint count)
+        => Standard::Text::AsReadOnly(ref *this, start, count);
+}
+
+public Span<readonly(char)> AsImmutable(ref immutable(String) value, nuint start)
+{
+    Span<readonly(char)> whole = Standard::Text::AsImmutable(ref value);
+    return whole.Slice(start);
+}
+
+extension String
+{
+    public immutable Span<readonly(char)> AsImmutable(nuint start)
+        => Standard::Text::AsImmutable(ref *this, start);
+}
+
+public Span<readonly(char)> AsImmutable(ref immutable(String) value, nuint start, nuint count)
+{
+    Span<readonly(char)> whole = Standard::Text::AsImmutable(ref value);
+    return whole.Slice(start, count);
+}
+
+extension String
+{
+    public immutable Span<readonly(char)> AsImmutable(nuint start, nuint count)
+        => Standard::Text::AsImmutable(ref *this, start, count);
+}

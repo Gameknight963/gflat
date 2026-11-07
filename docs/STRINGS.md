@@ -153,3 +153,5 @@ Sources: `core/Text/String.gf`, `string_span.gf` for views, and `Text/ByteSearch
 for substring search.
 
 See [Using owning strings as search arguments](STRING_ARGUMENTS.md) for borrowed String search and replacement overloads.
+
+See [Borrowing a range of string bytes](STRING_RANGE_VIEWS.md) for allocation-free substring views.

@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard;
 
 // Dotted numeric version, not Semantic Versioning. Missing trailing parts are -1.
@@ -94,6 +96,18 @@ public struct Version : IEquatable<Version>, IComparable<Version>, IHashable, IF
         if (!TryParse(text, count, &result)) throw new Exception("Invalid version");
         return result;
     }
+
+    public static bool TryParse(Span<readonly(char)> text, Version* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static Version Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
     public static Version Parse(readonly(char)* text)
     {
         Version result = new();
@@ -120,6 +134,26 @@ public struct Version : IEquatable<Version>, IComparable<Version>, IHashable, IF
         if (build >= 0) fields = 3;
         if (revision >= 0) fields = 4;
         return this.TryFormat(output, capacity, ref written, fields);
+    }
+
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
+    public immutable bool TryFormat(Span<char> destination, ref nuint written, int fieldCount) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return fieldCount == 0;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written, fieldCount);
     }
 
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written, int fieldCount) nothrow

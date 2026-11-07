@@ -33,6 +33,9 @@ hashing preserve those distinctions.
 
 ## Parsing
 
+For counted text views and writable destinations, see
+[span parsing and formatting](VERSION_SPANS.md).
+
 Parse and TryParse accept C strings or counted input with two through four
 ASCII decimal components. Signs, whitespace, empty components, suffixes, and
 values above `int` maximum are rejected. Leading zeroes are accepted, even

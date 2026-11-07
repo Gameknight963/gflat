@@ -152,7 +152,7 @@ public sealed class VersionTests
     [Fact]
     public void SelectedCoreValueSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
     {
-        string[] names=["Version.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
+        string[] names=["Memory/Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf", "Version.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("version-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}

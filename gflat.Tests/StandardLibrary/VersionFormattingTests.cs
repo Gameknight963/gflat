@@ -6,9 +6,11 @@ public sealed class VersionFormattingTests
     public void GuideExampleCompiles() => StandardLibraryGuideTests.CheckProgram("VERSION_FORMATTING.md", 0);
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void FieldCountsAndRevisionHalvesMatchDotNetWithGuardedBuffers(int optimization)
+    [InlineData(0, false)]
+    [InlineData(2, false)]
+    [InlineData(0, true)]
+    [InlineData(2, true)]
+    public void FieldCountsAndRevisionHalvesMatchDotNetWithGuardedBuffers(int optimization, bool spans)
     {
         string path = Path.Combine(Path.GetTempPath(), "gflat_version_fields_" + Guid.NewGuid().ToString("N"));
         try
@@ -36,13 +38,21 @@ public sealed class VersionFormattingTests
                 .Append(new SourceFile("version-fields.gf", $$"""
                 using Standard;
                 using Standard::Text;
+                using Standard::Memory;
 
                 extern "C" void*? fopen(readonly(char)* path, readonly(char)* mode);
                 extern "C" nuint fread(void* buffer, nuint size, nuint count, void* file);
                 extern "C" int fclose(void* file);
                 extern "C" int ferror(void* file);
                 bool Render(immutable(Version)* value, char* output, nuint capacity, ref nuint written, int fields) nothrow
-                    => value.TryFormat(output, capacity, ref written, fields);
+                {
+                    if ({{(spans ? "true" : "false")}})
+                    {
+                        if (capacity == 0) return value.TryFormat(new Span<char>(), ref written, fields);
+                        return value.TryFormat(new Span<char>(output, capacity), ref written, fields);
+                    }
+                    return value.TryFormat(output, capacity, ref written, fields);
+                }
                 int main()
                 {
                     void*? file = fopen({{literal}}, "rb");

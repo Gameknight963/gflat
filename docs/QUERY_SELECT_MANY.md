@@ -30,6 +30,47 @@ Load `Queries/SelectManySource.gf`, `Queries/enumerable_select_many.gf`, and
 `Memory/Unique.gf` alongside the query and sequence dependencies. The free
 function `SelectMany(source, selector)` provides the same operation.
 
+## Combining outer and inner values
+
+`SelectMany(selector, resultSelector)` passes each outer value and each of its
+inner values to a result selector. The outer iterator's `Current` is read once
+per visited outer element. That value is retained until its inner sequence ends.
+
+```csharp
+using Standard::Queries;
+
+Enumerable<int, IntRange, IntRange::Enumerator> Expand(int count)
+    => new IntRange(0, count).AsEnumerable();
+
+int Combine(int outer, int inner) => outer * 10 + inner;
+
+int main()
+{
+    var query = new IntRange(0, 4).AsEnumerable().SelectMany(Expand, Combine);
+    int[6] expected = [10, 20, 21, 30, 31, 32];
+    nuint index = 0;
+    foreach (int value in query)
+    {
+        if (index >= 6 || value != expected[index]) return 1;
+        index++;
+    }
+    if (index != 6) return 2;
+    return 0;
+}
+```
+
+This overload also needs `Queries/SelectManyResultSource.gf` and
+`Queries/enumerable_select_many_result.gf`. The free function accepts the same
+two selectors, and their argument and result types are inferred.
+
+Outer values must support copying for the by-value callbacks. Use pointer
+elements to borrow noncopyable outer objects. Result values can be move-only
+owners, such as `Unique<T>`. Each read of `Current` runs the result selector again
+and produces a fresh result. A result-selector failure ends the cursor and
+releases its retained outer value and active inner state.
+A borrowed result must not refer to a result-selector parameter's temporary
+storage.
+
 ## Evaluation and lifetime
 
 Constructing the query does not call the selector. Each cursor obtains a fresh

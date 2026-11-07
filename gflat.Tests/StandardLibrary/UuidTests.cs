@@ -152,7 +152,7 @@ public sealed class UuidTests
     [Fact]
     public void CoreValueAndNothrowOperationsNeedNoStringSource()
     {
-        string[] names=["core/Uuid.gf","core/ITextWriter.gf", "core/IFormattable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf",
+        string[] names=["core/Memory/Span.gf", "core/Queries/Enumerable.gf", "core/Collections/IEnumerable.gf", "core/Uuid.gf","core/ITextWriter.gf", "core/IFormattable.gf","core/IHashable.gf","core/IEquatable.gf","core/IComparable.gf","core/Hashing/primitive_hashing.gf",
             "core/Exception.gf","libc/Memory/allocation.gf","libc/Exceptions/unhandled.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("nothrow.gf","""

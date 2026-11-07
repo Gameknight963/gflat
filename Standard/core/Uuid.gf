@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard;
 
 // Opaque 128-bit identifier. Numeric halves follow canonical/network byte order.
@@ -33,6 +35,76 @@ public struct Uuid : IEquatable<Uuid>, IComparable<Uuid>, IHashable, IFormattabl
         Uuid result = new();
         if (!TryFromBytes(data, count, &result)) throw new Exception("UUID requires 16 bytes");
         return result;
+    }
+
+    public static bool TryFromBytes(Span<readonly(byte)> data, Uuid* result) nothrow
+    {
+        if (data.Length != 16)
+        {
+            *result = new Uuid();
+            return false;
+        }
+        return TryFromBytes(data.Data!, data.Length, result);
+    }
+
+    public static Uuid FromBytes(Span<readonly(byte)> data)
+    {
+        if (data.Length != 16) throw new Exception("UUID requires 16 bytes");
+        return FromBytes(data.Data!, data.Length);
+    }
+
+    public immutable bool TryWriteBytes(Span<byte> destination, ref nuint written) nothrow
+    {
+        if (destination.Length < 16)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryWriteBytes(destination.Data!, destination.Length, ref written);
+    }
+
+    public static bool TryParse(Span<readonly(char)> text, Uuid* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static Uuid Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
+    public static bool TryParseExact(Span<readonly(char)> text, char format, Uuid* result) nothrow
+    {
+        if (text.IsEmpty) return TryParseExact("", 0, format, result);
+        return TryParseExact(text.Data!, text.Length, format, result);
+    }
+
+    public static Uuid ParseExact(Span<readonly(char)> text, char format)
+    {
+        if (text.IsEmpty) return ParseExact("", 0, format);
+        return ParseExact(text.Data!, text.Length, format);
+    }
+
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
+    public immutable bool TryFormat(Span<char> destination, ref nuint written, char format) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written, format);
     }
 
     // Output may overlap this value; written is separate from output and receiver.

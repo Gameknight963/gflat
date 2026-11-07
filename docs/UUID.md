@@ -32,6 +32,9 @@ TryFormat writes 36 lowercase bytes without a terminator. Short capacity returns
 false, zeros written, and preserves output. Format and interpolation use the same
 spelling.
 
+Span overloads cover parsing, exact formats, text output, and canonical bytes.
+See [UUID text and byte spans](UUID_SPANS.md).
+
 ## Canonical bytes
 
 TryFromBytes accepts exactly 16 bytes, with the first eight forming High and the

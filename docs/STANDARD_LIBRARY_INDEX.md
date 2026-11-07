@@ -197,6 +197,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Named IP address values | [Common IP address values](IP_ADDRESS_WELL_KNOWN.md) |
 | `Uuid`, `UuidGenerator` | [UUID values](UUID.md) |
 | UUID `ParseExact`, `ToString(format)` | [Explicit UUID text formats](UUID_FORMATS.md) |
+| UUID span parsing, formatting, and byte conversion | [UUID text and byte spans](UUID_SPANS.md) |
 | `Version` | [Dotted numeric versions](VERSION.md) |
 | Version field-count formatting and revision halves | [Formatting selected version fields](VERSION_FORMATTING.md) |
 | `IpAddress` | [Numeric IP addresses](IP_ADDRESS.md) |

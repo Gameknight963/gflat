@@ -1,10 +1,12 @@
-# Copying queue and stack elements
+# Copying queue, stack, and deque elements
 
-`CopyTo(destination)` assigns copies into an initialized `Span<T>`. Queues copy
-front to back, and stacks copy top to bottom, matching enumeration order.
+`CopyTo(destination)` assigns copies into an initialized `Span<T>`. Queues
+and deques copy front to back, and stacks copy top to bottom, matching
+enumeration order.
 `CopyTo(destination, destinationIndex)` starts at the specified destination index.
 
-Load `Collections/queue_copy.gf` or `Collections/stack_copy.gf` from Standard's
+Load `Collections/queue_copy.gf`, `Collections/stack_copy.gf`, or
+`Collections/deque_copy.gf` from Standard's
 core source root. These extensions require copyable elements only when called.
 
 ```csharp
@@ -26,6 +28,11 @@ int main()
     stack.Push(20);
     if (!stack.TryCopyTo(output)) return 2;
     if (buffer[0] != 20 || buffer[1] != 10 || queue.Count != 2) return 3;
+    Deque<int> deque = new();
+    deque.AddFirst(20);
+    deque.AddFirst(10);
+    deque.CopyTo(output);
+    if (buffer[0] != 10 || buffer[1] != 20) return 4;
     return 0;
 }
 ```

@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class QueueStackCopyTests
 {
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Combine(StandardTestSources.Values,
-        StandardTestSources.Load("core/Collections/Queue.gf", "core/Collections/Stack.gf",
+        StandardTestSources.Load("core/Collections/Deque.gf", "core/Collections/deque_copy.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf",
             "core/Collections/queue_copy.gf", "core/Collections/stack_copy.gf"))
         .Append(new SourceFile("queue-stack-copy.gf", code));
 
@@ -11,6 +11,8 @@ public sealed class QueueStackCopyTests
     public void GuideExampleCompiles() => StandardLibraryGuideTests.CheckProgram("QUEUE_STACK_COPY.md", 0);
 
     [Theory]
+    [InlineData("Deque", "AddLast", "RemoveFirst", "Front", 0)]
+    [InlineData("Deque", "AddLast", "RemoveFirst", "Front", 2)]
     [InlineData("Queue", "Enqueue", "Dequeue", "Front", 0)]
     [InlineData("Queue", "Enqueue", "Dequeue", "Front", 2)]
     [InlineData("Stack", "Push", "Pop", "Top", 0)]
@@ -43,7 +45,7 @@ public sealed class QueueStackCopyTests
                     {{type}}<int> source = new();
                     source.Reserve(16);
                     for (nuint i = 0; i < size; i++) source.{{add}}((int)i);
-                    {{(type == "Queue" ? "if (size != 0) for (int i = 0; i < 13; i++) { int item = source.Dequeue(); source.Enqueue(item); }" : "")}}
+                    {{(type != "Stack" ? $"if (size != 0) for (int i = 0; i < 13; i++) {{ int item = source.{remove}(); source.{add}(item); }}" : "")}}
                     int[16] buffer = default(int[16]);
                     Span<int> output = new(&buffer[0], 16);
                     for (nuint offset = 0; offset <= 16; offset++)
@@ -94,6 +96,8 @@ public sealed class QueueStackCopyTests
     }
 
     [Theory]
+    [InlineData("Deque", "AddLast", 0)]
+    [InlineData("Deque", "AddLast", 2)]
     [InlineData("Queue", "Enqueue", 0)]
     [InlineData("Queue", "Enqueue", 2)]
     [InlineData("Stack", "Push", 0)]
@@ -161,13 +165,13 @@ public sealed class QueueStackCopyTests
                         for (nuint i = 0; i < 4; i++)
                         {
                             int expected = 99;
-                            if (i < (nuint)(failure - 1)) expected = {{(type == "Queue" ? "(int)i" : "2 - (int)i")}};
+                            if (i < (nuint)(failure - 1)) expected = {{(type != "Stack" ? "(int)i" : "2 - (int)i")}};
                             if (target[i].Key != expected || !target[i].Text.Equals("owned")) return 2;
                         }
                         failAt = -1;
                         source.CopyTo(target.AsSpan());
                         for (nuint i = 0; i < 3; i++)
-                            if (target[i].Key != {{(type == "Queue" ? "(int)i" : "2 - (int)i")}}) return 3;
+                            if (target[i].Key != {{(type != "Stack" ? "(int)i" : "2 - (int)i")}}) return 3;
                     }
                 }
                 if (live != 0) return 4;
@@ -189,6 +193,9 @@ public sealed class QueueStackCopyTests
             }
             int main()
             {
+                Deque<Owner> deque = new();
+                deque.AddFirst(new Owner());
+                deque.RemoveLast();
                 Queue<Owner> queue = new();
                 Stack<Owner> stack = new();
                 queue.Enqueue(new Owner());

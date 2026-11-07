@@ -16,6 +16,8 @@ public partial class TypeChecker
     private readonly HashSet<CallExpression> checkedExtensionArguments = new();
     private readonly HashSet<IdentifierExpression> extensionReceiverVariables = new();
     private readonly Dictionary<IdentifierExpression, TypeExpression> extensionReceiverSlotTypes = new();
+    // Shared nominal identities store concrete arguments, never one caller's
+    // declaration contracts. Per-use provenance belongs on TypeExpression.GenericUse.
     private readonly Dictionary<string, NamedTypeExpression> extensionGenericTypeOrigins = new();
 
     public CallExpression? GetExtensionCall(CallExpression call) => extensionCalls.GetValueOrDefault(call);
@@ -334,7 +336,8 @@ public partial class TypeChecker
             var known = extensionGenericTypeOrigins.FirstOrDefault(pair =>
                 pair.Value.Name == named.Name &&
                 pair.Value.TypeArguments.Count == named.TypeArguments.Count &&
-                pair.Value.TypeArguments.Zip(named.TypeArguments).All(p => TypesMatchPublic(p.First, p.Second)));
+                pair.Value.TypeArguments.Zip(named.TypeArguments).All(p => TypesMatchPublic(p.First, p.Second) ||
+                    TypesMatchPublic(KnownExtensionType(p.First) ?? p.First, KnownExtensionType(p.Second) ?? p.Second)));
             // An editor can also supply a declaration-bound open parameter.
             // Keep that nominal signature symbolic; do not manufacture its
             // layout or instantiate a body merely to preview a member.
@@ -365,9 +368,20 @@ public partial class TypeChecker
             return new FunctionPointerTypeExpression(result, parameters.Select(p => p!).ToList(), function.IsManaged,
                 function.IsNullable, function.Line, function.IsSignature).WithQualifiersFrom(function);
         }
-        // Unresolved nested generic syntax cannot be inferred without specializing
-        // its parent. Nongeneric signatures have already resolved these nodes.
-        if (type is NestedTypeExpression) return resolvedSourceTypes.GetValueOrDefault(type);
+        if (type is NestedTypeExpression nested)
+        {
+            if (resolvedSourceTypes.TryGetValue(type, out var resolved)) return resolved;
+            // Substitution creates fresh nested syntax. Reuse a registered child
+            // of an already known parent without specializing anything for preview.
+            if (nested.TypeArguments.Count == 0 && KnownExtensionType(nested.Parent) is NamedTypeExpression parent)
+            {
+                string identity = parent.Name + "." + nested.Member;
+                if (_classes.ContainsKey(identity) || _structs.ContainsKey(identity) ||
+                    _interfaces.ContainsKey(identity) || _enums.ContainsKey(identity))
+                    return NamedTypeExpression.Resolved(identity, nested.Line).WithQualifiersFrom(type);
+            }
+            return null;
+        }
         return type;
     }
 

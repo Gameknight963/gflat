@@ -23,7 +23,7 @@ public partial class TypeChecker
                 throw new TypeCheckException($"Type '{DisplayTypeName(arguments[i])}' does not satisfy constraint '{DisplayTypeName(parameter.Constraint)}' for type parameter '{parameter.Name}' on interface '{DisplayName(definition.Name)}'", line);
         }
         string name = definition.Name + "$" + string.Join("$", arguments.Select(GetTypeMangledName));
-        extensionGenericTypeOrigins[name] = new NamedTypeExpression(definition.Name, null, line, arguments);
+        extensionGenericTypeOrigins[name] = new NamedTypeExpression(definition.Name, null, line, arguments.Select(t => ClearIncomingGenericContracts(t)).ToList());
         _displayNames[name] = DisplayName(definition.Name) + "<" + string.Join(", ", arguments.Select(DisplayTypeName)) + ">";
         CheckFailedTypeSpecialization(name, line);
         var identity = NamedTypeExpression.Resolved(name, line);

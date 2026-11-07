@@ -938,7 +938,7 @@ namespace gflat
             }
 
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
-            extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs);
+            extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs.Select(t => ClearIncomingGenericContracts(t)).ToList());
             _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             CheckFailedTypeSpecialization(mangledName, line);
             if (_structs.ContainsKey(mangledName))
@@ -986,7 +986,7 @@ namespace gflat
             }
 
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
-            extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs);
+            extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs.Select(t => ClearIncomingGenericContracts(t)).ToList());
             _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             CheckFailedTypeSpecialization(mangledName, line);
             if (_classes.ContainsKey(mangledName))

@@ -12,7 +12,7 @@ public partial class TypeChecker
         switch (node)
         {
             case IdentifierExpression or NamedTypeExpression or GlobalExpression: return;
-            case MemberAccessExpression member when !member.IsArrow: ValidateNameofSyntax(member.Object); return;
+            case MemberAccessExpression member: ValidateNameofSyntax(member.Object); return;
             case NamespaceAccessExpression member: ValidateNameofSyntax(member.Left); return;
             default: throw new TypeCheckException("nameof requires a named entity, not a runtime expression", node.Span);
         }

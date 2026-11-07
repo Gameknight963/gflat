@@ -165,7 +165,6 @@ public partial class TypeChecker
                 owner = _currentClass?.Name ?? _currentStruct?.Name;
                 break;
             case MemberAccessExpression member:
-                if (member.IsArrow) return null;
                 // Namespace/type operands must retain the usual '.' versus '::' diagnostics.
                 if (member.Object is IdentifierExpression typeId && !TryLookupVariable(typeId.Name, out _) &&
                     (GetClass(typeId.Name) != null || GetStruct(typeId.Name) != null || IsInterface(typeId.Name))) return null;
@@ -299,7 +298,7 @@ public partial class TypeChecker
 
     private CallExpression PropertyCall(PropertyAccess property, MethodDeclaration method, AstNode? receiver, List<AstNode> args, AstNode site)
     {
-        AstNode callee = receiver != null ? new MemberAccessExpression(receiver, method.Name, false, site.Line) :
+        AstNode callee = receiver != null ? new MemberAccessExpression(receiver, method.Name, site.Line) :
             property.StaticOwner != null ? new NamespaceAccessExpression(property.StaticOwner, method.Name, site.Line) :
             new IdentifierExpression(method.Name, site.Line);
         callee.Span = site.Span;

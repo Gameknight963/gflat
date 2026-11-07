@@ -71,9 +71,9 @@ public partial class TypeChecker
                 throw new TypeCheckException("Only the first parameter can be an extension receiver", member.Span);
             if (parameters[0].DefaultValue != null || parameters[0].IsConst)
                 throw new TypeCheckException("An extension receiver cannot have a default or be const", parameters[0].Span);
-            if (method.ExtensionReceiverType == null)
-                throw new TypeCheckException("Use an extension block; parameter-modifier extensions were removed", member.Span);
-            var target = ExtensionFormalType(method, method.ExtensionReceiverType);
+            if (method.ExtensionReceiverType is not { } receiverType)
+                throw new TypeCheckException("An extension receiver requires an extension block", member.Span);
+            var target = ExtensionFormalType(method, receiverType);
             if (target is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression or FunctionPointerTypeExpression ||
                 target is NamedTypeExpression { Name: "void" or "null" })
                 throw new TypeCheckException("Extension blocks target the underlying object type, never a pointer or reference type", method.ExtensionReceiverType.Span);
@@ -408,7 +408,7 @@ public partial class TypeChecker
 
     private bool TryCheckExtensionCall(CallExpression call)
     {
-        if (call.Callee is not MemberAccessExpression { IsArrow: false } member || extensions.Count == 0 ||
+        if (call.Callee is not MemberAccessExpression member || extensions.Count == 0 ||
             !extensions.Any(e => ExtensionMemberName(e.Definition) == member.Member)) return false;
         if (ResolveNamespace(member.Object) != null || ResolveEnum(member.Object) != null) return false;
         if (member.Object is IdentifierExpression id && !TryLookupVariable(id.Name, out _) &&

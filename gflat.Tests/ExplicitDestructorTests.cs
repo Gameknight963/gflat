@@ -85,7 +85,6 @@ public class ExplicitDestructorTests
     [InlineData("void* p = malloc(8)!; p.~void();", "concrete")]
     [InlineData("S* p; p.~S();", "unassigned")]
     [InlineData("S* p = new* S(); p.~S(1);", "no arguments")]
-    [InlineData("S* p = new* S(); p->~S();", "Use '.'")]
     public void InvalidTargetsAreRejected(string body, string message)
     {
         var error = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(

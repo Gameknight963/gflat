@@ -53,7 +53,6 @@ namespace gflat
         EqualsGreater,
         Caret,
         Dollar,
-        Arrow,
         DoubleColon,
         Hash,
         CharLiteral,

@@ -1047,15 +1047,13 @@ namespace gflat
         private Parameter ParseParameterCoreLocated()
         {
             int line = Current.Line;
-            bool isReceiver = CheckContextual("this");
-            if (isReceiver) throw new TypeCheckException("The this parameter modifier was removed; use an extension block with a borrowed instance receiver", Current.Span);
             bool isConst = Match(TokenKind.Const);
             TypeExpression paramType = ParseParameterType();
             if (!isConst && paramType is SpliceTypeExpression && (Check(TokenKind.Comma) || Check(TokenKind.CloseParen)))
                 return new Parameter("", paramType, line) { IsListSplice = true };
             string paramName = Expect(TokenKind.Identifier).Text;
             AstNode? defaultValue = Match(TokenKind.Equals) ? ParseExpression() : null;
-            return new Parameter(paramName, paramType, line, isConst, defaultValue) { IsExtensionReceiver = isReceiver };
+            return new Parameter(paramName, paramType, line, isConst, defaultValue);
         }
 
         private List<AttributeNode> ParseAttributes()
@@ -1957,7 +1955,7 @@ namespace gflat
                 }
 
                 // handle member access
-                if (op.Kind is TokenKind.Dot or TokenKind.Arrow)
+                if (op.Kind == TokenKind.Dot)
                 {
                     if (Check(TokenKind.OpenBracket) && Peek(1).Kind == TokenKind.Colon)
                     {
@@ -1966,8 +1964,6 @@ namespace gflat
                     }
                     if (Match(TokenKind.Tilde))
                     {
-                        if (op.Kind == TokenKind.Arrow)
-                            throw new TypeCheckException("Use '.' for destructor calls, not '->'", op.Line);
                         TypeExpression targetType = ParseTypeExpression(allowSignature: false);
                         Expect(TokenKind.OpenParen);
                         if (!Check(TokenKind.CloseParen))
@@ -1977,7 +1973,7 @@ namespace gflat
                         continue;
                     }
                     string member = Expect(TokenKind.Identifier).Text;
-                    left = new MemberAccessExpression(left, member, op.Kind == TokenKind.Arrow, op.Line);
+                    left = new MemberAccessExpression(left, member, op.Line);
                     continue;
                 }
 
@@ -2447,7 +2443,7 @@ namespace gflat
             TokenKind.Plus or TokenKind.Minus => (18, 19),
             TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (20, 21),
             TokenKind.PlusPlus or TokenKind.MinusMinus or TokenKind.Bang => (24, 0),
-            TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (24, 25),
+            TokenKind.Dot or TokenKind.DoubleColon => (24, 25),
             TokenKind.OpenParen or TokenKind.OpenBracket => (24, 0),
             _ => (0, 0)
         };

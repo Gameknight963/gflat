@@ -3598,7 +3598,7 @@ namespace gflat
                 precheckedForeachInitializers.Add(collectionTemporary);
             }
             var getEnumerator = new CallExpression(new MemberAccessExpression(targetCollection,
-                "GetEnumerator", false, node.Line), [], node.Line);
+                "GetEnumerator", node.Line), [], node.Line);
             TypeExpression enumeratorType;
             bool currentIsMethod;
             PushScope();
@@ -3624,8 +3624,8 @@ namespace gflat
             string iteratorName = $"__iter_{node.Line}_{_foreachCounter++}";
             var iteratorDeclaration = new VariableDeclaration(iteratorName, enumeratorType, getEnumerator, node.Line);
             var iterator = new IdentifierExpression(iteratorName, node.Line);
-            var moveNext = new CallExpression(new MemberAccessExpression(iterator, "MoveNext", false, node.Line), [], node.Line);
-            AstNode current = new MemberAccessExpression(new IdentifierExpression(iteratorName, node.Line), "Current", false, node.Line);
+            var moveNext = new CallExpression(new MemberAccessExpression(iterator, "MoveNext", node.Line), [], node.Line);
+            AstNode current = new MemberAccessExpression(new IdentifierExpression(iteratorName, node.Line), "Current", node.Line);
             if (currentIsMethod) current = new CallExpression(current, [], node.Line);
             var element = new VariableDeclaration(node.VariableName, node.ElementType, current, node.Line);
             var body = new BlockStatement(new[] { (AstNode)element }.Concat(node.Body.Statements).ToList(), node.Line);
@@ -4482,9 +4482,6 @@ namespace gflat
             if (node.Target is not (IdentifierExpression or NamespaceAccessExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
-            if (node.Target is MemberAccessExpression { IsArrow: true })
-                throw new TypeCheckException("Cannot assign using '->'. Use '.' for member access.", node.Line);
-
             CheckNullableStorage(node.Target);
             TypeExpression targetType = GetType(node.Target);
             CheckAssignmentTarget(node.Target, node.Line);
@@ -4606,24 +4603,21 @@ namespace gflat
             bool memberMethodCallee = false;
             if (node.Callee is not IdentifierExpression and not NamespaceAccessExpression)
             {
-                if (node.Callee is not MemberAccessExpression { IsArrow: true })
+                if (node.Callee is MemberAccessExpression memberCallee)
                 {
-                    if (node.Callee is MemberAccessExpression memberCallee)
+                    // Method return types need the selected method arguments; fields/properties are values now.
+                    memberMethodCallee = CheckMemberAccess(memberCallee, asCallCallee: true);
+                }
+                else node.Callee.Accept(this);
+                if (!memberMethodCallee)
+                {
+                    TypeExpression calleeType = ResolveAlias(GetType(node.Callee));
+                    if (calleeType is FunctionPointerTypeExpression fnPtr &&
+                        (node.Callee is not MemberAccessExpression || _propertyReads.ContainsKey(node.Callee)))
                     {
-                        // Method return types need the selected method arguments; fields/properties are values now.
-                        memberMethodCallee = CheckMemberAccess(memberCallee, asCallCallee: true);
-                    }
-                    else node.Callee.Accept(this);
-                    if (!memberMethodCallee)
-                    {
-                        TypeExpression calleeType = ResolveAlias(GetType(node.Callee));
-                        if (calleeType is FunctionPointerTypeExpression fnPtr &&
-                            (node.Callee is not MemberAccessExpression || _propertyReads.ContainsKey(node.Callee)))
-                        {
-                            CheckArguments();
-                            CheckIndirectCall(node, fnPtr);
-                            return;
-                        }
+                        CheckArguments();
+                        CheckIndirectCall(node, fnPtr);
+                        return;
                     }
                 }
             }
@@ -4636,15 +4630,6 @@ namespace gflat
 
             if (node.Callee is MemberAccessExpression memberAccess)
             {
-                if (memberAccess.IsArrow)
-                {
-                    if (memberAccess.Member == "free")
-                    {
-                        throw new TypeCheckException("The '->free()' syntax has been removed. Use 'delete ptr;' for objects allocated with 'new*', or 'free(ptr)' for raw malloc pointers.", node.Line);
-                    }
-                    throw new TypeCheckException("The '->' operator is no longer supported. Use '.' for member access.", node.Line);
-                }
-
                 EnumInfo? calleeEnum = ResolveEnum(memberAccess.Object);
                 if (calleeEnum != null)
                 {
@@ -5206,11 +5191,6 @@ namespace gflat
             if (CheckReflectionSequenceMember(node, objType)) return false;
             if (IsNullable(ResolveAlias(objType)))
                 throw new TypeCheckException("Cast a nullable pointer to non-null before accessing members", node.Line);
-
-            if (node.IsArrow)
-            {
-                throw new TypeCheckException("The '->' operator is no longer supported. Use '.' for member access, 'delete ptr;' to deallocate, and 'ptr == null' to check for null.", node.Line);
-            }
 
             // unwrap pointer if needed
             if (objType is PointerTypeExpression ptr)

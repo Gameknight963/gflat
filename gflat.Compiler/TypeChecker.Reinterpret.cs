@@ -14,7 +14,7 @@ public partial class TypeChecker
     private bool TryCheckReinterpretCall(CallExpression node)
     {
         if (node.Callee is not MemberAccessExpression { Member: "reinterpret" } member) return false;
-        if (member.IsArrow || node.TypeArguments.Count != 1 || node.Arguments.Count != 0)
+        if (node.TypeArguments.Count != 1 || node.Arguments.Count != 0)
             throw new TypeCheckException("reinterpret requires '.reinterpret<T>()' with one target type and no arguments", node.Span);
         member.Object.Accept(this);
         TypeExpression source = ResolveAlias(GetType(member.Object));

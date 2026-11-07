@@ -303,7 +303,7 @@ public partial class TypeChecker
 
     private bool TryCheckPrimitiveInterfaceCall(CallExpression call)
     {
-        if (primitiveImplementationSources.Count == 0 || call.Callee is not MemberAccessExpression { IsArrow: false } member) return false;
+        if (primitiveImplementationSources.Count == 0 || call.Callee is not MemberAccessExpression member) return false;
         if (ResolveNamespace(member.Object) != null || ResolveEnum(member.Object) != null) return false;
         member.Object.Accept(this);
         checkedPrimitiveReceivers.Add(member.Object);

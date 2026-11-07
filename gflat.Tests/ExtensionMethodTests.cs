@@ -23,10 +23,7 @@ public sealed class ExtensionMethodTests
     }
 
     [Theory]
-    [InlineData("int Bad(int n, this int self) => n; int main() => 0;", "this parameter modifier was removed")]
     [InlineData("extension int* { public int Bad() => **this; } int main() => 0;", "pointer")]
-    [InlineData("struct S { public int Bad(this int self) => self; } int main() => 0;", "this parameter modifier was removed")]
-    [InlineData("extern \"C\" int Bad(this int self); int main() => 0;", "this parameter modifier was removed")]
     [InlineData("extension int { public void Set() { *this = 1; } } int main() { immutable(int) n = 0; n.Set(); return 0; }", "Set")]
     [InlineData("namespace Helpers { extension int { public int Add() => *this; } } int main() { int n = 0; return n.Add(); }", "Add")]
     [InlineData("extension int { public void Set() { *this = 1; } } int main() { readonly(int) n = 0; n.Set(); return 0; }", "Set")]
@@ -154,13 +151,6 @@ public sealed class ExtensionMethodTests
             int main() { int n = 0; try { return n.Fail(); } catch (Exception* error) { return error.GetCode(); } }
             """);
         Assert.Equal(42, result.ExitCode);
-    }
-
-    [Fact]
-    public void LegacyThisModifierCannotBeReintroducedByAReplacement()
-    {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("weak int Read(int self) => self; replace int Read(this int self) => self; int main() => 0;"));
-        Assert.Contains("this parameter modifier was removed", error.Message);
     }
 
     [Fact]

@@ -216,7 +216,7 @@ public partial class TypeChecker
         foreach (var definition in methods) BindMethodSignature(definition);
         var choice = SelectCallableOverload(methods, node, reflection.Name);
         ValidateReflectedMethodAccess(choice.Definition, node.Callee.Span);
-        AstNode callee = receiver != null ? new MemberAccessExpression(receiver, reflection.Name, false, node.Line)
+        AstNode callee = receiver != null ? new MemberAccessExpression(receiver, reflection.Name, node.Line)
             : reflection.DeclaringType != null ? new NamespaceAccessExpression(reflection.DeclaringType, reflection.Name, node.Line)
             : ReflectedNamespaceCallee(choice.Definition, reflection.Name, node.Line);
         callee.Span = splice.Span;

@@ -700,8 +700,6 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (node is MemberAccessExpression member)
         {
-            if (member.IsArrow)
-                throw new Exception($"Cannot take address of pointer property '->{member.Member}'");
             EmitMemberAddress(member);
         }
         else if (node is IndexExpression idx)
@@ -3297,88 +3295,6 @@ public partial class LlvmEmitter : IVisitor
             }
         }
 
-        if (node.Callee is MemberAccessExpression { IsArrow: true, Member: "free" } freeAccess)
-        {
-            freeAccess.Object.Accept(this);
-            string ptrVal = Pop();
-            TypeExpression ptrType = _typeChecker.GetType(freeAccess.Object);
-            string llvmPtrType = EmitType(ptrType);
-
-            if (_typeChecker.TryGetClassDestructorCall(node, out (TypeChecker.ClassInfo Class, bool IsVirtual, int SlotIndex) dtorCall))
-            {
-                if (dtorCall.IsVirtual)
-                {
-                    string classPtr = ptrVal;
-                    if (llvmPtrType != $"%{dtorCall.Class.Name}*")
-                    {
-                        classPtr = NewTemp();
-                        Emit($"    {classPtr} = bitcast {llvmPtrType} {ptrVal} to %{dtorCall.Class.Name}*");
-                    }
-                    string vtableSlot = NewTemp();
-                    Emit($"    {vtableSlot} = getelementptr %{dtorCall.Class.Name}, %{dtorCall.Class.Name}* {classPtr}, i32 0, i32 0");
-                    string vtablePtr = NewTemp();
-                    Emit($"    {vtablePtr} = load i8**, i8*** {vtableSlot}");
-                    string slotPtr = NewTemp();
-                    Emit($"    {slotPtr} = getelementptr i8*, i8** {vtablePtr}, i32 {dtorCall.SlotIndex}");
-                    string rawFnPtr = NewTemp();
-                    Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
-                    string dtorFn = NewTemp();
-                    Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{dtorCall.Class.Name}*)*");
-                    TransferArguments();
-                    EmitCallInstruction("void", dtorFn, $"%{dtorCall.Class.Name}* {classPtr}", handleUnwind: false);
-                }
-                else
-                {
-                    string classPtr = ptrVal;
-                    if (llvmPtrType != $"%{dtorCall.Class.Name}*")
-                    {
-                        classPtr = NewTemp();
-                        Emit($"    {classPtr} = bitcast {llvmPtrType} {ptrVal} to %{dtorCall.Class.Name}*");
-                    }
-                    string dtorNs = dtorCall.Class.Namespace;
-                    string dtorMangled = dtorNs.Length > 0
-                        ? $"gflat${dtorNs}${dtorCall.Class.Name}$dtor"
-                        : $"gflat${dtorCall.Class.Name}$dtor";
-                    TransferArguments();
-                    EmitCallInstruction("void", "@" + dtorMangled, $"%{dtorCall.Class.Name}* {classPtr}", handleUnwind: false);
-                }
-            }
-            else if (_typeChecker.TryGetStructDestructorCall(node, out TypeChecker.StructInfo? structInfo) && structInfo != null)
-            {
-                string structPtr = ptrVal;
-                if (llvmPtrType != $"%{structInfo.Name}*")
-                {
-                    structPtr = NewTemp();
-                    Emit($"    {structPtr} = bitcast {llvmPtrType} {ptrVal} to %{structInfo.Name}*");
-                }
-                string dtorNs = structInfo.Namespace;
-                string dtorMangled = dtorNs.Length > 0
-                    ? $"gflat${dtorNs}${structInfo.Name}$dtor"
-                    : $"gflat${structInfo.Name}$dtor";
-                TransferArguments();
-                EmitCallInstruction("void", "@" + dtorMangled, $"%{structInfo.Name}* {structPtr}", handleUnwind: false);
-            }
-
-            // The runtime ABI deallocator is a source definition.
-            _externNames.Add(RuntimeMemorySymbol("Free"));
-
-            string castPtr;
-            if (llvmPtrType != "i8*")
-            {
-                castPtr = NewTemp();
-                Emit($"    {castPtr} = bitcast {llvmPtrType} {ptrVal} to i8*");
-            }
-            else
-            {
-                castPtr = ptrVal;
-            }
-
-            TransferArguments();
-
-            EmitCallInstruction("void", "@" + RuntimeMemorySymbol("Free"), $"i8* {castPtr}");
-            return;
-        }
-
         if (_typeChecker.TryGetInterfaceCall(node, out (TypeChecker.InterfaceInfo Interface, int SlotIndex, MethodDeclaration Method) ifaceCall))
         {
             MemberAccessExpression ifaceMemberAccess = (MemberAccessExpression)node.Callee;
@@ -3839,10 +3755,6 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
 
-        if (node.IsArrow)
-        {
-            throw new Exception($"The '->' operator is no longer supported on line {node.Line}");
-        }
 
         if (node.Object is IdentifierExpression objIdent &&
             _typeChecker.TryGetConstValue(objIdent, out ConstValue? constObj) && constObj != null)

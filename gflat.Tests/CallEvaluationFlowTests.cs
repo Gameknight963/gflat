@@ -82,13 +82,6 @@ public sealed class CallEvaluationFlowTests
     }
 
     [Fact]
-    public void RemovedArrowSyntaxStillProducesASourceDiagnostic()
-        => Assert.Contains("no longer supported", Assert.Throws<TypeCheckException>(() => Compiler.Check("""
-            struct Box { public int Read()=>42; }
-            int main(){Box value=new Box();Box* pointer=&value;return pointer->Read();}
-            """)).Description);
-
-    [Fact]
     public void LaterArgumentsSeeEarlierArgumentAssignments()
         => Assert.Equal(42, CompilerTestHelper.Run("""
             int Sum(int first,int second)=>first+second;

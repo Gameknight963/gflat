@@ -60,7 +60,6 @@ namespace gflat
             TokenKind.Ampersand => "&",
             TokenKind.Pipe => "|",
             TokenKind.Dot => ".",
-            TokenKind.Arrow => "->",
             TokenKind.DoubleColon => "::",
             TokenKind.Colon => ":",
             TokenKind.Semicolon => ";",

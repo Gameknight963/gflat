@@ -132,8 +132,6 @@ public class Lexer
                     { tokens.Add(new Token(TokenKind.MinusEquals, line, i, i + 1)); i++; break; }
                     if (i + 1 < code.Length && code[i + 1] == '-')
                     { tokens.Add(new Token(TokenKind.MinusMinus, line, i, i + 1)); i++; break; }
-                    if (i + 1 < code.Length && code[i + 1] == '>')
-                    { tokens.Add(new Token(TokenKind.Arrow, line, i, i + 1)); i++; break; }
                     tokens.Add(new Token(TokenKind.Minus, line, i, i)); break;
                 case '*':
                     if (i + 1 < code.Length && code[i + 1] == '=')

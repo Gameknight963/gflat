@@ -1257,7 +1257,7 @@ Scalar function boundaries use the host C ABI consistently for ordinary function
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.
 
-Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. `throws` has been removed. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across G♭ frames, but G♭ types do not yet have C++ RTTI or typed C++ catch interoperability.
+Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across G♭ frames, but G♭ types do not yet have C++ RTTI or typed C++ catch interoperability.
 
 Exception payloads first use `Memory::Allocate`. If it returns null, the native
 exception runtime uses a process-wide emergency reserve. Its own ownership records

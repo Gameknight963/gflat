@@ -417,7 +417,7 @@ namespace gflat.ast
             if (node is MoveExpression move) return new MoveExpression(CloneNode(move.Operand), move.Line, move.Destination == null ? null : CloneNode(move.Destination));
             if (node is MemberAccessExpression mem)
             {
-                return new MemberAccessExpression(CloneNode(mem.Object), mem.Member, mem.IsArrow, mem.Line);
+                return new MemberAccessExpression(CloneNode(mem.Object), mem.Member, mem.Line);
             }
             if (node is IndexExpression idx)
             {

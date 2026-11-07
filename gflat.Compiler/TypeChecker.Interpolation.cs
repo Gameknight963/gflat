@@ -46,7 +46,7 @@ public partial class TypeChecker
                 if (part is LiteralExpression { Token.Kind: TokenKind.InterpolatedStringSegment } segment)
                 {
                     string raw = segment.Token.Text;
-                    action = new(new MemberAccessExpression(result, "Write", false, part.Line),
+                    action = new(new MemberAccessExpression(result, "Write", part.Line),
                         new() { Literal(raw), Size(StringLiteralEncoding.Bytes(raw, part.Line).Length) }, part.Line) { Span = part.Span };
                 }
                 else
@@ -57,31 +57,31 @@ public partial class TypeChecker
                     var destination = new UnaryExpression(result, TokenKind.Ampersand, true, part.Line) { Span = part.Span };
                     bool formattable = TypeImplementsInterface(type, "IFormattable") || valueType is NamedTypeExpression { Name: "IFormattable" };
                     if (formattable)
-                        action = new(new MemberAccessExpression(part, "Format", false, part.Line), new() { destination }, part.Line) { Span = part.Span };
+                        action = new(new MemberAccessExpression(part, "Format", part.Line), new() { destination }, part.Line) { Span = part.Span };
                     else if (type is NamedTypeExpression primitive && primitive.Name is
                         "bool" or "char" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "extralong" or "nint" or "nuint" or "float" or "double")
                     {
                         // Interpolation formats the checked primitive value, including a
                         // specialized generic parameter, through ordinary extension lookup.
                         var value = new CastExpression(new NamedTypeExpression(primitive.Name, null, part.Line), part, part.Line) { Span = part.Span };
-                        action = new(new MemberAccessExpression(value, "Format", false, part.Line), new() { destination }, part.Line) { Span = part.Span };
+                        action = new(new MemberAccessExpression(value, "Format", part.Line), new() { destination }, part.Line) { Span = part.Span };
                     }
                     else if (TypeImplementsInterface(type, "IStringConvertable") || valueType is NamedTypeExpression { Name: "IStringConvertable" })
                     {
-                        conversion = new(new MemberAccessExpression(part, "ToString", false, part.Line), new(), part.Line) { Span = part.Span };
+                        conversion = new(new MemberAccessExpression(part, "ToString", part.Line), new(), part.Line) { Span = part.Span };
                         conversion.Accept(this);
                         converted = Temporary(GetType(conversion));
-                        action = new(new MemberAccessExpression(result, "Write", false, part.Line), new()
+                        action = new(new MemberAccessExpression(result, "Write", part.Line), new()
                         {
-                            new MemberAccessExpression(converted, "Data", false, part.Line),
-                            new MemberAccessExpression(converted, "Length", false, part.Line)
+                            new MemberAccessExpression(converted, "Data", part.Line),
+                            new MemberAccessExpression(converted, "Length", part.Line)
                         }, part.Line) { Span = part.Span };
                     }
                     else if (type is PointerTypeExpression { Inner: NamedTypeExpression { Name: "char" } } textPointer)
                     {
                         if (textPointer.IsNullable)
                             throw new TypeCheckException("A nullable C string must be checked for null or explicitly asserted with '!' before interpolation", part.Span);
-                        action = new(new MemberAccessExpression(result, "Write", false, part.Line), new() { part }, part.Line) { Span = part.Span };
+                        action = new(new MemberAccessExpression(result, "Write", part.Line), new() { part }, part.Line) { Span = part.Span };
                     }
                     else throw new TypeCheckException($"Interpolation value of type '{DisplayTypeName(type)}' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text", part.Line);
                 }

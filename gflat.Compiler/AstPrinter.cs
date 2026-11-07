@@ -234,7 +234,7 @@ namespace gflat
 
         public void Visit(MemberAccessExpression node)
         {
-            Print($"MemberAccess: {(node.IsArrow ? "->" : ".")}{node.Member}");
+            Print($"MemberAccess: .{node.Member}");
             Indented(() => node.Object.Accept(this));
         }
 

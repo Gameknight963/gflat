@@ -89,7 +89,7 @@ public partial class TypeChecker
             resolved = new ConstantExpression(reflection.Value, reflection.Type, node.Line);
         else if (reflection.Kind is "Field" or "Property" or "Method" or "OverloadGroup")
         {
-            if (node.Receiver != null) resolved = new MemberAccessExpression(ReflectedFieldReceiver(node, reflection), reflection.Name, false, node.Line);
+            if (node.Receiver != null) resolved = new MemberAccessExpression(ReflectedFieldReceiver(node, reflection), reflection.Name, node.Line);
             else if (reflection.DeclaringType != null)
                 resolved = new NamespaceAccessExpression(reflection.DeclaringType, reflection.Name, node.Line);
             else resolved = new IdentifierExpression(reflection.Name, node.Line);

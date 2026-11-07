@@ -519,6 +519,13 @@ namespace gflat.comptime
                     throw new ConstEvalException($"Cannot take address of non-struct/class '{operand}' at compile time", node.Line);
 
                 case TokenKind.Star:
+                    // Instance receivers store their aggregate directly in the evaluator.
+                    if (node.Operand is IdentifierExpression { Name: "this" } &&
+                        operand is ConstValue.Struct or ConstValue.ClassInstance)
+                    {
+                        _currentValue = operand;
+                        return;
+                    }
                     if (operand is ConstValue.StaticAddress staticAddress)
                     {
                         _currentValue = ReadStaticAddress(staticAddress, node.Line, _context.GetType(node));

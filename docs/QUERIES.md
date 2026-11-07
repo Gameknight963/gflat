@@ -71,6 +71,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `DistinctBy(selector)` | Yield the first whole value for each selected key, in encounter order. |
 | `Union`, `Except`, `Intersect` | Combine distinct values using [query set operations](QUERY_SET_OPERATIONS.md). |
 | `UnionBy`, `ExceptBy`, `IntersectBy` | Combine records by [selected keys](QUERY_SET_OPERATIONS_BY.md). |
+| `Index()` | Pair each item with its zero-based position as an [Indexed value](QUERY_INDEX.md). |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Concat(other)` | Yield the complete first query, then the second, with inline cursor state. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements. Counts are `nuint`. |

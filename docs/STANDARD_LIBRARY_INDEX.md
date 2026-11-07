@@ -60,6 +60,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `NthElement<T>(span, nth, compare)` | [Selecting an element by rank](NTH_ELEMENT.md) |
 | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Enumeration and queries](../Standard/core/Queries/README.md) |
 | `Distinct` | [Lazy distinct values](QUERY_DISTINCT.md) |
+| Query `Index()`, `Indexed<T>` | [Pair sequence items with their positions](QUERY_INDEX.md) |
 | `Union`, `Except`, `Intersect` | [Query set operations](QUERY_SET_OPERATIONS.md) |
 | `UnionBy`, `ExceptBy`, `IntersectBy` | [Query set operations by key](QUERY_SET_OPERATIONS_BY.md) |
 | `DistinctBy(selector)` | [Lazy distinct values by key](QUERY_DISTINCT_BY.md) |

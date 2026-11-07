@@ -36,6 +36,7 @@ on later reads.
 ## Operations
 
 - Filter and project with `Where` and `Select`
+- Retain positions with [Index](../../../docs/QUERY_INDEX.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`
 - Combine distinct values with [Union, Except, and Intersect](../../../docs/QUERY_SET_OPERATIONS.md)

@@ -28,6 +28,8 @@ public partial class TypeChecker
         // cannot depend on declaration scope or specialize another type.
         if (method.ReturnType is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } result && IsPrimitive(result.Name) &&
             method.Parameters.All(p => p.Type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } type && IsPrimitive(type.Name))) return;
+        using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("check.bind-method-signature",
+            $"{method.Name} ({method.Span.Source?.Path}:{method.Line}) #{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(method)}") : null;
         using var context = EnterMethodSignatureContext(method);
         ExpandParameterLists(method, method.Parameters);
         method.ReturnType = ResolveAlias(method.ReturnType);

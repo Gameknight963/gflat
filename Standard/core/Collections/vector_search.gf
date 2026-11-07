@@ -8,6 +8,30 @@ public nuint IndexOf<T>(immutable(Vector<T>)* source, immutable(T)* key,
     return source.Count;
 }
 
+public nuint IndexOf<T>(immutable(Vector<T>)* source, immutable(T)* key, nuint start, nuint count,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    if (start > source.Count || count > source.Count - start)
+        throw new Exception("Vector search range out of bounds");
+    nuint end = start + count;
+    for (nuint i = start; i < end; i++)
+        if (equal(&(*source)[i], key)) return i;
+    return source.Count;
+}
+
+public nuint IndexOf<T>(immutable(Vector<T>)* source, immutable(T)* key, nuint start,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    if (start > source.Count) throw new Exception("Vector search range out of bounds");
+    return IndexOf<T>(source, key, start, source.Count - start, equal);
+}
+
+public nuint IndexOf<T : IEquatable<T>>(immutable(Vector<T>)* source, immutable(T)* key, nuint start, nuint count)
+    => IndexOf<T>(source, key, start, count, EqualityComparer<T>::Equals);
+
+public nuint IndexOf<T : IEquatable<T>>(immutable(Vector<T>)* source, immutable(T)* key, nuint start)
+    => IndexOf<T>(source, key, start, EqualityComparer<T>::Equals);
+
 public nuint LastIndexOf<T>(immutable(Vector<T>)* source, immutable(T)* key,
     bool(immutable(T)*, immutable(T)*)* equal)
 {
@@ -50,6 +74,14 @@ extension Vector<T>
     public immutable nuint IndexOf(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
         => Standard::Collections::IndexOf<T>(this, key, equal);
 
+    public immutable nuint IndexOf(immutable(T)* key, nuint start,
+        bool(immutable(T)*, immutable(T)*)* equal)
+        => Standard::Collections::IndexOf<T>(this, key, start, equal);
+
+    public immutable nuint IndexOf(immutable(T)* key, nuint start, nuint count,
+        bool(immutable(T)*, immutable(T)*)* equal)
+        => Standard::Collections::IndexOf<T>(this, key, start, count, equal);
+
     public immutable nuint LastIndexOf(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
         => Standard::Collections::LastIndexOf<T>(this, key, equal);
 
@@ -65,6 +97,12 @@ extension Vector<T : IEquatable<T>>
 {
     public immutable nuint IndexOf(immutable(T)* key)
         => Standard::Collections::IndexOf<T>(this, key);
+
+    public immutable nuint IndexOf(immutable(T)* key, nuint start)
+        => Standard::Collections::IndexOf<T>(this, key, start);
+
+    public immutable nuint IndexOf(immutable(T)* key, nuint start, nuint count)
+        => Standard::Collections::IndexOf<T>(this, key, start, count);
 
     public immutable nuint LastIndexOf(immutable(T)* key)
         => Standard::Collections::LastIndexOf<T>(this, key);

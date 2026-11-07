@@ -75,6 +75,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | Queue, stack, and priority-queue `Peek`, `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | `Deque<T>.RemoveRange` | [Removing a deque range](DEQUE_REMOVE_RANGE.md) |
+| Vector `IndexOf` ranges | [Searching part of a vector](VECTOR_RANGE_SEARCH.md) |
 | Borrowed `Vector<T>.ForEach` | [Visiting vector elements](VECTOR_FOR_EACH.md) |
 | `Vector<T>.Rotate` | [Rotating vector elements](VECTOR_ROTATION.md) |
 | `Deque<T>.Reverse` | [Reversing a deque](DEQUE_REVERSE.md) |

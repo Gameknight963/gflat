@@ -246,3 +246,6 @@ with `frame.SkipExactly(frame.Remaining)` when appropriate.
 
 Sources: reader extensions and sequence types are in `core/IO`. Query adapters
 are separate `byte_sequence_queries.gf` and `line_sequence_queries.gf` files.
+
+See [caller-owned byte buffers](BYTE_READER_BUFFERS.md) for direct byte-pointer
+exact reads, minimum reads, and copy scratch.

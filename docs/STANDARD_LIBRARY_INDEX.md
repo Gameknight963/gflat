@@ -29,6 +29,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Repeated-byte String construction, append, capacity, and suffix removal | [Building strings from repeated bytes](STRING_CONSTRUCTION.md) |
 | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `ReadAtLeast`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](BYTE_READERS.md) |
 | `ReadToEnd()` and `ReadToEnd(ref text)` | [Read the remaining input](READ_TO_END.md) |
+| Byte-reader byte buffers | [Caller-owned byte-reader buffers](BYTE_READER_BUFFERS.md) |
 | `IByteReader.ReadBytes` | [Reading a bounded owning byte buffer](BYTE_READER_READ_BYTES.md) |
 | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Binary scalar IO](BINARY_IO.md) |
 | `BufferedReader` with owned or caller-provided scratch, `PeekByte` | [Explicit buffered input](BUFFERED_READER.md) |

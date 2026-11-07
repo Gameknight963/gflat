@@ -74,6 +74,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Vector `Reverse` and `Sort` | [Reversing and sorting vectors](VECTOR_ORDERING.md) |
 | Vector binary search and bounds | [Searching sorted vectors](VECTOR_SORTED_SEARCH.md) |
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
+| `Queue<T>.EnqueueRange` | [Enqueue a FIFO batch](QUEUE_RANGE.md) |
 | Queue, stack, and priority-queue `Peek`, `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | Priority-queue `EnqueueRange` | [Enqueue batches with staged input](PRIORITY_QUEUE_RANGE.md) |
 | Deque `PeekFirst`, `PeekLast`, and try-peek helpers | [Copy deque endpoints](DEQUE_PEEK.md) |

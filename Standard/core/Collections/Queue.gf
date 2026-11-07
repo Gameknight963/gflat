@@ -1,3 +1,4 @@
+using Standard::Memory;
 using Standard::Queries;
 
 namespace Standard::Collections;
@@ -92,6 +93,31 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
         else tail = count - remaining;
         move value at data! + tail;
         count++;
+    }
+
+    internal void EnqueueStagedRange(Vector<T> staged)
+    {
+        if (staged.IsEmpty) return;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        nuint maximum = ((nuint)0 - 1) / stride;
+        if (staged.Count > maximum - count) throw new Exception("Queue count overflow");
+        // Complete allocation before publishing any of the captured values.
+        this.Reserve(count + staged.Count);
+        Span<T> elements = staged.AsSpan();
+        T* captured = elements.Data!;
+        nuint left = 0;
+        nuint right = staged.Count;
+        while (left < right)
+        {
+            right--;
+            if (left == right) break;
+            T temporary = move *(captured + left);
+            move *(captured + right) at captured + left;
+            move temporary at captured + right;
+            left++;
+        }
+        while (!staged.IsEmpty) this.Enqueue(staged.Pop());
     }
 
     public T Dequeue()

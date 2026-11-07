@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Time;
 
 // Civil wall time plus a whole-minute UTC offset; no named time zone is retained.
@@ -188,6 +190,18 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
         nuint count = 0; while (count < 34 && text[count] != '\0') count++;
         return TryParse(text, count, result);
     }
+    public static bool TryParse(Span<readonly(char)> text, DateTimeOffset* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static DateTimeOffset Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
     public static DateTimeOffset Parse(readonly(char)* text, nuint count)
     {
         DateTimeOffset result = new();
@@ -197,6 +211,16 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     {
         DateTimeOffset result = new();
         if (!TryParse(text, &result)) throw new Exception("Invalid date and time offset"); return result;
+    }
+
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
     }
 
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow

@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Time;
 
 // Proleptic Gregorian calendar date, independent of clocks and time zones.
@@ -230,6 +232,18 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         return TryParse(text, count, result);
     }
 
+    public static bool TryParse(Span<readonly(char)> text, Date* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static Date Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
     public static Date Parse(readonly(char)* text, nuint count)
     {
         Date result = new();
@@ -251,6 +265,16 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
     // Fixed invariant ISO spelling, counted bytes without a null terminator.
     // written must be separate from output and this value's storage. Components
     // are captured before output writes, so sufficiently backed output may overlap this value.
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;

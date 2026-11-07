@@ -173,7 +173,7 @@ public sealed class DateTimeTests
     [Fact]
     public void SelectedPureSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
     {
-        string[] names=["Time/DateTime.gf","Time/Date.gf","Time/DayOfWeek.gf","Time/TimeOfDay.gf","Time/TimeSpan.gf","ITextWriter.gf", "IFormattable.gf",
+        string[] names=["Memory/Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf", "Time/DateTime.gf","Time/Date.gf","Time/DayOfWeek.gf","Time/TimeOfDay.gf","Time/TimeSpan.gf","ITextWriter.gf", "IFormattable.gf",
             "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("date-time-contract.gf","""

@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Time;
 
 // Signed duration in 100 ns ticks, independent of calendars and clocks.
@@ -200,6 +202,18 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
         return TryParse(text, count, result);
     }
 
+    public static bool TryParse(Span<readonly(char)> text, TimeSpan* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static TimeSpan Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
     public static TimeSpan Parse(readonly(char)* text, nuint count)
     {
         TimeSpan result = new();
@@ -265,6 +279,16 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
     // Invariant [-][d.]hh:mm:ss[.fffffff], counted bytes without a terminator.
     // Output may overlap this value: prepare all bytes before writing output.
     // written must be separate from output and this value's storage.
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         long value = ticks;

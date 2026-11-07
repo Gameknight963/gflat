@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Time;
 
 // Time within one day, in 100 ns ticks. No date or time zone is attached.
@@ -145,6 +147,18 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
         while (count < 17 && text[count] != '\0') count++;
         return TryParse(text, count, result);
     }
+    public static bool TryParse(Span<readonly(char)> text, TimeOfDay* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static TimeOfDay Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
     public static TimeOfDay Parse(readonly(char)* text, nuint count)
     {
         TimeOfDay result = new();
@@ -165,6 +179,16 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
         return 0;
     }
     public immutable nuint GetHashCode() nothrow => Hashing::Integer((ulong)ticks);
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         TimeSpan interval = TimeSpan::FromTicks(ticks);

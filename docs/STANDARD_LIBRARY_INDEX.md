@@ -214,6 +214,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Date and clock `Deconstruct` | [Read components together](TEMPORAL_DECONSTRUCTION.md) |
 | `DateTime` | [Date and time](DATE_TIME.md) |
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |
+| Temporal span `Parse`, `TryParse`, `TryFormat` | [Parse and format time values through spans](TEMPORAL_SPAN_TEXT.md) |
 | Temporal `UnixEpoch`, offset tick construction, and `ToUniversalTime` | [Unix epochs and zero-offset timestamps](TEMPORAL_EPOCH.md) |
 | Date/time component constructors | [Constructing dates and timestamps from components](TEMPORAL_CONSTRUCTION.md) |
 | Date/time `AddTicks`, `AddDays` through `AddMicroseconds` | [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) |

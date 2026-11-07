@@ -1,3 +1,5 @@
+using Standard::Memory;
+
 namespace Standard::Time;
 
 // Gregorian civil date and wall-clock time. No time zone, offset, or instant is implied.
@@ -105,6 +107,18 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
         while (count < 28 && text[count] != '\0') count++;
         return TryParse(text, count, result);
     }
+    public static bool TryParse(Span<readonly(char)> text, DateTime* result) nothrow
+    {
+        if (text.IsEmpty) return TryParse("", 0, result);
+        return TryParse(text.Data!, text.Length, result);
+    }
+
+    public static DateTime Parse(Span<readonly(char)> text)
+    {
+        if (text.IsEmpty) return Parse("", 0);
+        return Parse(text.Data!, text.Length);
+    }
+
     public static DateTime Parse(readonly(char)* text, nuint count)
     {
         DateTime result = new();
@@ -120,6 +134,16 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
 
     // Canonical date/time, no NUL: 19 bytes or 27 with a nonzero seven-digit fraction.
     // Output may overlap sufficiently backed receiver storage. Written must be separate.
+    public immutable bool TryFormat(Span<char> destination, ref nuint written) nothrow
+    {
+        if (destination.IsEmpty)
+        {
+            written = 0;
+            return false;
+        }
+        return this.TryFormat(destination.Data!, destination.Length, ref written);
+    }
+
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         Date day = date;

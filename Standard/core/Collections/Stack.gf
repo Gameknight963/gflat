@@ -32,6 +32,24 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
         result = storage.Pop();
         return true;
     }
+
+    internal immutable immutable(T)* CopySourceAt(nuint index)
+    {
+        if (index >= storage.Count) throw new Exception("Stack index out of range");
+        return &storage[storage.Count - 1 - index];
+    }
+
+    internal immutable bool CopyDestinationOverlaps(T* output, nuint length)
+    {
+        if (length == 0 || storage.Count == 0) return false;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        nuint start = (storage.AsImmutable().Data!).reinterpret<nuint>();
+        nuint target = output.reinterpret<nuint>();
+        if (target >= start) return (target - start) / stride < storage.Capacity;
+        return (start - target) / stride < length;
+    }
+
     internal immutable bool ContainsBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
     {
         for (nuint remaining = storage.Count; remaining != 0; remaining--)

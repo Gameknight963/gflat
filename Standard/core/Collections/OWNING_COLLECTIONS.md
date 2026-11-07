@@ -217,6 +217,9 @@ argument.
 
 ### Iteration order and views
 
+The optional [CopyTo extensions](../../../docs/QUEUE_STACK_COPY.md) copy queue
+elements front to back and stack elements top to bottom into initialized spans.
+
 Queue iteration is FIFO, and stack iteration is top-first. AsEnumerable captures
 the same storage and count. Keep the owner alive and structurally unchanged while
 using a view. Element edits stay visible, while structural mutation, moving, or

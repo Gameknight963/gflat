@@ -126,6 +126,25 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
         }
     }
 
+    internal immutable immutable(T)* CopySourceAt(nuint index)
+    {
+        if (index >= count) throw new Exception("Queue index out of range");
+        nuint remaining = capacity - head;
+        if (index < remaining) return data! + head + index;
+        return data! + index - remaining;
+    }
+
+    internal immutable bool CopyDestinationOverlaps(T* output, nuint length) nothrow
+    {
+        if (length == 0 || capacity == 0) return false;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        nuint start = (data!).reinterpret<nuint>();
+        nuint target = output.reinterpret<nuint>();
+        if (target >= start) return (target - start) / stride < capacity;
+        return (start - target) / stride < length;
+    }
+
     internal immutable bool ContainsBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
     {
         nuint position = head;

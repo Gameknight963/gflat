@@ -378,6 +378,9 @@ transferring its stored owner into an initialized output.
 higher removal priority. Equal-priority order is unstable. Keep priorities and
 comparison behavior consistent while stored:
 
+Use [EnqueueRange](../../../docs/PRIORITY_QUEUE_RANGE.md) to capture a batch
+and build an empty heap in linear comparison work.
+
 ```csharp
 using Standard;
 using Standard::Collections;

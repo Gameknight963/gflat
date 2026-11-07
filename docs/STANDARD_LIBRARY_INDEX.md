@@ -75,6 +75,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Vector binary search and bounds | [Searching sorted vectors](VECTOR_SORTED_SEARCH.md) |
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | Queue, stack, and priority-queue `Peek`, `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
+| Priority-queue `EnqueueRange` | [Enqueue batches with staged input](PRIORITY_QUEUE_RANGE.md) |
 | Deque `PeekFirst`, `PeekLast`, and try-peek helpers | [Copy deque endpoints](DEQUE_PEEK.md) |
 | `Deque<T>.RemoveRange` | [Removing a deque range](DEQUE_REMOVE_RANGE.md) |
 | Vector `FindIndex` ranges | [Searching with predicates](VECTOR_PREDICATE_RANGES.md) |

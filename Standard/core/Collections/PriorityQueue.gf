@@ -100,6 +100,60 @@ struct PriorityQueue<T>
         move pending at data + destination;
     }
 
+    internal void EnqueueStagedRange(Vector<T> staged)
+    {
+        if (staged.IsEmpty) return;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        nuint maximum = ((nuint)0 - 1) / stride;
+        if (staged.Count > maximum - storage.Count) throw new Exception("Priority queue count overflow");
+        Span<T> elements = staged.AsSpan();
+        T* data = elements.Data!;
+        bool builtEmptyHeap = storage.IsEmpty;
+        if (builtEmptyHeap)
+        {
+            nuint count = staged.Count;
+            nuint parent = count / 2;
+            while (parent != 0)
+            {
+                parent--;
+                nuint hole = parent;
+                while (hole < count / 2)
+                {
+                    nuint child = hole * 2 + 1;
+                    if (child + 1 < count && compare(data + child + 1, data + child) < 0) child++;
+                    if (compare(data + hole, data + child) <= 0) break;
+                    T temporary = move *(data + hole);
+                    move *(data + child) at data + hole;
+                    move temporary at data + child;
+                    hole = child;
+                }
+            }
+            if (storage.Capacity < staged.Count)
+            {
+                storage = move staged;
+                return;
+            }
+        }
+        // Reverse once so popping retains the staged order.
+        nuint left = 0;
+        nuint right = staged.Count;
+        while (left < right)
+        {
+            right--;
+            if (left == right) break;
+            T temporary = move *(data + left);
+            move *(data + right) at data + left;
+            move temporary at data + right;
+            left++;
+        }
+        while (!staged.IsEmpty)
+        {
+            if (builtEmptyHeap) storage.Add(staged.Pop());
+            else this.Enqueue(staged.Pop());
+        }
+    }
+
     public T Dequeue()
     {
         nuint count = storage.Count;

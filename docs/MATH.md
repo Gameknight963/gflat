@@ -61,6 +61,9 @@ Both `float` and `double` support the following `nothrow` methods:
 | Method | Behavior |
 | --- | --- |
 | `IsNaN`, `IsFinite` | Classify values, with finite including zeros and subnormals |
+| `IsInfinity`, `IsPositiveInfinity`, `IsNegativeInfinity` | Recognize either or a specific infinity |
+| `IsNormal`, `IsSubnormal` | Distinguish finite nonzero exponent classes |
+| `IsNegative`, `IsPositive` | Inspect the sign bit, including on zero and NaNs |
 | `Abs` | Clear the sign bit, including on zero and NaNs |
 | `CopySign(magnitude, sign)` | Replace the sign bit and preserve all other bits |
 | `Min`, `Max` | Select by numeric order with the NaN and zero rules below |
@@ -68,6 +71,9 @@ Both `float` and `double` support the following `nothrow` methods:
 | `Sqrt` | Compute square root |
 
 ### NaNs and signed zero
+
+See [floating-point classification](FLOATING_CLASSIFICATION.md) for predicates
+and the distinction between sign-bit checks and numeric comparisons.
 
 Min and Max return a NaN input. If both are NaN, the first is returned.
 For opposite signed zeroes, Min selects negative zero and Max positive zero.

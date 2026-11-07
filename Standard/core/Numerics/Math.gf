@@ -606,6 +606,27 @@ public static class Math
         uint bits = value.reinterpret<uint>();
         return (bits & (uint)2139095040) != (uint)2139095040;
     }
+    public static bool IsInfinity(float value) nothrow
+        => (value.reinterpret<uint>() & 0x7fffffffu) == 0x7f800000u;
+    public static bool IsPositiveInfinity(float value) nothrow
+        => value.reinterpret<uint>() == 0x7f800000u;
+    public static bool IsNegativeInfinity(float value) nothrow
+        => value.reinterpret<uint>() == 0xff800000u;
+    public static bool IsNegative(float value) nothrow
+        => (value.reinterpret<uint>() & 0x80000000u) != 0u;
+    public static bool IsPositive(float value) nothrow
+        => (value.reinterpret<uint>() & 0x80000000u) == 0u;
+    public static bool IsNormal(float value) nothrow
+    {
+        uint exponent = value.reinterpret<uint>() & 0x7f800000u;
+        return exponent != 0u && exponent != 0x7f800000u;
+    }
+    public static bool IsSubnormal(float value) nothrow
+    {
+        uint magnitude = value.reinterpret<uint>() & 0x7fffffffu;
+        return magnitude != 0u && magnitude < 0x00800000u;
+    }
+
     public static float Abs(float value) nothrow
     {
         uint bits = value.reinterpret<uint>() & (uint)2147483647;
@@ -728,6 +749,27 @@ public static class Math
         ulong bits = value.reinterpret<ulong>();
         return (bits & 9218868437227405312ul) != 9218868437227405312ul;
     }
+    public static bool IsInfinity(double value) nothrow
+        => (value.reinterpret<ulong>() & 0x7ffffffffffffffful) == 0x7ff0000000000000ul;
+    public static bool IsPositiveInfinity(double value) nothrow
+        => value.reinterpret<ulong>() == 0x7ff0000000000000ul;
+    public static bool IsNegativeInfinity(double value) nothrow
+        => value.reinterpret<ulong>() == 0xfff0000000000000ul;
+    public static bool IsNegative(double value) nothrow
+        => (value.reinterpret<ulong>() & 0x8000000000000000ul) != 0ul;
+    public static bool IsPositive(double value) nothrow
+        => (value.reinterpret<ulong>() & 0x8000000000000000ul) == 0ul;
+    public static bool IsNormal(double value) nothrow
+    {
+        ulong exponent = value.reinterpret<ulong>() & 0x7ff0000000000000ul;
+        return exponent != 0ul && exponent != 0x7ff0000000000000ul;
+    }
+    public static bool IsSubnormal(double value) nothrow
+    {
+        ulong magnitude = value.reinterpret<ulong>() & 0x7ffffffffffffffful;
+        return magnitude != 0ul && magnitude < 0x0010000000000000ul;
+    }
+
     public static double Abs(double value) nothrow
     {
         ulong bits = value.reinterpret<ulong>() & 9223372036854775807ul;

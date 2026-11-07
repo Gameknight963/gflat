@@ -81,6 +81,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Integer parsing](INTEGER_PARSING.md) |
 | `BigInteger` | [BigInteger](BIG_INTEGER.md) |
+| `Math` floating-point classification | [Classifying floating-point values](FLOATING_CLASSIFICATION.md) |
 | `Rational` | [Exact rational values](RATIONAL.md) |
 | `Interlocked` | [Atomic integer operations](INTERLOCKED.md) |
 | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md) |

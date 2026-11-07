@@ -30,6 +30,21 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     }
     private immutable long GetUtcTicks() nothrow => clock.Ticks - offsetTicks;
     public Standard::Time::DateTime DateTime { immutable get nothrow => clock; }
+    public Date Date { immutable get nothrow => clock.Date; }
+    public TimeOfDay TimeOfDay { immutable get nothrow => clock.TimeOfDay; }
+    public long Ticks { immutable get nothrow => clock.Ticks; }
+    public long UtcTicks { immutable get nothrow => this.GetUtcTicks(); }
+    public int Year { immutable get nothrow => clock.Year; }
+    public int Month { immutable get nothrow => clock.Month; }
+    public int Day { immutable get nothrow => clock.Day; }
+    public int DayOfYear { immutable get nothrow => clock.DayOfYear; }
+    public DayOfWeek DayOfWeek { immutable get nothrow => clock.DayOfWeek; }
+    public int Hour { immutable get nothrow => clock.Hour; }
+    public int Minute { immutable get nothrow => clock.Minute; }
+    public int Second { immutable get nothrow => clock.Second; }
+    public int Millisecond { immutable get nothrow => clock.Millisecond; }
+    public int Microsecond { immutable get nothrow => clock.Microsecond; }
+    public int Nanosecond { immutable get nothrow => clock.Nanosecond; }
     public Standard::Time::DateTime UtcDateTime { immutable get => Standard::Time::DateTime::FromTicks(this.GetUtcTicks()); }
     public TimeSpan Offset { immutable get nothrow => TimeSpan::FromTicks(offsetTicks); }
 

@@ -7,14 +7,15 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
     private static const long TicksPerDay = 864000000000l;
 
     public TimeOfDay() nothrow { ticks = 0l; }
-    public TimeOfDay(int hour, int minute, int second = 0, int millisecond = 0)
+    public TimeOfDay(int hour, int minute, int second = 0, int millisecond = 0, int microsecond = 0)
     {
         ticks = 0l;
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59
-            || second < 0 || second > 59 || millisecond < 0 || millisecond > 999)
+            || second < 0 || second > 59 || millisecond < 0 || millisecond > 999
+            || microsecond < 0 || microsecond > 999)
             throw new Exception("TimeOfDay component is out of range");
         ticks = (long)hour * 36000000000l + (long)minute * 600000000l
-            + (long)second * 10000000l + (long)millisecond * 10000l;
+            + (long)second * 10000000l + (long)millisecond * 10000l + (long)microsecond * 10l;
     }
     public static TimeOfDay FromTicks(long value)
     {
@@ -26,6 +27,18 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
     public int Minute { immutable get nothrow => (int)(ticks / 600000000l % 60l); }
     public int Second { immutable get nothrow => (int)(ticks / 10000000l % 60l); }
     public int Millisecond { immutable get nothrow => (int)(ticks / 10000l % 1000l); }
+    public int Microsecond { immutable get nothrow => (int)(ticks / 10l % 1000l); }
+    public int Nanosecond { immutable get nothrow => (int)(ticks % 10l * 100l); }
+
+    public static TimeOfDay FromTimeSpan(TimeSpan value) => FromTicks(value.Ticks);
+    public immutable TimeSpan ToTimeSpan() nothrow => TimeSpan::FromTicks(ticks);
+
+    public immutable TimeSpan Subtract(TimeOfDay other) nothrow
+    {
+        long difference = ticks - other.ticks;
+        if (difference < 0l) difference += TicksPerDay;
+        return TimeSpan::FromTicks(difference);
+    }
 
     public immutable TimeOfDay Add(TimeSpan value) nothrow
     {

@@ -13,6 +13,17 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
 
     public Date Date { immutable get nothrow => date; }
     public TimeOfDay TimeOfDay { immutable get nothrow => time; }
+    public int Year { immutable get nothrow => date.Year; }
+    public int Month { immutable get nothrow => date.Month; }
+    public int Day { immutable get nothrow => date.Day; }
+    public int DayOfYear { immutable get nothrow => date.DayOfYear; }
+    public DayOfWeek DayOfWeek { immutable get nothrow => date.DayOfWeek; }
+    public int Hour { immutable get nothrow => time.Hour; }
+    public int Minute { immutable get nothrow => time.Minute; }
+    public int Second { immutable get nothrow => time.Second; }
+    public int Millisecond { immutable get nothrow => time.Millisecond; }
+    public int Microsecond { immutable get nothrow => time.Microsecond; }
+    public int Nanosecond { immutable get nothrow => time.Nanosecond; }
     // Ordinal ticks since 0001-01-01 at midnight in this civil calendar.
     public long Ticks { immutable get nothrow => (long)date.DayNumber * TicksPerDay + time.Ticks; }
 

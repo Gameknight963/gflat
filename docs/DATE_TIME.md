@@ -4,6 +4,9 @@
 It describes a calendar date and clock reading. Use [DateTimeOffset](DATE_TIME_OFFSET.md)
 when the value must identify a UTC instant.
 
+Direct calendar and clock properties such as `Year`, `Hour`, and `Microsecond`
+are covered in [date and clock components](TEMPORAL_COMPONENTS.md).
+
 ```csharp
 using Standard::Text;
 using Standard;

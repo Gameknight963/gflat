@@ -25,9 +25,13 @@ int main()
 
 ## Construction and arithmetic
 
-The constructor takes hours, minutes, optional seconds, and optional
-milliseconds. Their ranges are 0â€“23, 0â€“59, 0â€“59, and 0â€“999.
+The constructor takes hour and minute, with optional second, millisecond,
+and microsecond components. Their ranges are `0..23`, `0..59`, `0..59`,
+`0..999`, and `0..999` respectively.
 `FromTicks(long)` accepts `0..863999999999`. Invalid components throw.
+
+See [date and clock components](TEMPORAL_COMPONENTS.md) for submillisecond
+properties, duration conversions, and circular-clock subtraction.
 
 Properties expose Ticks, Hour, Minute, Second, and Millisecond. Add accepts a
 signed TimeSpan and wraps within the day. `Add(value, ref wrappedDays)` also

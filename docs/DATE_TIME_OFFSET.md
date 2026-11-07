@@ -4,6 +4,9 @@
 offset. Both wall time and UTC must fit years 1 through 9999. The offset is a
 whole number of minutes between -14:00 and +14:00.
 
+See [date and clock components](TEMPORAL_COMPONENTS.md) for direct wall-clock
+properties, `Ticks`, and `UtcTicks`.
+
 ```csharp
 using Standard;
 using Standard::Time;

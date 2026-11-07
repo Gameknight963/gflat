@@ -232,3 +232,5 @@ See [Formatting selected version fields](VERSION_FORMATTING.md) for field counts
 See [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) for cursor-preserving WriteTo.
 
 See [Splitting on an exact byte pattern](TEXT_PATTERN_SPLIT.md) for multi-byte separators.
+
+See [Choosing a rounding mode](MIDPOINT_ROUNDING.md) for midpoint and directed rounding.

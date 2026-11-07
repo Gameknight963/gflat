@@ -1,5 +1,14 @@
 namespace Standard::Numerics;
 
+public enum MidpointRounding
+{
+    ToEven,
+    AwayFromZero,
+    ToZero,
+    ToNegativeInfinity,
+    ToPositiveInfinity
+}
+
 // Scalar arithmetic helpers, without direct libc calls. Checked integer
 // operations require the ordinary exception/allocation support.
 public static class Math
@@ -965,5 +974,29 @@ public static class Math
         if (left > right) return a;
         if (left < right) return b;
         return Max(a, b);
+    }
+
+    public static float Round(float value, MidpointRounding mode)
+    {
+        if (mode == MidpointRounding::ToEven) return Round(value);
+        if (mode == MidpointRounding::ToZero) return Truncate(value);
+        if (mode == MidpointRounding::ToNegativeInfinity) return Floor(value);
+        if (mode == MidpointRounding::ToPositiveInfinity) return Ceiling(value);
+        if (mode != MidpointRounding::AwayFromZero) throw new Exception("Invalid midpoint rounding mode");
+        float whole = Truncate(value);
+        if (Abs(value - whole) >= 0.5f) return whole + CopySign(1.0f, value);
+        return whole;
+    }
+
+    public static double Round(double value, MidpointRounding mode)
+    {
+        if (mode == MidpointRounding::ToEven) return Round(value);
+        if (mode == MidpointRounding::ToZero) return Truncate(value);
+        if (mode == MidpointRounding::ToNegativeInfinity) return Floor(value);
+        if (mode == MidpointRounding::ToPositiveInfinity) return Ceiling(value);
+        if (mode != MidpointRounding::AwayFromZero) throw new Exception("Invalid midpoint rounding mode");
+        double whole = Truncate(value);
+        if (Abs(value - whole) >= 0.5d) return whole + CopySign(1.0d, value);
+        return whole;
     }
 }

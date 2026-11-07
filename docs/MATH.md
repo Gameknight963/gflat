@@ -133,3 +133,5 @@ NoStdLib builds must supply their exception and Memory contracts, including
 when only a floating-point helper is used.
 
 See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Clamp and magnitude selection.
+
+See [Choosing a rounding mode](MIDPOINT_ROUNDING.md) for midpoint and directed rounding.

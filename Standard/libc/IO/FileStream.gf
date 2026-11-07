@@ -121,6 +121,23 @@ public struct FileStream : ITextWriter, IByteReader
         return read;
     }
 
+    public nuint Read(byte* data, nuint count)
+        => this.Read(data.reinterpret<char*>(), count);
+
+    public void ReadExactly(byte* data, nuint count)
+        => this.ReadExactly(data.reinterpret<char*>(), count);
+
+    public void Write(readonly(byte)* data, nuint count)
+        => this.Write(data.reinterpret<readonly(char)*>(), count);
+
+    public void WriteByte(byte value) => this.Write(&value, 1);
+
+    public nuint CopyTo(FileStream* destination, byte* buffer, nuint capacity)
+        => this.CopyTo(destination, buffer.reinterpret<char*>(), capacity);
+
+    public nuint CopyTo(ITextWriter* destination, byte* buffer, nuint capacity)
+        => this.CopyTo(destination, buffer.reinterpret<char*>(), capacity);
+
     // Returns a byte from 0 through 255, or -1 at EOF. IO errors throw IOException.
     public int ReadByte()
     {

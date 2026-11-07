@@ -137,8 +137,8 @@ public sealed class FileExistenceTests(ITestOutputHelper output)
     [InlineData(2)]
     public void DirectoryQueriesWorkWithAnExplicitDirectorySourceClosure(int optimization)
     {
-        string[] sources = ["core/IO/IOException.gf", "libc/IO/Directory.gf"];
-        var files = sources.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))));
+        var files = StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/IO/IOException.gf", "libc/IO/Directory.gf"));
         string ir = Compiler.Emit(files.Append(new SourceFile("directory-only.gf", """
             using Standard::IO;
 

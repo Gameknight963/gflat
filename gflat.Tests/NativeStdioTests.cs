@@ -182,4 +182,32 @@ public sealed class NativeStdioTests
         Assert.NotEqual(c, NativeRuntime.ObjectCacheKey("clang-18", "Stdio", "def", false, false, []));
         Assert.NotEqual(c, NativeRuntime.ObjectCacheKey("clang-18", "Stdio", "abc", false, false, ["-DPROFILE=1"]));
     }
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CurrentDirectoryBridgeUsesCallerBuffersWithTheCOnlyHostProfile(int optimization)
+    {
+        string ir = Compiler.Emit("""
+            extern "C" int __gflat_stdio_get_current_directory(char*? buffer, nuint capacity) nothrow;
+            extern "C" int __gflat_stdio_set_current_directory(readonly(char)* path) nothrow;
+            int main() nothrow
+            {
+                char[4096] before;
+                char[4096] after;
+                char[1] shortBuffer;
+                if (__gflat_stdio_get_current_directory(before, 4096) != 1) return 1;
+                if (__gflat_stdio_get_current_directory(shortBuffer, 1) != -1) return 2;
+                if (__gflat_stdio_get_current_directory(null, 0) != 0) return 3;
+                if (__gflat_stdio_set_current_directory(".") != 0) return 4;
+                if (__gflat_stdio_get_current_directory(after, 4096) != 1) return 5;
+                for (nuint i = 0; before[i] != '\0'; i++)
+                    if (before[i] != after[i]) return 6;
+                if (__gflat_stdio_set_current_directory(before) != 0) return 7;
+                return 0;
+            }
+            """, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
+        Assert.Equal((false, true), NativeToolchain.RequiredNativeRuntimes(ir));
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
+    }
+
 }

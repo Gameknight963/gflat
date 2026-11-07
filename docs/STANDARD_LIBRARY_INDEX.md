@@ -253,7 +253,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Console redirection | [`IsInputRedirected`, `IsOutputRedirected`, `IsErrorRedirected`](HOST_RUNTIME.md#stream-redirection) |
 | Formatted console output | [Primitive values and borrowed `IFormattable` values](CONSOLE_FORMATTING.md) |
 | Managed console output | [Managed objects and temporary references](CONSOLE_MANAGED_FORMATTING.md) |
-| Files | `File`, `Directory`, `FileStream`, `SeekOrigin`, `FileLines`, `FileLineSequence`, `FileBinary`, [`FileHash`](FILE_HASH.md), [`FileVarInt`](FILE_VARINT.md) |
+| Files | `File`, `Directory` ([current directory](CURRENT_DIRECTORY.md)), `FileStream`, `SeekOrigin`, `FileLines`, `FileLineSequence`, `FileBinary`, [`FileHash`](FILE_HASH.md), [`FileVarInt`](FILE_VARINT.md) |
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |
 | Exceptions | Default unhandled exception termination |

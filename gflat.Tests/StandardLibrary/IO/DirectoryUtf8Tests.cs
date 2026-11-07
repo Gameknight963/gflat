@@ -22,6 +22,7 @@ public sealed class DirectoryUtf8Tests(ITestOutputHelper output)
             File.WriteAllBytes(regular, original);
             string source = $$"""
                 using Standard::IO;
+                using Standard::Text;
 
                 // Windows SDK ucrt/locale.h defines LC_CTYPE as 2.
                 extern "C" char*? setlocale(int category, readonly(char)* locale) nothrow;
@@ -33,6 +34,11 @@ public sealed class DirectoryUtf8Tests(ITestOutputHelper output)
                         Directory::CreateDirectory(path);
                         Directory::CreateDirectory(path);
                         if (!Directory::Exists(path)) return 2;
+                        String initial = Directory::GetCurrentDirectory();
+                        Directory::SetCurrentDirectory(path);
+                        String current = Directory::GetCurrentDirectory();
+                        if (!current.Equals(path)) return 7;
+                        Directory::SetCurrentDirectory(initial.Data);
                         try { Directory::CreateDirectory(regular); return 3; } catch (IOException* error) {}
                     } else {
                         Directory::Remove(path);
@@ -42,9 +48,8 @@ public sealed class DirectoryUtf8Tests(ITestOutputHelper output)
                     return 0;
                 }
                 """;
-            string[] selected = ["core/IO/IOException.gf", "libc/IO/Directory.gf"];
-            var sources = selected.Select(path => new SourceFile(path,
-                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", path))))
+            var sources = StandardTestSources.Combine(StandardTestSources.Values,
+                StandardTestSources.Load("core/IO/IOException.gf", "libc/IO/Directory.gf"))
                 .Append(new SourceFile("directory-utf8.gf", source));
             string ir = Path.Combine(directory, "program.ll"), executable = Path.Combine(directory, "program.exe");
             File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));

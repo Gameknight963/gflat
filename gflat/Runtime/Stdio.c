@@ -4,6 +4,7 @@
 #endif
 
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -97,6 +98,26 @@ int __gflat_stdio_set_length(void* stream, int64_t length) {
     off_t native_length = (off_t)length;
     if ((int64_t)native_length != length) { errno = EOVERFLOW; return -1; }
     return ftruncate(fileno((FILE*)stream), native_length);
+#endif
+}
+
+// 1 is success, -1 requests a larger caller-owned buffer, 0 is an IO error.
+int __gflat_stdio_get_current_directory(char* buffer, size_t capacity) {
+    if (buffer == NULL || capacity == 0) { errno = EINVAL; return 0; }
+#ifdef _WIN32
+    int size = capacity > INT_MAX ? INT_MAX : (int)capacity;
+    if (_getcwd(buffer, size) != NULL) return 1;
+#else
+    if (getcwd(buffer, capacity) != NULL) return 1;
+#endif
+    return errno == ERANGE ? -1 : 0;
+}
+
+int __gflat_stdio_set_current_directory(const char* path) {
+#ifdef _WIN32
+    return _chdir(path);
+#else
+    return chdir(path);
 #endif
 }
 

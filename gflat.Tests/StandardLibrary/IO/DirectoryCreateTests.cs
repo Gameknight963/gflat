@@ -215,8 +215,8 @@ public sealed class DirectoryCreateTests(ITestOutputHelper output)
 
     private static string Compile(string directory, string code, int optimization)
     {
-        string[] sources = ["core/IO/IOException.gf", "libc/IO/Directory.gf"];
-        var files = sources.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
+        var files = StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/IO/IOException.gf", "libc/IO/Directory.gf"))
             .Append(new SourceFile("directory-create.gf", code));
         string ir = Path.Combine(directory, "program.ll"), executable = Path.Combine(directory, "program.exe");
         File.WriteAllText(ir, Compiler.Emit(files, options: new() { InternalizeFunctions = true }));

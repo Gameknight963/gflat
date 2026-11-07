@@ -1,7 +1,38 @@
+using Standard::Text;
+
 namespace Standard::IO;
 
 public static class Directory
 {
+    public static String GetCurrentDirectory()
+    {
+        String result = new();
+        nuint size = 64;
+        while (true)
+        {
+            result.Resize(size);
+            int status = directory_path_detail::__gflat_stdio_get_current_directory((char*)result.Data, size + 1);
+            if (status == 1)
+            {
+                nuint length = 0;
+                while (length < size && result[length] != '\0') length++;
+                result.Resize(length);
+                return move result;
+            }
+            if (status != -1) throw new IOException("Current directory query failed");
+            nuint maximum = (nuint)0 - (nuint)2;
+            if (size > maximum / 2) throw new IOException("Current directory path is too long");
+            size *= 2;
+        }
+    }
+
+    public static void SetCurrentDirectory(readonly(char)* path)
+    {
+        if (path[0] == '\0') throw new IOException("Directory path is empty");
+        if (directory_path_detail::__gflat_stdio_set_current_directory(path) != 0)
+            throw new IOException("Current directory change failed");
+    }
+
     // Follows links. Missing paths, other kinds, and metadata failures return false.
     public static bool Exists(readonly(char)* path) nothrow
     {
@@ -29,6 +60,8 @@ public static class Directory
 
 namespace directory_path_detail
 {
+    private extern "C" int __gflat_stdio_get_current_directory(char* buffer, nuint capacity) nothrow;
+    private extern "C" int __gflat_stdio_set_current_directory(readonly(char)* path) nothrow;
     private extern "C" int __gflat_stdio_path_kind(readonly(char)* path) nothrow;
     private extern "C" int __gflat_stdio_make_directory(readonly(char)* path) nothrow;
     private extern "C" int __gflat_stdio_remove_directory(readonly(char)* path) nothrow;

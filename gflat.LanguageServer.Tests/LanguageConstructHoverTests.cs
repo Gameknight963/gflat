@@ -22,6 +22,11 @@ public sealed class LanguageConstructHoverTests
     [InlineData("void F() { if (true) return; }", "if", "condition is true")]
     [InlineData("#if 0\nignored\n#endif\nint main() => 0;", "if", "preprocessor condition")]
     [InlineData("void F() { static if (true) {} }", "static", "compile time")]
+    [InlineData("class Sample { private int value; }", "private", "declaring type")]
+    [InlineData("class Sample { protected int value; }", "protected", "derived types")]
+    [InlineData("class Sample { public int value; }", "public", "accessible")]
+    [InlineData("class Sample { internal int value; }", "internal", "compilation")]
+    [InlineData("class Sample { public finalizer ~Sample() {} }", "finalizer", "ordinary destructor")]
     public void ConstructExplanationsAreOptIn(string code, string word, string explanation)
     {
         var source = new SourceFile(Path.GetFullPath("learning-hovers.gf"), code);

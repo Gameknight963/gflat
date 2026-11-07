@@ -20,8 +20,14 @@ public void WriteHex(ITextWriter* output, readonly(char)* data, nuint count, boo
     }
 }
 
+public void WriteHex(ITextWriter* output, readonly(byte)* data, nuint count, bool uppercase = true)
+    => Standard::Encoding::WriteHex(output, data.reinterpret<readonly(char)*>(), count, uppercase);
+
 extension ITextWriter
 {
     public void WriteHex(readonly(char)* data, nuint count, bool uppercase = true)
     => Standard::Encoding::WriteHex(this, data, count, uppercase);
+
+    public void WriteHex(readonly(byte)* data, nuint count, bool uppercase = true)
+        => Standard::Encoding::WriteHex(this, data, count, uppercase);
 }

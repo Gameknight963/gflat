@@ -65,6 +65,9 @@ public struct Base32Decoder : ITextWriter
         failed = false;
     }
 
+    public void Write(readonly(byte)* data, nuint count)
+        => this.Write(data.reinterpret<readonly(char)*>(), count);
+
     // Rejects an incomplete final group. Repeated successful completion is allowed.
     // A failure permanently prevents further use.
     public void Complete()

@@ -112,3 +112,6 @@ overloads of standard and URL-safe Base64.
 
 See [Base32 and percent-encoded byte buffers](ENCODED_BYTE_BUFFERS.md) for their
 direct byte-pointer overloads.
+
+See [streaming codec byte input](STREAMING_CODEC_BYTES.md) for byte-pointer writes
+to encoders, decoders, and hexadecimal writers.

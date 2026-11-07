@@ -57,6 +57,9 @@ public struct HexDecoder : ITextWriter
         failed = false;
     }
 
+    public void Write(readonly(byte)* data, nuint count)
+        => this.Write(data.reinterpret<readonly(char)*>(), count);
+
     // Rejects an unmatched final hex digit.
     public void Complete()
     {

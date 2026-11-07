@@ -65,6 +65,9 @@ public struct Base64Decoder : ITextWriter
         failed = false;
     }
 
+    public void Write(readonly(byte)* data, nuint count)
+        => this.Write(data.reinterpret<readonly(char)*>(), count);
+
     public void Complete()
     {
         this.CheckUsable();

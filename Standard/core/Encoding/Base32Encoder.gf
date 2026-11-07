@@ -80,6 +80,9 @@ public struct Base32Encoder : ITextWriter
         failed = false;
     }
 
+    public void Write(readonly(byte)* data, nuint count)
+        => this.Write(data.reinterpret<readonly(char)*>(), count);
+
     // Writes padding for the pending tail. Repeated successful completion is allowed.
     // A sink failure permanently prevents further use.
     public void Complete()

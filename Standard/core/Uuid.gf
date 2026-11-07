@@ -10,6 +10,8 @@ public struct Uuid : IEquatable<Uuid>, IComparable<Uuid>, IHashable, IFormattabl
     public Uuid(ulong upper, ulong lower) nothrow { high = upper; low = lower; }
     public ulong High { immutable get nothrow => high; }
     public ulong Low { immutable get nothrow => low; }
+    public int Version { immutable get nothrow => (int)((high >> 12) & 15ul); }
+    public int Variant { immutable get nothrow => (int)(low >> 60); }
     public bool IsNil { immutable get nothrow => high == 0ul && low == 0ul; }
 
     // Canonical/network bytes: High first, then Low, most significant byte first.

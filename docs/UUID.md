@@ -107,3 +107,5 @@ platform library or supplies its own callback.
 Sources: `core/Uuid.gf`, `core/UuidGenerator.gf`
 
 See [Explicit UUID text formats](UUID_FORMATS.md) for compact and wrapped forms.
+
+See [UUID metadata](UUID_METADATA.md) for the `Version` and raw `Variant` fields.

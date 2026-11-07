@@ -159,6 +159,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 
 | APIs | Guide |
 | --- | --- |
+| UUID `Version`, `Variant` | [Inspecting UUID metadata](UUID_METADATA.md) |
 | `Uuid`, `UuidGenerator` | [UUID values](UUID.md) |
 | UUID `ParseExact`, `ToString(format)` | [Explicit UUID text formats](UUID_FORMATS.md) |
 | `Version` | [Dotted numeric versions](VERSION.md) |

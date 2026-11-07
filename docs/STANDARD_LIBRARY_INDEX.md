@@ -68,6 +68,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `SkipLast(count)` | [Streaming without a trailing suffix](QUERY_SKIP_LAST.md) |
 | `Append`, `Prepend` | [Adding a query endpoint](QUERY_ENDPOINT.md) |
 | `CountBy` | [Count sequence elements by key](QUERY_COUNT_BY.md) |
+| `AggregateBy` | [Aggregate values by key](QUERY_AGGREGATE_BY.md) |
 | `ToHashMap` | [Materialize a query as a hash map](QUERY_TO_HASH_MAP.md) |
 | `ToLookup` | [Materialize ordered groups](QUERY_LOOKUP.md) |
 | `DefaultIfEmpty(value)` | [Default value for an empty query](QUERY_DEFAULT_IF_EMPTY.md) |

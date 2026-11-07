@@ -42,6 +42,7 @@ on later reads.
 - Combine records by key with [UnionBy, ExceptBy, and IntersectBy](../../../docs/QUERY_SET_OPERATIONS_BY.md)
 - Search with `Any`, `All`, `Contains`, `First`, `Last`, and `ElementAt`
 - Summarize with `Count`, `Sum`, `Aggregate`, `Min`, and `Max`
+- Summarize groups with `CountBy` and [AggregateBy](../../../docs/QUERY_AGGREGATE_BY.md)
 - Order with `Order`, `Reverse`, `TakeLast`, and `SkipLast`
 - Collect results with `ToVector`, `ToHashSet`, `ToHashMap`, and `ToLookup`
 

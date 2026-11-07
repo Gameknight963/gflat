@@ -101,6 +101,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `ToVector()` | Copy values into a new owning vector. |
 | `ToHashSet()` | Copy distinct values into a new owning hash set. |
 | `CountBy(selector)` | Materialize an owning hash map of selected-key counts. |
+| `AggregateBy(selector, seed, function)` | Materialize one accumulator per key, using a seed value or seed factory. See [grouped aggregation](QUERY_AGGREGATE_BY.md). |
 | `ToHashMap(keySelector)` / `ToHashMap(keySelector, valueSelector)` | Materialize an owning map. Reject duplicate selected keys. |
 | `ToLookup(keySelector)` / `ToLookup(keySelector, valueSelector)` | Materialize an owning map of vectors, preserving encounter order within each group. |
 

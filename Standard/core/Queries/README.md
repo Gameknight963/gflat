@@ -41,6 +41,7 @@ on later reads.
 - Flatten projected sequences with [SelectMany](../../../docs/QUERY_SELECT_MANY.md)
 - Join sequences by key with [Join](../../../docs/QUERY_JOIN.md)
 - Retain each outer value and its shared matches with [GroupJoin](../../../docs/QUERY_GROUP_JOIN.md)
+- Group values in first-key order with [GroupBy](../../../docs/QUERY_GROUP_BY.md)
 - Retain positions with [Index](../../../docs/QUERY_INDEX.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`

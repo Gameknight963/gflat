@@ -108,6 +108,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `ToLookup` | [Materialize ordered groups](QUERY_LOOKUP.md) |
 | Query `Join` | [Joining queries by key](QUERY_JOIN.md) |
 | Query `GroupJoin`, `Group<T>` | [Grouping matches for each outer value](QUERY_GROUP_JOIN.md) |
+| Query `GroupBy`, `Grouping<K, T>` | [Grouping a query by key](QUERY_GROUP_BY.md) |
 | `DefaultIfEmpty(value)` | [Default value for an empty query](QUERY_DEFAULT_IF_EMPTY.md) |
 | `Sum()` / `Sum(selector)` | [Integer, floating, and projected sums](QUERY_SUM.md) |
 | `Average()` / `Average(selector)` | [Sequence averages](QUERY_AVERAGE.md) |

@@ -9,6 +9,10 @@ their IEEE representation bits:
 | `UInt32BitsToFloat(uint)` | `float` with those bits |
 | `DoubleToUInt64Bits(double)` | 64 representation bits as `ulong` |
 | `UInt64BitsToDouble(ulong)` | `double` with those bits |
+| `FloatToInt32Bits(float)` | 32 representation bits as signed `int` |
+| `Int32BitsToFloat(int)` | `float` with those bits |
+| `DoubleToInt64Bits(double)` | 64 representation bits as signed `long` |
+| `Int64BitsToDouble(long)` | `double` with those bits |
 
 ```csharp
 using Standard::Binary;
@@ -26,3 +30,6 @@ byte order. Freestanding Windows builds need the usual
 [`_fltused` startup marker](FREESTANDING_CORE.md#windows-floating-point-marker).
 
 Source: `core/Binary/BitConverter.gf`
+
+`IsLittleEndian` reports the native byte order of the running program. See
+[signed representations and native byte order](SIGNED_BIT_CONVERTER.md).

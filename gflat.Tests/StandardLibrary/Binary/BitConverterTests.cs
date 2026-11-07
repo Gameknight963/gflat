@@ -4,6 +4,9 @@ namespace gflat.Tests.Std.Binary;
 
 public class BitConverterTests
 {
+    [Fact]
+    public void SignedGuideCompiles() => StandardLibraryGuideTests.CheckProgram("SIGNED_BIT_CONVERTER.md", 0);
+
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
@@ -21,11 +24,19 @@ public class BitConverterTests
         ulong[] doubles = doubleEdges.Concat(Enumerable.Range(0, 256).Select(i => BinaryPrimitives.ReadUInt64LittleEndian(randomBytes.AsSpan(i * 8, 8)))).ToArray();
         uint[] floatReference = floats.Select(bits => BitConverter.SingleToUInt32Bits(BitConverter.UInt32BitsToSingle(bits))).ToArray();
         ulong[] doubleReference = doubles.Select(bits => BitConverter.DoubleToUInt64Bits(BitConverter.UInt64BitsToDouble(bits))).ToArray();
+        uint[] signedFloatReference = floats.Select(bits => unchecked((uint)BitConverter.SingleToInt32Bits(
+            BitConverter.Int32BitsToSingle(unchecked((int)bits))))).ToArray();
+        ulong[] signedDoubleReference = doubles.Select(bits => unchecked((ulong)BitConverter.DoubleToInt64Bits(
+            BitConverter.Int64BitsToDouble(unchecked((long)bits))))).ToArray();
+        Assert.Equal(floats, signedFloatReference);
+        Assert.Equal(doubles, signedDoubleReference);
         Assert.Equal(floats, floatReference);
         Assert.Equal(doubles, doubleReference);
         string code = $$"""
-            using Standard; using Standard::Binary;
+            using Standard::Binary;
+
             int main() {
+                if (BitConverter::IsLittleEndian != {{BitConverter.IsLittleEndian.ToString().ToLowerInvariant()}}) return 7;
                 uint[{{floats.Length}}] singles = [{{string.Join(",", floats.Select(bits => bits + "u"))}}];
                 uint[{{floatReference.Length}}] expectedSingles = [{{string.Join(",", floatReference.Select(bits => bits + "u"))}}];
                 ulong[{{doubles.Length}}] doubles = [{{string.Join(",", doubles.Select(bits => bits + "ul"))}}];
@@ -36,6 +47,10 @@ public class BitConverterTests
                     float reference = (singles[i]).reinterpret<float>();
                     if (BitConverter::FloatToUInt32Bits(reference) != expectedSingles[i]) return 2;
                     if (BitConverter::FloatToUInt32Bits(decoded) != singles[i]) return 3;
+                    int signedBits = BitConverter::FloatToInt32Bits(reference);
+                    if (signedBits != (int)expectedSingles[i]) return 8;
+                    float signedDecoded = BitConverter::Int32BitsToFloat((int)singles[i]);
+                    if ((signedDecoded).reinterpret<uint>() != expectedSingles[i]) return 9;
                 }
                 for (int i = 0; i < {{doubles.Length}}; i++) {
                     double decoded = BitConverter::UInt64BitsToDouble(doubles[i]);
@@ -43,6 +58,10 @@ public class BitConverterTests
                     double reference = (doubles[i]).reinterpret<double>();
                     if (BitConverter::DoubleToUInt64Bits(reference) != expectedDoubles[i]) return 5;
                     if (BitConverter::DoubleToUInt64Bits(decoded) != doubles[i]) return 6;
+                    long signedBits = BitConverter::DoubleToInt64Bits(reference);
+                    if (signedBits != (long)expectedDoubles[i]) return 10;
+                    double signedDecoded = BitConverter::Int64BitsToDouble((long)doubles[i]);
+                    if ((signedDecoded).reinterpret<ulong>() != expectedDoubles[i]) return 11;
                 }
                 return 0;
             }

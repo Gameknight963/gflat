@@ -151,6 +151,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | BigInteger `GetByteCount`, `TryWriteBytes` | [Writing into an existing byte buffer](BIG_INTEGER_WRITE_BYTES.md) |
 | BigInteger byte conversion | [BigInteger byte conversion](BIG_INTEGER_BYTES.md) |
 | BigInteger `IsZero`, `IsOne`, `IsEven` | [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) |
+| BigInteger `GetBitLength`, `IsPowerOfTwo` | [Inspect an integer's binary size](BIG_INTEGER_BIT_METADATA.md) |
 | BigInteger `Min`, `Max`, `Clamp`, `CopySign` | [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) |
 | BigInteger `MinMagnitude`, `MaxMagnitude` | [Select integer values by magnitude](BIG_INTEGER_MAGNITUDE_BOUNDS.md) |
 | `BitOperations::ReverseEndianness` | [Reversing integer byte order](INTEGER_ENDIANNESS.md) |

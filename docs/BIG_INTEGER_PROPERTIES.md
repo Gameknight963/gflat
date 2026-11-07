@@ -22,3 +22,7 @@ int main()
 Zero is even. Parity is independent of sign, so negative even integers also
 report `IsEven`. These properties accept immutable and readonly receivers.
 `Sign` remains available for distinguishing negative, zero, and positive values.
+
+For binary size and positive powers of two, see
+[`GetBitLength` and `IsPowerOfTwo`](BIG_INTEGER_BIT_METADATA.md). Large values
+need scratch storage for those operations.

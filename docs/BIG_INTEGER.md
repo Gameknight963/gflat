@@ -260,6 +260,9 @@ See [BigInteger byte conversion](BIG_INTEGER_BYTES.md) for signed, unsigned, and
 
 See [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) for allocation-free zero, one, and parity checks.
 
+See [binary size and powers of two](BIG_INTEGER_BIT_METADATA.md) for GetBitLength
+and IsPowerOfTwo, including their scratch-storage requirements for large values.
+
 See [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) for Min, Max, Clamp, and CopySign.
 
 See [checked integer conversions](BIG_INTEGER_NARROW_CONVERSIONS.md) for smaller

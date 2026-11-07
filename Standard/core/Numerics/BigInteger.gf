@@ -214,6 +214,75 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return count;
     }
 
+    // Shortest two's-complement length, excluding the sign bit.
+    public immutable long GetBitLength()
+    {
+        ulong magnitude = 0ul;
+        if (this.TryMagnitude(18446744073709551615ul, ref magnitude))
+        {
+            if (sign < 0) magnitude--;
+            long bits = 0l;
+            while (magnitude != 0ul)
+            {
+                bits++;
+                magnitude = magnitude >> 1;
+            }
+            return bits;
+        }
+        Vector<uint> working = this.ByteWorkingCopy();
+        if (sign < 0)
+        {
+            nuint i = 0;
+            while (working[i] == 0u)
+            {
+                working[i] = (uint)(Radix - 1ul);
+                i++;
+            }
+            working[i]--;
+            if (working[working.Count - 1] == 0u) working.Truncate(working.Count - 1);
+        }
+        long result = 0l;
+        while (working.Count != 0)
+        {
+            uint top = TakeByte(&working);
+            int bits = 8;
+            if (working.Count == 0)
+            {
+                bits = 0;
+                while (top != 0u)
+                {
+                    bits++;
+                    top = top >> 1;
+                }
+            }
+            if (result > 9223372036854775807l - (long)bits)
+                throw new Exception("BigInteger bit length overflow");
+            result += (long)bits;
+        }
+        return result;
+    }
+
+    public bool IsPowerOfTwo
+    {
+        immutable get
+        {
+            if (sign <= 0) return false;
+            ulong magnitude = 0ul;
+            if (this.TryMagnitude(18446744073709551615ul, ref magnitude))
+                return (magnitude & (magnitude - 1ul)) == 0ul;
+            Vector<uint> working = this.ByteWorkingCopy();
+            bool seen = false;
+            while (working.Count != 0)
+            {
+                uint value = TakeByte(&working);
+                if (value == 0u) continue;
+                if (seen || (value & (value - 1u)) != 0u) return false;
+                seen = true;
+            }
+            return true;
+        }
+    }
+
     public immutable nuint GetByteCount(bool isUnsigned = false)
     {
         if (isUnsigned && sign < 0) throw new Exception("Negative BigInteger has no unsigned byte representation");

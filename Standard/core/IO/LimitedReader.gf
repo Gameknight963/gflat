@@ -15,6 +15,9 @@ public struct LimitedReader : IByteReader
         failed = false;
     }
 
+    public nuint Read(byte* data, nuint count)
+        => this.Read(data.reinterpret<char*>(), count);
+
     // Unused byte allowance. Early EOF can leave it positive.
     // An input error preserves this value and prevents further reads.
     public nuint Remaining { immutable get nothrow => remaining; }

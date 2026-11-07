@@ -48,6 +48,22 @@ public struct BufferedReader : IByteReader
         scratch = storage;
     }
 
+    public BufferedReader(IByteReader* input, byte* storage, nuint capacity)
+    {
+        source = input;
+        buffer = new Vector<char>();
+        scratch = null;
+        this.capacity = capacity;
+        start = 0;
+        end = 0;
+        failed = false;
+        if (capacity == 0) throw new IOException("Buffered reader capacity must not be zero");
+        scratch = storage.reinterpret<char*>();
+    }
+
+    public nuint Read(byte* data, nuint count)
+        => this.Read(data.reinterpret<char*>(), count);
+
     public nuint BufferedCount { immutable get nothrow => end - start; }
     public nuint Capacity { immutable get nothrow => capacity; }
 

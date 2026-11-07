@@ -96,6 +96,18 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         return new Rational(denominator, numerator);
     }
 
+    public immutable Rational Pow(int exponent)
+    {
+        if (exponent == 0) return new Rational(1l);
+        if (exponent < 0 && numerator.IsZero) throw new Exception("Zero cannot have a negative rational power");
+        uint magnitude = (uint)exponent;
+        if (exponent < 0) magnitude = (uint)(-(long)exponent);
+        BigInteger top = numerator.Pow(magnitude);
+        BigInteger bottom = denominator.Pow(magnitude);
+        if (exponent < 0) return new Rational(move bottom, move top);
+        return new Rational(move top, move bottom);
+    }
+
     public immutable BigInteger Truncate() => numerator.Divide(&denominator);
 
     private immutable BigInteger IntegralBound(bool upper)

@@ -66,3 +66,5 @@ See [exact rational integral values](RATIONAL_INTEGRAL.md) for `Truncate`,
 `Floor`, and `Ceiling` without floating-point conversion.
 
 See [rational magnitude and reciprocals](RATIONAL_MAGNITUDE.md) for `Abs` and `Reciprocal`.
+
+See [exact rational powers](RATIONAL_POW.md) for signed integer exponents.

@@ -5,7 +5,7 @@ public sealed partial class CollectionPeekTests
     private static void Run(string program, int optimization)
     {
         var sources = StandardTestSources.Combine(StandardTestSources.Values, StandardTestSources.Load(
-            "core/Collections/Queue.gf", "core/Collections/Stack.gf", "core/Collections/PriorityQueue.gf",
+            "core/Collections/Deque.gf", "core/Collections/deque_peek.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf", "core/Collections/PriorityQueue.gf",
             "core/Collections/queue_peek.gf", "core/Collections/stack_peek.gf", "core/Collections/priority_queue_peek.gf"))
             .Append(new SourceFile("collection-peek-tests.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);
@@ -36,6 +36,10 @@ public sealed partial class CollectionPeekTests
             int main()
             {
                 {
+                    Deque<Owner> deque = new();
+                    deque.AddLast(new Owner(4));
+                    if (deque.Front.Id != 4 || deque.Back.Id != 4) return 3;
+                    Owner end = deque.RemoveLast();
                     Queue<Owner> queue = new();
                     Stack<Owner> stack = new();
                     PriorityQueue<Owner> priority = new(Compare);
@@ -46,7 +50,7 @@ public sealed partial class CollectionPeekTests
                     Owner first = queue.Dequeue();
                     Owner top = stack.Pop();
                     Owner minimum = priority.Dequeue();
-                    if (first.Id != 1 || top.Id != 2 || minimum.Id != 3 || live != 3) return 2;
+                    if (first.Id != 1 || top.Id != 2 || minimum.Id != 3 || live != 4) return 2;
                 }
                 return live;
             }

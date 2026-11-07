@@ -35,6 +35,8 @@ on later reads.
 
 ## Operations
 
+- Compute numeric and projected means with [Average](../../../docs/QUERY_AVERAGE.md)
+
 - Filter and project with `Where` and `Select`
 - Retain positions with [Index](../../../docs/QUERY_INDEX.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`

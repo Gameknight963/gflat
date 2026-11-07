@@ -212,3 +212,5 @@ See [Reserving and trimming hash tables](HASH_CAPACITY.md) for hash table capaci
 See [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) for borrowed membership checks.
 
 See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Clamp and magnitude selection.
+
+See [Sequence averages](QUERY_AVERAGE.md) for numeric and projected Average queries.

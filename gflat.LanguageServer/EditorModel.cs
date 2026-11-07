@@ -995,6 +995,7 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         path = CanonicalQueryPath(path);
+        offset = EscapedIdentifierOffset(path, offset);
         using var queryTiming = PipelineTimings.Measure("editor.query.hover");
         options ??= new();
         if (DocumentationReferenceAt(path, offset) is { } documented)

@@ -1,0 +1,25 @@
+namespace Standard::Collections;
+
+public bool ContainsValue<K, V>(immutable(SortedMap<K, V>)* source, immutable(V)* value,
+    bool(immutable(V)*, immutable(V)*)* equal)
+{
+    var iterator = source.GetEnumerator();
+    while (iterator.MoveNext())
+        if (equal(iterator.Current.ValueImmutable, value)) return true;
+    return false;
+}
+
+public bool ContainsValue<K, V : IEquatable<V>>(immutable(SortedMap<K, V>)* source, immutable(V)* value)
+    => ContainsValue<K, V>(source, value, EqualityComparer<V>::Equals);
+
+extension SortedMap<K, V>
+{
+    public immutable bool ContainsValue(immutable(V)* value, bool(immutable(V)*, immutable(V)*)* equal)
+        => Standard::Collections::ContainsValue<K, V>(this, value, equal);
+}
+
+extension SortedMap<K, V : IEquatable<V>>
+{
+    public immutable bool ContainsValue(immutable(V)* value)
+        => Standard::Collections::ContainsValue<K, V>(this, value);
+}

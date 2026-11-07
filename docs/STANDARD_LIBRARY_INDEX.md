@@ -60,6 +60,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Hash-table `EnsureCapacity`, `TrimExcess` | [Reserving and trimming hash tables](HASH_CAPACITY.md) |
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
 | Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
+| Map `ContainsValue` | [Searching map values](MAP_VALUE_SEARCH.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |
 | Set `TryGetValue`, sorted-set `Min`/`Max` | [Retrieve stored set values](SET_VALUE_LOOKUP.md) |
 | Sorted-set equality, subset/superset checks, overlap | [Comparing sorted sets](SORTED_SET_RELATIONS.md) |

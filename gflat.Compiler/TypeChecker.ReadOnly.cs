@@ -42,6 +42,9 @@ public partial class TypeChecker
             throw new gflat.CompileExceptions.TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", line);
     }
 
+    private static bool IsThisReceiver(AstNode receiver) => receiver is IdentifierExpression { Name: "this" } or
+        UnaryExpression { Operator: TokenKind.Star, Operand: IdentifierExpression { Name: "this" } };
+
     private bool CanInitializeReadOnlyField(AstNode target)
     {
         if (_lambdaScopeBoundaries.Count != 0) return false;
@@ -53,7 +56,7 @@ public partial class TypeChecker
         string? name = target switch
         {
             IdentifierExpression id when !_scopes.Any(s => s.ContainsKey(id.Name)) => id.Name,
-            MemberAccessExpression { Object: IdentifierExpression { Name: "this" } } m => m.Member,
+            MemberAccessExpression m when IsThisReceiver(m.Object) => m.Member,
             _ => null
         };
         return name != null && (_currentStruct?.FieldDeclarationsByName.ContainsKey(name) == true ||

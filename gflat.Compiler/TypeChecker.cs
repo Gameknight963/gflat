@@ -4353,7 +4353,7 @@ namespace gflat
                             if (sField.IsReadOnly)
                             {
                                 bool allowedInCtor = _currentConstructor != null &&
-                                                     memberAccess.Object is IdentifierExpression { Name: "this" } &&
+                                                     IsThisReceiver(memberAccess.Object) &&
                                                      _currentStruct != null &&
                                                      _currentStruct.Name == sInfo.Name;
                                 if (!allowedInCtor)
@@ -4374,7 +4374,7 @@ namespace gflat
                             if (cField.IsReadOnly)
                             {
                                 bool allowedInCtor = _currentConstructor != null &&
-                                                     memberAccess.Object is IdentifierExpression { Name: "this" } &&
+                                                     IsThisReceiver(memberAccess.Object) &&
                                                      _currentClass != null &&
                                                      _currentClass.FieldDeclarations.Contains(cField);
                                 if (!allowedInCtor)

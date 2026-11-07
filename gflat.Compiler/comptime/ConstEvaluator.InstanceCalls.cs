@@ -6,6 +6,13 @@ public partial class ConstEvaluator
 {
     private readonly Dictionary<ConstValue.ClassInstance, string> constructionClasses = new(ReferenceEqualityComparer.Instance);
 
+    private ConstValue? CurrentInstanceReceiver()
+    {
+        foreach (var scope in _scopes)
+            if (scope.TryGetValue("this", out var receiver)) return AggregateReceiver(receiver);
+        return null;
+    }
+
     private static ConstValue? AggregateReceiver(ConstValue? value)
     {
         if (value is ConstValue.BorrowedReference borrowed) value = borrowed.Read();

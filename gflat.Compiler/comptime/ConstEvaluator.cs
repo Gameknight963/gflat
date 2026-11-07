@@ -1032,8 +1032,8 @@ namespace gflat.comptime
                     funcName = declarationNamespace.Length == 0 ? external.Name : declarationNamespace + "::" + external.Name;
                 }
                 if (method != null && !method.IsStatic && node.Callee is IdentifierExpression &&
-                    checker.TryGetMethodOwner(method, out _, out _) && TryGetVariable("this", out var receiver))
-                    thisReceiver = AggregateReceiver(receiver);
+                    CurrentInstanceReceiver() is { } receiver && checker.TryGetMethodOwner(method, out _, out _))
+                    thisReceiver = receiver;
                 if (method != null)
                 {
                     method = ConstantDispatchTarget(checker, node, method, thisReceiver);

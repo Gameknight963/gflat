@@ -56,3 +56,5 @@ Source: `core/Binary/BinaryPrimitives.gf`
 See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for scalar byte swaps.
 
 See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.
+
+For target-native widths, use the [nint and nuint endian codecs](NATIVE_INTEGER_BINARY.md).

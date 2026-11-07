@@ -292,6 +292,50 @@ public static class BinaryPrimitives
     public static bool TryWriteUInt64BigEndian(byte* data, nuint count, ulong value) nothrow
         => Write(data, count, value, 8, false);
 
+    public static bool TryReadNUIntLittleEndian(readonly(byte)* data, nuint count, ref nuint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nuint);
+        if (count < width) { value = 0; return false; }
+        value = (nuint)Read(data, width, true);
+        return true;
+    }
+
+    public static bool TryWriteNUIntLittleEndian(byte* data, nuint count, nuint value) nothrow
+        => Write(data, count, (ulong)value, (nuint)sizeof(nuint), true);
+
+    public static bool TryReadNIntLittleEndian(readonly(byte)* data, nuint count, ref nint value) nothrow
+    {
+        nuint bits = 0;
+        bool success = TryReadNUIntLittleEndian(data, count, ref bits);
+        value = (nint)bits;
+        return success;
+    }
+
+    public static bool TryWriteNIntLittleEndian(byte* data, nuint count, nint value) nothrow
+        => TryWriteNUIntLittleEndian(data, count, (nuint)value);
+
+    public static bool TryReadNUIntBigEndian(readonly(byte)* data, nuint count, ref nuint value) nothrow
+    {
+        nuint width = (nuint)sizeof(nuint);
+        if (count < width) { value = 0; return false; }
+        value = (nuint)Read(data, width, false);
+        return true;
+    }
+
+    public static bool TryWriteNUIntBigEndian(byte* data, nuint count, nuint value) nothrow
+        => Write(data, count, (ulong)value, (nuint)sizeof(nuint), false);
+
+    public static bool TryReadNIntBigEndian(readonly(byte)* data, nuint count, ref nint value) nothrow
+    {
+        nuint bits = 0;
+        bool success = TryReadNUIntBigEndian(data, count, ref bits);
+        value = (nint)bits;
+        return success;
+    }
+
+    public static bool TryWriteNIntBigEndian(byte* data, nuint count, nint value) nothrow
+        => TryWriteNUIntBigEndian(data, count, (nuint)value);
+
     public static bool TryReadInt16LittleEndian(readonly(byte)* data, nuint count, ref short value) nothrow
     {
         ushort bits = (ushort)0;

@@ -68,3 +68,6 @@ See [exact rational integral values](RATIONAL_INTEGRAL.md) for `Truncate`,
 See [rational magnitude and reciprocals](RATIONAL_MAGNITUDE.md) for `Abs` and `Reciprocal`.
 
 See [exact rational powers](RATIONAL_POW.md) for signed integer exponents.
+
+See [inspecting rational values](RATIONAL_CLASSIFICATION.md) for allocation-free
+sign, zero, one, and integer checks.

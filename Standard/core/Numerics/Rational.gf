@@ -26,7 +26,7 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         denominator = source.denominator;
     }
 
-    private static bool IsOne(immutable(BigInteger)* value) nothrow => value.IsOne;
+    private static bool IsOneValue(immutable(BigInteger)* value) nothrow => value.IsOne;
     // Called only while constructing a new owner, never on an exposed value.
     private void Normalize()
     {
@@ -39,11 +39,16 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
             numerator = move first; denominator = move second;
         }
         BigInteger divisor = BigInteger::GreatestCommonDivisor(&numerator, &denominator);
-        if (IsOne(&divisor)) return;
+        if (IsOneValue(&divisor)) return;
         BigInteger first = numerator.Divide(&divisor);
         BigInteger second = denominator.Divide(&divisor);
         numerator = move first; denominator = move second;
     }
+
+    public int Sign { immutable get nothrow => numerator.Sign; }
+    public bool IsZero { immutable get nothrow => numerator.IsZero; }
+    public bool IsOne { immutable get nothrow => numerator.IsOne && denominator.IsOne; }
+    public bool IsInteger { immutable get nothrow => denominator.IsOne; }
 
     // Ordinary owning value copies; these getters may allocate and throw.
     public BigInteger Numerator { immutable get => numerator; }
@@ -196,6 +201,6 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
     public immutable void Format(ITextWriter* output)
     {
         numerator.Format(output);
-        if (!IsOne(&denominator)) { output.Write("/", 1); denominator.Format(output); }
+        if (!IsOneValue(&denominator)) { output.Write("/", 1); denominator.Format(output); }
     }
 }

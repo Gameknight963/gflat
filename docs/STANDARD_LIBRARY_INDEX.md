@@ -100,6 +100,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `CountBy` | [Count sequence elements by key](QUERY_COUNT_BY.md) |
 | `AggregateBy` | [Aggregate values by key](QUERY_AGGREGATE_BY.md) |
 | `Aggregate` with a result selector | [Transforming an aggregate result](QUERY_AGGREGATE_RESULT.md) |
+| `First`, `Last`, `Single` with predicates | [Selecting an element with a predicate](QUERY_ELEMENT_PREDICATES.md) |
 | `ToHashMap` | [Materialize a query as a hash map](QUERY_TO_HASH_MAP.md) |
 | `ToLookup` | [Materialize ordered groups](QUERY_LOOKUP.md) |
 | `DefaultIfEmpty(value)` | [Default value for an empty query](QUERY_DEFAULT_IF_EMPTY.md) |

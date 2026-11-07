@@ -89,6 +89,8 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `ElementAt(index)` | Return the zero-based element. Throw with code 3 if out of range. |
 | `TryElementAt(index, ref result)` | Return the selected element through initialized output, or false with output unchanged if out of range. |
 | `TryFirst(ref result)` | Return false without changing `result` if empty. |
+| `First(predicate)`, `Last(predicate)`, `Single(predicate)` | Select matches directly. See [predicate terminals](QUERY_ELEMENT_PREDICATES.md). |
+| `TryFirst(predicate, ref result)`, `TryLast`, `TrySingle` | Select matches without replacing output on failure. See [predicate terminals](QUERY_ELEMENT_PREDICATES.md). |
 | `TryLast(ref result)` | Return the last value, or false without changing `result` if empty. |
 | `TrySingle(ref result)` | Return the only value, or false without changing `result` if empty or multiple. |
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |

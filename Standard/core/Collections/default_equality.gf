@@ -41,3 +41,6 @@ public nuint LastIndexOf<T : IEquatable<T>>(Span<immutable(T)> values, Span<immu
 
 public nuint Count<T : IEquatable<T>>(Span<immutable(T)> values, immutable(T)* key)
     => Standard::Collections::Count<T>(values, key, EqualityComparer<T>::Equals);
+
+public nuint Count<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> pattern)
+    => Standard::Collections::Count<T>(values, pattern, EqualityComparer<T>::Equals);

@@ -42,12 +42,14 @@ public sealed class SpanCountTests
                 Item[5] values = [new Item(3, 0), new Item(7, 1), new Item(3, 2), new Item(9, 3), new Item(3, 4)];
                 Span<immutable(Item)> source = new(&values[0], 5);
                 Item key = new(3, 99);
-                for (int form = 0; form < 2; form++)
+                for (int form = 0; form < 4; form++)
                 {
                     calls = 0; next = 0;
                     nuint count = 0;
                     if (form == 0) count = Count<Item>(source, &key);
-                    else count = Count<Item>(source, &values[0], Equal);
+                    else if (form == 1) count = Count<Item>(source, &values[0], Equal);
+                    else if (form == 2) count = Count<Item>(source, source.Slice(0, 1));
+                    else count = Count<Item>(source, source.Slice(0, 1), Equal);
                     if (count != 3 || calls != 5) return 1;
                 }
                 calls = 0; next = 0;
@@ -57,7 +59,7 @@ public sealed class SpanCountTests
                     failAt = failure; calls = 0; next = 0;
                     nuint output = 99;
                     bool caught = false;
-                    try { output = Count<Item>(source, &key); }
+                    try { output = Count<Item>(source, source.Slice(0, 1)); }
                     catch (Exception* error) { caught = true; }
                     if (!caught || output != 99 || calls != failure + 1) return 3;
                     if (values[0].Value != 3 || values[4].Value != 3 || key.Value != 3) return 4;

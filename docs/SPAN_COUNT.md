@@ -29,3 +29,32 @@ not mutate it from equality. Runtime is linear in the span length.
 Selective builds load `Collections/span_algorithms.gf` for callback counting.
 The default overload also uses `Collections/default_equality.gf` and
 `Collections/EqualityComparer.gf`. Use `CountIf` for predicate-based counting.
+
+## Counting a pattern
+
+Pass another span to count non-overlapping occurrences of a pattern:
+
+```csharp
+using Standard::Collections;
+using Standard::Memory;
+
+int main()
+{
+    int[5] values = [1, 1, 1, 1, 1];
+    Span<immutable(int)> view = new(&values[0], 5);
+    if (Count<int>(view, view.Slice(0, 2)) != 2) return 1;
+    if (Count<int>(view, new Span<immutable(int)>()) != 0) return 2;
+    return 0;
+}
+```
+
+The explicit callback form is `Count<T>(values, pattern, equal)`. An empty
+pattern or a pattern longer than the source returns zero without comparisons.
+After a match, searching resumes immediately after the matched range. Candidate
+positions and pattern offsets are checked from left to right, with the source
+element passed to equality first. The pattern may borrow part of the source.
+
+Pattern counting copies no elements and allocates no storage. The worst-case
+comparison count is proportional to source length times pattern length. Load
+`Collections/span_subsequence_search.gf` for the callback form. Default equality
+also uses the same files as value counting above.

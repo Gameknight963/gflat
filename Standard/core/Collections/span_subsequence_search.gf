@@ -46,3 +46,29 @@ public nuint LastIndexOf<T>(Span<immutable(T)> values, Span<immutable(T)> patter
         start--;
     }
 }
+
+// Counts non-overlapping patterns. Empty and oversized patterns match zero times.
+public nuint Count<T>(Span<immutable(T)> values, Span<immutable(T)> pattern,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    if (pattern.Length == 0 || pattern.Length > values.Length) return 0;
+    nuint count = 0;
+    nuint start = 0;
+    nuint last = values.Length - pattern.Length;
+    while (start <= last)
+    {
+        nuint offset = 0;
+        while (offset < pattern.Length)
+        {
+            if (!equal(&values[start + offset], &pattern[offset])) break;
+            offset++;
+        }
+        if (offset == pattern.Length)
+        {
+            count++;
+            start = start + pattern.Length;
+        }
+        else start++;
+    }
+    return count;
+}

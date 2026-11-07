@@ -24,6 +24,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `String.ReplaceLineEndings()` | [Normalize line endings](LINE_ENDINGS.md) |
 | String arguments for search and replacement | [Using owning strings as search arguments](STRING_ARGUMENTS.md) |
 | Ranged String `AsSpan`, `AsReadOnly`, `AsImmutable` | [Borrowing a range of string bytes](STRING_RANGE_VIEWS.md) |
+| String `CopyTo`, `TryCopyTo` | [Copying string bytes into a buffer](STRING_COPY.md) |
 | `IByteReader`, borrowed `ReadByte`, `ReadExactly`, `ReadAtLeast`, `SkipExactly` and `CopyTo` extensions | [Borrowed byte readers](BYTE_READERS.md) |
 | `ReadToEnd()` and `ReadToEnd(ref text)` | [Read the remaining input](READ_TO_END.md) |
 | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Binary scalar IO](BINARY_IO.md) |

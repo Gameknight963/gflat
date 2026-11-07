@@ -1069,4 +1069,26 @@ public static class Math
         ulong result = sign | rounded;
         return result.reinterpret<double>();
     }
+    public static long BigMul(int left, int right) nothrow => (long)left * (long)right;
+    public static ulong BigMul(uint left, uint right) nothrow => (ulong)left * (ulong)right;
+    public static extralong BigMul(long left, long right) nothrow => (extralong)left * (extralong)right;
+
+    public static long BigMul(long left, long right, ref long low) nothrow
+    {
+        extralong product = (extralong)left * (extralong)right;
+        low = (long)product;
+        return (long)(product >> 64);
+    }
+
+    public static ulong BigMul(ulong left, ulong right, ref ulong low) nothrow
+    {
+        ulong first = (ulong)(uint)left * (ulong)(uint)right;
+        ulong second = (ulong)(uint)left * (right >> 32);
+        ulong third = (left >> 32) * (ulong)(uint)right;
+        ulong fourth = (left >> 32) * (right >> 32);
+        ulong middle = (first >> 32) + (ulong)(uint)second + (ulong)(uint)third;
+        low = (middle << 32) | (ulong)(uint)first;
+        return fourth + (second >> 32) + (third >> 32) + (middle >> 32);
+    }
+
 }

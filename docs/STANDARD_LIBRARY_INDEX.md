@@ -240,3 +240,5 @@ See [Summing numeric sequences](QUERY_SUM.md) for integer, floating, and project
 See [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) for pointer-sized masks and signed power checks.
 
 See [Scaling by powers of two](MATH_SCALE_B.md) for ScaleB.
+
+See [Full-width integer multiplication](MATH_BIG_MUL.md) for BigMul.

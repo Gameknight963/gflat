@@ -21,6 +21,9 @@ public static class PercentEncodingText
         return move result;
     }
 
+    public static String Encode(readonly(byte)* data, nuint count)
+        => PercentEncodingText::Encode(data.reinterpret<readonly(char)*>(), count);
+
     public static String Decode(readonly(char)* text, nuint count)
     {
         nuint length = 0;

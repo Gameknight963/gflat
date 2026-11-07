@@ -89,6 +89,17 @@ public static class PercentEncoding
         return true;
     }
 
+    public static bool TryEncode(readonly(byte)* data, nuint count, char* output, nuint capacity,
+        ref nuint written) nothrow
+        => PercentEncoding::TryEncode(data.reinterpret<readonly(char)*>(), count, output, capacity, ref written);
+
+    public static bool TryDecode(readonly(char)* text, nuint count, byte* output, nuint capacity,
+        ref nuint written) nothrow
+        => PercentEncoding::TryDecode(text, count, output.reinterpret<char*>(), capacity, ref written);
+
+    public static bool TryGetEncodedLength(readonly(byte)* data, nuint count, ref nuint length) nothrow
+        => PercentEncoding::TryGetEncodedLength(data.reinterpret<readonly(char)*>(), count, ref length);
+
     private static bool IsUnreserved(char value) nothrow
         => (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z') ||
            (value >= '0' && value <= '9') || value == '-' || value == '.' || value == '_' || value == '~';

@@ -109,3 +109,6 @@ encoding and decoding overloads.
 
 See [Base64 byte buffers](BASE64_BYTE_BUFFERS.md) for direct byte-pointer
 overloads of standard and URL-safe Base64.
+
+See [Base32 and percent-encoded byte buffers](ENCODED_BYTE_BUFFERS.md) for their
+direct byte-pointer overloads.

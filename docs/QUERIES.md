@@ -84,7 +84,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `All(predicate)` | Stop at the first failure. True for an empty sequence. |
 | `Count()` | Count elements without reading the terminal iterator's `Current`. Throw on count overflow. Upstream operators can still read their inputs. |
 | `Count(predicate)` | Count matching elements by testing every value. Return zero for an empty sequence and throw on count overflow. |
-| `Sum()` | Reduce elements implicitly convertible to `long`, checking each signed 64-bit addition. Zero for empty input. |
+| `Sum()` / `Sum(selector)` | Checked `long` integer totals, or floating totals accumulated in `double`. Zero for empty input. See [Sum](QUERY_SUM.md). |
 | `First()` / `Last()` / `Single()` | Return a value. Throw if empty. `Single` also rejects multiple elements. |
 | `ElementAt(index)` | Return the zero-based element. Throw with code 3 if out of range. |
 | `TryElementAt(index, ref result)` | Return the selected element through initialized output, or false with output unchanged if out of range. |

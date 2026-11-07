@@ -203,7 +203,7 @@ public sealed class StandardQueryGenericSumTests
         Compiler.Check(Inputs("int", "1"));
         (string Type, string Value)[] cases =
         [
-            ("float", "1.0f"), ("double", "1.0"), ("ulong", "1ul"), ("nuint", "(nuint)1"),
+            ("ulong", "1ul"), ("nuint", "(nuint)1"),
             ("extralong", "(extralong)1"), ("bool", "true"), ("Code", "Code::One"), ("String", "s\"text\"")
         ];
         foreach (var row in cases)

@@ -64,3 +64,5 @@ Seed zero's first output is `0xe220a8397b1dcdaf`.
 `GetItems` samples into existing spans or owning vectors. See [Choosing random items](RANDOM_ITEMS.md).
 
 See [Generating random text](RANDOM_TEXT.md) for custom alphabets and hexadecimal strings.
+
+See [unsigned random ranges](RANDOM_UNSIGNED_RANGES.md) for two-bound unsigned draws.

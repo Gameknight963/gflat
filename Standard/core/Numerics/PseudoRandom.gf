@@ -38,6 +38,18 @@ struct PseudoRandom
         return (uint)this.NextULong((ulong)exclusiveMax);
     }
 
+    public ulong NextULong(ulong inclusiveMin, ulong exclusiveMax)
+    {
+        if (inclusiveMin >= exclusiveMax) throw new Exception("Random range must not be empty");
+        return inclusiveMin + this.NextULong(exclusiveMax - inclusiveMin);
+    }
+
+    public uint NextUInt(uint inclusiveMin, uint exclusiveMax)
+    {
+        if (inclusiveMin >= exclusiveMax) throw new Exception("Random range must not be empty");
+        return inclusiveMin + this.NextUInt(exclusiveMax - inclusiveMin);
+    }
+
     public int NextInt(int exclusiveMax) => this.NextInt(0, exclusiveMax);
 
     // The interval includes inclusiveMin and excludes exclusiveMax.

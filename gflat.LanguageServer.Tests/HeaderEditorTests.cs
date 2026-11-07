@@ -6,13 +6,17 @@ namespace gflat.LanguageServer.Tests;
 public sealed class HeaderEditorTests
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void SelectedHeaderContextChangesEnclosingMemberCompletion(bool alternatePathCasing)
+    [InlineData(false, ".gfh", false)]
+    [InlineData(true, ".gfh", false)]
+    [InlineData(false, ".gf", false)]
+    [InlineData(true, ".gf", false)]
+    [InlineData(false, ".gfh", true)]
+    [InlineData(false, ".gf", true)]
+    public void SelectedHeaderContextChangesEnclosingMemberCompletion(bool alternatePathCasing, string extension, bool relativeSourcePath)
     {
         if (alternatePathCasing && !OperatingSystem.IsWindows()) return;
-        string directory = Path.GetFullPath("header-context");
-        var header = new SourceFile(Path.Combine(directory, "members.gfh"), "public int Read() { return Value; }");
+        string directory = relativeSourcePath ? "header-context" : Path.GetFullPath("header-context");
+        var header = new SourceFile(Path.Combine(directory, "members" + extension), "public int Read() { return Value; }");
         var root = new SourceFile(Path.Combine(directory, "main.gf"), """
             struct First { public int Value; public int FirstOnly;
             #include "members.gfh"
@@ -20,8 +24,8 @@ public sealed class HeaderEditorTests
             struct Second { public int Value; public int SecondOnly;
             #include "members.gfh"
             }
-            """);
-        var snapshot = new AnalysisSnapshot([root], new() { NoStdLib = true, IncludeLoader = path => path == header.Path ? header : null });
+            """.Replace("members.gfh", "members" + extension, StringComparison.Ordinal));
+        var snapshot = new AnalysisSnapshot([root], new() { NoStdLib = true, IncludeLoader = path => Workspace.Paths.Equals(path, Path.GetFullPath(header.Path)) ? header : null });
         Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, [root, header]);
         string queryPath = alternatePathCasing ? header.Path.ToUpperInvariant() : header.Path;

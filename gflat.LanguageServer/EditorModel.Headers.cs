@@ -25,6 +25,8 @@ public sealed partial class EditorModel
     public HeaderContext[] HeaderContexts(string path)
     {
         path = CanonicalQueryPath(path);
+        string dependencyPath = path.StartsWith('<') ? path : Path.GetFullPath(path);
+        if (!snapshot.PreprocessorDependencies.Contains(dependencyPath, Workspace.Paths)) return [];
         return snapshot.Nodes.Where(n => n.Span.Source?.Path == path)
             .Select(n => InclusionContext(n, path)).OfType<HeaderContext>().DistinctBy(c => c.Id).OrderBy(c => c.Label).ToArray();
     }

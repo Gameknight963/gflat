@@ -131,6 +131,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Fractional `TimeSpan` factories, microsecond and nanosecond components/totals | [Fractional time intervals](TIME_SPAN_FRACTIONAL.md) |
 | `TimeSpan.Duration`, `Multiply`, `Divide` | [Scaling time intervals](TIME_SPAN_SCALING.md) |
 | `TimeOfDay` | [Time of day](TIME_OF_DAY.md) |
+| Clock `AddHours`, `AddMinutes`, `AddTicks` | [Adding units to a clock value](CLOCK_UNIT_ADDITION.md) |
 | Direct date/time components and clock-duration conversion | [Date and clock components](TEMPORAL_COMPONENTS.md) |
 | `DateTime` | [Date and time](DATE_TIME.md) |
 | `DateTimeOffset` | [Civil timestamps with an explicit UTC offset](DATE_TIME_OFFSET.md) |

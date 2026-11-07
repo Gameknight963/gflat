@@ -57,6 +57,26 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
         wrappedDays = (int)days;
         return result;
     }
+    public immutable TimeOfDay AddTicks(long ticks) nothrow => this.Add(TimeSpan::FromTicks(ticks));
+    public immutable TimeOfDay AddTicks(long ticks, ref int wrappedDays) nothrow
+        => this.Add(TimeSpan::FromTicks(ticks), ref wrappedDays);
+
+    public immutable TimeOfDay AddHours(long value) => this.Add(TimeSpan::FromHours(value));
+    public immutable TimeOfDay AddHours(long value, ref int wrappedDays)
+        => this.Add(TimeSpan::FromHours(value), ref wrappedDays);
+
+    public immutable TimeOfDay AddHours(double value) => this.Add(TimeSpan::FromHours(value));
+    public immutable TimeOfDay AddHours(double value, ref int wrappedDays)
+        => this.Add(TimeSpan::FromHours(value), ref wrappedDays);
+
+    public immutable TimeOfDay AddMinutes(long value) => this.Add(TimeSpan::FromMinutes(value));
+    public immutable TimeOfDay AddMinutes(long value, ref int wrappedDays)
+        => this.Add(TimeSpan::FromMinutes(value), ref wrappedDays);
+
+    public immutable TimeOfDay AddMinutes(double value) => this.Add(TimeSpan::FromMinutes(value));
+    public immutable TimeOfDay AddMinutes(double value, ref int wrappedDays)
+        => this.Add(TimeSpan::FromMinutes(value), ref wrappedDays);
+
     public immutable bool IsBetween(TimeOfDay start, TimeOfDay end) nothrow
     {
         if (start.ticks <= end.ticks) return ticks >= start.ticks && ticks < end.ticks;

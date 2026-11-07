@@ -61,3 +61,5 @@ allowing overlap with properly backed result or receiver storage. Keep
 Source: `Time/TimeOfDay.gf`, with TimeSpan and interface dependencies.
 Arithmetic follows [TimeOnly.Add](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.add)
 and [TimeOnly.IsBetween](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.isbetween).
+
+See [Adding units to a clock value](CLOCK_UNIT_ADDITION.md) for hour, minute, and tick additions.

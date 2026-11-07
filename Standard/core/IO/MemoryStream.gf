@@ -86,6 +86,15 @@ public struct MemoryStream : IByteReader, ITextWriter
         output.Write(bytes.Data!, bytes.Length);
     }
 
+    // Copies the entire logical buffer, independently of the current cursor.
+    public immutable Vector<byte> ToBytes()
+    {
+        Vector<byte> result = new();
+        result.Reserve(buffer.Count);
+        for (nuint i = 0; i < buffer.Count; i++) result.Add((byte)buffer[i]);
+        return move result;
+    }
+
     public void Flush() nothrow { }
 
     // Growth can relocate storage. Length changes invalidate removed ranges.

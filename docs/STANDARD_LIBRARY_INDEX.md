@@ -186,6 +186,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Paths.HasExtension` | [Checking for a path extension](PATH_EXTENSION_TEST.md) |
 | `MemoryStream` | [Owning byte streams](../Standard/core/IO/MEMORY_STREAM.md) |
 | `MemoryStream.WriteTo` | [Writing an entire memory stream](MEMORY_STREAM_WRITE_TO.md) |
+| `MemoryStream.ToBytes` | [Taking an owning snapshot](MEMORY_STREAM_BYTES.md) |
 | `BitOperations` | [Integer bit operations](BIT_OPERATIONS.md) |
 | Native-width masks and signed power checks | [Native-width bit operations](NATIVE_BIT_OPERATIONS.md) |
 | `BitOperations.Log2`, `Math.ILogB` | [Integer base-two logarithms](INTEGER_LOGARITHMS.md) |

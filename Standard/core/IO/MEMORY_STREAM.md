@@ -73,3 +73,5 @@ Selective builds include `IO/MemoryStream.gf`, `IO/SeekOrigin.gf`, `IO/IOExcepti
 the Vector/Span collection and query contracts.
 
 See [Writing an entire memory stream](../../../docs/MEMORY_STREAM_WRITE_TO.md) for WriteTo.
+
+See [Taking an owning snapshot](../../../docs/MEMORY_STREAM_BYTES.md) for ToBytes.

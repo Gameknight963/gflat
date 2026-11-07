@@ -63,3 +63,5 @@ and [RFC 4291](https://www.rfc-editor.org/rfc/rfc4291.html#section-2.2).
 Formatting follows [RFC 5952](https://www.rfc-editor.org/rfc/rfc5952.html#section-4).
 
 Source: `core/Net/IpAddress.gf`
+
+See [Mapping and classifying IP addresses](IP_ADDRESS_MAPPING.md) for family conversion and IPv6 prefixes.

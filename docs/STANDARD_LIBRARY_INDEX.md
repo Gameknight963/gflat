@@ -119,6 +119,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Version` | [Dotted numeric versions](VERSION.md) |
 | Version field-count formatting and revision halves | [Formatting selected version fields](VERSION_FORMATTING.md) |
 | `IpAddress` | [Numeric IP addresses](IP_ADDRESS.md) |
+| IP family conversion, loopback, and IPv6 prefixes | [Mapping and classifying IP addresses](IP_ADDRESS_MAPPING.md) |
 | `IpEndpoint` | [Numeric IP endpoints](IP_ENDPOINT.md) |
 | `IpNetwork`, `NetworkAddress`, `LastAddress` | [IP network prefixes](IP_NETWORK.md) |
 | `Date` | [Calendar dates](DATE.md) |

@@ -10,6 +10,39 @@ public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashab
     public IpAddress() nothrow { high = 0ul; low = 0ul; ipv4 = true; }
     public bool IsIpv4 { immutable get nothrow => ipv4; }
 
+    public bool IsIpv6 { immutable get nothrow => !ipv4; }
+    public bool IsIpv4MappedToIpv6 { immutable get nothrow => !ipv4 && high == 0ul && (low >> 32) == 0xfffful; }
+    public bool IsIpv6Multicast { immutable get nothrow => !ipv4 && (high >> 56) == 0xfful; }
+    public bool IsIpv6LinkLocal { immutable get nothrow => !ipv4 && (high >> 54) == 0x3faul; }
+    public bool IsIpv6SiteLocal { immutable get nothrow => !ipv4 && (high >> 54) == 0x3fbul; }
+    public bool IsIpv6UniqueLocal { immutable get nothrow => !ipv4 && (high >> 57) == 0x7eul; }
+    public bool IsIpv6Teredo { immutable get nothrow => !ipv4 && (high >> 32) == 0x20010000ul; }
+
+    public immutable IpAddress MapToIpv6() nothrow
+    {
+        IpAddress result = *this;
+        if (ipv4)
+        {
+            result.high = 0ul;
+            result.low = 0xffff00000000ul | low;
+            result.ipv4 = false;
+        }
+        return result;
+    }
+
+    public immutable IpAddress MapToIpv4() nothrow
+    {
+        IpAddress result = new();
+        result.low = low & 0xfffffffful;
+        return result;
+    }
+
+    public static bool IsLoopback(IpAddress address) nothrow
+    {
+        if (address.ipv4) return (address.low >> 24) == 127ul;
+        return address.high == 0ul && (address.low == 1ul || address.low == 0xffff7f000001ul);
+    }
+
     public nuint ByteCount
     {
         immutable get nothrow { if (ipv4) return 4; return 16; }

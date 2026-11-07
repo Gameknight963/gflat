@@ -58,6 +58,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Vector<T>.ConvertAll` | [Converting every vector element](VECTOR_CONVERT_ALL.md) |
 | Vector predicate searches | [Searching vectors with a predicate](VECTOR_PREDICATES.md) |
 | `Vector<T>.FindAll` | [Copying matching vector elements](VECTOR_FIND_ALL.md) |
+| Vector `Reverse` and `Sort` | [Reversing and sorting vectors](VECTOR_ORDERING.md) |
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | Queue, stack, and priority-queue `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | `PriorityQueue<T>.EnqueueDequeue`, `DequeueEnqueue` | [Replacing a priority queue root](PRIORITY_QUEUE_REPLACEMENT.md) |

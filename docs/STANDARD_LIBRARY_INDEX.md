@@ -58,6 +58,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Span inclusive-range searches | [Searching spans by an inclusive range](SPAN_RANGE_SEARCH.md) |
 | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](../Standard/core/Collections/OWNING_COLLECTIONS.md) |
 | `BitSet.FindIndex`, `FindLastIndex` | [Searching packed bits](BIT_SET_SEARCH.md) |
+| BitSet proper subset and superset | [Strict BitSet inclusion](BIT_SET_PROPER_SUBSETS.md) |
 | `BitSet.Not` | [Inverting every bit](BIT_SET_COMPLEMENT.md) |
 | `Deque<T>` | [Deque](DEQUE.md) |
 | Collection `EnsureCapacity`, `TrimExcess`, `ShrinkToFit` | [Controlling collection capacity](COLLECTION_CAPACITY.md) |

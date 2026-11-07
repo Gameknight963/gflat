@@ -83,6 +83,11 @@ public sealed class BitSetSubsetTests
                         if(right.IsSubsetOf(&left)!=superset||right.IsSupersetOf(&left)!=subset)return 2;
                         if(deep.IsSubsetOf(&right)!=subset||shallow.IsSupersetOf(&right)!=superset)return 3;
                         if(!left.IsSubsetOf(&left)||!left.IsSupersetOf(&left)||!right.IsSubsetOf(&right))return 4;
+
+                        if(left.IsProperSubsetOf(&right)!=(subset&&!superset)||left.IsProperSupersetOf(&right)!=(superset&&!subset))return 11;
+                        if(right.IsProperSubsetOf(&left)!=(superset&&!subset)||right.IsProperSupersetOf(&left)!=(subset&&!superset))return 12;
+                        if(deep.IsProperSubsetOf(&right)!=(subset&&!superset)||shallow.IsProperSupersetOf(&right)!=(superset&&!subset))return 13;
+                        if(left.IsProperSubsetOf(&left)||left.IsProperSupersetOf(&left))return 14;
                         if(attempts!=before||left.Length!=length||right.Length!=length)return 5;
                         nuint verify=start;
                         for(nuint i=0;i<length;i++)if(left[i]!=(ReadByte(packet,ref verify)!=0))return 6;
@@ -120,6 +125,10 @@ public sealed class BitSetSubsetTests
                         if(left.IsSubsetOf(&right)!=subset||left.IsSupersetOf(&right)!=superset)return 1;
                         if(!left.IsSubsetOf(&freshLeft)||!left.IsSupersetOf(&freshLeft))return 2;
                         if(!right.IsSubsetOf(&freshRight)||!right.IsSupersetOf(&freshRight))return 3;
+
+                        if(left.IsProperSubsetOf(&right)!=(subset&&!superset)||left.IsProperSupersetOf(&right)!=(superset&&!subset))return 11;
+                        if(left.IsProperSubsetOf(&freshLeft)||left.IsProperSupersetOf(&freshLeft))return 12;
+                        if(right.IsProperSubsetOf(&freshRight)||right.IsProperSupersetOf(&freshRight))return 13;
                         if(attempts!=before)return 4;
                         deny=false;
                         for(nuint i=0;i<length;i++)if(left[i]!=freshLeft[i]||right[i]!=freshRight[i])return 5;
@@ -128,11 +137,13 @@ public sealed class BitSetSubsetTests
                 {
                     BitSet left=new(65);BitSet right=new(64);left.SetAll(true);right.SetAll(true);
                     nuint leftHash=left.GetHashCode();nuint rightHash=right.GetHashCode();
-                    for(int method=0;method<2;method++) {
+                    for(int method=0;method<4;method++) {
                         bool result=true;bool caught=false;
                         try {
                             if(method==0)result=left.IsSubsetOf(&right);
-                            else result=left.IsSupersetOf(&right);
+                            else if(method==1)result=left.IsSupersetOf(&right);
+                            else if(method==2)result=left.IsProperSubsetOf(&right);
+                            else result=left.IsProperSupersetOf(&right);
                         }
                         catch(ref Exception error) {
                             if(!CString::Equals(error.GetMessage(),"BitSet lengths differ"))return 6;
@@ -149,6 +160,9 @@ public sealed class BitSetSubsetTests
                 return 0;
             }
             """, optimization);
+
+    [Fact]
+    public void ProperSubsetGuideCompiles() => StandardLibraryGuideTests.CheckProgram("BIT_SET_PROPER_SUBSETS.md", 0);
 
     private const string Memory = """
         using Standard; using Standard::Text; using Standard::Collections;

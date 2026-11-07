@@ -38,7 +38,67 @@ Freestanding forms accept the query first, for example
 Type arguments can be inferred.
 
 These operators establish a primary ordering. Calling `OrderBy` again creates
-a new primary ordering. Secondary-key `ThenBy` operations are not provided yet.
+a new primary ordering. Use `ThenBy` or `ThenByDescending` to add a lower-priority
+key instead.
+
+## Add secondary keys
+
+`ThenBy(selector)` orders ties in earlier keys in ascending order.
+`ThenByDescending(selector)` orders those ties in descending order. Each level
+can have a different key type, direction, and optional comparison callback.
+Elements whose keys compare equal at every level retain their input order.
+
+```csharp
+using Standard::Memory;
+using Standard::Queries;
+using Standard::Text;
+
+struct Item
+{
+    public int Group;
+    public String Name;
+    public int Id;
+
+    public Item(int group, String name, int id)
+    {
+        Group = group;
+        Name = move name;
+        Id = id;
+    }
+}
+
+int Group(Item value) => value.Group;
+String Name(Item value) => value.Name;
+long Id(Item value) => (long)value.Id;
+
+int main()
+{
+    Item[4] input = [new Item(2, s"A", 1), new Item(1, s"B", 3),
+        new Item(1, s"B", 2), new Item(1, s"C", 5)];
+    var query = new Span<Item>(&input[0], 4).AsEnumerable()
+        .OrderBy(Group).ThenByDescending(Name).ThenBy(Id);
+    int[4] expected = [5, 2, 3, 1];
+    nuint index = 0;
+    foreach (Item value in query)
+    {
+        if (value.Id != expected[index]) return 1;
+        index++;
+    }
+    if (index != 4) return 2;
+    return 0;
+}
+```
+
+These methods apply directly to an `OrderBy` or `OrderByDescending` result, or
+another `ThenBy` result. Apply them before operators such as `Where` or `Take`,
+which return ordinary query views. Freestanding forms accept the ordered query
+first, for example `ThenBy(query, selector, compare)`.
+
+Adding a level does not alter the original query. Branches and repeated cursors
+keep independent ordering plans. One cursor snapshots the input once, computes
+all primary keys in input order, then all keys at each subsequent level. Every
+selector runs once per element, even when preceding keys are all distinct.
+Comparisons consult later levels only when earlier levels compare equal.
 
 ## Evaluation and ownership
 
@@ -65,7 +125,9 @@ The source itself is not reordered.
 
 ## Cost and errors
 
-Ordering takes O(n log n) comparisons and O(n) additional storage. The cursor
+A single key level takes O(n log n) comparisons and O(n) additional storage.
+With k levels, key generation takes O(nk) calls and key storage takes O(nk) space.
+Each ordering comparison can consult up to k keys. The cursor
 retains the element buffer and sorted indices while yielding. Cached keys and
 merge scratch are released before yielding. At completion it destroys buffered
 elements and retains empty buffer capacity until the cursor is destroyed.
@@ -75,7 +137,8 @@ Allocation, source, copy, selector, and comparison errors propagate. A failed
 cursor destroys its buffered elements and keys and stays finished. `Current`
 throws before the first successful move, after completion, or after failure.
 
-Selective builds load `Queries/OrderBySource.gf` and
+Selective builds load `Queries/OrderKey.gf`, `Queries/OrderBySource.gf`, and
 `Queries/enumerable_order_by.gf`, plus the normal Enumerable, Vector, and Span
-sources. Default comparisons also need `Collections/Comparer.gf` and the key's
+sources. Secondary ordering also loads `Queries/ThenOrderKey.gf` and
+`Queries/enumerable_then_by.gf`. Default comparisons also need `Collections/Comparer.gf` and the key's
 comparison implementation.

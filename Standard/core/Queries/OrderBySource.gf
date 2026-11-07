@@ -3,30 +3,25 @@ using Standard::Memory;
 
 namespace Standard::Queries;
 
-struct OrderBySource<T, K, Source, Iterator>
+struct OrderBySource<T, Plan, Source, Iterator>
 {
     private Source source;
-    private K(T)* selector;
-    private int(immutable(K)*, immutable(K)*)* compare;
-    private bool descending;
+    private Plan plan;
 
-    public OrderBySource(Source input, K(T)* keySelector,
-        int(immutable(K)*, immutable(K)*)* comparison, bool reverse)
+    public OrderBySource(Source input, Plan keys)
     {
         source = move input;
-        selector = keySelector;
-        compare = comparison;
-        descending = reverse;
+        plan = move keys;
     }
 
-    public Enumerator GetEnumerator() => new Enumerator(source, selector, compare, descending);
+    internal Source InputView() => source;
+    internal Plan KeyPlan() => plan;
+    public Enumerator GetEnumerator() => new Enumerator(source, plan);
 
     public struct Enumerator
     {
         private Source source;
-        private K(T)* selector;
-        private int(immutable(K)*, immutable(K)*)* compare;
-        private bool descending;
+        private Plan plan;
         private Vector<T> buffer;
         private Vector<nuint> indices;
         private nuint position;
@@ -34,13 +29,10 @@ struct OrderBySource<T, K, Source, Iterator>
         private bool finished;
         private bool valid;
 
-        public Enumerator(Source input, K(T)* keySelector,
-            int(immutable(K)*, immutable(K)*)* comparison, bool reverse)
+        public Enumerator(Source input, Plan keys)
         {
             source = move input;
-            selector = keySelector;
-            compare = comparison;
-            descending = reverse;
+            plan = move keys;
             buffer = new();
             indices = new();
             position = 0;
@@ -57,9 +49,7 @@ struct OrderBySource<T, K, Source, Iterator>
                 while (iterator.MoveNext()) buffer.Add(iterator.Current);
             }
             nuint count = buffer.Count;
-            Vector<K> keys = new();
-            keys.Reserve(count);
-            for (nuint i = 0; i < count; i++) keys.Add(selector(buffer[i]));
+            Plan::Keys keys = plan.Build(buffer.AsImmutable());
             indices.Reserve(count);
             Vector<nuint> temporary = new();
             if (count > 1) temporary.Reserve(count);
@@ -87,9 +77,7 @@ struct OrderBySource<T, K, Source, Iterator>
                     nuint destination = start;
                     while (left < middle && right < end)
                     {
-                        int relation = 0;
-                        if (descending) relation = compare(&keys[order[right]], &keys[order[left]]);
-                        else relation = compare(&keys[order[left]], &keys[order[right]]);
+                        int relation = keys.Compare(order[left], order[right]);
                         // Prefer the left run on ties in either direction.
                         if (relation <= 0)
                         {

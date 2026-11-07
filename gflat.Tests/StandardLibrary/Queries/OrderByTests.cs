@@ -6,6 +6,7 @@ public sealed partial class OrderByTests
 {
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Combine(StandardTestSources.Values,
         StandardTestSources.Load("core/Collections/Comparer.gf", "core/Queries/OrderBySource.gf",
+            "core/Queries/OrderKey.gf", "core/Queries/ThenOrderKey.gf", "core/Queries/enumerable_then_by.gf",
             "core/Queries/enumerable_order_by.gf", "core/Queries/enumerable_slice.gf",
             "core/Queries/SliceSource.gf"))
         .Append(new SourceFile("query-order-by.gf", code));
@@ -16,8 +17,10 @@ public sealed partial class OrderByTests
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
     }
 
-    [Fact]
-    public void GuideExampleCompiles() => StandardLibraryGuideTests.CheckProgram("QUERY_ORDER_BY.md", 0);
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void GuideExamplesCompile(int index) => StandardLibraryGuideTests.CheckProgram("QUERY_ORDER_BY.md", index);
 
     [Fact]
     public void BufferedElementsAreImmutable()
@@ -195,17 +198,17 @@ public sealed partial class OrderByTests
             int main()
             {
                 var source = new Enumerable<int, Source, Source::Enumerator>(new Source());
-                var query = source.OrderBy(Key);
+                var query = source.OrderBy(Key).ThenBy(Key).ThenByDescending(Key);
                 foreach (int value in query.Take(0)) return 1;
                 if (starts != 0 || calls != 0) return 2;
                 var first = query.GetEnumerator();
                 bool invalid = false;
                 try { first.Current; } catch (Exception* error) { invalid = true; }
                 if (!invalid || starts != 0) return 3;
-                if (!first.MoveNext() || first.Current != 16 || reads != 3 || calls != 3) return 4;
+                if (!first.MoveNext() || first.Current != 16 || reads != 3 || calls != 9) return 4;
                 phase = 1;
                 var second = query.GetEnumerator();
-                if (!second.MoveNext() || second.Current != 17 || calls != 6 || reads != 6) return 5;
+                if (!second.MoveNext() || second.Current != 17 || calls != 18 || reads != 6) return 5;
                 if (first.Current != 16 || !first.MoveNext() || first.Current != 32
                     || !first.MoveNext() || first.Current != 48 || first.MoveNext()) return 6;
                 if (starts != 2 || closes != 2) return 7;
@@ -216,7 +219,7 @@ public sealed partial class OrderByTests
                     try { failed.MoveNext(); } catch (Exception* error) { code = error.GetCode(); }
                     int before = starts;
                     if (code != 30 + failure || failed.MoveNext() || starts != before) return 8;
-                    if (calls != 6) return 9;
+                    if (calls != 18) return 9;
                 }
                 return 0;
             }

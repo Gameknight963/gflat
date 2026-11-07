@@ -3,9 +3,11 @@ namespace gflat.Tests.Std.Queries;
 public sealed partial class OrderByTests
 {
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void NoncopyableKeysAndOwningValuesCleanUpOnEveryObservedAllocationAndCallbackFailure(int optimization)
+    [InlineData(false, 0)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 2)]
+    public void NoncopyableKeysAndOwningValuesCleanUpOnEveryObservedAllocationAndCallbackFailure(bool chained, int optimization)
         => Run("""
             using Standard;
             using Standard::Collections;
@@ -52,11 +54,13 @@ public sealed partial class OrderByTests
             struct Key
             {
                 public int Value;
+                private int level;
                 private String text;
-                public Key(int value) { Value = value; text = s"key"; keys++; }
+                public Key(int value, int keyLevel = 0) { Value = value; level = keyLevel; text = s"key"; keys++; }
                 public immutable int CompareTo(immutable(Key)* other)
                 {
                     if (mode == 2) throw new Exception("compare", 22);
+                    if (mode == 5 && level == 1) throw new Exception("secondary compare", 25);
                     return Value - other.Value;
                 }
                 ~Key() { keys--; }
@@ -66,13 +70,18 @@ public sealed partial class OrderByTests
                 if (mode == 1 && value.Id == 4) throw new Exception("selector", 21);
                 return new Key(value.Id % 3);
             }
+            Key ProjectSecond(Item value)
+            {
+                if (mode == 4 && value.Id == 4) throw new Exception("secondary selector", 24);
+                return new Key(0, 1);
+            }
             int CompareKeys(immutable(Key)* left, immutable(Key)* right) => left.CompareTo(right);
             int main()
             {
                 {
                     Vector<Item> input = new();
                     for (int i = 0; i < 9; i++) input.Add(new Item(i));
-                    var query = input.AsEnumerable().OrderBy(Project, CompareKeys);
+                    var query = input.AsEnumerable().OrderBy(Project, CompareKeys)__SECONDARY__;
                     int observed = 0;
                     int baseline = allocated - released;
                     {
@@ -97,7 +106,7 @@ public sealed partial class OrderByTests
                         if (owners != 9 || keys != 0) return 7;
                     }
                     if (allocated - released != baseline || observed == 0) return 8;
-                    for (int failure = 1; failure <= observed + 3; failure++)
+                    for (int failure = 1; failure <= observed + __MODES__; failure++)
                     {
                         {
                             var cursor = query.GetEnumerator();
@@ -127,5 +136,7 @@ public sealed partial class OrderByTests
                 if (owners != 0 || keys != 0 || allocated != released) return 15;
                 return 0;
             }
-            """, optimization);
+            """.Replace("__SECONDARY__", chained
+                ? ".ThenByDescending(ProjectSecond, CompareKeys).ThenBy(ProjectSecond, CompareKeys)" : "")
+                .Replace("__MODES__", chained ? "5" : "3"), optimization);
 }

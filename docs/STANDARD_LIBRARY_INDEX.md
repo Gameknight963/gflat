@@ -147,6 +147,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | BigInteger byte conversion | [BigInteger byte conversion](BIG_INTEGER_BYTES.md) |
 | BigInteger `IsZero`, `IsOne`, `IsEven` | [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) |
 | BigInteger `Min`, `Max`, `Clamp`, `CopySign` | [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) |
+| BigInteger `MinMagnitude`, `MaxMagnitude` | [Select integer values by magnitude](BIG_INTEGER_MAGNITUDE_BOUNDS.md) |
 | `BitOperations::ReverseEndianness` | [Reversing integer byte order](INTEGER_ENDIANNESS.md) |
 | Checked BigInteger integer widths | [Checked integer conversions](BIG_INTEGER_NARROW_CONVERSIONS.md) |
 | Signed-exponent `BigInteger.Pow` | [BigInteger powers with signed exponents](BIG_INTEGER_SIGNED_POW.md) |

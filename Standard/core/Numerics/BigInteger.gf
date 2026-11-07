@@ -538,6 +538,24 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    public static BigInteger MinMagnitude(immutable(BigInteger)* first, immutable(BigInteger)* second)
+    {
+        int comparison = CompareMagnitude(first, second);
+        immutable(BigInteger)* selected = first;
+        if (comparison > 0 || (comparison == 0 && first.sign > second.sign)) selected = second;
+        BigInteger result = *selected;
+        return move result;
+    }
+
+    public static BigInteger MaxMagnitude(immutable(BigInteger)* first, immutable(BigInteger)* second)
+    {
+        int comparison = CompareMagnitude(first, second);
+        immutable(BigInteger)* selected = first;
+        if (comparison < 0 || (comparison == 0 && first.sign < second.sign)) selected = second;
+        BigInteger result = *selected;
+        return move result;
+    }
+
     public static BigInteger Clamp(immutable(BigInteger)* value, immutable(BigInteger)* minimum, immutable(BigInteger)* maximum)
     {
         if (minimum.CompareTo(maximum) > 0) throw new Exception("BigInteger minimum exceeds maximum");

@@ -34,3 +34,6 @@ and a zero magnitude remains zero regardless of the sign operand.
 Allocation failure leaves inputs and an assignment destination unchanged.
 Comparisons inspect only existing limbs. Copying takes time proportional to
 the selected integer's limb count. These methods belong to the core integer type.
+
+Use [MinMagnitude and MaxMagnitude](BIG_INTEGER_MAGNITUDE_BOUNDS.md) to select
+by absolute value while preserving the selected sign.

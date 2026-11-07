@@ -131,3 +131,5 @@ provide C errno reporting or floating-point trap control.
 `core/Numerics/Math.gf` also declares checked integer operations. Selective
 NoStdLib builds must supply their exception and Memory contracts, including
 when only a floating-point helper is used.
+
+See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Clamp and magnitude selection.

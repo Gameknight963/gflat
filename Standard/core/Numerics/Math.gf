@@ -906,4 +906,64 @@ public static class Math
         return b;
     }
 
+
+    public static float Clamp(float value, float minimum, float maximum)
+    {
+        if (minimum > maximum) throw new Exception("Clamp minimum exceeds maximum");
+        if (value < minimum) return minimum;
+        if (value > maximum) return maximum;
+        return value;
+    }
+
+    public static float MinMagnitude(float a, float b) nothrow
+    {
+        if (a != a) return a;
+        if (b != b) return b;
+        float left = Abs(a);
+        float right = Abs(b);
+        if (left < right) return a;
+        if (left > right) return b;
+        return Min(a, b);
+    }
+
+    public static float MaxMagnitude(float a, float b) nothrow
+    {
+        if (a != a) return a;
+        if (b != b) return b;
+        float left = Abs(a);
+        float right = Abs(b);
+        if (left > right) return a;
+        if (left < right) return b;
+        return Max(a, b);
+    }
+
+    public static double Clamp(double value, double minimum, double maximum)
+    {
+        if (minimum > maximum) throw new Exception("Clamp minimum exceeds maximum");
+        if (value < minimum) return minimum;
+        if (value > maximum) return maximum;
+        return value;
+    }
+
+    public static double MinMagnitude(double a, double b) nothrow
+    {
+        if (a != a) return a;
+        if (b != b) return b;
+        double left = Abs(a);
+        double right = Abs(b);
+        if (left < right) return a;
+        if (left > right) return b;
+        return Min(a, b);
+    }
+
+    public static double MaxMagnitude(double a, double b) nothrow
+    {
+        if (a != a) return a;
+        if (b != b) return b;
+        double left = Abs(a);
+        double right = Abs(b);
+        if (left > right) return a;
+        if (left < right) return b;
+        return Max(a, b);
+    }
 }

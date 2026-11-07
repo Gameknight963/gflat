@@ -6,6 +6,18 @@ namespace gflat.LanguageServer.Tests;
 public sealed class CodeActionTests
 {
     [Theory]
+    [InlineData("class Base { public Base(int value) {} } class Item : Base { private int value; }")]
+    [InlineData("class Base<T> { public Base(T value) {} } class Item : Base<int> { private int value; }")]
+    [InlineData("namespace Library { public class Base { public Base(int value) {} } } class Item : Library::Base { private int value; }")]
+    public void GeneratedConstructorDoesNotOmitRequiredBaseArguments(string code)
+    {
+        var source = new SourceFile(Path.GetFullPath("code-action-base-arguments.gf"), code);
+        var model = new EditorModel(new AnalysisSnapshot([source], new() { NoStdLib = true }), [source]);
+        var range = Workspace.ToRange(source.Span(code.IndexOf("Item :", StringComparison.Ordinal), 0));
+        Assert.DoesNotContain(model.CodeActions(source.Path, range), action => action.Title == "Generate constructor");
+    }
+
+    [Theory]
     [InlineData("\n", false)]
     [InlineData("\r\n", false)]
     [InlineData("\r", false)]
@@ -49,6 +61,8 @@ public sealed class CodeActionTests
     [InlineData("interface I { int Value { get; set; } } struct Item : I { }", "Item :", "Implement I")]
     [InlineData("struct Item { private int value; }", "Item", "Generate constructor")]
     [InlineData("class Base { public Base() {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base { public Base(int value = 1) {} } class Item : Base { private int value; }", "Item :", "Generate constructor")]
+    [InlineData("class Base<T> { public Base(T value = default) {} } class Item : Base<int> { private int value; }", "Item :", "Generate constructor")]
     [InlineData("struct Item { private int* value; }", "Item", "Generate constructor")]
     [InlineData("struct Item { private int @class; }", "Item", "Generate constructor")]
     [InlineData("class @class {} struct Item { private @class* value; }", "Item", "Generate constructor")]

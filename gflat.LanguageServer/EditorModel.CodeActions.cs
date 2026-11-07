@@ -118,7 +118,11 @@ public sealed partial class EditorModel
                         new SourceEdit(Workspace.ToRange(source.Span(close.Start, 0)), generated)));
                 }
                 var fields = symbols.Where(s => s.Owner == owner.Qualified && s.Syntax.Node is FieldDeclaration { IsStatic: false, IsConst: false, PropertyName: null }).ToArray();
-                if (fields.Length > 0 && !symbols.Any(s => s.Owner == owner.Qualified && s.Syntax.Node is ConstructorDeclaration &&
+                bool requiresBaseArguments = owner.Syntax.Node is ClassDeclaration cls && snapshot.Checker is { } checker &&
+                    checker.GetClassByIdentity(cls.Name)?.BaseClass is { } baseName &&
+                    checker.GetClassByIdentity(baseName) is { Constructors.Count: > 0 } baseClass &&
+                    !baseClass.Constructors.Any(constructor => constructor.Parameters.All(parameter => parameter.DefaultValue != null));
+                if (fields.Length > 0 && !requiresBaseArguments && !symbols.Any(s => s.Owner == owner.Qualified && s.Syntax.Node is ConstructorDeclaration &&
                     s.Parameters?.Select(p => DisplayType(p.Type)).SequenceEqual(fields.Select(f => DisplayType(f.Type!))) == true))
                 {
                     string generated = newline + indent + "public " + CompletionSpelling(owner) + "(" + string.Join(", ", fields.Select(f => SourceTypeSpelling(f.Type!, f) + " " + CompletionSpelling(f))) + ")" +

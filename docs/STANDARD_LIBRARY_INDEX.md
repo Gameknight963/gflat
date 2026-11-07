@@ -224,3 +224,5 @@ See [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) for sign
 See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for integer endianness swaps.
 
 See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.
+
+See [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) for borrowed equality searches and value removal.

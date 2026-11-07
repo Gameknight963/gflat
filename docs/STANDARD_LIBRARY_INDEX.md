@@ -59,6 +59,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Enumeration and queries](../Standard/core/Queries/README.md) |
 | `Distinct` | [Lazy distinct values](QUERY_DISTINCT.md) |
 | `Union`, `Except`, `Intersect` | [Query set operations](QUERY_SET_OPERATIONS.md) |
+| `UnionBy`, `ExceptBy`, `IntersectBy` | [Query set operations by key](QUERY_SET_OPERATIONS_BY.md) |
 | `DistinctBy(selector)` | [Lazy distinct values by key](QUERY_DISTINCT_BY.md) |
 | `Order()` / `Order(compare)` | [Order a buffered query](QUERY_ORDER.md) |
 | `Concat(other)` | [Concatenating queries](QUERY_CONCAT.md) |

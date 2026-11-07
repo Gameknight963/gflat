@@ -39,6 +39,7 @@ on later reads.
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`
 - Combine distinct values with [Union, Except, and Intersect](../../../docs/QUERY_SET_OPERATIONS.md)
+- Combine records by key with [UnionBy, ExceptBy, and IntersectBy](../../../docs/QUERY_SET_OPERATIONS_BY.md)
 - Search with `Any`, `All`, `Contains`, `First`, `Last`, and `ElementAt`
 - Summarize with `Count`, `Sum`, `Aggregate`, `Min`, and `Max`
 - Order with `Order`, `Reverse`, `TakeLast`, and `SkipLast`

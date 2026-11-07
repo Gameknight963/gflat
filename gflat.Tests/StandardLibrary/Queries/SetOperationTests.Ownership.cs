@@ -131,12 +131,15 @@ public sealed partial class SetOperationTests
         """;
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void OwningCollisionKeysKeepFirstRepresentativesAndCleanUpEveryObservedFailure(int optimization)
+    [InlineData(0, false)]
+    [InlineData(2, false)]
+    [InlineData(0, true)]
+    [InlineData(2, true)]
+    public void OwningCollisionKeysKeepFirstRepresentativesAndCleanUpEveryObservedFailure(int optimization, bool by)
     {
         var source = new StringBuilder(Tracking);
-        foreach (string operation in new[] { "Union", "Except", "Intersect" }) source.Append(OwnedCheck(operation));
+        if (by) source.Append("Key SelectKey(Key value) => value;\n");
+        foreach (string operation in new[] { "Union", "Except", "Intersect" }) source.Append(OwnedCheck(operation, by));
         source.Append("""
             int main()
             {
@@ -166,10 +169,11 @@ public sealed partial class SetOperationTests
                 return 0;
             }
             """);
-        Run(source.ToString(), optimization);
+        if (by) SetOperationByTests.Run(source.ToString(), optimization);
+        else Run(source.ToString(), optimization);
     }
 
-    private static string OwnedCheck(string operation)
+    private static string OwnedCheck(string operation, bool by)
     {
         int[] ids = operation switch { "Union" => [3, 1, 2, 4], "Except" => [3], _ => [1, 2] };
         string tags = operation switch { "Union" => "ABDY", "Except" => "A", _ => "BD" };
@@ -185,7 +189,7 @@ public sealed partial class SetOperationTests
                 rightMoves = 0;
                 int before = attempts;
                 {
-                    var query = left.{{operation}}(right);
+                    var query = left.{{operation}}{{(by ? "By" : "")}}(right{{(by ? ", SelectKey" : "")}});
                     if (attempts != before || active != 0 || leftMoves != 0 || rightMoves != 0) return 10;
                     Vector<Key> result = query.ToVector();
                     if (result.Count != (nuint){{ids.Length}}) return 11;
@@ -195,7 +199,7 @@ public sealed partial class SetOperationTests
                 leftMoves = 0;
                 rightMoves = 0;
                 {
-                    var iterator = left.{{operation}}(right).GetEnumerator();
+                    var iterator = left.{{operation}}{{(by ? "By" : "")}}(right{{(by ? ", SelectKey" : "")}}).GetEnumerator();
                     if (active != 2) return 14;
                     bool invalid = false;
                     try { Key item = iterator.Current; }
@@ -204,7 +208,7 @@ public sealed partial class SetOperationTests
                     if (rightMoves != {{(operation == "Union" ? 0 : 5)}} || leftMoves != {{(operation == "Intersect" ? 2 : 1)}}) return 16;
                 }
                 if (live != initialLive || active != 0 || allocations - releases != initialStorage) return 17;
-                foreach (Key item in left.{{operation}}(right)) break;
+                foreach (Key item in left.{{operation}}{{(by ? "By" : "")}}(right{{(by ? ", SelectKey" : "")}})) break;
                 if (live != initialLive || active != 0 || allocations - releases != initialStorage) return 18;
 
                 for (int failure = 1; failure <= 8; failure++)
@@ -216,7 +220,7 @@ public sealed partial class SetOperationTests
                     int code = 0;
                     try
                     {
-                        var iterator = left.{{operation}}(right).GetEnumerator();
+                        var iterator = left.{{operation}}{{(by ? "By" : "")}}(right{{(by ? ", SelectKey" : "")}}).GetEnumerator();
                         bool moving = false;
                         try
                         {
@@ -253,7 +257,7 @@ public sealed partial class SetOperationTests
                 int observed = 0;
                 attempts = 0;
                 {
-                    var iterator = left.{{operation}}(right).GetEnumerator();
+                    var iterator = left.{{operation}}{{(by ? "By" : "")}}(right{{(by ? ", SelectKey" : "")}}).GetEnumerator();
                     while (iterator.MoveNext()) { Key item = iterator.Current; }
                     observed = attempts;
                     bool invalid = false;
@@ -269,7 +273,7 @@ public sealed partial class SetOperationTests
                     bool caught = false;
                     try
                     {
-                        var iterator = left.{{operation}}(right).GetEnumerator();
+                        var iterator = left.{{operation}}{{(by ? "By" : "")}}(right{{(by ? ", SelectKey" : "")}}).GetEnumerator();
                         while (iterator.MoveNext()) { Key item = iterator.Current; }
                     }
                     catch (Exception* error) { caught = true; }

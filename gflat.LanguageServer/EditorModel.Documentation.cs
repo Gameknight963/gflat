@@ -61,6 +61,7 @@ public sealed partial class EditorModel
     private static DocumentationComment? ReadDocumentation(SourceFile source, int gapStart, int declarationStart)
     {
         string text = source.Text;
+        if (text.AsSpan(gapStart, declarationStart - gapStart).IndexOf("///", StringComparison.Ordinal) < 0) return null;
         int declarationLine = LineStart(text, declarationStart);
         if (!text.AsSpan(declarationLine, declarationStart - declarationLine).Trim().IsEmpty) return null;
         var lines = new Dictionary<int, (string Text, int Start)>();

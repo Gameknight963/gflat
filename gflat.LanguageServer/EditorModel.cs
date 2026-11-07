@@ -1164,7 +1164,11 @@ public sealed partial class EditorModel
             if (visualStudio && item.Kind >= 0 && TokenTypes[item.Kind] == "number") continue;
             int line = item.Span.Line - 1, column = item.Span.Column - 1;
             if (item.Kind < 0 || range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
-            data.AddRange([line - previousLine, line == previousLine ? column - previousColumn : column, item.Span.Length, item.Kind, item.Modifiers]);
+            data.Add(line - previousLine);
+            data.Add(line == previousLine ? column - previousColumn : column);
+            data.Add(item.Span.Length);
+            data.Add(item.Kind);
+            data.Add(item.Modifiers);
             previousLine = line; previousColumn = column;
         }
         return new { data };

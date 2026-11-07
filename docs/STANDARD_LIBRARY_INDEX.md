@@ -218,3 +218,5 @@ See [Sequence averages](QUERY_AVERAGE.md) for numeric and projected Average quer
 See [Choosing random items](RANDOM_ITEMS.md) for sampling into spans and owning vectors.
 
 See [Generating random text](RANDOM_TEXT.md) for custom alphabets and hexadecimal strings.
+
+See [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) for signed component constructors.

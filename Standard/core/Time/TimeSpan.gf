@@ -9,6 +9,31 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
 
     public TimeSpan() nothrow { ticks = 0l; }
 
+    public TimeSpan(long ticks) nothrow { this.ticks = ticks; }
+
+    public TimeSpan(int hours, int minutes, int seconds)
+    {
+        ticks = ComposeTicks(0, hours, minutes, seconds, 0, 0);
+    }
+
+    public TimeSpan(int days, int hours, int minutes, int seconds, int milliseconds = 0, int microseconds = 0)
+    {
+        ticks = ComposeTicks(days, hours, minutes, seconds, milliseconds, microseconds);
+    }
+
+    private static long ComposeTicks(int days, int hours, int minutes, int seconds, int milliseconds, int microseconds)
+    {
+        extralong total = (extralong)days * (extralong)864000000000l
+            + (extralong)hours * (extralong)36000000000l
+            + (extralong)minutes * (extralong)600000000l
+            + (extralong)seconds * (extralong)10000000l
+            + (extralong)milliseconds * (extralong)10000l
+            + (extralong)microseconds * (extralong)10l;
+        if (total < (extralong)MinimumTicks || total > (extralong)MaximumTicks)
+            throw new Exception("TimeSpan components overflow");
+        return (long)total;
+    }
+
     public static TimeSpan FromTicks(long value) nothrow
     {
         TimeSpan result = new(); result.ticks = value; return result;

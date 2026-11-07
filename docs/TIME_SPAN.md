@@ -99,3 +99,5 @@ Equality, ordering, and hashing use the exact tick count. Source:
 `core/Time/TimeSpan.gf`, with formatting and interface dependencies.
 The units and spelling follow [.NET TimeSpan](https://learn.microsoft.com/en-us/dotnet/api/system.timespan)
 and its [constant format](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-timespan-format-strings).
+
+See [Constructing durations from components](TIME_SPAN_CONSTRUCTION.md) for signed component constructors.

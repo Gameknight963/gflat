@@ -226,3 +226,5 @@ See [Reversing integer byte order](REVERSE_ENDIANNESS.md) for integer endianness
 See [Reversing byte order in buffers](REVERSE_ENDIANNESS_BUFFERS.md) for overlapping spans and pointer/count buffers.
 
 See [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) for borrowed equality searches and value removal.
+
+See [Formatting selected version fields](VERSION_FORMATTING.md) for field counts and revision halves.

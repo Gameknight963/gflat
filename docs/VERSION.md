@@ -55,3 +55,5 @@ sends the same representation in one write.
 
 Version implements `IEquatable<Version>`, `IComparable<Version>`, `IHashable`,
 and `IFormattable`.
+
+See [Formatting selected version fields](VERSION_FORMATTING.md) for field counts and revision halves.

@@ -20,6 +20,8 @@ public struct Version : IEquatable<Version>, IComparable<Version>, IHashable, IF
     public int Minor { immutable get nothrow => minor; }
     public int Build { immutable get nothrow => build; }
     public int Revision { immutable get nothrow => revision; }
+    public short MajorRevision { immutable get nothrow => (short)(revision >> 16); }
+    public short MinorRevision { immutable get nothrow => (short)revision; }
 
     public immutable bool Equals(immutable(Version)* other) nothrow
         => major == other.major && minor == other.minor && build == other.build && revision == other.revision;
@@ -114,26 +116,40 @@ public struct Version : IEquatable<Version>, IComparable<Version>, IHashable, IF
     // Staging supports sufficiently backed receiver/output overlap. Written is separate.
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
+        int fields = 2;
+        if (build >= 0) fields = 3;
+        if (revision >= 0) fields = 4;
+        return this.TryFormat(output, capacity, ref written, fields);
+    }
+
+    public immutable bool TryFormat(char* output, nuint capacity, ref nuint written, int fieldCount) nothrow
+    {
         written = 0;
+        if (fieldCount < 0 || fieldCount > 4 || (fieldCount >= 3 && build < 0) || (fieldCount == 4 && revision < 0))
+            return false;
         char[43] staged;
+        int[4] parts = [major, minor, build, revision];
         nuint length = 0;
-        WritePart(major, staged, ref length); staged[length] = '.'; length++;
-        WritePart(minor, staged, ref length);
-        if (build >= 0)
+        for (int i = 0; i < fieldCount; i++)
         {
-            staged[length] = '.'; length++;
-            WritePart(build, staged, ref length);
-        }
-        if (revision >= 0)
-        {
-            staged[length] = '.'; length++;
-            WritePart(revision, staged, ref length);
+            if (i != 0) { staged[length] = '.'; length++; }
+            WritePart(parts[(nuint)i], staged, ref length);
         }
         if (capacity < length) return false;
         for (nuint i = 0; i < length; i++) output[i] = staged[i];
         written = length;
         return true;
     }
+
+    public immutable void Format(ITextWriter* output, int fieldCount)
+    {
+        char[43] buffer;
+        nuint written = 0;
+        if (!this.TryFormat(buffer, 43, ref written, fieldCount))
+            throw new Exception("Version field count is unavailable");
+        output.Write(buffer, written);
+    }
+
     public immutable void Format(ITextWriter* output)
     {
         char[43] buffer;

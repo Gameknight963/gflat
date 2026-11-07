@@ -22,13 +22,79 @@ namespace gflat.PackageTests
             public override IMessage Invoke(IMessage message)
             {
                 var request = (IMethodCallMessage)message;
-                try { return new ReturnMessage(request.MethodName == "GetType" ? interfaceType : call(request), null, 0, request.LogicalCallContext, request); }
+                try {
+                    object result = request.MethodName == "GetType" ? interfaceType : call(request);
+                    return result as IMessage ?? new ReturnMessage(result, null, 0, request.LogicalCallContext, request);
+                }
                 catch (Exception error) { return new ReturnMessage(error, request); }
             }
         }
 
         private static T Interface<T>(Func<IMethodCallMessage, object> call)
         { return (T)new Proxy(typeof(T), call).GetTransparentProxy(); }
+
+        public static void RunTextMateEnter(Assembly assembly, string configurationPath)
+        {
+            var configurationType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.LanguageConfiguration.LanguageConfigurationContract", true);
+            var json = Type.GetType("Newtonsoft.Json.JsonConvert, Newtonsoft.Json", true);
+            var configuration = json.GetMethod("DeserializeObject", new[] { typeof(string), typeof(Type) })
+                .Invoke(null, new object[] { System.IO.File.ReadAllText(configurationPath), configurationType });
+            var rules = (System.Collections.IEnumerable)configurationType.GetProperty("OnEnterRules").GetValue(configuration);
+            var helperType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.Editor.LanguageConfiguration.Indentation.IndentationHelperService", true);
+            var helper = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(helperType);
+            var managerField = helperType.GetField("_indentationManagerService", BindingFlags.NonPublic | BindingFlags.Instance);
+            var manager = new Proxy(managerField.FieldType, m => {
+                if (m.MethodName != "GetIndentation") throw new Exception("Unexpected indentation option query: " + m.MethodName);
+                var arguments = m.Args;
+                arguments[2] = true; arguments[3] = 4; arguments[4] = 4;
+                return new ReturnMessage(null, arguments, arguments.Length, m.LogicalCallContext, m);
+            }).GetTransparentProxy();
+            managerField.SetValue(helper, manager);
+            const string document = "{\r\n}";
+            Microsoft.VisualStudio.Text.ITextSnapshot snapshot = null;
+            Microsoft.VisualStudio.Text.ITextSnapshotLine line = null, closer = null;
+            snapshot = Interface<Microsoft.VisualStudio.Text.ITextSnapshot>(m => {
+                if (m.MethodName == "get_Length") return document.Length;
+                if (m.MethodName == "get_LineCount") return 2;
+                if (m.MethodName == "get_Item") return document[(int)m.Args[0]];
+                if (m.MethodName == "GetLineFromLineNumber") return (int)m.Args[0] == 0 ? line : closer;
+                if (m.MethodName == "GetText") {
+                    if (m.Args.Length == 0) return document;
+                    if (m.Args.Length == 2) return document.Substring((int)m.Args[0], (int)m.Args[1]);
+                    var span = (Microsoft.VisualStudio.Text.Span)m.Args[0];
+                    return document.Substring(span.Start, span.Length);
+                }
+                throw new Exception("Unexpected Enter snapshot operation: " + m.MethodName);
+            });
+            Func<bool, Microsoft.VisualStudio.Text.ITextSnapshotLine> makeLine = closing => Interface<Microsoft.VisualStudio.Text.ITextSnapshotLine>(m => {
+                int start = closing ? 3 : 0, end = start + 1, breakEnd = closing ? 4 : 3;
+                if (m.MethodName == "GetText") return closing ? "}" : "{";
+                if (m.MethodName == "get_Snapshot") return snapshot;
+                if (m.MethodName == "get_LineNumber") return closing ? 1 : 0;
+                if (m.MethodName == "get_Extent") return new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, start, 1);
+                if (m.MethodName == "get_ExtentIncludingLineBreak") return new Microsoft.VisualStudio.Text.SnapshotSpan(snapshot, start, breakEnd - start);
+                if (m.MethodName == "get_Start") return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, start);
+                if (m.MethodName == "get_End") return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, end);
+                if (m.MethodName == "get_EndIncludingLineBreak") return new Microsoft.VisualStudio.Text.SnapshotPoint(snapshot, breakEnd);
+                throw new Exception("Unexpected Enter line operation: " + m.MethodName);
+            });
+            line = makeLine(false); closer = makeLine(true);
+            var buffer = Interface<Microsoft.VisualStudio.Text.ITextBuffer>(m => {
+                if (m.MethodName == "CreateEdit") throw new Exception("Enter indentation attempted a second buffer edit after brace completion");
+                throw new Exception("Unexpected Enter buffer operation: " + m.MethodName);
+            });
+            var view = Interface<Microsoft.VisualStudio.Text.Editor.ITextView>(m => m.MethodName == "get_TextBuffer" ? buffer : null);
+            var apply = helperType.GetMethod("ApplyOnEnterRule", BindingFlags.NonPublic | BindingFlags.Instance);
+            int checkedRules = 0;
+            foreach (var rule in rules)
+            {
+                var result = apply.Invoke(helper, new[] { (object)view, line, rule });
+                if (!Equals(result.GetType().GetField("Item2").GetValue(result), 4))
+                    throw new Exception("Enter between braces must indent the body by one level: " + result);
+                checkedRules++;
+            }
+            if (checkedRules == 0) throw new Exception("No brace Enter rule was tested");
+        }
 
         public static void RunLibraryProtection(Assembly assembly)
         {

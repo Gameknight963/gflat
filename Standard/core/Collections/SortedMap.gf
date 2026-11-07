@@ -55,6 +55,14 @@ struct SortedMap<K, V>
     internal immutable int CompareKeys(immutable(K)* left, immutable(K)* right)
         => compare(left, right);
 
+    internal immutable immutable(K)* KeyAt(nuint index)
+        => storage.AsImmutable()[index].Key;
+
+    internal void RemoveAt(nuint index)
+    {
+        storage.RemoveAt(index);
+    }
+
     // Borrow a half-open interval in comparer order; no entry is copied.
     public immutable Span<immutable(Entry)> GetRange(immutable(K)* lowerInclusive, immutable(K)* upperExclusive)
     {

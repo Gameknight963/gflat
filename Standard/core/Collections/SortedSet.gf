@@ -18,6 +18,79 @@ struct SortedSet<T>
     public immutable immutable(T)*? Find(immutable(T)* value) => storage.FindKey(value);
     public bool Remove(immutable(T)* value) => storage.Remove(value);
     public void Clear() { storage.Clear(); }
+
+    public void ExceptWith(immutable(SortedSet<T>)* other)
+    {
+        if ((this).reinterpret<nuint>() == (other).reinterpret<nuint>())
+        {
+            this.Clear();
+            return;
+        }
+        Enumerator iterator = other.GetEnumerator();
+        while (iterator.MoveNext()) this.Remove(iterator.Current);
+    }
+
+    public void IntersectWith(immutable(SortedSet<T>)* other)
+    {
+        if ((this).reinterpret<nuint>() == (other).reinterpret<nuint>()) return;
+        if (other.IsEmpty)
+        {
+            this.Clear();
+            return;
+        }
+        bool same = storage.HasSameComparison(&other.storage);
+        nuint index = 0;
+        while (index < this.Count)
+        {
+            immutable(T)* key = storage.KeyAt(index);
+            bool keep = false;
+            if (same) keep = other.Contains(key);
+            else
+            {
+                Enumerator iterator = other.GetEnumerator();
+                while (iterator.MoveNext())
+                {
+                    if (storage.CompareKeys(key, iterator.Current) == 0)
+                    {
+                        keep = true;
+                        break;
+                    }
+                }
+            }
+            if (keep) index++;
+            else storage.RemoveAt(index);
+        }
+    }
+
+    public nuint RemoveWhere(bool(immutable(T)*)* predicate)
+    {
+        nuint removed = 0;
+        nuint index = 0;
+        while (index < this.Count)
+        {
+            if (predicate(storage.KeyAt(index)))
+            {
+                storage.RemoveAt(index);
+                removed++;
+            }
+            else index++;
+        }
+        return removed;
+    }
+
+    internal immutable bool HasEquivalentBefore(immutable(SortedSet<T>)* source, immutable(T)* key)
+    {
+        if (storage.HasSameComparison(&source.storage)) return false;
+        Enumerator iterator = source.GetEnumerator();
+        while (iterator.MoveNext())
+        {
+            immutable(T)* earlier = iterator.Current;
+            if (earlier == key) return false;
+            if (storage.CompareKeys(earlier, key) == 0) return true;
+        }
+        return false;
+    }
+
     public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
     public immutable bool SetEquals(immutable(SortedSet<T>)* other)

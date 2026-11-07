@@ -3,7 +3,7 @@ using Standard::Collections;
 namespace Standard::Queries;
 
 public U Aggregate<T, U, S, E>(Enumerable<T, S, E> source, U seed, U(U, T)* accumulate)
-=> source.Aggregate<U>(seed, accumulate);
+=> source.Aggregate<U>(move seed, accumulate);
 
 extension Enumerable<T, S, E>
 {
@@ -12,6 +12,19 @@ extension Enumerable<T, S, E>
         E iterator = (*this).GetEnumerator();
         while (iterator.MoveNext()) seed = accumulate(move seed, iterator.Current);
         return move seed;
+    }
+}
+
+public R Aggregate<T, U, R, S, E>(Enumerable<T, S, E> source, U seed,
+    U(U, T)* accumulate, R(U)* resultSelector)
+    => source.Aggregate<U, R>(move seed, accumulate, resultSelector);
+
+extension Enumerable<T, S, E>
+{
+    public R Aggregate<U, R>(U seed, U(U, T)* accumulate, R(U)* resultSelector)
+    {
+        U result = (*this).Aggregate<U>(move seed, accumulate);
+        return resultSelector(move result);
     }
 }
 

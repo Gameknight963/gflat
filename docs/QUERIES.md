@@ -92,6 +92,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `TryLast(ref result)` | Return the last value, or false without changing `result` if empty. |
 | `TrySingle(ref result)` | Return the only value, or false without changing `result` if empty or multiple. |
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |
+| `Aggregate(seed, function, resultSelector)` | Fold and transform the final accumulator. See [aggregate results](QUERY_AGGREGATE_RESULT.md). |
 | `Aggregate(function)` | Fold from the first value. Throws if empty. |
 | `Min()` / `Max()` / `Min(compare)` / `Max(compare)` | Select the first least or greatest value. Throw if empty. |
 | `MinBy(selector)` / `MaxBy(selector)` | Select the first element with the least or greatest key. Optional key comparer. Throw if empty. |
@@ -224,6 +225,10 @@ int main()
 
 A callback returning its owning accumulator should use `return move accumulator`.
 Source elements retain their normal copying rules.
+
+`Aggregate(seed, function, resultSelector)` passes the final accumulator to the
+selector once, including for an empty input. The selector can produce a different
+result type. See [transforming an aggregate result](QUERY_AGGREGATE_RESULT.md).
 
 ## Ref-output terminals
 

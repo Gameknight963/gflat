@@ -28,6 +28,9 @@ struct SortedSet<T>
         }
     }
     public void Reserve(nuint count) { storage.Reserve(count); }
+    public nuint EnsureCapacity(nuint requested) => storage.EnsureCapacity(requested);
+    public void TrimExcess() { storage.TrimExcess(); }
+    public void ShrinkToFit() { storage.ShrinkToFit(); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
     public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
     // Borrows the stored comparison-equivalent value, or null when absent.

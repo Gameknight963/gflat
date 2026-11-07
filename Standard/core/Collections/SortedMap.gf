@@ -16,6 +16,9 @@ struct SortedMap<K, V>
     public nuint Capacity { immutable get nothrow => storage.Capacity; }
     public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }
     public void Reserve(nuint count) { storage.Reserve(count); }
+    public nuint EnsureCapacity(nuint requested) => storage.EnsureCapacity(requested);
+    public void TrimExcess() { storage.TrimExcess(); }
+    public void ShrinkToFit() { storage.ShrinkToFit(); }
     public void Clear() { storage.Clear(); }
 
     public struct Entry

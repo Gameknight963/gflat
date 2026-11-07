@@ -1,6 +1,7 @@
 # Controlling collection capacity
 
-`Vector<T>`, `Queue<T>`, `Stack<T>`, and `PriorityQueue<T>` expose
+`Vector<T>`, `Deque<T>`, `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`,
+`SortedMap<K, V>`, and `SortedSet<T>` expose
 `EnsureCapacity(nuint requested)`. It reserves at least the requested number
 of elements and returns the resulting capacity. A request below the current
 capacity does not shrink storage.
@@ -30,10 +31,11 @@ Use `ShrinkToFit()` to unconditionally reduce capacity to `Count`, including
 releasing an empty buffer. `Clear()` alone retains capacity.
 
 These operations move elements without copying them and work with noncopyable
-owners. Queue order, stack order, and heap ordering are preserved. A relocation
+owners. Deque order, queue order, stack order, and heap ordering are preserved. A relocation
 invalidates element pointers, spans, and iterators. If allocation fails, the
-original capacity and elements remain intact. Successful heap capacity changes
-do not call its comparator.
+original capacity and elements remain intact. Heap and sorted collection capacity
+changes do not call their comparators.
+Sorted containers preserve their existing comparer order.
 
 The existing `Reserve` API remains available when the resulting capacity is
 not needed. These methods belong to the core collection types.

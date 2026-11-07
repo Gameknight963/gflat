@@ -28,6 +28,18 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         this.RelocateStorage(requested);
     }
 
+    public nuint EnsureCapacity(nuint requested)
+    {
+        this.Reserve(requested);
+        return capacity;
+    }
+
+    public void TrimExcess()
+    {
+        nuint threshold = (capacity / 10) * 9 + ((capacity % 10) * 9) / 10;
+        if (count < threshold) this.ShrinkToFit();
+    }
+
     public void ShrinkToFit()
     {
         if (count == capacity) return;

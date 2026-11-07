@@ -135,6 +135,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | BigInteger `IsZero`, `IsOne`, `IsEven` | [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) |
 | BigInteger `Min`, `Max`, `Clamp`, `CopySign` | [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) |
 | `BitOperations::ReverseEndianness` | [Reversing integer byte order](INTEGER_ENDIANNESS.md) |
+| Rational `Truncate`, `Floor`, `Ceiling` | [Exact rational integral values](RATIONAL_INTEGRAL.md) |
 | `Math` | [Scalar math](MATH.md) |
 | Integer `Math::CopySign` | [Copying integer signs](INTEGER_COPY_SIGN.md) |
 | `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |

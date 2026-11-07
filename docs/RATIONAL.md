@@ -61,3 +61,6 @@ a partial result in the sink.
 
 Sources: `Numerics/Rational.gf`, BigInteger dependencies, and
 `Text/formattable_string.gf` for the ToString extension.
+
+See [exact rational integral values](RATIONAL_INTEGRAL.md) for `Truncate`,
+`Floor`, and `Ceiling` without floating-point conversion.

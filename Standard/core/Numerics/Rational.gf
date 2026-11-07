@@ -84,6 +84,24 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
         BigInteger bottom = denominator;
         return new Rational(move top, move bottom);
     }
+    public immutable BigInteger Truncate() => numerator.Divide(&denominator);
+
+    private immutable BigInteger IntegralBound(bool upper)
+    {
+        BigInteger remainder = new();
+        BigInteger quotient = numerator.DivRem(&denominator, ref remainder);
+        if (!remainder.IsZero && ((upper && numerator.Sign > 0) || (!upper && numerator.Sign < 0)))
+        {
+            BigInteger one = new(1l);
+            if (upper) return quotient.Add(&one);
+            return quotient.Subtract(&one);
+        }
+        return move quotient;
+    }
+
+    public immutable BigInteger Floor() => this.IntegralBound(false);
+    public immutable BigInteger Ceiling() => this.IntegralBound(true);
+
     public immutable int CompareTo(immutable(Rational)* other)
     {
         BigInteger first = numerator.Multiply(&other.denominator);

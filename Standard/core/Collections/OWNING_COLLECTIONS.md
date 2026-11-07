@@ -64,8 +64,12 @@ An empty vector returns false before that check.
 `AddRange(immutableSpan)` copies elements into the tail. A span from the same
 vector is supported across growth. Empty input is a no-op.
 
-Allocation failure before copying preserves contents. A later copy failure leaves
-the successfully appended prefix and all original elements valid. Capacity may
+The optional [enumerable AddRange overload](../../../docs/VECTOR_ENUMERABLE_RANGE.md)
+captures input before changing the vector, supporting self-enumeration and
+fresh move-only values. Its input or allocation failures preserve the target.
+
+For span input, allocation failure before copying preserves contents. A later
+copy failure leaves the successfully appended prefix and all original elements valid. Capacity may
 have grown, invalidating old views. Copy constructors must leave source and
 target structurally unchanged through other aliases.
 

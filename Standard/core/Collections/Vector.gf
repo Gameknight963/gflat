@@ -263,6 +263,43 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         }
     }
 
+    // Capture has completed. Allocate before transferring any captured owners.
+    internal void AppendStagedRange(Vector<T> staged)
+    {
+        if (staged.IsEmpty) return;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        nuint maximum = ((nuint)0 - 1) / stride;
+        if (staged.Count > maximum - count) throw new Exception("Vector count overflow");
+        nuint required = count + staged.Count;
+        if (required > capacity)
+        {
+            nuint grown = 4;
+            if (capacity != 0)
+            {
+                grown = maximum;
+                if (capacity <= maximum / 2) grown = capacity * 2;
+            }
+            if (grown > maximum) grown = maximum;
+            if (grown < required) grown = required;
+            this.Reserve(grown);
+        }
+        Span<T> elements = staged.AsSpan();
+        T* captured = elements.Data!;
+        nuint left = 0;
+        nuint right = staged.Count;
+        while (left < right)
+        {
+            right--;
+            if (left == right) break;
+            T temporary = move *(captured + left);
+            move *(captured + right) at captured + left;
+            move temporary at captured + right;
+            left++;
+        }
+        while (!staged.IsEmpty) this.Add(staged.Pop());
+    }
+
     // Destroys all elements while retaining allocated capacity.
     public void Clear() { this.Truncate(0); }
 

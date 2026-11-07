@@ -49,6 +49,12 @@ struct SortedMap<K, V>
         return compare(items[index].Key, key) == 0;
     }
 
+    internal immutable bool HasSameComparison(immutable(SortedMap<K, V>)* other) nothrow
+        => compare == other.compare;
+
+    internal immutable int CompareKeys(immutable(K)* left, immutable(K)* right)
+        => compare(left, right);
+
     // Borrow a half-open interval in comparer order; no entry is copied.
     public immutable Span<immutable(Entry)> GetRange(immutable(K)* lowerInclusive, immutable(K)* upperExclusive)
     {

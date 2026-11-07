@@ -33,6 +33,7 @@ int main()
 | `Remove(&query)` | Destroys the stored value, returning false when absent |
 | `Clear()` | Destroys values and retains capacity |
 | `Reserve(count)` | Reserves entry capacity |
+| `SetEquals`, subset/superset checks, `Overlaps` | [Compare sets using the receiver's comparer](SORTED_SET_RELATIONS.md) |
 
 A zero comparer result identifies an existing value. The comparer must keep a
 consistent ordering and leave the set unchanged through other aliases. Comparison

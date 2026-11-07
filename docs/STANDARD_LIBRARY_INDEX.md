@@ -54,6 +54,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
 | Map `TryGetValue`, `GetValueOrDefault` | [Copying values from maps](MAP_VALUE_LOOKUP.md) |
 | `SortedSet<T>` | [SortedSet](SORTED_SET.md) |
+| Sorted-set equality, subset/superset checks, overlap | [Comparing sorted sets](SORTED_SET_RELATIONS.md) |
 | `DisjointSet` | [Disjoint sets](DISJOINT_SET.md) |
 | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Equality, hashing, and ordering](HASHING.md) |
 | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, max-heap operations, bounds/search helpers, `Comparer<T>` | [Value and span algorithms](../Standard/core/Collections/ALGORITHMS.md) |

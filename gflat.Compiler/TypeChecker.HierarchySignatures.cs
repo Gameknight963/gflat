@@ -28,6 +28,14 @@ public partial class TypeChecker
         // cannot depend on declaration scope or specialize another type.
         if (method.ReturnType is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } result && IsPrimitive(result.Name) &&
             method.Parameters.All(p => p.Type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } type && IsPrimitive(type.Name))) return;
+        // Primitive pointers still need qualifier publication, but no lexical
+        // declaration context is needed to resolve their pointees.
+        if (PrimitiveSignatureType(method.ReturnType) && method.Parameters.All(p => PrimitiveSignatureType(p.Type)))
+        {
+            method.ReturnType = ResolveAlias(method.ReturnType);
+            foreach (var parameter in method.Parameters) parameter.Type = ResolveAlias(parameter.Type);
+            return;
+        }
         using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("check.bind-method-signature",
             $"{method.Name} ({method.Span.Source?.Path}:{method.Line}) #{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(method)}") : null;
         using var context = EnterMethodSignatureContext(method);
@@ -36,6 +44,12 @@ public partial class TypeChecker
         foreach (var parameter in method.Parameters)
             parameter.Type = ResolveAlias(parameter.Type);
     }
+
+    private static bool PrimitiveSignatureType(TypeExpression type) => type switch {
+        NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named => IsPrimitive(named.Name),
+        PointerTypeExpression { Inner: NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named } => IsPrimitive(named.Name),
+        _ => false
+    };
 
     private TypeExpression ResolveHierarchyMethodType(MethodDeclaration method, TypeExpression type)
     {

@@ -14,9 +14,11 @@ public sealed class StringAnySearchTests
         """;
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void Latin1HostOracleChecksEveryStartAndBothCountedAndCStringSetsWithoutAllocation(int optimization)
+    [InlineData(false, 0)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 2)]
+    public void Latin1HostOracleChecksEveryStartAndBothCountedAndCStringSetsWithoutAllocation(bool invert, int optimization)
     {
         byte[] every=Enumerable.Range(0,256).Select(value=>(byte)value).ToArray();
         var rows=new List<(byte[] Text,byte[] Set)> {([],[]),([],every),(every,[]),(every,every),
@@ -30,13 +32,19 @@ public sealed class StringAnySearchTests
         using(var writer=new BinaryWriter(manifest,System.Text.Encoding.UTF8,leaveOpen:true))foreach(var row in rows) {
             string text=new(row.Text.Select(value=>(char)value).ToArray());char[] set=row.Set.Select(value=>(char)value).ToArray();
             writer.Write((ushort)row.Text.Length);writer.Write((ushort)row.Set.Length);writer.Write(row.Text);writer.Write(row.Set);
-            WriteIndex(writer,text.LastIndexOfAny(set));
-            for(int start=0;start<=text.Length;start++)WriteIndex(writer,text.IndexOfAny(set,start));
+            WriteIndex(writer,invert ? text.AsSpan().LastIndexOfAnyExcept(set.AsSpan()) : text.LastIndexOfAny(set));
+            for(int start=0;start<=text.Length;start++)
+            {
+                int found = invert ? text.AsSpan(start).IndexOfAnyExcept(set.AsSpan()) : text.AsSpan(start).IndexOfAny(set.AsSpan());
+                WriteIndex(writer, found < 0 ? -1 : start + found);
+            }
             int end=Array.IndexOf(row.Set,(byte)0);if(end<0)end=row.Set.Length;
-            char[] cstring=set.Take(end).ToArray();WriteIndex(writer,text.IndexOfAny(cstring));WriteIndex(writer,text.LastIndexOfAny(cstring));
+            char[] cstring=set.Take(end).ToArray();
+            WriteIndex(writer, invert ? text.AsSpan().IndexOfAnyExcept(cstring.AsSpan()) : text.IndexOfAny(cstring));
+            WriteIndex(writer, invert ? text.AsSpan().LastIndexOfAnyExcept(cstring.AsSpan()) : text.LastIndexOfAny(cstring));
         }
         string hex=Convert.ToHexString(manifest.ToArray());
-        Run(Counters+$$"""
+        string code = Counters+$$"""
             int Digit(char value)nothrow{if(value<='9')return value-'0';return value-'A'+10;}
             int ReadByte(readonly(char)* text,ref nuint position)nothrow{int value=(Digit(text[position])<<4)|Digit(text[position+1]);position+=2;return value;}
             int ReadWord(readonly(char)* text,ref nuint position)nothrow{int low=ReadByte(text,ref position);return low|(ReadByte(text,ref position)<<8);}
@@ -67,7 +75,9 @@ public sealed class StringAnySearchTests
                 }
                 if(position!={{hex.Length}}||allocated!=released)return 8;return 0;
             }
-            """,optimization);
+            """;
+        if (invert) code = code.Replace("IndexOfAny", "IndexOfAnyExcept");
+        Run(code, optimization);
     }
 
     [Theory]
@@ -77,7 +87,8 @@ public sealed class StringAnySearchTests
     {
         string program=Counters+"""
             bool Observe(immutable(String)* text,readonly(char)* values,nuint count)nothrow{
-                return text.LastIndexOfAny(values,count)!=String::NotFound&&text.LastIndexOfAny(values)!=String::NotFound;
+                return text.LastIndexOfAny(values,count)!=String::NotFound&&text.LastIndexOfAny(values)!=String::NotFound
+                    &&text.LastIndexOfAnyExcept(values,count)!=String::NotFound&&text.LastIndexOfAnyExcept(values)!=String::NotFound;
             }
             int main(){
                 {
@@ -118,9 +129,57 @@ public sealed class StringAnySearchTests
         Match observe=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Observe\([^\r\n]*\{\r?\n(?<body>.*?)^\}");
         Assert.True(observe.Success);Assert.Contains("nounwind",observe.Value);Assert.DoesNotContain("invoke ",observe.Value);
         string[] last=ir.Split('\n').Where(line=>line.StartsWith("define ")&&line.Contains("$String$LastIndexOfAny",StringComparison.Ordinal)).ToArray();
-        Assert.Equal(2,last.Length);Assert.All(last,line=>Assert.Contains("nounwind",line));
+        Assert.Equal(4,last.Length);Assert.All(last,line=>Assert.Contains("nounwind",line));
         Run(program,optimization);
     }
+
+    [Fact]
+    public void ExceptGuideCompiles() => StandardLibraryGuideTests.CheckProgram("STRING_ANY_EXCEPT.md", 0);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ExceptSearchesHandleEmptySetsBorrowedSetsAndInvalidStarts(int optimization)
+        => Run(Counters + """
+            int main()
+            {
+                {
+                    String empty = new();
+                    char[256] data;
+                    for (nuint i = 0; i < 256; i++) data[i] = (char)i;
+                    String text = String::From(&data[0], 256);
+                    readonly(char)* invalid = ((nuint)1).reinterpret<readonly(char)*>();
+                    int before = attempts;
+                    deny = true;
+                    if (empty.IndexOfAnyExcept(invalid, 123) != String::NotFound || empty.LastIndexOfAnyExcept(invalid, 123) != String::NotFound) return 1;
+                    if (text.IndexOfAnyExcept(invalid, 0) != 0 || text.LastIndexOfAnyExcept(invalid, 0) != 255) return 2;
+                    if (text.IndexOfAnyExcept(invalid, 123, 256) != String::NotFound) return 3;
+                    if (text.IndexOfAnyExcept(text.Data, 256) != String::NotFound || text.LastIndexOfAnyExcept(text.Data, 256) != String::NotFound) return 4;
+                    if (text.IndexOfAnyExcept(text.Data) != 0 || text.LastIndexOfAnyExcept(text.Data) != 255) return 5;
+                    for (nuint offset = 0; offset <= 256; offset++)
+                    {
+                        nuint last = offset - 1;
+                        if (offset == 0) last = String::NotFound;
+                        if (text.LastIndexOfAnyExcept(text.Data + offset, 256 - offset) != last) return 6;
+                        for (nuint start = 0; start <= 256; start++)
+                        {
+                            nuint expected = String::NotFound;
+                            if (start < offset) expected = start;
+                            if (text.IndexOfAnyExcept(text.Data + offset, 256 - offset, start) != expected) return 7;
+                        }
+                    }
+                    deny = false;
+                    if (attempts != before) return 8;
+                    bool caught = false;
+                    try { text.IndexOfAnyExcept(invalid, 123, (nuint)0 - 1); }
+                    catch (Exception* error) { caught = CString::Equals(error.GetMessage(), "String search start out of range"); }
+                    if (!caught || text.Length != 256) return 9;
+                    for (nuint i = 0; i < 256; i++) if (text[i] != (char)i) return 10;
+                }
+                if (allocated != released) return 11;
+                return 0;
+            }
+            """, optimization);
 
     private static void WriteIndex(BinaryWriter writer,int value)=>writer.Write(value<0?ushort.MaxValue:(ushort)value);
     private static IEnumerable<SourceFile> Sources(string program){

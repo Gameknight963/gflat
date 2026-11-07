@@ -159,3 +159,6 @@ for substring search.
 See [Using owning strings as search arguments](STRING_ARGUMENTS.md) for borrowed String search and replacement overloads.
 
 See [Borrowing a range of string bytes](STRING_RANGE_VIEWS.md) for allocation-free substring views.
+
+Use [IndexOfAnyExcept and LastIndexOfAnyExcept](STRING_ANY_EXCEPT.md) to find
+bytes outside an allowed set.

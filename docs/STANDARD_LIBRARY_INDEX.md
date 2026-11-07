@@ -55,6 +55,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Vectors](../Standard/core/README.md#vectors), [Copying borrowed spans](../Standard/core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Span value and pattern `Count` | [Counting values and patterns in spans](SPAN_COUNT.md) |
 | Span `IndexOfAny`, `IndexOfAnyExcept`, and related searches | [Searching a span for a set of values](SPAN_SET_SEARCH.md) |
+| String `IndexOfAnyExcept`, `LastIndexOfAnyExcept` | [Find bytes outside an allowed set](STRING_ANY_EXCEPT.md) |
 | Span inclusive-range searches | [Searching spans by an inclusive range](SPAN_RANGE_SEARCH.md) |
 | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](../Standard/core/Collections/OWNING_COLLECTIONS.md) |
 | `BitSet.FindIndex`, `FindLastIndex` | [Searching packed bits](BIT_SET_SEARCH.md) |

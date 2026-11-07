@@ -106,6 +106,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Math::DivRem`, `TryDivRem` | [Integer quotient and remainder](MATH_DIVREM.md) |
 | `PseudoRandom` | [Deterministic pseudorandom values](PSEUDORANDOM.md) |
 | `PseudoRandom.NextBytes` | [Filling a byte buffer](RANDOM_BYTES.md) |
+| `PseudoRandom.Shuffle` | [Shuffling through a random generator](RANDOM_SHUFFLE.md) |
 | `PseudoRandom.GetItems` | [Choosing random items](RANDOM_ITEMS.md) |
 | `PseudoRandom.GetString`, `GetHexString` | [Generating random text](RANDOM_TEXT.md) |
 | `Math` floating-point classification | [Classifying floating-point values](FLOATING_CLASSIFICATION.md) |

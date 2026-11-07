@@ -124,6 +124,11 @@ normalization releases its partial result.
 The existing `Join`, `IsRooted`, and `IsFullyQualified` operations retain their
 lexical rules. Full-path resolution uses the stricter root requirements above.
 
+## Computing a relative path
+
+Compute routes between fully qualified paths with
+[GetRelativePath](../../../docs/PATH_RELATIVE.md).
+
 ## Source selection
 
 Selective builds include IO/PathStyle.gf, IO/Paths.gf, String, and Span with its

@@ -223,6 +223,91 @@ public static class Paths
         return Paths::GetFullPathCore(input, path.Length, baseData, basePath.Length, style);
     }
 
+    // Both inputs must be fully qualified. Windows comparison folds ASCII case.
+    public static String GetRelativePath(readonly(char)* relativeTo, readonly(char)* path, PathStyle style)
+        => Paths::GetRelativePathCore(relativeTo, Paths::Length(relativeTo), path, Paths::Length(path), style);
+
+    public static String GetRelativePath(Span<readonly(char)> relativeTo, Span<readonly(char)> path, PathStyle style)
+    {
+        readonly(char)* baseData = "";
+        readonly(char)* targetData = "";
+        if (!relativeTo.IsEmpty) baseData = relativeTo.Data!;
+        if (!path.IsEmpty) targetData = path.Data!;
+        return Paths::GetRelativePathCore(baseData, relativeTo.Length, targetData, path.Length, style);
+    }
+
+    private static String GetRelativePathCore(readonly(char)* relativeTo, nuint baseLength,
+        readonly(char)* path, nuint pathLength, PathStyle style)
+    {
+        if (style != PathStyle::Unix && style != PathStyle::Windows)
+            throw new Exception("Invalid path style");
+        nuint baseRoot = Paths::FullPathRootLength(relativeTo, baseLength, style);
+        if (baseRoot == 0) throw new Exception("Relative base must be fully qualified");
+        nuint targetRoot = Paths::FullPathRootLength(path, pathLength, style);
+        if (targetRoot == 0) throw new Exception("Target path must be fully qualified");
+        String origin = Paths::NormalizeFullPath(relativeTo, baseLength, baseRoot, style);
+        String target = Paths::NormalizeFullPath(path, pathLength, targetRoot, style);
+        baseRoot = Paths::FullPathRootLength(origin.Data, origin.Length, style);
+        targetRoot = Paths::FullPathRootLength(target.Data, target.Length, style);
+        if (!Paths::RelativePathBytesEqual(origin.Data, baseRoot, target.Data, targetRoot, style))
+            return move target;
+
+        nuint baseEnd = origin.Length;
+        nuint targetEnd = target.Length;
+        if (baseEnd > baseRoot && Paths::IsSeparator(origin.Data[baseEnd - 1], style)) baseEnd--;
+        if (targetEnd > targetRoot && Paths::IsSeparator(target.Data[targetEnd - 1], style)) targetEnd--;
+        nuint left = baseRoot;
+        nuint right = targetRoot;
+        if (left < baseEnd && Paths::IsSeparator(origin.Data[left], style)) left++;
+        if (right < targetEnd && Paths::IsSeparator(target.Data[right], style)) right++;
+        while (left < baseEnd && right < targetEnd)
+        {
+            nuint leftEnd = left;
+            nuint rightEnd = right;
+            while (leftEnd < baseEnd && !Paths::IsSeparator(origin.Data[leftEnd], style)) leftEnd++;
+            while (rightEnd < targetEnd && !Paths::IsSeparator(target.Data[rightEnd], style)) rightEnd++;
+            if (!Paths::RelativePathBytesEqual(origin.Data + left, leftEnd - left,
+                target.Data + right, rightEnd - right, style)) break;
+            left = leftEnd;
+            right = rightEnd;
+            if (left < baseEnd) left++;
+            if (right < targetEnd) right++;
+        }
+        if (left == baseEnd && right == targetEnd) return String::From(".");
+        String result = new();
+        while (left < baseEnd)
+        {
+            if (!result.IsEmpty) Paths::AppendFullPathSeparator(&result, style);
+            result.AppendLiteral("..", 2);
+            while (left < baseEnd && !Paths::IsSeparator(origin.Data[left], style)) left++;
+            if (left < baseEnd) left++;
+        }
+        if (right < targetEnd)
+        {
+            if (!result.IsEmpty) Paths::AppendFullPathSeparator(&result, style);
+            result.AppendLiteral(target.Data + right, target.Length - right);
+        }
+        return move result;
+    }
+
+    private static bool RelativePathBytesEqual(readonly(char)* left, nuint leftLength,
+        readonly(char)* right, nuint rightLength, PathStyle style) nothrow
+    {
+        if (leftLength != rightLength) return false;
+        for (nuint i = 0; i < leftLength; i++)
+        {
+            char a = left[i];
+            char b = right[i];
+            if (style == PathStyle::Windows)
+            {
+                if (a >= 'A' && a <= 'Z') a = (char)((int)a + 32);
+                if (b >= 'A' && b <= 'Z') b = (char)((int)b + 32);
+            }
+            if (a != b) return false;
+        }
+        return true;
+    }
+
     private static String GetFullPathCore(readonly(char)* path, nuint length,
         readonly(char)* basePath, nuint baseLength, PathStyle style)
     {

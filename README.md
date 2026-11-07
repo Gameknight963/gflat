@@ -1,6 +1,10 @@
 ![GitHub Repo Views](https://gitviews.com/repo/gameknight963/gflat.svg?style=flat&label-color=purple)
 [![compiler](https://github.com/Gameknight963/gflat/actions/workflows/test.yml/badge.svg)](https://github.com/Gameknight963/gflat/actions/workflows/test.yml)
 
+## AI disclaimer
+
+This project has significant portions written by AI, including READMEs and other documentation. I'll rewrite the documentation myself eventually, but if the usage of AI bothers you, this project is not for you.
+
 # G♭ 
 (gflat)
 

@@ -268,6 +268,18 @@ struct HashMap<K : IHashable, V>
         return removed;
     }
 
+    internal immutable bool CopyKeyDestinationOverlaps(K* output, nuint length) nothrow
+    {
+        if (length == 0 || capacity == 0) return false;
+        nuint start = (entries!).reinterpret<nuint>();
+        nuint target = output.reinterpret<nuint>();
+        nuint bytes = capacity * ((nuint)sizeof(Entry) + 1);
+        if (target >= start) return target - start < bytes;
+        nuint stride = (nuint)sizeof(K);
+        if (stride == 0) stride = 1;
+        return (start - target) / stride < length;
+    }
+
     public void Clear()
     {
         for (nuint i = 0; i < capacity; i++)

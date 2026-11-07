@@ -20,6 +20,9 @@ struct HashSet<T : IHashable>
     public nuint RemoveWhere(bool(immutable(T)*)* predicate)
         => storage.RemoveKeysWhere(predicate);
 
+    internal immutable bool CopyDestinationOverlaps(T* output, nuint length) nothrow
+        => storage.CopyKeyDestinationOverlaps(output, length);
+
     public void Clear() { storage.Clear(); }
     public void ExceptWith(immutable(HashSet<T>)* other)
     {

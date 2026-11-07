@@ -172,3 +172,6 @@ Reacquire pointers after growth or removal. Duplicate insertion and existing-key
 Set preserve the original key.
 
 Sources: `core/Collections/HashMap.gf`, `HashSet.gf`, and `hash_set_algebra.gf`
+
+To copy set elements into an initialized span, use the optional
+[CopyTo and TryCopyTo helpers](HASH_SET_COPY.md).

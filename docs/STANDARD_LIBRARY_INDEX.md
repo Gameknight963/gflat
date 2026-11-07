@@ -92,6 +92,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Linked-list `Find`, `FindLast`, `Contains`, `RemoveValue` | [Search linked-list values](LINKED_LIST_SEARCH.md) |
 | `Unique<T>` | [Unique ownership](UNIQUE.md) |
 | `HashMap<K,V>`, `HashSet<T>`, query `ToHashSet` | [Hash collections](HASH_COLLECTIONS.md), [Materializing query results into a set](QUERY_HASH_SET.md) |
+| Hash-set `CopyTo`, `TryCopyTo` | [Copy set elements into an existing buffer](HASH_SET_COPY.md) |
 | Hash-table `EnsureCapacity`, `TrimExcess` | [Reserving and trimming hash tables](HASH_CAPACITY.md) |
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |
 | Map `Keys` and `Values` | [Enumerating map keys and values](MAP_COLLECTION_VIEWS.md) |

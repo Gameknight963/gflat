@@ -146,6 +146,129 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    private static nuint SmallByteCount(ulong magnitude, bool negative, bool isUnsigned) nothrow
+    {
+        nuint count = 0;
+        uint top = 0u;
+        uint carry = 1u;
+        while (true)
+        {
+            top = (uint)(magnitude & 255ul);
+            if (negative)
+            {
+                uint transformed = 255u - top + carry;
+                top = transformed & 255u;
+                carry = transformed >> 8;
+            }
+            count++;
+            magnitude = magnitude >> 8;
+            if (magnitude == 0ul) break;
+        }
+        if (!isUnsigned && ((!negative && top >= 128u) || (negative && top < 128u))) count++;
+        return count;
+    }
+
+    private immutable Vector<uint> ByteWorkingCopy()
+    {
+        Vector<uint> working = new();
+        working.Reserve(limbs.Count);
+        for (nuint i = 0; i < limbs.Count; i++) working.Add(limbs[i]);
+        return move working;
+    }
+
+    // Divide the temporary magnitude by 256, returning its low byte.
+    private static uint TakeByte(Vector<uint>* working) nothrow
+    {
+        ulong remainder = 0ul;
+        nuint index = working.Count;
+        while (index != 0)
+        {
+            index--;
+            ulong current = remainder * Radix + (ulong)(*working)[index];
+            (*working)[index] = (uint)(current / 256ul);
+            remainder = current % 256ul;
+        }
+        while (working.Count != 0 && (*working)[working.Count - 1] == 0u)
+            working.Truncate(working.Count - 1);
+        return (uint)remainder;
+    }
+
+    // Consumes the scratch elements, retaining their capacity for the write pass.
+    private static nuint ConsumeByteCount(Vector<uint>* working, bool negative, bool isUnsigned) nothrow
+    {
+        nuint count = 0;
+        uint top = 0u;
+        uint carry = 1u;
+        while (working.Count != 0)
+        {
+            top = TakeByte(working);
+            if (negative)
+            {
+                uint transformed = 255u - top + carry;
+                top = transformed & 255u;
+                carry = transformed >> 8;
+            }
+            count++;
+        }
+        if (!isUnsigned && ((!negative && top >= 128u) || (negative && top < 128u))) count++;
+        return count;
+    }
+
+    public immutable nuint GetByteCount(bool isUnsigned = false)
+    {
+        if (isUnsigned && sign < 0) throw new Exception("Negative BigInteger has no unsigned byte representation");
+        ulong magnitude = 0ul;
+        if (this.TryMagnitude(18446744073709551615ul, ref magnitude))
+            return SmallByteCount(magnitude, sign < 0, isUnsigned);
+        Vector<uint> working = this.ByteWorkingCopy();
+        return ConsumeByteCount(&working, sign < 0, isUnsigned);
+    }
+
+    // Destination and written must be disjoint from this owner, its limbs, and each other.
+    public immutable bool TryWriteBytes(Span<byte> destination, ref nuint written,
+        bool isUnsigned = false, bool isBigEndian = false)
+    {
+        written = 0;
+        if (isUnsigned && sign < 0) throw new Exception("Negative BigInteger has no unsigned byte representation");
+        if (destination.IsEmpty) return false;
+        bool negative = sign < 0;
+        ulong magnitude = 0ul;
+        bool small = this.TryMagnitude(18446744073709551615ul, ref magnitude);
+        Vector<uint> working = new();
+        nuint required = 0;
+        if (small) required = SmallByteCount(magnitude, negative, isUnsigned);
+        else
+        {
+            working = this.ByteWorkingCopy();
+            required = ConsumeByteCount(&working, negative, isUnsigned);
+        }
+        if (destination.Length < required) return false;
+        if (!small)
+            for (nuint i = 0; i < limbs.Count; i++) working.Add(limbs[i]);
+        uint carry = 1u;
+        for (nuint i = 0; i < required; i++)
+        {
+            uint value = 0u;
+            if (small)
+            {
+                value = (uint)(magnitude & 255ul);
+                magnitude = magnitude >> 8;
+            }
+            else if (working.Count != 0) value = TakeByte(&working);
+            if (negative)
+            {
+                uint transformed = 255u - value + carry;
+                value = transformed & 255u;
+                carry = transformed >> 8;
+            }
+            nuint index = i;
+            if (isBigEndian) index = required - i - 1;
+            destination[index] = (byte)value;
+        }
+        written = required;
+        return true;
+    }
+
     public copy BigInteger(immutable(BigInteger)* source)
     {
         limbs = new();

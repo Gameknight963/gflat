@@ -124,6 +124,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | --- | --- |
 | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Integer parsing](INTEGER_PARSING.md) |
 | `BigInteger` | [BigInteger](BIG_INTEGER.md) |
+| BigInteger `GetByteCount`, `TryWriteBytes` | [Writing into an existing byte buffer](BIG_INTEGER_WRITE_BYTES.md) |
 | BigInteger byte conversion | [BigInteger byte conversion](BIG_INTEGER_BYTES.md) |
 | BigInteger `IsZero`, `IsOne`, `IsEven` | [BigInteger state properties](BIG_INTEGER_PROPERTIES.md) |
 | BigInteger `Min`, `Max`, `Clamp`, `CopySign` | [BigInteger bounds and signs](BIG_INTEGER_BOUNDS.md) |

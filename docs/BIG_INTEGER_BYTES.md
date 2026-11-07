@@ -4,6 +4,9 @@
 `ToBytes()` returns an owning `Vector<byte>`. Both accept `isUnsigned` and
 `isBigEndian` flags, which default to false.
 
+For caller-owned output storage, use
+[GetByteCount and TryWriteBytes](BIG_INTEGER_WRITE_BYTES.md).
+
 ```csharp
 using Standard::Collections;
 using Standard::Numerics;
@@ -39,5 +42,5 @@ an assignment destination unchanged, and temporary storage is released.
 
 The integer stores decimal limbs internally. Conversion uses repeated small-base
 arithmetic, with worst-case quadratic work in the input or output byte length.
-Export allocates a temporary limb copy and the result vector. Import grows the
+`ToBytes` allocates a temporary limb copy and the result vector. Import grows the
 result's limbs as needed.

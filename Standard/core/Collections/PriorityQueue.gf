@@ -178,6 +178,66 @@ struct PriorityQueue<T>
         return result;
     }
 
+    // Search and plan heap repair before transferring any owner.
+    internal bool RemoveBy(immutable(T)* value, ref T output,
+        bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        nuint count = storage.Count;
+        if (count == 0) return false;
+        Span<T> elements = storage.AsSpan();
+        T* data = elements.Data!;
+        nuint start = data.reinterpret<nuint>();
+        nuint address = (&output).reinterpret<nuint>();
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        if (address >= start && address - start < storage.Capacity * stride)
+            throw new Exception("Priority queue output must not refer to its storage");
+        nuint index = 0;
+        while (index < count && !equal(data + index, value)) index++;
+        if (index == count) return false;
+        nuint end = count - 1;
+        if (index == end)
+        {
+            output = storage.Pop();
+            return true;
+        }
+        nuint[64] path;
+        nuint depth = 0;
+        nuint hole = index;
+        while (hole != 0)
+        {
+            nuint parent = (hole - 1) / 2;
+            if (compare(data + end, data + parent) >= 0) break;
+            path[depth] = parent;
+            depth++;
+            hole = parent;
+        }
+        if (depth == 0)
+        {
+            while (hole < end / 2)
+            {
+                nuint child = hole * 2 + 1;
+                if (child + 1 < end && compare(data + child + 1, data + child) < 0) child++;
+                if (compare(data + child, data + end) >= 0) break;
+                path[depth] = child;
+                depth++;
+                hole = child;
+            }
+        }
+        T removed = move *(data + index);
+        T last = storage.Pop();
+        hole = index;
+        for (nuint i = 0; i < depth; i++)
+        {
+            nuint next = path[i];
+            move *(data + next) at data + hole;
+            hole = next;
+        }
+        move last at data + hole;
+        output = move removed;
+        return true;
+    }
+
     public bool TryDequeue(ref T result)
     {
         if (storage.Count == 0) return false;

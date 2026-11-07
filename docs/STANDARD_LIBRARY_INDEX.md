@@ -69,6 +69,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Queue, stack, and priority-queue `Peek`, `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | Queue and stack `CopyTo`, `TryCopyTo` | [Copying queue and stack elements](QUEUE_STACK_COPY.md) |
 | `PriorityQueue<T>.EnqueueDequeue`, `DequeueEnqueue` | [Replacing a priority queue root](PRIORITY_QUEUE_REPLACEMENT.md) |
+| `PriorityQueue<T>.Remove` | [Removing a specific queued value](PRIORITY_QUEUE_REMOVE.md) |
 | `PriorityQueue<T>.UnorderedItems` | [Inspecting priority queue items](PRIORITY_QUEUE_ITEMS.md) |
 | `Span<T>.Windows` | [Sliding windows over borrowed spans](SPAN_WINDOWS.md) |
 | `Span<T>.Chunks` | [Borrowed span chunks](SPAN_CHUNKS.md) |

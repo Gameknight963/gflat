@@ -50,6 +50,7 @@ on later reads.
 - Search with `Any`, `All`, `Contains`, `First`, `Last`, and `ElementAt`
 - Summarize with `Count`, [Sum](../../../docs/QUERY_SUM.md), `Aggregate`, `Min`, and `Max`
 - Summarize groups with `CountBy` and [AggregateBy](../../../docs/QUERY_AGGREGATE_BY.md)
+- Order by selected keys with [OrderBy and OrderByDescending](../../../docs/QUERY_ORDER_BY.md)
 - Order with `Order`, `Reverse`, `TakeLast`, and `SkipLast`
 - Collect results with `ToVector`, `ToHashSet`, `ToHashMap`, and `ToLookup`
 

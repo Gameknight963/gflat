@@ -66,6 +66,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `Reverse()` | Yield in reverse order, buffering the complete input on each iterator's first move. |
 | `TakeLast(count)` | Yield the final at most count elements, buffering a bounded tail on each iterator's first move. |
 | `SkipLast(count)` | Omit a trailing suffix using bounded streaming lookahead. |
+| `OrderBy(selector)` / `OrderByDescending(selector)` | [Stable ordering by cached keys](QUERY_ORDER_BY.md), with default or explicit comparisons. |
 | `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order. Each enumeration owns a hash set. |
 | `DistinctBy(selector)` | Yield the first whole value for each selected key, in encounter order. |
@@ -146,6 +147,7 @@ value once. `Any` and `Contains` stop at the first match. See
 | `SelectMany` | One heap-owned active inner query and iterator |
 | `Join` | A hash map of inner groups and one reusable outer-value slot |
 | `GroupJoin` | A hash map of shared groups and one reusable outer-value slot; escaped groups retain their values |
+| `OrderBy`, `OrderByDescending` | Element snapshots, cached keys, and stable index sorting on the first move |
 | `GroupBy` | A hash index and ordered owning groupings, built on the first move |
 | `Distinct`, `DistinctBy` | A hash set grown during iteration |
 | `Union`, `Except`, `Intersect` | A hash set per enumerator, with the buffering rules in [query set operations](QUERY_SET_OPERATIONS.md) |

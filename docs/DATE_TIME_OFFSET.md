@@ -108,3 +108,5 @@ backed result or receiver storage. Keep `written` separate from output and
 receiver.
 
 Source: `Time/DateTimeOffset.gf`, with DateTime and TimeSpan dependencies.
+
+See [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) for exact and fractional additions.

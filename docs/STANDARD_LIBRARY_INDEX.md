@@ -202,3 +202,5 @@ See [host runtime APIs](HOST_RUNTIME.md) and
 
 The [example index](../examples/README.md) lists command-line programs using
 these APIs, with build commands and sample input.
+
+See [Adding date and time units](TEMPORAL_UNIT_ADDITION.md) for exact and fractional additions.

@@ -73,6 +73,8 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     public immutable long ToUnixTimeMilliseconds() nothrow => this.GetUtcTicks() / 10000l - 62135596800000l;
 
     // Preserve the displayed offset; both wall and UTC clocks must remain valid.
+    public immutable DateTimeOffset AddTicks(long ticks) => this.Add(TimeSpan::FromTicks(ticks));
+
     public immutable DateTimeOffset Add(TimeSpan value)
     {
         long delta = value.Ticks;

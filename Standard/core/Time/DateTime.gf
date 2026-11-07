@@ -44,6 +44,8 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
         return FromTicks(current + delta);
     }
 
+    public immutable DateTime AddTicks(long ticks) => this.Add(TimeSpan::FromTicks(ticks));
+
     // Subtracts the signed duration, rejecting results outside years 1 through 9999.
     public immutable DateTime Subtract(TimeSpan value)
     {

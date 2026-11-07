@@ -87,6 +87,41 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         return null;
     }
 
+    private static bool CopyOverlapsAllocation(T* output, nuint length, nuint address, nuint bytes) nothrow
+    {
+        nuint target = output.reinterpret<nuint>();
+        if (target >= address) return target - address < bytes;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        return (address - target) / stride < length;
+    }
+
+    // The caller has checked destination length. Validate every allocation before
+    // copying, including nodes that would only be encountered after earlier writes.
+    internal immutable bool CopyDestinationOverlaps(T* output, nuint length) nothrow
+    {
+        if (length == 0) return false;
+        if (CopyOverlapsAllocation(output, length, (state!).reinterpret<nuint>(), (nuint)sizeof(State)))
+            return true;
+        immutable(Node)*? node = state!.First;
+        while (node != null)
+        {
+            if (CopyOverlapsAllocation(output, length, (node!).reinterpret<nuint>(), (nuint)sizeof(Node)))
+                return true;
+            node = node!.next;
+        }
+        return false;
+    }
+
+    internal immutable immutable(Node)*? CopyFirst() nothrow
+    {
+        if (state == null) return null;
+        return state!.First;
+    }
+
+    internal static immutable(Node)*? CopyNext(immutable(Node)* node) nothrow => node.next;
+    internal static immutable(T)* CopyValue(immutable(Node)* node) nothrow => &node.value;
+
     internal immutable bool ContainsBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
     {
         if (state == null) return false;

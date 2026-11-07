@@ -3,14 +3,20 @@ namespace gflat.Tests.Std.Collections;
 public sealed class QueueStackCopyTests
 {
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Combine(StandardTestSources.Values,
-        StandardTestSources.Load("core/Collections/Deque.gf", "core/Collections/deque_copy.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf",
+        StandardTestSources.Load("core/Collections/LinkedList.gf", "core/Collections/linked_list_copy.gf",
+            "core/Collections/Deque.gf", "core/Collections/deque_copy.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf",
             "core/Collections/queue_copy.gf", "core/Collections/stack_copy.gf"))
         .Append(new SourceFile("queue-stack-copy.gf", code));
 
     [Fact]
     public void GuideExampleCompiles() => StandardLibraryGuideTests.CheckProgram("QUEUE_STACK_COPY.md", 0);
 
+    [Fact]
+    public void LinkedListGuideCompiles() => StandardLibraryGuideTests.CheckProgram("LINKED_LIST_COPY.md", 0);
+
     [Theory]
+    [InlineData("LinkedList", "AddLast", "RemoveFirst", "First!.Value", 0)]
+    [InlineData("LinkedList", "AddLast", "RemoveFirst", "First!.Value", 2)]
     [InlineData("Deque", "AddLast", "RemoveFirst", "Front", 0)]
     [InlineData("Deque", "AddLast", "RemoveFirst", "Front", 2)]
     [InlineData("Queue", "Enqueue", "Dequeue", "Front", 0)]
@@ -43,7 +49,7 @@ public sealed class QueueStackCopyTests
                 for (nuint size = 0; size <= 12; size++)
                 {
                     {{type}}<int> source = new();
-                    source.Reserve(16);
+                    {{(type == "LinkedList" ? "" : "source.Reserve(16);")}}
                     for (nuint i = 0; i < size; i++) source.{{add}}((int)i);
                     {{(type != "Stack" ? $"if (size != 0) for (int i = 0; i < 13; i++) {{ int item = source.{remove}(); source.{add}(item); }}" : "")}}
                     int[16] buffer = default(int[16]);
@@ -81,6 +87,18 @@ public sealed class QueueStackCopyTests
                         try { source.CopyTo(new Span<int>(&source.{{peek}}, size)); }
                         catch (Exception* error) { overlap = true; }
                         if (!overlap) return 5;
+                        {{(type == "LinkedList" ? """
+                        LinkedList<int>::Node*? node = source.First;
+                        while (node != null)
+                        {
+                            bool caughtOverlap = false;
+                            try { source.CopyTo(new Span<int>(&node!.Value, size)); }
+                            catch (Exception* error) { caughtOverlap = true; }
+                            if (!caughtOverlap) return 8;
+                            node = node!.Next;
+                        }
+                        """ : "")}}
+
                         for (nuint i = 0; i < size; i++)
                         {
                             int expected = (int)i;
@@ -96,6 +114,8 @@ public sealed class QueueStackCopyTests
     }
 
     [Theory]
+    [InlineData("LinkedList", "AddLast", 0)]
+    [InlineData("LinkedList", "AddLast", 2)]
     [InlineData("Deque", "AddLast", 0)]
     [InlineData("Deque", "AddLast", 2)]
     [InlineData("Queue", "Enqueue", 0)]
@@ -193,6 +213,9 @@ public sealed class QueueStackCopyTests
             }
             int main()
             {
+                LinkedList<Owner> list = new();
+                list.AddLast(new Owner());
+                list.RemoveFirst();
                 Deque<Owner> deque = new();
                 deque.AddFirst(new Owner());
                 deque.RemoveLast();

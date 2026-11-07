@@ -70,6 +70,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | Queue, stack, and priority-queue `Peek`, `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | `Deque<T>.Reverse` | [Reversing a deque](DEQUE_REVERSE.md) |
+| LinkedList `CopyTo`, `TryCopyTo` | [Copying linked-list elements](LINKED_LIST_COPY.md) |
 | Queue, stack, and deque `CopyTo`, `TryCopyTo` | [Copying queue, stack, and deque elements](QUEUE_STACK_COPY.md) |
 | `PriorityQueue<T>.EnqueueDequeue`, `DequeueEnqueue` | [Replacing a priority queue root](PRIORITY_QUEUE_REPLACEMENT.md) |
 | `PriorityQueue<T>.Remove` | [Removing a specific queued value](PRIORITY_QUEUE_REMOVE.md) |

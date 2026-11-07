@@ -52,6 +52,13 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return result;
     }
 
+    public static String From(char value, nuint count)
+    {
+        String result = new();
+        result.Resize(count, value);
+        return move result;
+    }
+
     public static String operator s""(readonly(char)* text, nuint count)
     {
         return String::From(text, count);
@@ -72,6 +79,12 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (capacity != 0) global::Memory::Free(data!);
         data = replacement;
         capacity = requested;
+    }
+
+    public nuint EnsureCapacity(nuint requested)
+    {
+        this.Reserve(requested);
+        return capacity;
     }
 
     // Releases spare capacity while retaining contents.
@@ -163,6 +176,20 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
 
     public void Append(immutable(String)* text) { this.AppendLiteral(text.Data, text.Length); }
     public void Append(char value) { this.AppendLiteral(&value, 1); }
+
+    public void Append(char value, nuint repeatCount)
+    {
+        nuint maximum = (nuint)0 - (nuint)1;
+        if (repeatCount > maximum - 1 - length) throw new Exception("String length overflow", 1);
+        nuint required = length + repeatCount;
+        if (required > capacity)
+        {
+            nuint grown = required;
+            if (capacity <= (maximum - 1) / 2 && capacity * 2 > grown) grown = capacity * 2;
+            this.Reserve(grown);
+        }
+        this.Resize(required, value);
+    }
 
     // Inserts counted bytes at index, allowing Length for append. Input may borrow this String.
     // Invalid indices or allocation failure preserve contents. Growth can invalidate views.
@@ -353,6 +380,14 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (count == 0) return;
         for (nuint i = start; i < length - count; i++) data[i] = data[i + count];
         length -= count;
+        data[length] = '\0';
+    }
+
+    public void Remove(nuint start)
+    {
+        if (start > length) throw new Exception("String removal out of range");
+        if (start == length) return;
+        length = start;
         data[length] = '\0';
     }
 

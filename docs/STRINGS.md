@@ -23,6 +23,7 @@ nuint offset = text.IndexOf('!');
 | `new String()` | Empty String |
 | `String::From(text)` | Copies a C string before its first NUL |
 | `String::From(data, count)` | Copies counted bytes |
+| `String::From(value, count)` for `char value` | [Repeats a byte](STRING_CONSTRUCTION.md) |
 | `Data`, `ToCString()` | Readonly pointer into owned storage |
 | `AsSpan()` | Mutable `Span<char>` over `Length` bytes |
 | `AsReadOnly()`, `AsImmutable()` | `Span<readonly(char)>` over `Length` bytes |
@@ -73,8 +74,10 @@ String still has three bytes. Substring search takes O(text length + pattern len
 | Method | Effect |
 | --- | --- |
 | `Append(value)` | Adds a character, C string, counted bytes, or another String's bytes |
+| `Append(char, repeatCount)` | [Appends repeated copies of one byte](STRING_CONSTRUCTION.md) |
 | `Insert(index, value)` | Inserts before a byte offset. `Length` appends. |
 | `Remove(start, count)` | Removes bytes and shifts the suffix |
+| `Remove(start)` | Removes the suffix beginning at a byte offset |
 | `Replace(char, char)` | Changes matching bytes in place |
 | `Replace(oldText, newText)` | Replaces nonoverlapping matches from left to right |
 | `Trim`, `TrimStart`, `TrimEnd` | Remove ASCII whitespace or selected bytes in place |
@@ -116,6 +119,7 @@ The set may borrow the String's own contents.
 ## Capacity and length
 
 - `Reserve(capacity)` grows storage while preserving the counted contents
+- `EnsureCapacity(capacity)` grows storage if needed and returns the resulting capacity
 - `Resize(length, fill = '\0')` preserves the prefix and fills new bytes
 - `Clear()` empties the String while retaining capacity
 - `ShrinkToFit()` reduces capacity to Length, releasing storage when empty

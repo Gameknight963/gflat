@@ -52,12 +52,12 @@ public sealed class TypedLocalDiagnosticTests
     }
 
     [Theory]
-    [InlineData("p->~S();")]
-    [InlineData("for(p->~S();false;){}")]
+    [InlineData("p.~S(1);")]
+    [InlineData("for(p.~S(1);false;){}")]
     public void ExplicitExpressionErrorsKeepTheirSpecificMessages(string statement)
     {
         var error=Assert.Throws<TypeCheckException>(()=>Parser.Parse(Lexer.Tokenize("int F(){"+statement+"}")));
-        Assert.Contains("Use '.'",error.Description);
+        Assert.Contains("Destructor calls take no arguments",error.Description);
     }
 
     [Theory]

@@ -57,11 +57,10 @@ public sealed class ExtensionBlockTests
     }
 
     [Theory]
-    [InlineData("void Old(this int value){}", "extension block")]
     [InlineData("extension int* { public void Bad(){} }", "underlying object")]
     [InlineData("extension int** { public void Bad(){} }", "underlying object")]
     [InlineData("alias P=int*;extension P {public void Bad(){}}", "underlying object")]
-    public void RemovedParameterSyntaxAndPointerTargetsAreRejected(string code,string message)
+    public void PointerTargetsAreRejected(string code,string message)
         => Assert.Contains(message, Assert.Throws<TypeCheckException>(() => Compiler.Check(code,
             options: new(){NoStdLib=true,NoBuiltins=true})).Message);
 

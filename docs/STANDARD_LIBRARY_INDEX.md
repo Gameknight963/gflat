@@ -50,6 +50,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `Span<T>.Windows` | [Sliding windows over borrowed spans](SPAN_WINDOWS.md) |
 | `Span<T>.Chunks` | [Borrowed span chunks](SPAN_CHUNKS.md) |
 | `LinkedList<T>` | [Linked lists](LINKED_LIST.md) |
+| Linked-list `Find`, `FindLast`, `Contains`, `RemoveValue` | [Search linked-list values](LINKED_LIST_SEARCH.md) |
 | `Unique<T>` | [Unique ownership](UNIQUE.md) |
 | `HashMap<K,V>`, `HashSet<T>`, query `ToHashSet` | [Hash collections](HASH_COLLECTIONS.md), [Materializing query results into a set](QUERY_HASH_SET.md) |
 | `SortedMap<K,V>` | [Sorted map](SORTED_MAP.md) |

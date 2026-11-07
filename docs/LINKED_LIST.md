@@ -31,6 +31,7 @@ int main()
 | Node `Next`, `Previous`, ref `Value` | Traversal and element access |
 | `Reverse()` | Reverses links while preserving node addresses |
 | `RemoveAll(predicate)` | Removes matches and returns their count |
+| `Find`, `FindLast`, `Contains`, `RemoveValue` | Optional [borrowed-value searches](LINKED_LIST_SEARCH.md) |
 | `Clear()` | Destroys elements and frees nodes |
 
 Use `move` to insert noncopyable owners. Discarding a returned owner destroys it.

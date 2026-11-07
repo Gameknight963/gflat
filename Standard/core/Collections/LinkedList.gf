@@ -65,6 +65,48 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         }
     }
 
+    internal Node*? FindBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        Node*? node = this.First;
+        while (node != null)
+        {
+            if (equal(&node!.value, key)) return node;
+            node = node!.next;
+        }
+        return null;
+    }
+
+    internal Node*? FindLastBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        Node*? node = this.Last;
+        while (node != null)
+        {
+            if (equal(&node!.value, key)) return node;
+            node = node!.previous;
+        }
+        return null;
+    }
+
+    internal immutable bool ContainsBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        if (state == null) return false;
+        immutable(Node)*? node = state!.First;
+        while (node != null)
+        {
+            if (equal(&node!.value, key)) return true;
+            node = node!.next;
+        }
+        return false;
+    }
+
+    internal bool RemoveValueBy(immutable(T)* key, bool(immutable(T)*, immutable(T)*)* equal)
+    {
+        Node*? node = this.FindBy(key, equal);
+        if (node == null) return false;
+        this.Remove(node!);
+        return true;
+    }
+
     private State* EnsureState()
     {
         if (state == null) state = new* State();

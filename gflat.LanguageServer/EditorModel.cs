@@ -296,12 +296,33 @@ public sealed partial class EditorModel
     }
     private static bool IsType(AstNode node) => node is ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration;
     private static string SourceName(AstNode node) => node switch { ClassDeclaration c => c.SourceName, StructDeclaration s => s.SourceName, InterfaceDeclaration i => i.SourceName, EnumDeclaration e => e.SourceName, _ => "" };
-    private static string Namespace(IEnumerable<Syntax> parents) => string.Join("::", parents.Reverse().Where(p => p.Node is NamespaceDeclaration).Select(p => ((NamespaceDeclaration)p.Node).Name));
+    private static string Namespace(IEnumerable<Syntax> parents) => ScopeName(parents as Syntax[] ?? parents.ToArray(), false);
     private static string? Owner(IEnumerable<Syntax> parents)
     {
-        var ordered = parents.Reverse().ToArray();
-        if (!ordered.Any(p => IsType(p.Node))) return null;
-        return string.Join("::", ordered.Where(p => IsType(p.Node) || p.Node is NamespaceDeclaration).Select(p => p.Node is NamespaceDeclaration n ? n.Name : SourceName(p.Node)));
+        var ancestry = parents as Syntax[] ?? parents.ToArray();
+        foreach (var parent in ancestry)
+            if (IsType(parent.Node)) return ScopeName(ancestry, true);
+        return null;
+    }
+    private static string ScopeName(Syntax[] parents, bool includeTypes)
+    {
+        string? first = null;
+        System.Text.StringBuilder? result = null;
+        for (int index = parents.Length - 1; index >= 0; index--)
+        {
+            var node = parents[index].Node;
+            string name;
+            if (node is NamespaceDeclaration declaration) name = declaration.Name;
+            else if (includeTypes && IsType(node)) name = SourceName(node);
+            else continue;
+            if (first == null) first = name;
+            else
+            {
+                result ??= new(first);
+                result.Append("::").Append(name);
+            }
+        }
+        return result?.ToString() ?? first ?? "";
     }
     private static bool IsStatic(AstNode n) => n switch { MethodDeclaration m => m.IsStatic, FieldDeclaration f => f.IsStatic || f.IsConst, PropertyDeclaration p => p.Getter?.IsStatic ?? p.Setter?.IsStatic ?? false, EnumMemberDeclaration => true, _ => false };
     private static TokenKind Access(AstNode n) => n switch { MethodDeclaration m => m.Accessibility, ExternDeclaration e => e.Accessibility, FieldDeclaration f => f.Accessibility, PropertyDeclaration p => PropertyAccess(p), ClassDeclaration c => c.Accessibility, StructDeclaration s => s.Accessibility, InterfaceDeclaration i => i.Accessibility, EnumDeclaration e => e.Accessibility, ConstructorDeclaration c => c.Accessibility, _ => TokenKind.Public };

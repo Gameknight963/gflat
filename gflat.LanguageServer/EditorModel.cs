@@ -88,9 +88,10 @@ public sealed partial class EditorModel
             // Missing closing braces are routine while typing. The parser's
             // consumed-token range excludes trailing trivia, but the scope extends
             // through the caret at EOF until that brace is supplied.
-            foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration or PropertyDeclaration or LambdaExpression or OperatorDeclaration or ExtensionDeclaration))
-                if (braces.Any(start => start >= node.Span.Start && start < node.Span.Start + node.Span.Length))
-                    scopeEnds[node] = file.Text.Length + 1;
+            if (braces.Count > 0)
+                foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration or PropertyDeclaration or LambdaExpression or OperatorDeclaration or ExtensionDeclaration))
+                    if (braces.Any(start => start >= node.Span.Start && start < node.Span.Start + node.Span.Length))
+                        scopeEnds[node] = file.Text.Length + 1;
             contexts[file.Path] = new SyntaxRangeIndex(nodes[file.Path], scopeEnds);
             foreach (var group in nodes[file.Path].Where(n => n.Node is CallExpression)
                 .GroupBy(n => { var call = (CallExpression)n.Node; return call.Callee.Span.Start + call.Callee.Span.Length; }))

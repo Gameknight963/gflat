@@ -55,6 +55,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Collection `EnsureCapacity`, `TrimExcess`, `ShrinkToFit` | [Controlling collection capacity](COLLECTION_CAPACITY.md) |
 | Vector/deque `Contains`, `IndexOf`, `LastIndexOf`, `RemoveValue` | [Searching vectors and deques](SEQUENCE_COLLECTION_SEARCH.md) |
 | `Vector<T>.GetRange` | [Copying a vector range](VECTOR_GET_RANGE.md) |
+| `Vector<T>.ConvertAll` | [Converting every vector element](VECTOR_CONVERT_ALL.md) |
 | Queue/stack `Contains` | [Searching a queue or stack](QUEUE_STACK_CONTAINS.md) |
 | Queue, stack, and priority-queue `TryPeek` | [Copy the next collection value](COLLECTION_PEEK.md) |
 | `PriorityQueue<T>.EnqueueDequeue`, `DequeueEnqueue` | [Replacing a priority queue root](PRIORITY_QUEUE_REPLACEMENT.md) |

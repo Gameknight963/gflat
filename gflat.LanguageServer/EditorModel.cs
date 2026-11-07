@@ -150,9 +150,11 @@ public sealed partial class EditorModel
                 classification = containingType?.Node is StructDeclaration ? "struct" : "class";
             }
             if (name.Contains('$')) continue;
+            ScopeEnvironment? containerScope = entry.Parent is { Node: CompilationUnit or NamespaceDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration } container &&
+                scopeEnvironments.TryGetValue(container, out var environment) ? environment : null;
             string ns = entry.Parent?.Node is ExtensionDeclaration ? Namespace(parents)
-                : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
-            string? owner = Owner(parents);
+                : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? containerScope?.Namespace ?? Namespace(parents);
+            string? owner = containerScope is { } scopeEnvironment ? scopeEnvironment.Owner : Owner(parents);
             if (owner == null && entry.Node is MethodDeclaration qualified && snapshot.Checker != null &&
                 methodOwners.TryGetValue(qualified, out var methodOwner))
                 owner = snapshot.Checker.DisplayTypeName(new NamedTypeExpression(methodOwner.Owner, null, qualified.Line));

@@ -38,6 +38,7 @@ on later reads.
 - Filter and project with `Where` and `Select`
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`
+- Combine distinct values with [Union, Except, and Intersect](../../../docs/QUERY_SET_OPERATIONS.md)
 - Search with `Any`, `All`, `Contains`, `First`, `Last`, and `ElementAt`
 - Summarize with `Count`, `Sum`, `Aggregate`, `Min`, and `Max`
 - Order with `Order`, `Reverse`, `TakeLast`, and `SkipLast`

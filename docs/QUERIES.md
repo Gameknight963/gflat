@@ -69,6 +69,7 @@ For example, its predicate can accept `.Where((readonly(int) n) => n > 0)`.
 | `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order. Each enumeration owns a hash set. |
 | `DistinctBy(selector)` | Yield the first whole value for each selected key, in encounter order. |
+| `Union`, `Except`, `Intersect` | Combine distinct values using [query set operations](QUERY_SET_OPERATIONS.md). |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Concat(other)` | Yield the complete first query, then the second, with inline cursor state. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements. Counts are `nuint`. |
@@ -133,6 +134,7 @@ value once. `Any` and `Contains` stop at the first match. See
 | --- | --- |
 | `Where`, `Select`, `Zip`, `Concat`, `Take`, `Skip`, `TakeWhile`, `SkipWhile` | Inline source and cursor state |
 | `Distinct`, `DistinctBy` | A hash set grown during iteration |
+| `Union`, `Except`, `Intersect` | A hash set per enumerator, with the buffering rules in [query set operations](QUERY_SET_OPERATIONS.md) |
 | `Reverse` | A vector filled on the first move |
 | `TakeLast` | A bounded deque filled on the first move |
 | `SkipLast` | A bounded lookahead buffer |

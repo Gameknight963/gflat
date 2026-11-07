@@ -142,6 +142,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Checked BigInteger integer widths | [Checked integer conversions](BIG_INTEGER_NARROW_CONVERSIONS.md) |
 | Signed-exponent `BigInteger.Pow` | [BigInteger powers with signed exponents](BIG_INTEGER_SIGNED_POW.md) |
 | Rational value classification | [Inspecting rational values](RATIONAL_CLASSIFICATION.md) |
+| Exact `Rational.Round` | [Exact rational rounding](RATIONAL_ROUNDING.md) |
 | `Rational.CopySign` | [Copying a rational sign](RATIONAL_COPY_SIGN.md) |
 | Rational `Min`, `Max`, `Clamp` | [Rational bounds](RATIONAL_BOUNDS.md) |
 | `Rational.Pow` | [Exact rational powers](RATIONAL_POW.md) |

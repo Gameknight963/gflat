@@ -21,6 +21,15 @@ public struct Group<T> : IEnumerable<T, Group<T>::Enumerator>
 
     public bool IsEmpty { immutable get nothrow => this.Count == 0; }
 
+    public ref immutable(T) this[nuint index]
+    {
+        immutable get
+        {
+            if (index >= this.Count) throw new Exception("Group index out of range");
+            return storage.ValueImmutable[index];
+        }
+    }
+
     internal void Add(T value)
     {
         if (storage.IsEmpty) storage = new SharedStorage<Vector<T>>(new Vector<T>());

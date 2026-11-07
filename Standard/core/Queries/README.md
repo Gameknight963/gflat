@@ -43,6 +43,7 @@ on later reads.
 - Retain each outer value and its shared matches with [GroupJoin](../../../docs/QUERY_GROUP_JOIN.md)
 - Group values in first-key order with [GroupBy](../../../docs/QUERY_GROUP_BY.md)
 - Retain positions with [Index](../../../docs/QUERY_INDEX.md)
+- Process batches with [owning Chunk groups](../../../docs/QUERY_CHUNK.md)
 - Select prefixes with [indexed TakeWhile and SkipWhile](../../../docs/QUERY_INDEXED_WHILE.md)
 - Slice with `Skip`, `Take`, `SkipWhile`, and `TakeWhile`
 - Combine with `Zip`, `Concat`, `Append`, and `Prepend`

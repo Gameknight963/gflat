@@ -216,3 +216,5 @@ See [Floating-point bounds and magnitudes](FLOATING_EXTREMA.md) for floating Cla
 See [Sequence averages](QUERY_AVERAGE.md) for numeric and projected Average queries.
 
 See [Choosing random items](RANDOM_ITEMS.md) for sampling into spans and owning vectors.
+
+See [Generating random text](RANDOM_TEXT.md) for custom alphabets and hexadecimal strings.

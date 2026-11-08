@@ -95,6 +95,7 @@ public static partial class NativeToolchain
             UseShellExecute = false, CreateNoWindow = true,
             RedirectStandardOutput = true, RedirectStandardError = true
         };
+        gflat.Projects.MsBuildHost.RestoreUserProcessEnvironment(process.StartInfo.Environment);
         foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
         if (PipelineTimings.Enabled && PipelineTimings.TestName is { } test)
             process.StartInfo.Environment["GFLAT_PROFILE_TEST"] = test;

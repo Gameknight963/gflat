@@ -271,7 +271,7 @@ public static class Program
             }
             WriteDependencies();
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            string[] interfaceOutputs = outputType == "Executable" ? [] : [outputPath + ".gfi", outputPath + ".gfi.gfh", outputPath + ".hpp"];
+            string[] interfaceOutputs = outputType == "Executable" ? [] : [outputPath + ".gfi", outputPath + ".gfi.gfh", outputPath + ".hpp", outputPath + ".cmake"];
             foreach (string companion in interfaceOutputs)
             {
                 ValidateOutput(companion);
@@ -326,6 +326,7 @@ public static class Program
                     File.WriteAllText(interfaceOutputs[0], manifest.ToString());
                     File.WriteAllText(interfaceOutputs[1], libraryInterface.HeaderText);
                     File.WriteAllText(interfaceOutputs[2], libraryInterface.CppHeader());
+                    File.WriteAllText(interfaceOutputs[3], NativeCmakeExport.Generate(outputPath, outputType == "DynamicLibrary"));
                 }
                 foreach (var deployment in deployments) File.Copy(deployment.Source, deployment.Destination, overwrite: true);
                 if (!run) return 0;

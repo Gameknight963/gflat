@@ -6,6 +6,25 @@ namespace gflat.Tests;
 public sealed class ProjectUpToDateStateTests
 {
     [Fact]
+    [Trait("Optimization", "Independent")]
+    public void BinaryLibraryStateRequiresItsCmakeImportCompanion()
+    {
+        WithProject((directory, project, globals) =>
+        {
+            globals["OutputType"] = "StaticLibrary";
+            string output = Path.Combine(directory, "answer" + (OperatingSystem.IsWindows() ? ".lib" : ".a"));
+            globals["TargetPath"] = output;
+            foreach (string suffix in new[] { "", ".gfi", ".gfi.gfh", ".hpp", ".cmake" })
+                File.WriteAllText(output + suffix, "output");
+            string state = Path.Combine(directory, "state.xml");
+            BuildUpToDateState.Capture(project, globals, DateTime.UtcNow).Write(state);
+            Assert.True(BuildUpToDateState.IsUpToDate(state, project, Xml(project, globals), CancellationToken.None));
+            File.Delete(output + ".cmake");
+            Assert.False(BuildUpToDateState.IsUpToDate(state, project, Xml(project, globals), CancellationToken.None));
+        });
+    }
+
+    [Fact]
     public void SourceLibraryStateTracksGlobAdditionsRemovalsImportsAndHeaderCandidates()
     {
         WithProject((directory, project, globals) =>

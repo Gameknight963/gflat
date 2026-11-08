@@ -174,7 +174,7 @@
       <_GflatCompilerFiles Include="$(GflatCompilerPath)" Condition="'$(GflatCompilerPath)' != ''" />
       <_GflatNativeOutputs Include="$(_GflatBuildOutput)" />
       <_GflatNativeOutputs Include="$(_GflatImportLibrary)" Condition="'$(_GflatImportLibrary)' != '' and '$(GflatEmitIR)' != 'true'" />
-      <_GflatNativeOutputs Include="$(TargetPath).gfi;$(TargetPath).gfi.gfh;$(TargetPath).hpp" Condition="'$(_GflatExportOption)' != '' and '$(GflatEmitIR)' != 'true'" />
+      <_GflatNativeOutputs Include="$(TargetPath).gfi;$(TargetPath).gfi.gfh;$(TargetPath).hpp;$(TargetPath).cmake" Condition="'$(_GflatExportOption)' != '' and '$(GflatEmitIR)' != 'true'" />
       <_GflatNativeOutputs Include="$(_GflatFullPdbPath)" Condition="'$(OutputType)' != 'StaticLibrary' and '$(DebugSymbols)' == 'true' and '$(GflatEmitIR)' != 'true' and '$(_GflatFullPdbPath)' != ''" />
       <_GflatCompilerFiles Include="$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.dll;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.json;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Runtime/*.cpp;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Runtime/*.c;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Standard/**/*.gf" Condition="'$(GflatCompilerPath)' != ''" />
       <_GflatBuildInputs Include="@(_GflatSources);@(_GflatEvaluatedProjectInputs);$([MSBuild]::Escape('$(GflatBuildTasksPath)'));@(_GflatCompilerFiles);@(GflatCompilerInputs)" />
@@ -232,7 +232,7 @@
     <Error Condition="'$(OutputType)' != 'SourceLibrary' and '$(_GflatCleanExtension)' != '.exe' and '$(_GflatCleanExtension)' != '.lib' and '$(_GflatCleanExtension)' != '.a' and '$(_GflatCleanExtension)' != '.dll' and '$(_GflatCleanExtension)' != '.so'" Text="Clean requires a recognized executable or library extension; custom output names must be cleaned explicitly." />
     <Delete Files="$(_GflatFullTargetPath);$(_GflatFullIRPath);$(_GflatFullIRPath).foreign.json;$(_GflatFullPdbPath)" Condition="'$(OutputType)' != 'SourceLibrary'" />
     <Delete Files="$(_GflatImportLibrary);$(_GflatExportFile)" Condition="'$(_GflatImportLibrary)' != ''" />
-    <Delete Files="$(TargetPath).gfi;$(TargetPath).gfi.gfh;$(TargetPath).hpp;$(_GflatExportSourceList)" Condition="'$(_GflatExportOption)' != ''" />
+    <Delete Files="$(TargetPath).gfi;$(TargetPath).gfi.gfh;$(TargetPath).hpp;$(TargetPath).cmake;$(_GflatExportSourceList)" Condition="'$(_GflatExportOption)' != ''" />
     <Delete Files="$(_GflatSourceList);$(_GflatBuildSettings);$(_GflatBuildSuccess);$(_GflatUpToDateState);$(_GflatNativeLinkManifest);$(_GflatPreprocessorManifest);$(_GflatIncludeDependencies);$(_GflatIncludeDependencies).state" />
   </Target>
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />

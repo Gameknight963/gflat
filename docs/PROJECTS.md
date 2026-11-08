@@ -105,7 +105,8 @@ implementation sources into the caller's compilation. Dynamic dependencies are
 copied beside the consuming artifact.
 
 Binary builds generate `.gfi` interface metadata, a `.gfi.gfh` declaration header,
-and a `.hpp` header for C++ callers beside the artifact. The initial interface
+and a `.hpp` header for C++ callers beside the artifact. A `.cmake` companion
+imports the binary and its native dependencies into CMake. The initial interface
 exports public namespace functions with scalar and raw-pointer signatures,
 including `ref` parameters to those types. The C++ header exposes these parameters
 as lvalue references and retains readonly access as `const`.
@@ -116,6 +117,9 @@ source libraries. Generated declaration headers open read-only in Visual Studio.
 For a distributed binary, pass `--library-interface path/to/library.lib.gfi`.
 Keep its generated declaration header beside the metadata. Ordinary native
 libraries still use declarations from headers and `NativeLibraryFile` for linking.
+
+See [CMake consumers](CMAKE.md) for imported targets, Windows runtime selection,
+and shared-library deployment.
 
 For individual source files, use `--output-type StaticLibrary` or
 `--output-type DynamicLibrary`. A library cannot be launched with `--run`.

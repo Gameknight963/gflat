@@ -129,6 +129,7 @@ public sealed class BuildUpToDateState
                             outputs.Add(output + ".gfi");
                             outputs.Add(output + ".gfi.gfh");
                             outputs.Add(output + ".hpp");
+                            outputs.Add(output + ".cmake");
                             if (Path.DirectorySeparatorChar == '\\' && kind.Equals("DynamicLibrary", StringComparison.OrdinalIgnoreCase))
                                 outputs.Add(Path.ChangeExtension(output, ".lib"));
                         }

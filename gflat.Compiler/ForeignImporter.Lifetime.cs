@@ -22,7 +22,7 @@ internal static partial class ForeignImporter
             if (kind != "CXXConstructorDecl") continue;
             bool implicitConstructor = child.TryGetProperty("isImplicit", out _);
             explicitConstructor |= !implicitConstructor;
-            if ((!implicitConstructor && access != "public") || child.TryGetProperty("explicitlyDeleted", out _) ||
+            if ((!implicitConstructor && access != "public") || IsDeletedNativeMember(child) ||
                 child.TryGetProperty("variadic", out _)) continue;
             var parameters = child.TryGetProperty("inner", out var children)
                 ? children.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl").ToArray() : [];
@@ -35,6 +35,7 @@ internal static partial class ForeignImporter
             constructors.Add(new(Text(child, "mangledName"), mapped.Select(parameter => parameter!).ToArray(), native, ParameterNames(parameters)));
         }
         if (!explicitConstructor && constructors.All(constructor => constructor.Parameters.Length != 0) &&
+            !record.GetProperty("inner").EnumerateArray().Any(child => Text(child, "kind") == "CXXDestructorDecl" && IsDeletedNativeMember(child)) &&
             record.TryGetProperty("definitionData", out data) && data.TryGetProperty("defaultCtor", out var defaultCtor) &&
             defaultCtor.TryGetProperty("exists", out var exists) && exists.GetBoolean())
             constructors.Add(new("implicit-default-constructor", [], [], []));
@@ -50,9 +51,12 @@ internal static partial class ForeignImporter
         {
             string kind = Text(child, "kind");
             if (kind == "AccessSpecDecl") access = Text(child, "access");
-            if (kind == "CXXDestructorDecl" && !child.TryGetProperty("isImplicit", out _))
-                return access == "public" && !child.TryGetProperty("explicitlyDeleted", out _);
+            if (kind == "CXXDestructorDecl")
+                return !IsDeletedNativeMember(child) && (child.TryGetProperty("isImplicit", out _) || access == "public");
         }
         return true;
     }
+
+    private static bool IsDeletedNativeMember(JsonElement node)
+        => node.TryGetProperty("explicitlyDeleted", out _) || Text(node, "explicitlyDefaulted") == "deleted";
 }

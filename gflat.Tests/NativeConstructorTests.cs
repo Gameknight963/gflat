@@ -5,6 +5,21 @@ namespace gflat.Tests;
 public sealed class NativeConstructorTests
 {
     [Theory]
+    [InlineData("Holder* value = new* Holder();", "public constructor")]
+    [InlineData("delete Borrow()!;", "native destructor")]
+    public void ImplicitlyDeletedNativeLifetimesAreRejectedBeforeEmission(string statement, string expected)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+            #lang cpp
+            class Hidden { Hidden() {} ~Hidden() {} };
+            struct Holder { Hidden field; };
+            Holder* Borrow();
+            #lang gflat
+            """ + "\nvoid Invalid() { " + statement + " }", options: Options()));
+        Assert.Contains(expected, error.Description);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(2)]
     public void NativeReferencesBorrowScalarsAndOpaqueObjects(int optimization)

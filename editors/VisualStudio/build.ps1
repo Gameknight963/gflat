@@ -13,7 +13,10 @@ if (-not $MSBuild) {
             if (Test-Path -LiteralPath $candidate) { $candidate }
         }
     }
-    $MSBuild = $candidates | Sort-Object -Descending | Select-Object -First 1
+    $MSBuild = $candidates | Sort-Object -Property @{ Expression = {
+        $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($_)
+        [Version]::new($version.FileMajorPart, $version.FileMinorPart, $version.FileBuildPart, $version.FilePrivatePart)
+    }; Descending = $true } | Select-Object -First 1
 }
 if (-not $MSBuild -or -not (Test-Path -LiteralPath $MSBuild)) {
     throw 'Visual Studio MSBuild was not found. Pass -MSBuild with its full path.'

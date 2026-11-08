@@ -112,6 +112,9 @@ namespace gflat
             }
             if (Current.Kind != kind)
             {
+                // A failed alternative cannot use recovered syntax. Stop before
+                // building diagnostics and parsing the remainder of the file.
+                if (speculativeDepth != 0) throw new SpeculativeParseException();
                 var span = Current.Span;
                 if (kind is TokenKind.Semicolon or TokenKind.CloseParen or TokenKind.CloseBrace or TokenKind.CloseBracket)
                     span = span with { Length = 0 };
@@ -1406,10 +1409,10 @@ namespace gflat
                     try
                     {
                         Consume(); // (
-                        while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                        while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile) && _diagnostics.Count == diagMark)
                         {
                             paramTypes.Add(ParseParameterType());
-                            if (!Check(TokenKind.CloseParen))
+                            if (_diagnostics.Count == diagMark && !Check(TokenKind.CloseParen))
                                 Expect(TokenKind.Comma);
                         }
                         Expect(TokenKind.CloseParen);
@@ -1595,10 +1598,7 @@ namespace gflat
             missingName = null;
             if (CheckContextual("move")) return false;
             // look ahead to see if this is "type name" or "type* name" etc
-            int saved = _pos;
-            var savedTokens = _tokens;
-            bool savedCopyTokensOnSplit = _copyTokensOnSplit;
-            _copyTokensOnSplit = true;
+            using var probe = new TokenProbe(this);
             int diagMark = _diagnostics.Count;
             try
             {
@@ -1616,12 +1616,6 @@ namespace gflat
             {
                 _diagnostics.ClearSince(diagMark);
                 return false;
-            }
-            finally
-            {
-                _pos = saved;
-                _tokens = savedTokens;
-                _copyTokensOnSplit = savedCopyTokensOnSplit;
             }
         }
 
@@ -2102,7 +2096,7 @@ namespace gflat
             // static lambda
             if (Check(TokenKind.Static))
             {
-                using var probe = new TokenProbe(this);
+                using var probe = new TokenProbe(this, failFast: false);
                 Consume(); // 'static'
                 if (Check(TokenKind.OpenParen))
                 {
@@ -2391,10 +2385,10 @@ namespace gflat
                 int line = Current.Line;
                 Expect(TokenKind.OpenParen);
                 List<Parameter> parameters = new();
-                while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile) && _diagnostics.Count == diagMark)
                 {
                     parameters.Add(ParseParameter());
-                    if (!Check(TokenKind.CloseParen))
+                    if (_diagnostics.Count == diagMark && !Check(TokenKind.CloseParen))
                     {
                         Expect(TokenKind.Comma);
                     }
@@ -2407,6 +2401,7 @@ namespace gflat
                     return null;
                 }
 
+                probe.EndSpeculation();
                 AstNode body;
                 bool isExpressionBody;
                 if (Check(TokenKind.OpenBrace))

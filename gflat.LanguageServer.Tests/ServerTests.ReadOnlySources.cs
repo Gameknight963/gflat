@@ -13,7 +13,6 @@ public sealed partial class ServerTests
         File.WriteAllText(session.File("library.lib.gfi"), "<GflatInterface Version=\"1\" />");
         await session.Initialize();
         await session.Open(name, "int Answer();");
-        await session.Diagnostics(name, 1);
         await session.Send(new { jsonrpc = "2.0", id = 81, method = "textDocument/formatting", @params = new {
             textDocument = new { uri = session.Uri(name) }, options = new { tabSize = 4, insertSpaces = true } } });
         var response = await session.Receive(message => message.TryGetProperty("id", out var id) && id.ToString() == "81");

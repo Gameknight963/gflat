@@ -199,10 +199,10 @@ namespace gflat.PackageTests
                 string metadata = System.IO.Path.Combine(directory, "library.lib.gfi"), header = metadata + ".gfh";
                 System.IO.File.WriteAllText(metadata, "<GflatInterface Version=\"1\" />");
                 System.IO.File.WriteAllText(header, "int Answer();");
-                if (!(bool)contains.Invoke(null, new object[] { System.IO.Path.GetDirectoryName(assembly.Location), header }))
+                if (!(bool)contains.Invoke(null, new object[] { directory, header }))
                     throw new Exception("Generated binary declaration headers must open read-only");
                 System.IO.File.Delete(metadata);
-                if ((bool)contains.Invoke(null, new object[] { System.IO.Path.GetDirectoryName(assembly.Location), header }))
+                if ((bool)contains.Invoke(null, new object[] { directory, header }))
                     throw new Exception("Ordinary user headers must remain editable");
             }
             finally { System.IO.Directory.Delete(directory, true); }

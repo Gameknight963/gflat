@@ -55,6 +55,15 @@ internal static partial class ForeignImporter
         for (int index = 0; index < parameters.Count; index++)
         {
             string name = "__arg" + index, native = nativeParameters[index];
+            bool reference = parameters[index].StartsWith("ref ", StringComparison.Ordinal);
+            if (reference)
+            {
+                externParameters.Add(parameters[index][4..] + "* " + name);
+                nativeDeclarations.Add("__typeof__(" + native[..native.LastIndexOf('&')].Trim() + ")* " + name);
+                hostValues.Add("&" + (parameterNames?[index] ?? name));
+                nativeValues.Add("*" + name);
+                continue;
+            }
             string? record = RecordValueType(parameters[index], records);
             externParameters.Add((record != null ? "readonly(" + record + ")*" : parameters[index]) + " " + name);
             nativeDeclarations.Add((record != null ? "const __typeof__(" + native + ")*" :

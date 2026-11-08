@@ -8,7 +8,7 @@ internal static partial class ForeignImporter
     private sealed record RecordMethod(string Name, string Symbol, string Result, string[] Parameters,
         string[] NativeParameters, string[] ParameterNames, bool ReadOnly, bool IsStatic);
 
-    private static IEnumerable<RecordMethod> RecordMethods(JsonElement record, Func<string, string?> type)
+    private static IEnumerable<RecordMethod> RecordMethods(JsonElement record, Func<string, string?> type, Func<string, string?> parameterType)
     {
         var methods = new List<RecordMethod>();
         string access = Text(record, "tagUsed") == "class" ? "private" : "public";
@@ -36,7 +36,7 @@ internal static partial class ForeignImporter
                 ? body.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl").ToArray() : [];
             var nativeParameters = parameters.Select(parameter => parameter.GetProperty("type"))
                 .Select(parameter => Text(parameter, "desugaredQualType", Text(parameter, "qualType"))).ToArray();
-            var mapped = nativeParameters.Select(type).ToArray();
+            var mapped = nativeParameters.Select(parameterType).ToArray();
             if (mapped.Any(parameter => parameter == null)) continue;
             methods.Add(new(name, Text(child, "mangledName"), result, mapped.Select(parameter => parameter!).ToArray(),
                 nativeParameters, ParameterNames(parameters), suffix.StartsWith("const", StringComparison.Ordinal), Text(child, "storageClass") == "static"));

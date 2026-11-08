@@ -7,6 +7,54 @@ public sealed class NativeConstructorTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void NativeReferencesBorrowScalarsAndOpaqueObjects(int optimization)
+    {
+        Run("""
+            #lang cpp
+            class Widget {
+                int value;
+            public:
+                explicit Widget(const int& initial) : value(initial) {}
+                void Add(int& amount) { value += amount; ++amount; }
+                int Read() const { return value; }
+            };
+            int Read(const Widget& widget) { return widget.Read(); }
+            using NumberRef = int&;
+            void Increase(NumberRef value) { ++value; }
+            void Increase(double& value) { value += 1.0; }
+            #lang gflat
+            int main()
+            {
+                int initial = 40;
+                Widget* widget = new* Widget(ref initial);
+                int amount = 1;
+                Increase(ref amount);
+                double fractional = 1.0;
+                Increase(ref fractional);
+                widget.Add(ref amount);
+                int result = Read(ref *widget);
+                delete widget;
+                if (amount != 3 || initial != 40 || fractional != 2.0) return 1;
+                return result;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData("readonly(int) value = 42; Write(ref value);")]
+    [InlineData("Write(ref 42);")]
+    public void NativeReferencesKeepHostMutabilityAndAddressabilityChecks(string statement)
+    {
+        Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+            #lang cpp
+            void Write(int& value) { value = 0; }
+            #lang gflat
+            """ + "\nvoid Invalid() { " + statement + " }", options: Options()));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void NativeParameterNamesCannotCaptureGeneratedBridgeLocals(int optimization)
     {
         Run("""

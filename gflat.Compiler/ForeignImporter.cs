@@ -116,7 +116,7 @@ internal static partial class ForeignImporter
                 var signatures = functions.GroupBy(item => item.Scope + "::" + Text(item.Node, "name") + "(" +
                     string.Join(",", item.Node.TryGetProperty("inner", out var children)
                         ? children.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl")
-                            .Select(child => Regex.Replace(Type(Text(child.GetProperty("type"), "desugaredQualType", Text(child.GetProperty("type"), "qualType")), scope: item.Scope, allowRecord: true) ?? "?", "readonly\\(|\\)", ""))
+                            .Select(child => Regex.Replace(Type(Text(child.GetProperty("type"), "desugaredQualType", Text(child.GetProperty("type"), "qualType")), scope: item.Scope, allowRecord: true, allowReference: true) ?? "?", "readonly\\(|\\)", ""))
                         : []) + ")");
                 foreach (var signature in signatures)
                 {
@@ -128,7 +128,8 @@ internal static partial class ForeignImporter
                     {
                         string qualified = scope.Length == 0 ? Text(node, "name") : scope + "::" + Text(node, "name");
                         if (!node.TryGetProperty("completeDefinition", out _) || !records.TryGetValue(qualified, out string? receiver)) continue;
-                        foreach (var method in RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true)))
+                        foreach (var method in RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true),
+                            spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true)))
                         {
                             string key = qualified + "::" + method.Name + "(" + string.Join(",", method.Parameters) + ")";
                             if (importedSymbols.TryGetValue(key, out string? previous))
@@ -155,7 +156,7 @@ internal static partial class ForeignImporter
                         if (!opaqueRecords.Contains(receiver)) continue;
                         string ownerIdentity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(qualified)))[..24];
                         string constructorFactory = "__gflat_native_construct_" + ownerIdentity;
-                        foreach (var constructor in RecordConstructors(node, spelling => Type(spelling, scope: scope, allowRecord: true)))
+                        foreach (var constructor in RecordConstructors(node, spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true)))
                         {
                             string key = qualified + "::.constructor(" + string.Join(",", constructor.Parameters) + ")";
                             if (importedSymbols.ContainsKey(key)) continue;
@@ -223,9 +224,15 @@ internal static partial class ForeignImporter
                 }
 
                 string? Type(string spelling, HashSet<string>? resolving = null, string scope = "", bool allowRecord = false,
-                    bool allowOpaqueRecord = false)
+                    bool allowOpaqueRecord = false, bool allowReference = false)
                 {
                     spelling = spelling.Trim();
+                    if (spelling.EndsWith('&'))
+                    {
+                        if (!allowReference || spelling.EndsWith("&&", StringComparison.Ordinal)) return null;
+                        string? referred = Type(spelling[..^1], resolving, scope, allowRecord: true, allowOpaqueRecord: true);
+                        return referred == null || referred == "void" ? null : "ref " + referred;
+                    }
                     var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?:const\s*)?\)\s*\((?<parameters>.*)\)$");
                     if (callback.Success)
                     {
@@ -274,7 +281,7 @@ internal static partial class ForeignImporter
                         resolving ??= [];
                         if (!resolving.Add(alias)) return null;
                         int separator = alias.LastIndexOf("::", StringComparison.Ordinal);
-                        primitive = Type(target, resolving, separator < 0 ? "" : alias[..separator], allowRecord, allowOpaqueRecord);
+                        primitive = Type(target, resolving, separator < 0 ? "" : alias[..separator], allowRecord, allowOpaqueRecord, allowReference);
                         resolving.Remove(alias);
                     }
                     if (primitive == null && allowRecord && records.TryGetValue(alias, out var record) &&
@@ -297,7 +304,7 @@ internal static partial class ForeignImporter
                         ? body.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl").ToArray() : [];
                     var parameterTypes = parameters.Select(parameter => parameter.GetProperty("type"))
                         .Select(type => Text(type, "desugaredQualType", Text(type, "qualType"))).ToArray();
-                    var types = parameterTypes.Select(type => Type(type, scope: scope, allowRecord: true)).ToArray();
+                    var types = parameterTypes.Select(type => Type(type, scope: scope, allowRecord: true, allowReference: true)).ToArray();
                     var parameterNames = ParameterNames(parameters);
                     if (types.Any(type => type == null)) return;
                     string qualified = scope.Length == 0 ? name : scope + "::" + name;

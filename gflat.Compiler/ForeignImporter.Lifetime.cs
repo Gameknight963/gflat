@@ -26,6 +26,8 @@ internal static partial class ForeignImporter
                 child.TryGetProperty("variadic", out _)) continue;
             var parameters = child.TryGetProperty("inner", out var children)
                 ? children.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl").ToArray() : [];
+            // Implicit copy/move construction is outside the imported lifetime API.
+            if (implicitConstructor && parameters.Length != 0) continue;
             var native = parameters.Select(parameter => parameter.GetProperty("type"))
                 .Select(parameter => Text(parameter, "desugaredQualType", Text(parameter, "qualType"))).ToArray();
             var mapped = native.Select(type).ToArray();

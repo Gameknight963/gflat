@@ -55,6 +55,12 @@ to supported scalars, imported records, or `void`. Scalar typedefs, C++ namespac
 parameter types are supported. Pointers are nullable and retain pointee `const`
 as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
 
+C++ lvalue-reference parameters use host `ref` parameters. Pass `ref value` for
+`T&` or `const T&`, including references to opaque native objects. `const`
+references preserve readonly access. Mutable references require mutable,
+addressable storage. Reference results, rvalue-reference parameters, and
+references in callback signatures are not imported yet.
+
 Function-pointer parameters support callbacks with scalar and raw-pointer
 signatures, including nested callback parameters and callback typedefs. Pass an
 ordinary G♭ function pointer. Native callback pointers are nullable. Keep the

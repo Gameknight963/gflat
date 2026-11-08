@@ -26,6 +26,8 @@ public sealed class GflatReadProjectInputs : Task
     [Output] public ITaskItem[] IncludeDirectories { get; set; } = [];
     [Output] public ITaskItem[] Defines { get; set; } = [];
     [Output] public ITaskItem[] DeclarationSources { get; set; } = [];
+    [Output] public ITaskItem[] BinaryInterfaces { get; set; } = [];
+    [Output] public ITaskItem[] RuntimeFiles { get; set; } = [];
 
     public override bool Execute()
     {
@@ -43,6 +45,8 @@ public sealed class GflatReadProjectInputs : Task
             var includeDirectories = new List<string>();
             var definitions = new List<string>();
             var declarationScopes = new Dictionary<string, string>(comparer);
+            var binaryInterfaces = new List<string>();
+            var runtimeFiles = new List<string>();
             using (var collection = new ProjectCollection())
             {
                 void Visit(string file, bool asReference)
@@ -54,6 +58,17 @@ public sealed class GflatReadProjectInputs : Task
                     var project = new Project(file, properties, null, collection);
                     inputs.Add(file);
                     foreach (var import in project.Imports) inputs.Add(import.ImportedProject.FullPath);
+                    string outputType = project.GetPropertyValue("OutputType");
+                    if (asReference && (outputType == "StaticLibrary" || outputType == "DynamicLibrary"))
+                    {
+                        var reference = new BinaryProjectReference(project.GetPropertyValue("TargetPath"), outputType == "DynamicLibrary");
+                        binaryInterfaces.Add(reference.InterfacePath);
+                        inputs.Add(reference.InterfacePath);
+                        inputs.Add(reference.InterfacePath + ".gfh");
+                        runtimeFiles.AddRange(reference.RuntimeFiles);
+                        nativeProjects.Add(new NativeLinkProject(file, [], reference.NativeInputs));
+                        return;
+                    }
                     includeDirectories.AddRange(project.GetItems("IncludeDirectory").Select(item => item.GetMetadataValue("FullPath")));
                     if (!asReference) definitions.AddRange(project.GetItems("Define").Select(item => item.EvaluatedInclude));
                     string scope = PreprocessorInputs.ParseDeclarationScope(project.GetPropertyValue("DeclarationScope"));
@@ -76,6 +91,10 @@ public sealed class GflatReadProjectInputs : Task
                 Visit(ProjectFile, false);
             }
             ProjectInputs = inputs.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
+            if (runtimeFiles.Distinct(comparer).GroupBy(Path.GetFileName, comparer).Any(group => group.Count() > 1))
+                throw new ArgumentException("Referenced runtime libraries have conflicting filenames.");
+            BinaryInterfaces = binaryInterfaces.Distinct(comparer).Select(path => (ITaskItem)new TaskItem(path)).ToArray();
+            RuntimeFiles = runtimeFiles.Distinct(comparer).Select(path => (ITaskItem)new TaskItem(path)).ToArray();
             var preprocessing = new PreprocessorInputs(includeDirectories, definitions, declarationScopes);
             if (PreprocessorOverrides.Length != 0) preprocessing = preprocessing.Append(PreprocessorInputs.Read(PreprocessorOverrides));
             IncludeDirectories = preprocessing.Directories.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
@@ -95,7 +114,8 @@ public sealed class GflatReadProjectInputs : Task
                 return (ITaskItem)item;
             }).ToArray();
             NativeLibraryDirectories = nativeInputs.Directories.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
-            NativeLibraryFiles = nativeInputs.Libraries.Where(library => library.Kind == "File").Select(library => (ITaskItem)new TaskItem(library.Value)).ToArray();
+            NativeLibraryFiles = nativeInputs.Libraries.Where(library => library.Kind == "File").Select(library => library.Value)
+                .Concat(runtimeFiles).Distinct(comparer).Select(path => (ITaskItem)new TaskItem(path)).ToArray();
             HasLogicalLibraries = nativeInputs.HasLogicalLibraries;
             return true;
         }

@@ -23,10 +23,18 @@ public sealed class Compilation
     {
         cancellationToken.ThrowIfCancellationRequested();
         var captured = new List<SourceFile>();
+        var interfaces = new Dictionary<SourceId, BinaryInterface>();
         foreach (var source in sources)
         {
             cancellationToken.ThrowIfCancellationRequested();
             captured.Add(source);
+        }
+        foreach (string path in options?.BinaryInterfaces ?? [])
+        {
+            var library = BinaryInterface.Read(path);
+            var source = new SourceFile(Path.GetFullPath(path) + ".gfh", library.HeaderText);
+            interfaces[source.Id] = library;
+            if (captured.All(existing => existing.Id != source.Id)) captured.Add(source);
         }
         cancellationToken.ThrowIfCancellationRequested();
         var roots = captured.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
@@ -36,6 +44,12 @@ public sealed class Compilation
         var allSources = roots.ToDictionary(s => s.Id);
         var dependencies = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         var foreignDependencies = new HashSet<string>(dependencies.Comparer);
+        foreach (string path in options?.BinaryInterfaces ?? [])
+        {
+            dependencies.Add(Path.GetFullPath(path));
+            foreignDependencies.Add(Path.GetFullPath(path));
+            dependencies.Add(Path.GetFullPath(path) + ".gfh");
+        }
         var macroSymbols = new List<MacroSymbol>();
         var loader = options?.IncludeLoader;
         var preprocessingOptions = (options ?? new()) with { IncludeLoader = path =>
@@ -90,6 +104,7 @@ public sealed class Compilation
                 : Parser.Parse(tokens, diagnostics, recoverErrors);
             tree.Span = source.Span(0, source.Text.Length);
             tree.DeclarationScope = declarationScope;
+            if (interfaces.TryGetValue(source.Id, out var library)) library.Bind(tree);
             try
             {
                 if (importForeignDeclarations) ForeignImporter.Import(tree, foreign, preprocessingOptions, diagnostics,

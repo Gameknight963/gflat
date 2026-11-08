@@ -13,6 +13,24 @@ public partial class TypeChecker
     private readonly Dictionary<FieldDeclaration, DefaultParameterContext> defaultConstantContexts = new();
     private readonly HashSet<FieldDeclaration> checkingDefaultConstants = new();
 
+    internal string ExportParameterDefault(Parameter parameter)
+    {
+        if (parameter.DefaultValue == null) return "";
+        string type = DisplayTypeName(ResolveAlias(parameter.Type));
+        string literal = ParameterDefault(parameter) switch
+        {
+            null => "null",
+            ConstValue.Integer integer => integer.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "l",
+            ConstValue.UInteger integer => integer.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "ul",
+            ConstValue.Float number when double.IsFinite(number.Value) => number.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+            ConstValue.Boolean boolean => boolean.Value ? "true" : "false",
+            ConstValue.Char character => ((int)character.Value).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ConstValue.String { Offset: 0 } text => System.Text.Json.JsonSerializer.Serialize(text.Value),
+            _ => throw new TypeCheckException("This default argument cannot be represented in a binary interface", parameter.Span)
+        };
+        return " = (" + type + ")" + literal;
+    }
+
     private bool TryGetDefaultConstant(string name, out ConstValue? value)
     {
         value = null;

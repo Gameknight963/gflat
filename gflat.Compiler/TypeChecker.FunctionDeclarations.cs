@@ -7,6 +7,13 @@ public partial class TypeChecker
 {
     private readonly Dictionary<MethodDeclaration, MethodDeclaration[]> functionDeclarations = new();
 
+    public string GetNamespaceFunctionSymbol(MethodDeclaration method)
+    {
+        if (method.NativeSymbol != null) return method.NativeSymbol;
+        string scope = GetFunctionNamespace(method);
+        return "gflat$" + (scope.Length == 0 ? "" : scope + "$") + method.Name + GetOverloadSuffix(method);
+    }
+
     private List<Parameter> VisibleFunctionParameters(MethodDeclaration method, SourceSpan use)
     {
         if (!functionDeclarations.TryGetValue(method, out var declarations)) return method.Parameters;
@@ -43,6 +50,10 @@ public partial class TypeChecker
             if (definitions.Length > 1)
                 DuplicateDeclaration(definitions[0].Method, definitions[1].Method, $"Duplicate definition of '{definitions[0].Method.Name}'");
             var selected = definitions.FirstOrDefault() ?? prototypes[0];
+            var nativeSymbols = declarations.Select(entry => entry.Method.NativeSymbol).OfType<string>().Distinct().ToArray();
+            if (nativeSymbols.Length > 1)
+                throw new TypeCheckException($"Declarations of '{selected.Method.Name}' refer to different library symbols", selected.Method.Span);
+            if (nativeSymbols.Length == 1) selected.Method.NativeSymbol = nativeSymbols[0];
             foreach (var entry in declarations)
                 if (!ContractMatches(selected.Method, entry.Method))
                     throw new TypeCheckException($"Declaration of '{entry.Method.Name}' must match the function's return type, constraints, accessibility and modifiers", entry.Method.Span);

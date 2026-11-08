@@ -11,6 +11,8 @@ public sealed record CompilationOptions
     public Action<IReadOnlyList<string>>? DependencyObserver { get; init; }
     public Func<string>? ForeignCompilerResolver { get; init; }
     public IReadOnlyList<string> ForeignCompilerArguments { get; init; } = [];
+    public IReadOnlyList<string> BinaryInterfaces { get; init; } = [];
+    public IReadOnlyList<string>? ExportSources { get; init; }
     public bool NoStdLib { get; init; }
     public bool DebugSymbols { get; init; }
 

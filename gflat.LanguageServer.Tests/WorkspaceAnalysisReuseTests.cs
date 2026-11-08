@@ -5,6 +5,34 @@ namespace gflat.LanguageServer.Tests;
 public sealed class WorkspaceAnalysisReuseTests : IDisposable
 {
     [Fact]
+    public void BinaryInterfacesSupportNavigationAndInvalidateWhenRebuilt()
+    {
+        string implementation = Path.Combine(root, "library.gf"), metadata = Path.Combine(root, "library.lib.gfi");
+        void Publish(string code)
+        {
+            var source = new SourceFile(implementation, code);
+            var program = Compiler.EmitProgram([source], options: new() { NoStdLib = true, InternalizeFunctions = true, ExportSources = [implementation] });
+            Directory.CreateDirectory(root);
+            File.WriteAllText(metadata, program.Interface!.ToXml().ToString());
+            File.WriteAllText(metadata + ".gfh", program.Interface.HeaderText);
+        }
+        Publish("int Answer(int value)=>value;");
+        var caller = new SourceFile(Path.Combine(root, "main.gf"), "int main()=>Answer(42);");
+        var options = new CompilationOptions { NoStdLib = true, BinaryInterfaces = [metadata] };
+        var cache = new WorkspaceAnalysisCache();
+        var first = cache.Get([caller], options);
+        Assert.Empty(first.Snapshot.Diagnostics);
+        int offset = caller.Text.IndexOf("Answer", StringComparison.Ordinal);
+        Assert.Equal(Workspace.FileUri(metadata + ".gfh"), Assert.IsType<Location>(first.Model.Definition(caller.Path, offset)).Uri);
+        Assert.DoesNotContain(first.Snapshot.Sources, source => Workspace.Paths.Equals(source.Path, implementation));
+        Assert.Same(first.Snapshot, cache.Get([caller], options with { BinaryInterfaces = [metadata] }).Snapshot);
+        Publish("bool Answer(int value)=>true;");
+        var changed = cache.Get([caller], options);
+        Assert.NotSame(first.Snapshot, changed.Snapshot);
+        Assert.NotEmpty(changed.Snapshot.Diagnostics);
+    }
+
+    [Fact]
     public void DeclarationScopeChangesInvalidateAnalysisWithoutDefeatingReuse()
     {
         var implementation = new SourceFile(Path.GetFullPath("scoped-cache-implementation.gf"), "int Answer()=>42;");

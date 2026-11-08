@@ -35,6 +35,7 @@ public partial class LlvmEmitter
         var pending = new Queue<string>();
         AddOutput();
         pending.Enqueue("main");
+        foreach (string export in _exportedFunctions) pending.Enqueue(export);
         while (pending.TryDequeue(out string? name))
         {
             if (!done.Add(name)) continue;

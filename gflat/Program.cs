@@ -31,6 +31,9 @@ public static class Program
             NativeLinkInputs nativeLinkInputs = NativeLinkInputs.Empty;
             var nativeManifests = new List<string>();
             var sourceLists = new List<string>();
+            var binaryInterfaces = new List<string>();
+            var runtimeFiles = new List<string>();
+            List<string>? exportSources = null;
             PreprocessorInputs preprocessing = PreprocessorInputs.Empty;
             var preprocessorManifests = new List<string>();
             string? dependencyFile = null;
@@ -78,6 +81,13 @@ public static class Program
                         string sourceList = Path.GetFullPath(Value());
                         sourceLists.Add(sourceList);
                         sourcePaths.AddRange(File.ReadAllLines(sourceList).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath));
+                        break;
+                    case "--library-interface": binaryInterfaces.Add(Path.GetFullPath(Value())); break;
+                    case "--runtime-file": runtimeFiles.Add(Path.GetFullPath(Value())); break;
+                    case "--export-source-list":
+                        string exportList = Path.GetFullPath(Value());
+                        sourceLists.Add(exportList);
+                        exportSources = File.ReadAllLines(exportList).Where(path => !string.IsNullOrWhiteSpace(path)).Select(Path.GetFullPath).ToList();
                         break;
                     case "-I": case "--include-directory": IncludeDirectory(Value()); break;
                     case "-D": case "--define": Define(Value()); break;
@@ -157,6 +167,19 @@ public static class Program
                 "DynamicLibrary" => OperatingSystem.IsWindows() ? ".dll" : ".so", _ => ".exe" };
             outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : extension));
             var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            foreach (string path in binaryInterfaces)
+            {
+                var metadata = System.Xml.Linq.XElement.Load(path);
+                string library = (string?)metadata.Attribute("Library") ?? throw new InvalidDataException("Library interface is missing its artifact path.");
+                string target = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, library));
+                var reference = new BinaryProjectReference(target, (string?)metadata.Attribute("Kind") == "DynamicLibrary");
+                nativeLinkInputs = nativeLinkInputs.Append(new(reference.NativeInputs.Libraries.Where(required =>
+                    !nativeLinkInputs.Libraries.Any(existing => existing.Kind == required.Kind && pathComparer.Equals(existing.Value, required.Value))), reference.NativeInputs.Directories));
+                runtimeFiles.AddRange(reference.RuntimeFiles);
+            }
+            runtimeFiles = runtimeFiles.Distinct(pathComparer).ToList();
+            if (runtimeFiles.GroupBy(Path.GetFileName, pathComparer).Any(group => group.Count() > 1))
+                throw new ArgumentException("Referenced runtime libraries have conflicting filenames.");
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
                 throw new ArgumentException("A source file may only be supplied once.");
             void ValidateOutput(string path)
@@ -165,7 +188,7 @@ public static class Program
                     graph?.Projects.Any(project => pathComparer.Equals(project.FilePath, path)) == true)
                     throw new ArgumentException("Output must differ from every source file and source list.");
                 if (nativeLinkInputs.Libraries.Any(library => library.Kind == "File" && pathComparer.Equals(library.Value, path)) ||
-                    nativeManifests.Contains(path, pathComparer) || preprocessorManifests.Contains(path, pathComparer))
+                    nativeManifests.Contains(path, pathComparer) || preprocessorManifests.Contains(path, pathComparer) || binaryInterfaces.Contains(path, pathComparer) || runtimeFiles.Contains(path, pathComparer))
                     throw new ArgumentException("Output must differ from native library files and link manifests.");
             }
             ValidateOutput(outputPath);
@@ -189,7 +212,9 @@ public static class Program
             var included = new HashSet<string>(pathComparer);
             var compilationOptions = new CompilationOptions
             {
-                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly && outputType == "Executable", DebugSymbols = debugSymbols == true,
+                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
+                BinaryInterfaces = binaryInterfaces,
+                ExportSources = outputType == "Executable" ? null : exportSources ?? sourcePaths,
                 IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
                 FileDeclarationScopes = preprocessing.DeclarationScopes.ToDictionary(pair => pair.Key,
                     pair => Enum.Parse<DeclarationScope>(pair.Value), pathComparer),
@@ -238,6 +263,23 @@ public static class Program
             }
             WriteDependencies();
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            string[] interfaceOutputs = outputType == "Executable" ? [] : [outputPath + ".gfi", outputPath + ".gfi.gfh", outputPath + ".hpp"];
+            foreach (string companion in interfaceOutputs)
+            {
+                ValidateOutput(companion);
+                if (included.Contains(companion) || pathComparer.Equals(companion, dependencyFile) || pathComparer.Equals(companion, dependencyFile == null ? null : dependencyFile + ".state"))
+                    throw new ArgumentException("Library interface output must differ from included files and dependency outputs.");
+            }
+            var deployments = runtimeFiles.Select(file => (Source: file, Destination: Path.Combine(Path.GetDirectoryName(outputPath)!, Path.GetFileName(file))))
+                .Where(pair => !pathComparer.Equals(pair.Source, pair.Destination)).ToArray();
+            foreach (var deployment in deployments)
+            {
+                ValidateOutput(deployment.Destination);
+                if (pathComparer.Equals(deployment.Destination, outputPath) || interfaceOutputs.Contains(deployment.Destination, pathComparer) ||
+                    included.Contains(deployment.Destination) || pathComparer.Equals(deployment.Destination, dependencyFile) ||
+                    pathComparer.Equals(deployment.Destination, dependencyFile == null ? null : dependencyFile + ".state"))
+                    throw new ArgumentException("Runtime library deployment conflicts with a build output or included source file.");
+            }
             if (irOnly)
             {
                 string manifest = outputPath + ".foreign.json";
@@ -259,6 +301,24 @@ public static class Program
                         program.ForeignUnits, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes)
                     : NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits, sharedLibrary: outputType == "DynamicLibrary");
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
+                if (program.Interface is { } libraryInterface)
+                {
+                    var manifest = libraryInterface.ToXml();
+                    manifest.SetAttributeValue("Library", Path.GetFileName(outputPath));
+                    manifest.SetAttributeValue("Kind", outputType);
+                    manifest.Add(new System.Xml.Linq.XElement("NativeLibraries", nativeLinkInputs.Libraries.Select(library =>
+                        new System.Xml.Linq.XElement("Library", new System.Xml.Linq.XAttribute("Kind", library.Kind),
+                            new System.Xml.Linq.XAttribute("Value", library.Kind == "File" ? Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, library.Value) : library.Value)))));
+                    manifest.Add(new System.Xml.Linq.XElement("NativeDirectories", nativeLinkInputs.Directories.Select(directory =>
+                        new System.Xml.Linq.XElement("Directory", Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, directory)))));
+                    manifest.SetAttributeValue("CppRuntime", NativeToolchain.RequiredNativeRuntimes(ir).Exceptions || program.ForeignUnits.Any(unit => unit.Language == "cpp"));
+                    manifest.Add(new System.Xml.Linq.XElement("RuntimeFiles", runtimeFiles.Select(file => new System.Xml.Linq.XElement("File",
+                        Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, file)))));
+                    File.WriteAllText(interfaceOutputs[0], manifest.ToString());
+                    File.WriteAllText(interfaceOutputs[1], libraryInterface.HeaderText);
+                    File.WriteAllText(interfaceOutputs[2], libraryInterface.CppHeader());
+                }
+                foreach (var deployment in deployments) File.Copy(deployment.Source, deployment.Destination, overwrite: true);
                 if (!run) return 0;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }

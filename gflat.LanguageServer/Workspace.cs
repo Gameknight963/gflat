@@ -72,6 +72,7 @@ public static class Workspace
                     watched.UnionWith(files);
                     var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = result.Graph.PreprocessorInputs.Directories,
                         Defines = result.Graph.PreprocessorInputs.Defines,
+                        BinaryInterfaces = result.Graph.BinaryInterfaces,
                         FileDeclarationScopes = result.Graph.PreprocessorInputs.DeclarationScopes.ToDictionary(pair => pair.Key,
                             pair => Enum.Parse<DeclarationScope>(pair.Value), ProjectModel.Paths) };
                     Check(files, options);

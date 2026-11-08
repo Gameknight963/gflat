@@ -17,6 +17,7 @@ internal static class PackagedLibraryPaths
     internal static bool Contains(string extensionDirectory, string documentPath)
     {
         string document = Path.GetFullPath(documentPath);
+        if (document.EndsWith(".gfi.gfh", StringComparison.OrdinalIgnoreCase) && File.Exists(document.Substring(0, document.Length - 4))) return true;
         foreach (string root in Roots(extensionDirectory))
         {
             if (document.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return true;

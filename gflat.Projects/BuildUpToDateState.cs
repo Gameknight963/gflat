@@ -48,6 +48,7 @@ public sealed class BuildUpToDateState
         bool canCache = true;
         bool nativeOutput = false;
         string configuration = "", platform = "";
+        string outputDirectory = "";
         string Absolute(string value, string directory) => Path.GetFullPath(Path.IsPathRooted(value) ? value : Path.Combine(directory, value));
         void Value(string key, string value) => state.Append(key.Length).Append(':').Append(key).Append(value.Length).Append(':').Append(value).Append('\n');
         void Required(string path) { inputs.Add(path); requiredInputs.Add(path); }
@@ -72,9 +73,10 @@ public sealed class BuildUpToDateState
                 if (!reference)
                 {
                     xml = project.Xml.RawXml;
-                    nativeOutput = project.GetPropertyValue("OutputType").Equals("Executable", StringComparison.OrdinalIgnoreCase) && !Flag(project, "GflatEmitIR");
+                    nativeOutput = !project.GetPropertyValue("OutputType").Equals("SourceLibrary", StringComparison.OrdinalIgnoreCase) && !Flag(project, "GflatEmitIR");
                     configuration = project.GetPropertyValue("Configuration");
                     platform = project.GetPropertyValue("Platform");
+                    if (nativeOutput) outputDirectory = Path.GetDirectoryName(Absolute(project.GetPropertyValue("TargetPath"), directory))!;
                     // Defaults stay local to their declaring project. Promoting
                     // a relative SDK root would change referenced imports.
                     foreach (string name in new[] { "GflatSdkRoot", "GflatCompilerPath", "GflatBundledCompiler" })
@@ -86,7 +88,7 @@ public sealed class BuildUpToDateState
                 // reordered search paths, and newly active conditional imports.
                 foreach (string name in new[]
                 {
-                    "OutputType", "Configuration", "Platform", "TargetPath", "GflatIROutput", "NoStdLib", "NoBuiltins",
+                    "OutputType", "Configuration", "Platform", "TargetPath", "GflatIROutput", "NoStdLib", "NoBuiltins", "DeclarationScope",
                     "GflatExceptionReserveBytes", "GflatOptimizationLevel", "DebugSymbols", "GflatEmitIR", "GflatClang",
                     "GflatDefaultClangInput", "GflatCompilerPath", "GflatCompilerCommand", "GflatBundledCompiler", "GflatBuildTasksPath",
                     "GflatNativeLinkOverrides", "GflatPreprocessorOverrides", "GflatSdkRoot", "DisableFastUpToDateCheck", "_GflatKnownCompilerCommand"
@@ -97,6 +99,7 @@ public sealed class BuildUpToDateState
                     foreach (var item in project.GetItems(itemType))
                     {
                         Value("Item:" + itemType, item.EvaluatedInclude);
+                        if (itemType == "Compile") Value("Metadata:DeclarationScope", item.GetMetadataValue("DeclarationScope"));
                         if (itemType == "Compile" || itemType == "GflatCompilerInputs" || itemType == "UpToDateCheckInput" || itemType == "NativeLibraryFile" && nativeOutput)
                             Required(item.GetMetadataValue("FullPath"));
                         if (itemType == "UpToDateCheckOutput") outputs.Add(item.GetMetadataValue("FullPath"));
@@ -106,13 +109,22 @@ public sealed class BuildUpToDateState
                 if (!reference)
                 {
                     string kind = project.GetPropertyValue("OutputType");
-                    if (kind.Equals("Executable", StringComparison.OrdinalIgnoreCase))
+                    bool binary = kind.Equals("StaticLibrary", StringComparison.OrdinalIgnoreCase) || kind.Equals("DynamicLibrary", StringComparison.OrdinalIgnoreCase);
+                    if (kind.Equals("Executable", StringComparison.OrdinalIgnoreCase) || binary)
                     {
                         bool ir = Flag(project, "GflatEmitIR");
                         string output = Absolute(project.GetPropertyValue(ir ? "GflatIROutput" : "TargetPath"), directory);
                         outputs.Add(output);
-                        if (!ir && Path.DirectorySeparatorChar == '\\' && Flag(project, "DebugSymbols"))
+                        if (!ir && Path.DirectorySeparatorChar == '\\' && !kind.Equals("StaticLibrary", StringComparison.OrdinalIgnoreCase) && Flag(project, "DebugSymbols"))
                             outputs.Add(Path.ChangeExtension(output, ".pdb"));
+                        if (!ir && binary)
+                        {
+                            outputs.Add(output + ".gfi");
+                            outputs.Add(output + ".gfi.gfh");
+                            outputs.Add(output + ".hpp");
+                            if (Path.DirectorySeparatorChar == '\\' && kind.Equals("DynamicLibrary", StringComparison.OrdinalIgnoreCase))
+                                outputs.Add(Path.ChangeExtension(output, ".lib"));
+                        }
                         if (!ir)
                         {
                             string? clang = ResolveClang(project.GetPropertyValue("GflatClang"), directory);
@@ -158,6 +170,19 @@ public sealed class BuildUpToDateState
                         // resolved headers, so a newly shadowing header invalidates.
                         foreach (string file in File.ReadAllLines(dependencies))
                             if (file.Length != 0) inputs.Add(file);
+                    }
+                }
+                else if (project.GetPropertyValue("OutputType") is "StaticLibrary" or "DynamicLibrary")
+                {
+                    var binary = new BinaryProjectReference(project.GetPropertyValue("TargetPath"), project.GetPropertyValue("OutputType") == "DynamicLibrary");
+                    Required(binary.LibraryPath);
+                    Required(binary.LinkPath);
+                    Required(binary.InterfacePath);
+                    Required(binary.InterfacePath + ".gfh");
+                    foreach (string runtime in binary.RuntimeFiles)
+                    {
+                        Required(runtime);
+                        if (nativeOutput) outputs.Add(Path.Combine(outputDirectory, Path.GetFileName(runtime)));
                     }
                 }
                 foreach (var referenceItem in project.GetItems("ProjectReference"))

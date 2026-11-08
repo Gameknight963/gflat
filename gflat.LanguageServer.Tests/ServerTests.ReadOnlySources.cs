@@ -6,6 +6,22 @@ namespace gflat.LanguageServer.Tests;
 public sealed partial class ServerTests
 {
     [Fact]
+    public async Task GeneratedBinaryHeadersAreReadOnlyWithoutAConfiguredLibraryDirectory()
+    {
+        await using var session = new Session();
+        const string name = "library.lib.gfi.gfh";
+        File.WriteAllText(session.File("library.lib.gfi"), "<GflatInterface Version=\"1\" />");
+        await session.Initialize();
+        await session.Open(name, "int Answer();");
+        await session.Diagnostics(name, 1);
+        await session.Send(new { jsonrpc = "2.0", id = 81, method = "textDocument/formatting", @params = new {
+            textDocument = new { uri = session.Uri(name) }, options = new { tabSize = 4, insertSpaces = true } } });
+        var response = await session.Receive(message => message.TryGetProperty("id", out var id) && id.ToString() == "81");
+        Assert.Empty(response.GetProperty("result").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Fact]
     public async Task AReadOnlyDirectoryDoesNotProtectASiblingWithTheSamePrefix()
     {
         await using var session = new Session();

@@ -12,15 +12,17 @@ public partial class LlvmEmitter : IVisitor
     private readonly TypeChecker _typeChecker;
     private readonly bool _internalizeFunctions;
     private readonly bool _noBuiltins;
+    private readonly HashSet<string> _exportedFunctions;
     private string NoBuiltinsAttribute => _noBuiltins ? " \"no-builtins\"" : "";
 
     public LlvmEmitter(TypeChecker typeChecker, bool internalizeFunctions = false, bool debugSymbols = false,
-        bool noBuiltins = false)
+        bool noBuiltins = false, IEnumerable<string>? exportedFunctions = null)
     {
         _typeChecker = typeChecker;
         _internalizeFunctions = internalizeFunctions;
         _debugSymbols = debugSymbols;
         _noBuiltins = noBuiltins;
+        _exportedFunctions = (exportedFunctions ?? []).ToHashSet(StringComparer.Ordinal);
     }
 
     private int _constCounter = 0;
@@ -2213,10 +2215,8 @@ public partial class LlvmEmitter : IVisitor
             name = GetMethodMangledName(owner, node, _typeChecker.GetFunctionNamespace(node), ownerIsClass);
         else if (isMain)
             name = "main";
-        else if (_currentNamespacePath.Length > 0)
-            name = $"gflat${_currentNamespacePath}${node.Name}" + _typeChecker.GetOverloadSuffix(node);
         else
-            name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
+            name = _typeChecker.GetNamespaceFunctionSymbol(node);
 
         if (node.IsPrototype)
         {
@@ -3008,7 +3008,7 @@ public partial class LlvmEmitter : IVisitor
                 return true;
             }
             string ns = _typeChecker.GetFunctionNamespace(method);
-            string mangled = (ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}") + _typeChecker.GetOverloadSuffix(method);
+            string mangled = _typeChecker.GetNamespaceFunctionSymbol(method);
             Push($"@{mangled}");
             return true;
         }
@@ -3675,7 +3675,7 @@ public partial class LlvmEmitter : IVisitor
                 else
                 {
                     string ns = _typeChecker.GetFunctionNamespace(method);
-                    funcName = (ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}") + _typeChecker.GetOverloadSuffix(method);
+                    funcName = _typeChecker.GetNamespaceFunctionSymbol(method);
                 }
             }
             else if (node.Callee is IdentifierExpression ident)

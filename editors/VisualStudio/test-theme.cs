@@ -191,6 +191,21 @@ namespace gflat.PackageTests
 
         public static void RunLibraryProtection(Assembly assembly)
         {
+            var paths = assembly.GetType("gflat.VisualStudio.PackagedLibraryPaths", true);
+            var contains = paths.GetMethod("Contains", BindingFlags.NonPublic | BindingFlags.Static);
+            string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gflat-interface-protection-" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(directory);
+            try {
+                string metadata = System.IO.Path.Combine(directory, "library.lib.gfi"), header = metadata + ".gfh";
+                System.IO.File.WriteAllText(metadata, "<GflatInterface Version=\"1\" />");
+                System.IO.File.WriteAllText(header, "int Answer();");
+                if (!(bool)contains.Invoke(null, new object[] { System.IO.Path.GetDirectoryName(assembly.Location), header }))
+                    throw new Exception("Generated binary declaration headers must open read-only");
+                System.IO.File.Delete(metadata);
+                if ((bool)contains.Invoke(null, new object[] { System.IO.Path.GetDirectoryName(assembly.Location), header }))
+                    throw new Exception("Ordinary user headers must remain editable");
+            }
+            finally { System.IO.Directory.Delete(directory, true); }
             var listener = assembly.GetType("gflat.VisualStudio.GflatLibraryProtection", true);
             bool created = false, applied = false, disposed = false;
             var snapshot = Interface<Microsoft.VisualStudio.Text.ITextSnapshot>(m => m.MethodName == "get_Length" ? (object)42 : null);

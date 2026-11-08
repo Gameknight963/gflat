@@ -75,6 +75,7 @@ public sealed class ProjectGraph
     public IReadOnlyList<string> Sources { get; }
     public NativeLinkInputs NativeLinkInputs { get; }
     public PreprocessorInputs PreprocessorInputs { get; }
+    public IReadOnlyList<string> BinaryInterfaces { get; }
     private ProjectGraph(ProjectModel root, List<ProjectModel> projects, List<string> sources)
     {
         Root = root; Projects = projects; Sources = sources;
@@ -83,15 +84,19 @@ public sealed class ProjectGraph
         IEnumerable<string> IncludeDirectories(ProjectModel project)
         {
             if (!seen.Add(project.FilePath)) yield break;
+            if (project != root && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary) yield break;
             foreach (string directory in project.PreprocessorInputs.Directories) yield return directory;
             foreach (string reference in project.References)
                 foreach (string directory in IncludeDirectories(byPath[reference])) yield return directory;
         }
         PreprocessorInputs = new(IncludeDirectories(root), root.PreprocessorInputs.Defines.Select(pair => pair.Key + "=" + pair.Value),
-            projects.SelectMany(project => project.PreprocessorInputs.DeclarationScopes)
+            projects.Where(project => !BinaryReference(project)).SelectMany(project => project.PreprocessorInputs.DeclarationScopes)
                 .GroupBy(pair => pair.Key, ProjectModel.Paths).Select(group => group.First()));
+        bool BinaryReference(ProjectModel project) => project != root && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary;
+        BinaryInterfaces = projects.Where(BinaryReference).Select(project => project.TargetPath! + ".gfi").ToArray();
         NativeLinkInputs = NativeLinkProjectOrder.Aggregate(root.FilePath, projects.Select(project =>
-            new NativeLinkProject(project.FilePath, project.References, project.NativeLinkInputs)));
+            new NativeLinkProject(project.FilePath, BinaryReference(project) ? [] : project.References,
+                BinaryReference(project) ? new BinaryProjectReference(project.TargetPath!, project.Kind == ProjectKind.DynamicLibrary).NativeInputs : project.NativeLinkInputs)));
     }
 
     /// <summary>Evaluates the root normally and each dependency in reference context.</summary>
@@ -115,13 +120,20 @@ public sealed class ProjectGraph
             file = Path.GetFullPath(file);
             if (!active.Add(file)) throw new ProjectException(file, "Cyclic project reference.");
             var project = loader(file, asReference);
+            if (asReference && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary)
+            {
+                active.Remove(file);
+                visited.Add(file);
+                projects.Add(project);
+                return project;
+            }
             foreach (string reference in project.References)
             {
                 if (active.Contains(reference)) throw new ProjectException(file, "Cyclic project reference: " + reference);
                 if (visited.Contains(reference)) continue;
                 var dependency = Visit(reference, asReference: true);
-                if (dependency.Kind != ProjectKind.SourceLibrary)
-                    throw new ProjectException(file, "Only projects with OutputType=SourceLibrary can be referenced: " + reference);
+                if (dependency.Kind == ProjectKind.Executable)
+                    throw new ProjectException(file, "Executable projects cannot be referenced: " + reference);
             }
             active.Remove(file);
             visited.Add(file);

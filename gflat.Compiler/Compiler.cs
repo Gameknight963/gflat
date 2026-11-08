@@ -67,9 +67,10 @@ public static class Compiler
     {
         var (ast, checker) = Check(sources, diagnostics, options);
         CppLinkage.Resolve(ast, checker, options ?? new());
+        var library = options?.ExportSources is { } exports ? BinaryInterface.Create(ast, checker, exports) : null;
         var emitter = new LlvmEmitter(checker, options?.InternalizeFunctions == true, options?.DebugSymbols == true,
-            options?.NoBuiltins == true);
+            options?.NoBuiltins == true, library?.Functions.Select(function => function.Symbol));
         ast.Accept(emitter);
-        return new(emitter.GetOutput(), ast.ForeignUnits.ToArray());
+        return new(emitter.GetOutput(), ast.ForeignUnits.ToArray()) { Interface = library };
     }
 }

@@ -94,14 +94,26 @@ Standalone library builds and checks validate a complete compilation, so every
 can provide those implementations: references collect the library's sources
 without separately building or checking the library first.
 
-Project references name source libraries. Transitive references are supported,
+Project references name source or binary libraries. Transitive references are supported,
 diamond dependencies are deduplicated, and cycles are rejected.
 
 `StaticLibrary` produces a native archive (`.lib` on Windows, `.a` on Linux).
 `DynamicLibrary` produces a `.dll` with an import `.lib` on Windows or a `.so`
-on Linux. These outputs contain compiled code. Callers provide declarations and
-link the archive or import library through `NativeLibraryFile`. Binary project
-reference interfaces are not available yet.
+on Linux. A reference to a binary project builds that library, imports its
+generated declarations, and links its binary. It does not load the library's
+implementation sources into the caller's compilation. Dynamic dependencies are
+copied beside the consuming artifact.
+
+Binary builds generate `.gfi` interface metadata, a `.gfi.gfh` declaration header,
+and a `.hpp` header for C++ callers beside the artifact. The initial interface
+exports public namespace functions with scalar and raw-pointer signatures.
+Declarations retain exact linker names, overloads, and representable constant
+defaults. Generic bodies, compile-time functions, and type declarations require
+source libraries. Generated declaration headers open read-only in Visual Studio.
+
+For a distributed binary, pass `--library-interface path/to/library.lib.gfi`.
+Keep its generated declaration header beside the metadata. Ordinary native
+libraries still use declarations from headers and `NativeLibraryFile` for linking.
 
 For individual source files, use `--output-type StaticLibrary` or
 `--output-type DynamicLibrary`. A library cannot be launched with `--run`.

@@ -9,7 +9,10 @@ public sealed record ForeignTranslationUnit(string Language, string Text, IReadO
     public IReadOnlyDictionary<string, string> Bridges { get; init; } = new Dictionary<string, string>();
 }
 
-public sealed record EmittedProgram(string Ir, IReadOnlyList<ForeignTranslationUnit> ForeignUnits);
+public sealed record EmittedProgram(string Ir, IReadOnlyList<ForeignTranslationUnit> ForeignUnits)
+{
+    public BinaryInterface? Interface { get; init; }
+}
 
 public sealed record ForeignDependency(string Path, string? ContentHash)
 {

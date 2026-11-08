@@ -12,6 +12,7 @@ namespace gflat.ast
         public string Name { get; internal set; }
         public bool IsForeignImport { get; internal set; }
         public bool IsPrototype { get; internal set; }
+        public string? NativeSymbol { get; internal set; }
         public FunctionImplementationKind ImplementationKind { get; set; }
         public string? StringLiteralPrefix { get; set; }
         public string? PropertyName { get; set; }

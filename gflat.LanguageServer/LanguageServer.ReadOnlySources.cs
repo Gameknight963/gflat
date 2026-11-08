@@ -19,8 +19,9 @@ public sealed partial class LanguageServer
 
     private bool IsReadOnlySource(string path)
     {
-        if (readOnlySourceRoots.Length == 0 || path.StartsWith('<')) return false;
+        if (path.StartsWith('<')) return false;
         string fullPath = Path.GetFullPath(path);
+        if (fullPath.EndsWith(".gfi.gfh", StringComparison.OrdinalIgnoreCase) && File.Exists(fullPath[..^4])) return true;
         return readOnlySourceRoots.Any(root => fullPath.StartsWith(root,
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
     }
@@ -28,7 +29,7 @@ public sealed partial class LanguageServer
     private bool WritableCodeAction(EditorCodeAction action) => action.Edit == null ||
         action.Edit.Changes.Keys.All(uri => !IsReadOnlySource(Workspace.FilePath(uri)));
 
-    private bool ReadOnlyDeclaration(EditorModel model, string path, int offset) => readOnlySourceRoots.Length != 0 &&
+    private bool ReadOnlyDeclaration(EditorModel model, string path, int offset) =>
         model.Definition(path, offset) is Location location && IsReadOnlySource(Workspace.FilePath(location.Uri));
 
     private object? PrepareRename(EditorModel model, string path, int offset)

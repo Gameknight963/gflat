@@ -21,6 +21,8 @@ internal sealed class WorkspaceAnalysisCache
         options = options with {
             IncludeDirectories = options.IncludeDirectories.ToArray(),
             ForeignCompilerArguments = options.ForeignCompilerArguments.ToArray(),
+            BinaryInterfaces = options.BinaryInterfaces.ToArray(),
+            ExportSources = options.ExportSources?.ToArray(),
             FileDeclarationScopes = options.FileDeclarationScopes.Count == 0 ? EmptyDeclarationScopes :
                 new Dictionary<string, DeclarationScope>(options.FileDeclarationScopes, Workspace.Paths),
             Defines = options.Defines.Count == 0 ? EmptyDefines : new Dictionary<string, string>(options.Defines, StringComparer.Ordinal)
@@ -55,8 +57,10 @@ internal sealed class WorkspaceAnalysisCache
     }
 
     private static bool SameOptions(CompilationOptions left, CompilationOptions right) =>
-        (left with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, FileDeclarationScopes = EmptyDeclarationScopes, IncludeLoader = null, DependencyObserver = null }) ==
-        (right with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, FileDeclarationScopes = EmptyDeclarationScopes, IncludeLoader = null, DependencyObserver = null }) &&
+        (left with { IncludeDirectories = [], ForeignCompilerArguments = [], BinaryInterfaces = [], ExportSources = null, Defines = EmptyDefines, FileDeclarationScopes = EmptyDeclarationScopes, IncludeLoader = null, DependencyObserver = null }) ==
+        (right with { IncludeDirectories = [], ForeignCompilerArguments = [], BinaryInterfaces = [], ExportSources = null, Defines = EmptyDefines, FileDeclarationScopes = EmptyDeclarationScopes, IncludeLoader = null, DependencyObserver = null }) &&
+        left.BinaryInterfaces.SequenceEqual(right.BinaryInterfaces, Workspace.Paths) &&
+        (left.ExportSources == null ? right.ExportSources == null : right.ExportSources != null && left.ExportSources.SequenceEqual(right.ExportSources, Workspace.Paths)) &&
         left.FileDeclarationScopes.Count == right.FileDeclarationScopes.Count &&
         left.FileDeclarationScopes.All(pair => right.FileDeclarationScopes.TryGetValue(pair.Key, out var scope) && scope == pair.Value) &&
         left.ForeignCompilerArguments.SequenceEqual(right.ForeignCompilerArguments) &&

@@ -117,12 +117,21 @@ void notify_debugger(void* object, const DebugException& info, unsigned stage) n
     (void)object; (void)info; (void)stage;
 #endif
 }
-struct Exception final {
+struct Exception final : std::exception {
     // MSVC may copy the native exception. Copies share the gflat payload.
     std::shared_ptr<void> object;
     DebugException debug;
-    Exception(void* value, void (*cleanup)(void*), DebugException info = {})
-        : object(value, cleanup, RuntimeAllocator<unsigned char>{}), debug(info) {}
+    const char* (*message)(void*) = nullptr;
+    Exception(void* value, void (*cleanup)(void*), DebugException info = {}, const char* (*get_message)(void*) = nullptr)
+        : object(value, cleanup, RuntimeAllocator<unsigned char>{}), debug(info), message(get_message) {}
+    const char* what() const noexcept override {
+        try {
+            if (message) {
+                if (const char* text = message(object.get())) return text;
+            }
+        } catch (...) {}
+        return "Gflat exception";
+    }
 };
 struct Handle { std::exception_ptr exception; };
 thread_local bool invoking_payload_allocator = false;
@@ -160,6 +169,16 @@ void __gflat_eh_free_exception(void* value, void (*deallocator)(void*)) {
     DebugException info{type, message_offset, code_offset};
     // Keep ownership established if construction of the C++ transport fails.
     Exception error(object, destroy, info);
+    notify_debugger(object, info, 1);
+    throw error;
+}
+[[noreturn]] void __gflat_eh_throw_message(void* object, void (*destroy)(void*), const char* (*message)(void*)) {
+    throw Exception(object, destroy, {}, message);
+}
+[[noreturn]] void __gflat_eh_throw_message_debug(void* object, void (*destroy)(void*), const char* (*message)(void*),
+    const char* type, std::int64_t message_offset, std::int64_t code_offset) {
+    DebugException info{type, message_offset, code_offset};
+    Exception error(object, destroy, info, message);
     notify_debugger(object, info, 1);
     throw error;
 }

@@ -14,9 +14,12 @@ public class NativeExceptionRuntimeTests
         {
             string code = """
                 #include <cstdint>
+                #include <exception>
+                #include <cstring>
                 extern "C" {
                     void __gflat_eh_throw(void*, void(*)(void*));
                     void __gflat_eh_throw_debug(void*, void(*)(void*), const char*, std::int64_t, std::int64_t);
+                    void __gflat_eh_throw_message(void*, void(*)(void*), const char*(*)(void*));
                     void* __gflat_eh_capture();
                     void* __gflat_eh_object(void*);
                     void __gflat_eh_release(void*);
@@ -25,6 +28,7 @@ public class NativeExceptionRuntimeTests
                 }
                 int destroyed = 0;
                 void destroy(void* value) { if (*(int*)value == 42) ++destroyed; }
+                const char* no_message(void*) { return nullptr; }
                 struct Guard { int* count; ~Guard() { ++*count; } };
                 int main() {
                     __gflat_eh_release(nullptr); // Cleanup after rethrow may own no handle.
@@ -38,6 +42,11 @@ public class NativeExceptionRuntimeTests
                     if (destroyed != 0) return 2;
                     __gflat_eh_release(handle);
                     if (destroyed != 1) return 3;
+                    try { __gflat_eh_throw_message(&value, destroy, no_message); }
+                    catch (const std::exception& error) {
+                        if (std::strcmp(error.what(), "Gflat exception") != 0) return 7;
+                    }
+                    if (destroyed != 2) return 8;
                     try { throw 17; }
                     catch (...) { handle = __gflat_eh_capture(); }
                     if (__gflat_eh_object(handle) != nullptr) return 4;

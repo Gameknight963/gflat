@@ -67,7 +67,26 @@ The following are not imported yet:
 - Variadic C++ functions without C linkage
 
 C-linkage variadic functions are imported directly. Foreign functions cannot
-participate in host constant evaluation. C++ exception conversion is not implemented.
+participate in host constant evaluation.
+
+## Exceptions across native calls
+
+C++ exceptions unwind through G♭ calls and cleanup. A catch-all can retain and
+rethrow the original native exception. A typed G♭ catch matches G♭ payloads,
+not arbitrary C++ exception classes.
+
+C++ callers can catch a G♭ exception as `const std::exception&`. Its `what()`
+uses the exception's `GetMessage()` method, including virtual overrides. A null
+result, missing compatible getter, or escaping getter exception produces
+`"Gflat exception"`. `what()` is `noexcept`. The exception retains its payload
+while C++ holds it, including through `std::exception_ptr`. Borrowed message
+storage must remain alive for that duration. `GetCode()` remains available to
+G♭ callers.
+
+This adapter does not expose G♭ class layouts as C++ exception classes.
+Typed G♭ catches across separately compiled binary libraries are not yet
+supported. Code using Windows native libraries must select a compatible CRT
+as described in [project references](PROJECTS.md#visual-c-project-references).
 
 ## Declare a separately linked C++ function
 

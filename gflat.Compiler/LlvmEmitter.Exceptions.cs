@@ -140,6 +140,8 @@ public partial class LlvmEmitter
             // receiver temporaries and managed roots alive until the unwind.
             _deferScopes[^1].Remove(allocationCleanup);
             string arguments = $"i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*)";
+            string? messageGetter = EmitExceptionMessageGetter(exceptionClass);
+            if (messageGetter != null) arguments += $", i8* (i8*)* @{messageGetter}";
             if (_debugSymbols)
             {
                 long offset = TargetInfo.Default.PointerBytes, messageOffset = -1, codeOffset = -1;
@@ -157,12 +159,46 @@ public partial class LlvmEmitter
                     offset += _typeChecker.GetTypeSize(field.Type);
                 }
                 string name = CStringAddress(new ConstValue.String(_typeChecker.DisplayTypeName(type)));
-                EmitRuntimeCall(ExceptionRuntime.ThrowDebug, arguments + $", i8* {name}, i64 {messageOffset}, i64 {codeOffset}");
+                EmitRuntimeCall(messageGetter == null ? ExceptionRuntime.ThrowDebug : ExceptionRuntime.ThrowMessageDebug,
+                    arguments + $", i8* {name}, i64 {messageOffset}, i64 {codeOffset}");
             }
-            else EmitRuntimeCall(ExceptionRuntime.Throw, arguments);
+            else EmitRuntimeCall(messageGetter == null ? ExceptionRuntime.Throw : ExceptionRuntime.ThrowMessage, arguments);
         }
         Emit("    unreachable");
         _hasTerminated = true;
+    }
+
+    private readonly Dictionary<string, string?> _exceptionMessageGetters = new();
+
+    private string? EmitExceptionMessageGetter(TypeChecker.ClassInfo type)
+    {
+        if (_exceptionMessageGetters.TryGetValue(type.Name, out var existing)) return existing;
+        if (!type.Methods.TryGetValue("GetMessage", out var member) || member.Method.IsStatic ||
+            member.Method.Parameters.Count != 0 || EmitType(member.Method.ReturnType) != "i8*")
+        {
+            _exceptionMessageGetters[type.Name] = null;
+            return null;
+        }
+        string name = "gflat$exception_message$" + type.Name;
+        _exceptionMessageGetters[type.Name] = name;
+        _lambdaFunctions.AppendLine($"define internal i8* @{name}(i8* %object) {{");
+        string owner = member.DeclaringClass;
+        _lambdaFunctions.AppendLine($"    %self = bitcast i8* %object to %{owner}*");
+        string callee;
+        if (type.VTableSlots.TryGetValue("GetMessage", out int slot))
+        {
+            _lambdaFunctions.AppendLine("    %vptr = bitcast i8* %object to i8***");
+            _lambdaFunctions.AppendLine("    %table = load i8**, i8*** %vptr");
+            _lambdaFunctions.AppendLine($"    %slot = getelementptr i8*, i8** %table, i32 {slot}");
+            _lambdaFunctions.AppendLine("    %raw = load i8*, i8** %slot");
+            _lambdaFunctions.AppendLine($"    %method = bitcast i8* %raw to i8* (%{owner}*)*");
+            callee = "%method";
+        }
+        else callee = "@" + GetMethodMangledName(owner, member.Method, _typeChecker.GetFunctionNamespace(member.Method), isClass: true);
+        _lambdaFunctions.AppendLine($"    %message = call i8* {callee}(%{owner}* %self)");
+        _lambdaFunctions.AppendLine("    ret i8* %message");
+        _lambdaFunctions.AppendLine("}");
+        return name;
     }
 
     private void EmitNativeTry(TryStatement node)

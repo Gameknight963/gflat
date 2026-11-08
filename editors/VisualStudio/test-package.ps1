@@ -139,10 +139,29 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
+    if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
+    $foreignConsumer = Join-Path $extracted 'foreign-consumer.gf'
+    @'
+#lang cpp
+#include <stddef.h>
+namespace Native
+{
+    static int Next(int value) { return value + 1; }
+}
+#lang gflat
+int main() { return Native::Next(41) - 42; }
+'@ | Set-Content -LiteralPath $foreignConsumer -Encoding Ascii
+    $foreignIr = Join-Path $extracted 'foreign-consumer.ll'
+    & $compiler $foreignConsumer --no-stdlib --emit-ir -o $foreignIr
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath ($foreignIr + '.foreign.json'))) {
+        throw 'Packaged foreign language source and IR companion emission failed'
+    }
+    & $compiler $foreignConsumer --no-stdlib -o (Join-Path $extracted 'foreign-consumer.exe') --run
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged foreign language consumer failed' }
+    Write-Host 'Packaged C++ source switch, header import, static function call, and IR companion passed.'
     & (Join-Path $PSScriptRoot 'test-sdk-installation.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-sdk-elevation.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-explorer-installation.ps1') -PackageDirectory $extracted
-    if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     & (Join-Path $repoRoot 'build/test-bundled-msbuild.ps1') -ToolchainDirectory (Join-Path $extracted 'Sdk') -CompilerDirectory (Join-Path $extracted 'Compiler')
     & (Join-Path $PSScriptRoot 'test-project-templates.ps1') -PackageDirectory $extracted
     # Keep installed CPS/MSBuild dependencies in a fresh desktop CLR load context.

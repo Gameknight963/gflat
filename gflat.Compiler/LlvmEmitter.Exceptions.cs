@@ -216,10 +216,15 @@ public partial class LlvmEmitter
         if (!_hasTerminated) Emit($"    br label %{end}");
         Emit(dispatch + ":");
         _hasTerminated = false;
-        string handle = NewTemp(), rawObject = NewTemp(), error = NewTemp();
+        string handle = NewTemp(), error = "";
         Emit($"    {handle} = load i8*, i8** {slot}");
-        EmitRuntimeCall(ExceptionRuntime.Object, $"i8* {handle}", rawObject);
-        Emit($"    {error} = bitcast i8* {rawObject} to %Exception*");
+        if (node.CatchClauses.Any(clause => clause.ExceptionType != null))
+        {
+            string rawObject = NewTemp();
+            error = NewTemp();
+            EmitRuntimeCall(ExceptionRuntime.Object, $"i8* {handle}", rawObject);
+            Emit($"    {error} = bitcast i8* {rawObject} to %Exception*");
+        }
         foreach (var clause in node.CatchClauses)
         {
             string body = NewLabel("catch_body"), next = NewLabel("catch_next");

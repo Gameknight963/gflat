@@ -88,7 +88,7 @@ public partial class TypeChecker
             return ResolveNamespaceByName(ns)?.TypeNames.GetValueOrDefault(name);
         foreach (var local in _localEnums)
             if (local.TryGetValue(name, out var enumeration)) return enumeration.Name;
-        if (!_localAliases.Any(local => local.ContainsKey(name)) && ResolveEnclosingNestedTypeName(name) is { } nested)
+        if (!HasLocalAlias(name) && ResolveEnclosingNestedTypeName(name) is { } nested)
             return nested;
         for (var scope = _currentNamespace; scope != null; scope = scope.Parent)
         {

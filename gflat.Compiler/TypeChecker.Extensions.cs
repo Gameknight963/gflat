@@ -262,7 +262,7 @@ public partial class TypeChecker
             }
             if (parent is not NamedTypeExpression { TypeArguments.Count: 0, Namespace: null, IsResolvedNominal: false } named ||
                 allowMethodParameters && names.Contains(named.Name)) return null;
-            if (_localAliases.Any(aliases => aliases.ContainsKey(named.Name)) || ResolveEnclosingNestedTypeName(named.Name) != null)
+            if (HasLocalAlias(named.Name) || ResolveEnclosingNestedTypeName(named.Name) != null)
                 return null;
             for (var current = scope; current != null; current = current.Parent)
                 if (current.TypeNames.ContainsKey(named.Name) || current.Aliases.ContainsKey(named.Name)) return null;

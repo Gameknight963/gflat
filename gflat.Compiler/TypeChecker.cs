@@ -1285,7 +1285,7 @@ namespace gflat
             IEnumerable<string> imports, bool reportAmbiguity = true)
         {
             if (TryResolveGlobalNamespace(nsName, _globalScope, out var rooted)) return rooted;
-            string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = NamespacePathSegments(nsName);
             if (parts.Length == 0) return null;
             NamespaceScope? current = ResolveNamespaceByName(parts[0], start);
             if (current == null)
@@ -1312,7 +1312,7 @@ namespace gflat
             if (TryResolveGlobalNamespace(nsName, _globalScope, out var rooted)) return rooted;
             if (nsName.Contains("::"))
             {
-                string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = NamespacePathSegments(nsName);
                 NamespaceScope? current = ResolveNamespaceByName(parts[0], start);
                 for (int i = 1; i < parts.Length && current != null; i++)
                 {
@@ -5941,7 +5941,7 @@ namespace gflat
                     if (localScope.TryGetValue(ident.Name, out EnumInfo? localInfo))
                         return localInfo;
                 }
-                if (!_localAliases.Any(local => local.ContainsKey(ident.Name)) &&
+                if (!HasLocalAlias(ident.Name) &&
                     ResolveEnclosingNestedTypeName(ident.Name) is { } nested && _enums.TryGetValue(nested, out var nestedEnum))
                     return nestedEnum;
                 NamespaceScope? cur = _currentNamespace;
@@ -6005,7 +6005,7 @@ namespace gflat
                     if (localScope.TryGetValue(named.Name, out EnumInfo? info))
                         return info;
                 }
-                if (!_localAliases.Any(local => local.ContainsKey(named.Name)) &&
+                if (!HasLocalAlias(named.Name) &&
                     ResolveEnclosingNestedTypeName(named.Name) is { } nested && _enums.TryGetValue(nested, out var nestedEnum))
                     return nestedEnum;
                 NamespaceScope? cur = _currentNamespace;

@@ -2,6 +2,25 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private readonly Dictionary<string, string[]> namespacePathSegments = new(StringComparer.Ordinal);
+
+    private string[] NamespacePathSegments(string name)
+    {
+        if (!namespacePathSegments.TryGetValue(name, out var segments))
+        {
+            segments = name.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
+            namespacePathSegments.Add(name, segments);
+        }
+        return segments;
+    }
+
+    private bool HasLocalAlias(string name)
+    {
+        foreach (var scope in _localAliases)
+            if (scope.ContainsKey(name)) return true;
+        return false;
+    }
+
     // Only declarations inside the current type and its enclosing types belong
     // here. A global fallback would incorrectly outrank namespace aliases.
     private string? ResolveEnclosingNestedTypeName(string name)

@@ -70,7 +70,7 @@ public partial class TypeChecker
                     return new NamespaceAccessExpression(new GlobalExpression(named.Line), named.Name, named.Line);
                 }
                 if (named.Namespace != null) return null;
-                if (TryLookupVariable(named.Name, out _) || _localAliases.Any(a => a.ContainsKey(named.Name))) return null;
+                if (TryLookupVariable(named.Name, out _) || HasLocalAlias(named.Name)) return null;
                 for (var lexical = _currentNamespace; lexical != null; lexical = lexical.Parent)
                     if (lexical.Aliases.ContainsKey(named.Name) || lexical.TypeNames.ContainsKey(named.Name)) return null;
                 return new IdentifierExpression(named.Name, named.Line);

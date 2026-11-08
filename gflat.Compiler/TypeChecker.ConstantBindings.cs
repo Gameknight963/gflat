@@ -13,13 +13,17 @@ public partial class TypeChecker
 
     private void BindConstantDeclaration(IdentifierExpression expression)
     {
-        foreach (var frame in _scopes.Zip(localConstants))
-            if (frame.First.ContainsKey(expression.Name))
+        var constants = localConstants.GetEnumerator();
+        foreach (var scope in _scopes)
+        {
+            if (!constants.MoveNext()) break;
+            if (scope.ContainsKey(expression.Name))
             {
-                if (frame.Second.TryGetValue(expression.Name, out var binding))
+                if (constants.Current.TryGetValue(expression.Name, out var binding))
                     constantDeclarationReads[expression] = binding.Declaration;
                 return;
             }
+        }
         if (ConstantField(expression.Name) is { IsConst: true } field) constantDeclarationReads[expression] = field;
     }
 
@@ -38,13 +42,17 @@ public partial class TypeChecker
     private bool BoundConstant(string name, out ConstValue? value)
     {
         value = null;
-        foreach (var frame in _scopes.Zip(localConstants))
-            if (frame.First.ContainsKey(name))
+        var constants = localConstants.GetEnumerator();
+        foreach (var scope in _scopes)
+        {
+            if (!constants.MoveNext()) break;
+            if (scope.ContainsKey(name))
             {
-                if (!frame.Second.TryGetValue(name, out var binding)) return false;
+                if (!constants.Current.TryGetValue(name, out var binding)) return false;
                 value = binding.Value;
                 return true;
             }
+        }
         if (ConstantField(name) is { } field) return EvaluateDefaultConstant(field, out value);
         // Preserve the legacy inspection API outside any source query. Compiler
         // reads are bound to scopes or declarations, never this spelling cache.
@@ -53,8 +61,12 @@ public partial class TypeChecker
 
     private bool BoundConstantIsReadOnly(string name)
     {
-        foreach (var frame in _scopes.Zip(localConstants))
-            if (frame.First.ContainsKey(name)) return frame.Second.ContainsKey(name);
+        var constants = localConstants.GetEnumerator();
+        foreach (var scope in _scopes)
+        {
+            if (!constants.MoveNext()) break;
+            if (scope.ContainsKey(name)) return constants.Current.ContainsKey(name);
+        }
         return ConstantField(name)?.IsConst == true;
     }
 }

@@ -73,6 +73,7 @@ public static class Workspace
                     var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = result.Graph.PreprocessorInputs.Directories,
                         Defines = result.Graph.PreprocessorInputs.Defines,
                         BinaryInterfaces = result.Graph.BinaryInterfaces,
+                        ForeignCompilerArguments = RuntimeLibrary.CompilerArguments(result.Graph.RuntimeLibrary),
                         FileDeclarationScopes = result.Graph.PreprocessorInputs.DeclarationScopes.ToDictionary(pair => pair.Key,
                             pair => Enum.Parse<DeclarationScope>(pair.Value), ProjectModel.Paths) };
                     Check(files, options);

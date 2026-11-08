@@ -1,0 +1,44 @@
+<Project>
+  <PropertyGroup>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$([System.IO.Path]::GetFullPath("$(MSBuildThisFileDirectory).."))</GflatSdkRoot>
+  </PropertyGroup>
+  <Target Name="GflatPrepareProjectReferences" BeforeTargets="AssignProjectConfiguration;PrepareProjectReferences">
+    <PropertyGroup>
+      <_GflatCppRuntimeLibrary>@(ClCompile->Metadata('RuntimeLibrary')->Distinct())</_GflatCppRuntimeLibrary>
+      <_GflatCppRuntimeLibrary Condition="'$(_GflatCppRuntimeLibrary)' == '' and '$(UseDebugLibraries)' == 'true'">MultiThreadedDebugDLL</_GflatCppRuntimeLibrary>
+      <_GflatCppRuntimeLibrary Condition="'$(_GflatCppRuntimeLibrary)' == ''">MultiThreadedDLL</_GflatCppRuntimeLibrary>
+      <_GflatCppMixedRuntime>$([System.String]::Copy("$(_GflatCppRuntimeLibrary)").Contains(";"))</_GflatCppMixedRuntime>
+      <_GflatCppReferenceProperties>Configuration=$(Configuration);Platform=AnyCPU;RuntimeLibrary=$(_GflatCppRuntimeLibrary);GflatSdkRoot=$([MSBuild]::Escape("$(GflatSdkRoot)"))</_GflatCppReferenceProperties>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Update="@(ProjectReference)" Condition="'%(ProjectReference.Extension)' == '.gfproj'">
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly><SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+        <SetPlatform>Platform=AnyCPU</SetPlatform>
+        <AdditionalProperties>%(ProjectReference.AdditionalProperties);RuntimeLibrary=$(_GflatCppRuntimeLibrary);GflatSdkRoot=$([MSBuild]::Escape("$(GflatSdkRoot)"))</AdditionalProperties>
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+  <Target Name="GflatGetReferencedProjectsInfo" BeforeTargets="GetReferencedVCProjectsInfo" DependsOnTargets="GflatPrepareProjectReferences">
+    <ItemGroup><_GflatCppReferences Include="@(ProjectReference)" Condition="'%(ProjectReference.Extension)' == '.gfproj'" /></ItemGroup>
+    <Error Condition="'@(_GflatCppReferences)' != '' and '$(Platform)' != 'x64'" Text="Gflat native project references currently require the x64 platform." />
+    <Error Condition="'@(_GflatCppReferences)' != '' and '$(_GflatCppMixedRuntime)' == 'true'" Text="C++ sources must use the same RuntimeLibrary setting when referencing a Gflat library." />
+    <MSBuild Projects="@(_GflatCppReferences)" Targets="Build" Properties="$(_GflatCppReferenceProperties)" Condition="'@(_GflatCppReferences)' != '' and '$(BuildProjectReferences)' != 'false' and '$(DesignTimeBuild)' != 'true'" />
+    <MSBuild Projects="@(_GflatCppReferences)" Targets="GetProjectInfoForReference" Properties="$(_GflatCppReferenceProperties);BuildProjectReferences=false" Condition="'@(_GflatCppReferences)' != ''">
+      <Output TaskParameter="TargetOutputs" ItemName="_GflatCppReferenceInfo" />
+    </MSBuild>
+    <ItemGroup>
+      <ReferencedVCProjectsInfo Include="@(_GflatCppReferenceInfo)" />
+      <_GflatCppRuntimeFiles Include="@(_GflatCppReferenceInfo)" Condition="'%(_GflatCppReferenceInfo.FileType)' == 'RuntimeFile'">
+        <DeploymentPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(OutDir)', '%(_GflatCppReferenceInfo.Filename)%(_GflatCppReferenceInfo.Extension)'))</DeploymentPath>
+      </_GflatCppRuntimeFiles>
+      <_GflatCppDeployments Include="@(_GflatCppRuntimeFiles)" Condition="'%(_GflatCppRuntimeFiles.FullPath)' != '%(_GflatCppRuntimeFiles.DeploymentPath)'" />
+    </ItemGroup>
+    <Error Condition="'%(_GflatCppReferenceInfo.RuntimeLibrary)' != '' and '%(_GflatCppReferenceInfo.RuntimeLibrary)' != '$(_GflatCppRuntimeLibrary)'" Text="Referenced libraries use incompatible RuntimeLibrary settings." />
+    <Error Condition="'%(_GflatCppDeployments.DeploymentPath)' == '$(TargetPath)'" Text="Runtime library deployment conflicts with the C++ project's output." />
+  </Target>
+  <Target Name="GflatCopyRuntimeLibraries" AfterTargets="Build" Condition="'@(_GflatCppDeployments)' != ''">
+    <Copy SourceFiles="@(_GflatCppDeployments)" DestinationFiles="@(_GflatCppDeployments->'%(DeploymentPath)')" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
+  </Target>
+</Project>

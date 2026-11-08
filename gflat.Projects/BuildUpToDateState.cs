@@ -61,11 +61,12 @@ public sealed class BuildUpToDateState
                 path = Path.GetFullPath(path);
                 if (!visited.Add(path)) return;
                 var context = new Dictionary<string, string>(properties, StringComparer.OrdinalIgnoreCase);
+                bool native = path.EndsWith(".vcxproj", StringComparison.OrdinalIgnoreCase);
                 if (reference)
                 {
                     context["GflatAsReference"] = "true";
                     context["Configuration"] = configuration;
-                    context["Platform"] = platform;
+                    context["Platform"] = native && (platform == "AnyCPU" || platform == "Any CPU") ? "x64" : platform;
                 }
                 var project = new Project(path, context, null, collection);
                 string directory = Path.GetDirectoryName(path)!;
@@ -89,17 +90,23 @@ public sealed class BuildUpToDateState
                 foreach (string name in new[]
                 {
                     "OutputType", "Configuration", "Platform", "TargetPath", "GflatIROutput", "NoStdLib", "NoBuiltins", "DeclarationScope",
-                    "GflatExceptionReserveBytes", "GflatOptimizationLevel", "DebugSymbols", "GflatEmitIR", "GflatClang",
+                    "GflatExceptionReserveBytes", "GflatOptimizationLevel", "DebugSymbols", "GflatEmitIR", "GflatClang", "RuntimeLibrary",
                     "GflatDefaultClangInput", "GflatCompilerPath", "GflatCompilerCommand", "GflatBundledCompiler", "GflatBuildTasksPath",
                     "GflatNativeLinkOverrides", "GflatPreprocessorOverrides", "GflatSdkRoot", "DisableFastUpToDateCheck", "_GflatKnownCompilerCommand"
                 })
                     Value("Property:" + name, project.GetPropertyValue(name));
-                foreach (string itemType in new[] { "Compile", "ProjectReference", "NativeLibrary", "NativeLibraryFile", "NativeLibraryDirectory", "IncludeDirectory", "Define", "GflatCompilerInputs", "UpToDateCheckInput", "UpToDateCheckOutput" })
+                foreach (string itemType in new[] { "Compile", "ClCompile", "ClInclude", "ProjectReference", "NativeLibrary", "NativeLibraryFile", "NativeLibraryDirectory", "IncludeDirectory", "Define", "GflatCompilerInputs", "UpToDateCheckInput", "UpToDateCheckOutput" })
                 {
                     foreach (var item in project.GetItems(itemType))
                     {
                         Value("Item:" + itemType, item.EvaluatedInclude);
                         if (itemType == "Compile") Value("Metadata:DeclarationScope", item.GetMetadataValue("DeclarationScope"));
+                        if (itemType == "ClCompile") Value("Metadata:RuntimeLibrary", item.GetMetadataValue("RuntimeLibrary"));
+                        if (itemType == "ClCompile" || itemType == "ClInclude")
+                        {
+                            Value("Metadata:ExcludedFromBuild", item.GetMetadataValue("ExcludedFromBuild"));
+                            if (!item.GetMetadataValue("ExcludedFromBuild").Equals("true", StringComparison.OrdinalIgnoreCase)) Required(item.GetMetadataValue("FullPath"));
+                        }
                         if (itemType == "Compile" || itemType == "GflatCompilerInputs" || itemType == "UpToDateCheckInput" || itemType == "NativeLibraryFile" && nativeOutput)
                             Required(item.GetMetadataValue("FullPath"));
                         if (itemType == "UpToDateCheckOutput") outputs.Add(item.GetMetadataValue("FullPath"));
@@ -170,6 +177,34 @@ public sealed class BuildUpToDateState
                         // resolved headers, so a newly shadowing header invalidates.
                         foreach (string file in File.ReadAllLines(dependencies))
                             if (file.Length != 0) inputs.Add(file);
+                    }
+                }
+                else if (native)
+                {
+                    string target = Absolute(project.GetPropertyValue("TargetPath"), directory);
+                    Required(target);
+                    var logs = new HashSet<string>(Paths);
+                    foreach (var item in project.GetItems("ClCompile"))
+                    {
+                        string tracking = item.GetMetadataValue("TrackerLogDirectory");
+                        if (tracking.Length == 0) { canCache = false; continue; }
+                        string trackingDirectory = Absolute(tracking, directory);
+                        if (!Directory.Exists(trackingDirectory)) { canCache = false; continue; }
+                        foreach (string log in Directory.EnumerateFiles(trackingDirectory, "*.read.*.tlog")) logs.Add(log);
+                    }
+                    if (logs.Count == 0) canCache = false;
+                    foreach (string log in logs)
+                    {
+                        Required(log);
+                        foreach (string file in File.ReadAllLines(log))
+                            if (file.Length != 0 && file[0] != '^' && Path.IsPathRooted(file)) Required(file);
+                    }
+                    if (project.GetPropertyValue("ConfigurationType") == "DynamicLibrary")
+                    {
+                        if (project.ItemDefinitions.TryGetValue("Link", out var link) && link.GetMetadataValue("ImportLibrary") is { Length: > 0 } importLibrary)
+                            Required(Absolute(importLibrary, directory));
+                        else canCache = false;
+                        if (nativeOutput) outputs.Add(Path.Combine(outputDirectory, Path.GetFileName(target)));
                     }
                 }
                 else if (project.GetPropertyValue("OutputType") is "StaticLibrary" or "DynamicLibrary")

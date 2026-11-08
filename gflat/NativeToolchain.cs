@@ -135,12 +135,13 @@ public static partial class NativeToolchain
         return process.ExitCode;
     }
 
-    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int optimizationLevel = 2)
+    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int optimizationLevel = 2, string runtimeLibrary = "MultiThreaded")
     {
         using var timing = PipelineTimings.Measure("native.compile-link", $"O{optimizationLevel}, explicit, C++");
         gflat.Projects.OptimizationLevel.Parse(optimizationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
         string compiler = FindClang(null);
-        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O" + optimizationLevel, "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes) };
+        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O" + optimizationLevel, "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes, runtimeLibrary: runtimeLibrary) };
+        args.AddRange(gflat.Projects.RuntimeLibrary.CompilerArguments(runtimeLibrary));
         AddUnusedCodeElimination(args);
         args.AddRange(NativeRuntime.HostArguments());
         if (objects != null) args.AddRange(objects);
@@ -148,7 +149,7 @@ public static partial class NativeToolchain
     }
 
     public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null, gflat.Projects.NativeLinkInputs? nativeLibraries = null,
-        IReadOnlyList<ForeignTranslationUnit>? foreignUnits = null, bool sharedLibrary = false)
+        IReadOnlyList<ForeignTranslationUnit>? foreignUnits = null, bool sharedLibrary = false, string? runtimeLibrary = null)
     {
         string optimization = optimizationLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
         using var timing = PipelineTimings.Measure("native.compile-link", $"O{optimization}, {(optimizationLevel.HasValue ? "explicit" : "default")}");
@@ -187,6 +188,8 @@ public static partial class NativeToolchain
         if (foreignUnits == null && File.Exists(irPath + ".foreign.json"))
             foreignUnits = System.Text.Json.JsonSerializer.Deserialize<ForeignTranslationUnit[]>(File.ReadAllText(irPath + ".foreign.json"));
         bool foreignCpp = foreignUnits?.Any(unit => unit.Language == "cpp") == true;
+        runtimeLibrary = ResolveRuntimeLibrary(runtimeLibrary, foreignUnits);
+        args.AddRange(gflat.Projects.RuntimeLibrary.CompilerArguments(runtimeLibrary));
         if (debug)
         {
             args.Add("-g");
@@ -202,10 +205,10 @@ public static partial class NativeToolchain
             var driverIdentity = NativeRuntimeCache.IdentifyDriver(compiler);
             // Keep the selected LLVM version, including names such as clang-18.
             args.Add(exceptions || foreignCpp ? "--driver-mode=g++" : "--driver-mode=gcc");
-            if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes, driverIdentity));
+            if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes, driverIdentity, runtimeLibrary));
             // With EH, compile the C bridge against the same matched C++ host
             // toolset. Its language remains C even though its host profile is shared.
-            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler, cppHost: exceptions, driverIdentity));
+            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler, cppHost: exceptions, driverIdentity, runtimeLibrary));
             args.AddRange(NativeRuntime.HostArguments(requireCppHeaders: exceptions || foreignCpp));
         }
         AddNativeLibraries(args, linkInputs);
@@ -231,7 +234,7 @@ public static partial class NativeToolchain
                 File.WriteAllText(source, unit.Text + "\n#line 1 \"<foreign-bridge>\"\n" +
                     string.Concat(unit.Bridges.Where(bridge => usedBridges.Contains(bridge.Key)).Select(bridge => bridge.Value)));
                 var compile = new List<string>(unit.Arguments);
-                compile.AddRange(NativeRuntime.HostCompilerArguments(unit.Language == "cpp"));
+                compile.AddRange(NativeRuntime.HostCompilerArguments(unit.Language == "cpp", runtimeLibrary));
                 compile.AddRange(["-x", unit.Language == "cpp" ? "c++" : "c", "-c", source, "-O" + optimization, "-o", obj]);
                 compile.AddRange(["-ffunction-sections", "-fdata-sections"]);
                 if (sharedLibrary && OperatingSystem.IsLinux()) compile.Add("-fPIC");

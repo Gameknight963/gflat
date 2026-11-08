@@ -77,7 +77,7 @@ internal static class MsBuildEvaluation
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
                 project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
                 excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"), disablesBuiltins, nativeInputs,
-                preprocessing);
+                preprocessing, project.GetPropertyValue("RuntimeLibrary") is { Length: > 0 } runtime ? RuntimeLibrary.Parse(runtime) : null);
         }
         catch (InvalidProjectFileException error)
         {

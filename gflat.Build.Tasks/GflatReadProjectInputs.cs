@@ -28,6 +28,7 @@ public sealed class GflatReadProjectInputs : Task
     [Output] public ITaskItem[] DeclarationSources { get; set; } = [];
     [Output] public ITaskItem[] BinaryInterfaces { get; set; } = [];
     [Output] public ITaskItem[] RuntimeFiles { get; set; } = [];
+    [Output] public string CompilerRuntimeLibrary { get; set; } = "MultiThreaded";
 
     public override bool Execute()
     {
@@ -47,6 +48,7 @@ public sealed class GflatReadProjectInputs : Task
             var declarationScopes = new Dictionary<string, string>(comparer);
             var binaryInterfaces = new List<string>();
             var runtimeFiles = new List<string>();
+            var runtimeProfiles = new List<string>();
             using (var collection = new ProjectCollection())
             {
                 void Visit(string file, bool asReference)
@@ -55,9 +57,32 @@ public sealed class GflatReadProjectInputs : Task
                     if (!visited.Add(file)) return;
                     var properties = new Dictionary<string, string>(globals, StringComparer.OrdinalIgnoreCase);
                     if (asReference) properties["GflatAsReference"] = "true";
+                    bool native = file.EndsWith(".vcxproj", StringComparison.OrdinalIgnoreCase);
+                    if (native) properties["Platform"] = "x64";
                     var project = new Project(file, properties, null, collection);
                     inputs.Add(file);
                     foreach (var import in project.Imports) inputs.Add(import.ImportedProject.FullPath);
+                    if (!asReference && project.GetPropertyValue("RuntimeLibrary") is { Length: > 0 } rootRuntime) runtimeProfiles.Add(rootRuntime);
+                    if (native)
+                    {
+                        if (project.GetPropertyValue("MSBuildRuntimeType") != "Full")
+                            throw new ArgumentException("Visual C++ project references require Visual Studio MSBuild.");
+                        string kind = project.GetPropertyValue("ConfigurationType");
+                        if (kind != "StaticLibrary" && kind != "DynamicLibrary") throw new ArgumentException("Referenced Visual C++ projects must produce a native library.");
+                        runtimeProfiles.AddRange(project.GetItems("ClCompile").Where(item => item.GetMetadataValue("ExcludedFromBuild") != "true")
+                            .Select(item => item.GetMetadataValue("RuntimeLibrary")).Where(value => value.Length != 0));
+                        var output = new System.Collections.Hashtable();
+                        properties["BuildProjectReferences"] = "false";
+                        if (!BuildEngine.BuildProjectFile(file, ["GetProjectInfoForReference"], properties, output))
+                            throw new IOException("Cannot read native project reference information: " + file);
+                        var information = output["GetProjectInfoForReference"] as ITaskItem[] ?? [];
+                        var nativeLibraries = information.Where(item => item.GetMetadata("FileType") == "lib")
+                            .Select(item => new NativeLibraryInput("File", item.GetMetadata("FullPath"))).ToArray();
+                        includeDirectories.AddRange(information.Where(item => item.GetMetadata("FileType") == "IncludeDirectory").Select(item => item.ItemSpec));
+                        if (kind == "DynamicLibrary") runtimeFiles.Add(project.GetPropertyValue("TargetPath"));
+                        nativeProjects.Add(new NativeLinkProject(file, [], new NativeLinkInputs(nativeLibraries, [])));
+                        return;
+                    }
                     string outputType = project.GetPropertyValue("OutputType");
                     if (asReference && (outputType == "StaticLibrary" || outputType == "DynamicLibrary"))
                     {
@@ -66,6 +91,7 @@ public sealed class GflatReadProjectInputs : Task
                         inputs.Add(reference.InterfacePath);
                         inputs.Add(reference.InterfacePath + ".gfh");
                         runtimeFiles.AddRange(reference.RuntimeFiles);
+                        if (reference.RuntimeLibrary != null) runtimeProfiles.Add(reference.RuntimeLibrary);
                         nativeProjects.Add(new NativeLinkProject(file, [], reference.NativeInputs));
                         return;
                     }
@@ -91,6 +117,9 @@ public sealed class GflatReadProjectInputs : Task
                 Visit(ProjectFile, false);
             }
             ProjectInputs = inputs.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
+            var profiles = runtimeProfiles.Select(gflat.Projects.RuntimeLibrary.Parse).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (profiles.Length > 1) throw new ArgumentException("Referenced libraries use incompatible RuntimeLibrary settings.");
+            CompilerRuntimeLibrary = profiles.FirstOrDefault() ?? "MultiThreaded";
             if (runtimeFiles.Distinct(comparer).GroupBy(Path.GetFileName, comparer).Any(group => group.Count() > 1))
                 throw new ArgumentException("Referenced runtime libraries have conflicting filenames.");
             BinaryInterfaces = binaryInterfaces.Distinct(comparer).Select(path => (ITaskItem)new TaskItem(path)).ToArray();

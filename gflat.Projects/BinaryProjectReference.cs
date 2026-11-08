@@ -13,6 +13,7 @@ public sealed class BinaryProjectReference
     public string LinkPath { get; }
     public NativeLinkInputs NativeInputs { get; }
     public IReadOnlyList<string> RuntimeFiles { get; }
+    public string? RuntimeLibrary { get; }
 
     public BinaryProjectReference(string targetPath, bool shared)
     {
@@ -27,6 +28,8 @@ public sealed class BinaryProjectReference
         {
             string directory = Path.GetDirectoryName(InterfacePath)!;
             var root = XElement.Load(InterfacePath);
+            RuntimeLibrary = (string?)root.Attribute("RuntimeLibrary");
+            if (RuntimeLibrary != null) RuntimeLibrary = gflat.Projects.RuntimeLibrary.Parse(RuntimeLibrary);
             if (root.Name != "GflatInterface" || (string?)root.Attribute("Version") != "1")
                 throw new InvalidDataException("Unsupported binary library interface: " + InterfacePath);
             foreach (var library in root.Element("NativeLibraries")?.Elements("Library") ?? Enumerable.Empty<XElement>())

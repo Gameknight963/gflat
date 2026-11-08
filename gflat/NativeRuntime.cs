@@ -5,10 +5,11 @@ namespace gflat;
 /// <summary>Build native C stream accessors and the host C++ exception transport.</summary>
 internal static class NativeRuntime
 {
-    internal static List<string> HostCompilerArguments(bool cpp)
+    internal static List<string> HostCompilerArguments(bool cpp, string runtimeLibrary = "MultiThreaded")
     {
         var source = HostArguments(cpp);
         var result = new List<string>();
+        result.AddRange(gflat.Projects.RuntimeLibrary.CompilerArguments(runtimeLibrary));
         for (int index = 0; index < source.Count; index++)
         {
             if (source[index] == "-Xlinker") { index++; continue; }
@@ -58,20 +59,21 @@ internal static class NativeRuntime
             .Select(candidate => candidate.Directory).FirstOrDefault();
     }
     internal static string GetObject(string driver, int reserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes,
-        NativeRuntimeCache.DriverIdentity? driverIdentity = null)
+        NativeRuntimeCache.DriverIdentity? driverIdentity = null, string runtimeLibrary = "MultiThreaded")
     {
         if (reserveBytes < 0) throw new ArgumentOutOfRangeException(nameof(reserveBytes));
-        return BuildObject(driver, "Exceptions", cpp: true, cppHost: true, ["-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes], driverIdentity);
+        return BuildObject(driver, "Exceptions", cpp: true, cppHost: true, ["-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes], driverIdentity, runtimeLibrary);
     }
 
-    internal static string GetStdioObject(string driver, bool cppHost = false, NativeRuntimeCache.DriverIdentity? driverIdentity = null)
-        => BuildObject(driver, "Stdio", cpp: false, cppHost, [], driverIdentity);
+    internal static string GetStdioObject(string driver, bool cppHost = false, NativeRuntimeCache.DriverIdentity? driverIdentity = null, string runtimeLibrary = "MultiThreaded")
+        => BuildObject(driver, "Stdio", cpp: false, cppHost, [], driverIdentity, runtimeLibrary);
 
-    private static string BuildObject(string driver, string name, bool cpp, bool cppHost, string[] options, NativeRuntimeCache.DriverIdentity? driverIdentity)
+    private static string BuildObject(string driver, string name, bool cpp, bool cppHost, string[] options, NativeRuntimeCache.DriverIdentity? driverIdentity, string runtimeLibrary)
     {
         string source = Path.Combine(AppContext.BaseDirectory, "Runtime", name + (cpp ? ".cpp" : ".c"));
         if (!File.Exists(source)) throw new FileNotFoundException("The native runtime source is missing. Restore the compiler's Runtime directory.", source);
         string fingerprint = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source)));
+        options = options.Concat(gflat.Projects.RuntimeLibrary.CompilerArguments(runtimeLibrary)).ToArray();
         string identity = ObjectCacheKey(driver, name, fingerprint, cpp, cppHost, options);
         var args = ObjectArguments(source, NativeRuntimeCache.OutputPlaceholder, cpp, options, HostArguments(requireCppHeaders: cppHost));
         return NativeRuntimeCache.GetObject(driver, source, identity, args, driverIdentity: driverIdentity);

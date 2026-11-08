@@ -120,6 +120,28 @@ For individual source files, use `--output-type StaticLibrary` or
 Native C++ consumers should link with their C++ driver when the library uses
 the exception runtime or C++ source sections.
 
+### Visual C++ project references
+
+On Windows, a G♭ project can reference an x64 `.vcxproj` static or dynamic
+library using `ProjectReference`. Builds use the installed Visual Studio MSBuild
+and C++ tools. Native declarations still come from headers in `#lang cpp` or
+`#lang c` sections. The native project controls its own compilation and exports.
+
+A Visual C++ project can reference a G♭ binary library using an ordinary
+`ProjectReference`. Import `build/Gflat.Cpp.targets` from the SDK after
+`Microsoft.Cpp.targets`. This supplies the generated header directory, native
+link inputs, and dynamic-library deployment. Source-library references require
+a G♭ binary library wrapper.
+
+Windows projects sharing native code must agree on `RuntimeLibrary`:
+`MultiThreaded`, `MultiThreadedDLL`, `MultiThreadedDebug`, or
+`MultiThreadedDebugDLL`, corresponding to `/MT`, `/MD`, `/MTd`, and `/MDd`.
+When omitted, G♭ uses a referenced native project's setting, or `MultiThreaded`
+without one. The C++ targets import passes the C++ project's selection to its
+G♭ references. Conflicting selections produce a build error. Standalone builds
+accept `--runtime-library` with the same names. Linux keeps its native runtime
+selection and supports `.a` and `.so` dependencies without Visual Studio.
+
 ## Standard library selection
 
 Projects reference the bundled `Standard/Standard.gfproj` by default.

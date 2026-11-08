@@ -28,6 +28,7 @@ public static class Program
             int? optimizationLevel = null;
             bool? debugSymbols = null;
             bool? noBuiltins = null;
+            string? runtimeLibrary = null;
             NativeLinkInputs nativeLinkInputs = NativeLinkInputs.Empty;
             var nativeManifests = new List<string>();
             var sourceLists = new List<string>();
@@ -66,6 +67,7 @@ public static class Program
                     case "--no-debug": debugSymbols = false; break;
                     case "--no-builtins": noBuiltins = true; break;
                     case "--builtins": noBuiltins = false; break;
+                    case "--runtime-library": runtimeLibrary = RuntimeLibrary.Parse(Value()); break;
                     case "-o": outputPath = Value(); break;
                     case "--output-type":
                         outputType = Value();
@@ -130,6 +132,8 @@ public static class Program
                 projectPath = sourcePaths[0];
                 var root = ProjectModel.Load(projectPath, explicitConfiguration ? configuration : null,
                     explicitPlatform ? platform : null, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, debugSymbols: debugSymbols, noBuiltins: noBuiltins);
+                if (runtimeLibrary != null && root.RuntimeLibrary != runtimeLibrary)
+                    throw new ArgumentException("Set RuntimeLibrary in the project for a project build.");
                 configuration = root.Configuration;
                 platform = root.Platform;
                 graph = ProjectGraph.Load(projectPath, (path, asReference) => !asReference ? root
@@ -173,11 +177,15 @@ public static class Program
                 string library = (string?)metadata.Attribute("Library") ?? throw new InvalidDataException("Library interface is missing its artifact path.");
                 string target = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, library));
                 var reference = new BinaryProjectReference(target, (string?)metadata.Attribute("Kind") == "DynamicLibrary");
+                if (runtimeLibrary != null && reference.RuntimeLibrary != null && runtimeLibrary != reference.RuntimeLibrary)
+                    throw new ArgumentException("Referenced libraries use incompatible RuntimeLibrary settings.");
+                runtimeLibrary ??= reference.RuntimeLibrary;
                 nativeLinkInputs = nativeLinkInputs.Append(new(reference.NativeInputs.Libraries.Where(required =>
                     !nativeLinkInputs.Libraries.Any(existing => existing.Kind == required.Kind && pathComparer.Equals(existing.Value, required.Value))), reference.NativeInputs.Directories));
                 runtimeFiles.AddRange(reference.RuntimeFiles);
             }
             runtimeFiles = runtimeFiles.Distinct(pathComparer).ToList();
+            runtimeLibrary ??= "MultiThreaded";
             if (runtimeFiles.GroupBy(Path.GetFileName, pathComparer).Any(group => group.Count() > 1))
                 throw new ArgumentException("Referenced runtime libraries have conflicting filenames.");
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
@@ -219,7 +227,7 @@ public static class Program
                 FileDeclarationScopes = preprocessing.DeclarationScopes.ToDictionary(pair => pair.Key,
                     pair => Enum.Parse<DeclarationScope>(pair.Value), pathComparer),
                 ForeignCompilerResolver = () => NativeToolchain.FindClang(clang),
-                ForeignCompilerArguments = NativeRuntime.HostCompilerArguments(cpp: true),
+                ForeignCompilerArguments = NativeRuntime.HostCompilerArguments(cpp: true, runtimeLibrary),
                 DependencyObserver = paths =>
                 {
                     included.UnionWith(paths);
@@ -298,14 +306,15 @@ public static class Program
                 ProcessResult compiled = outputType == "StaticLibrary"
                     ? NativeToolchain.CompileStaticLibrary(temporaryIr, outputPath, clang,
                         optimizationLevel ?? OptimizationLevel.Parse(Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0"),
-                        program.ForeignUnits, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes)
-                    : NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits, sharedLibrary: outputType == "DynamicLibrary");
+                        program.ForeignUnits, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, runtimeLibrary)
+                    : NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits, sharedLibrary: outputType == "DynamicLibrary", runtimeLibrary: runtimeLibrary);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (program.Interface is { } libraryInterface)
                 {
                     var manifest = libraryInterface.ToXml();
                     manifest.SetAttributeValue("Library", Path.GetFileName(outputPath));
                     manifest.SetAttributeValue("Kind", outputType);
+                    manifest.SetAttributeValue("RuntimeLibrary", runtimeLibrary);
                     manifest.Add(new System.Xml.Linq.XElement("NativeLibraries", nativeLinkInputs.Libraries.Select(library =>
                         new System.Xml.Linq.XElement("Library", new System.Xml.Linq.XAttribute("Kind", library.Kind),
                             new System.Xml.Linq.XAttribute("Value", library.Kind == "File" ? Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, library.Value) : library.Value)))));

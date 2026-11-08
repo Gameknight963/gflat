@@ -87,6 +87,9 @@
     <Content Include="gflat.natvis"><IncludeInVSIX>true</IncludeInVSIX><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
     <Compile Include="../../gflat.Projects/ProjectSdk.cs"><Link>ProjectSdk.cs</Link></Compile>
     <Compile Include="../../gflat.Projects/BuildUpToDateState.cs"><Link>BuildUpToDateState.cs</Link></Compile>
+    <Compile Include="../../gflat.Projects/NativeLinkInputs.cs"><Link>NativeLinkInputs.cs</Link></Compile>
+    <Compile Include="../../gflat.Projects/BinaryProjectReference.cs"><Link>BinaryProjectReference.cs</Link></Compile>
+    <Compile Include="../../gflat.Projects/RuntimeLibrary.cs"><Link>RuntimeLibrary.cs</Link></Compile>
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.txt"><Link>Licenses/MSBuild.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/Roslyn.txt"><Link>Licenses/Roslyn.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
@@ -123,7 +126,7 @@
       <Link>Compiler/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="../../build/Gflat.props;../../build/Gflat.targets">
+    <Content Include="../../build/Gflat.props;../../build/Gflat.targets;../../build/Gflat.Cpp.targets">
       <Link>Sdk/build/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

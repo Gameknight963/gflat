@@ -31,11 +31,13 @@ public sealed class ProjectModel
     public IReadOnlyList<string> Imports { get; }
     public NativeLinkInputs NativeLinkInputs { get; }
     public PreprocessorInputs PreprocessorInputs { get; }
+    public string? RuntimeLibrary { get; }
+    public bool IsNative { get; }
     private readonly string[] sources;
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string? targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false, NativeLinkInputs? nativeLinkInputs = null, PreprocessorInputs? preprocessorInputs = null)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false, NativeLinkInputs? nativeLinkInputs = null, PreprocessorInputs? preprocessorInputs = null, string? runtimeLibrary = null, bool isNative = false)
     {
         Configuration = configuration;
         Platform = platform;
@@ -48,11 +50,14 @@ public sealed class ProjectModel
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
         NativeLinkInputs = nativeLinkInputs ?? gflat.Projects.NativeLinkInputs.Empty;
         PreprocessorInputs = preprocessorInputs ?? gflat.Projects.PreprocessorInputs.Empty;
+        RuntimeLibrary = runtimeLibrary;
+        IsNative = isNative;
     }
     public static ProjectModel Load(string path) => Load(path, null, null);
     public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false, bool? debugSymbols = null, bool? noBuiltins = null)
     {
         path = Path.GetFullPath(path);
+        if (path.EndsWith(".vcxproj", StringComparison.OrdinalIgnoreCase)) return VisualStudioMsBuild.LoadProject(path, configuration, platform);
         try { MsBuildHost.Initialize(); }
         catch (IOException error) { throw new ProjectException(path, error.Message); }
         return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference, debugSymbols, noBuiltins);
@@ -76,15 +81,19 @@ public sealed class ProjectGraph
     public NativeLinkInputs NativeLinkInputs { get; }
     public PreprocessorInputs PreprocessorInputs { get; }
     public IReadOnlyList<string> BinaryInterfaces { get; }
-    private ProjectGraph(ProjectModel root, List<ProjectModel> projects, List<string> sources)
+    public string RuntimeLibrary { get; }
+    public bool HasRuntimeLibrarySelection { get; }
+    public bool RequiresVisualStudioMsBuild { get; }
+    private ProjectGraph(ProjectModel root, List<ProjectModel> projects, List<string> sources, bool requiresVisualStudioMsBuild)
     {
         Root = root; Projects = projects; Sources = sources;
+        RequiresVisualStudioMsBuild = requiresVisualStudioMsBuild;
         var byPath = projects.ToDictionary(project => project.FilePath, ProjectModel.Paths);
         var seen = new HashSet<string>(ProjectModel.Paths);
         IEnumerable<string> IncludeDirectories(ProjectModel project)
         {
             if (!seen.Add(project.FilePath)) yield break;
-            if (project != root && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary) yield break;
+            if (project != root && !project.IsNative && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary) yield break;
             foreach (string directory in project.PreprocessorInputs.Directories) yield return directory;
             foreach (string reference in project.References)
                 foreach (string directory in IncludeDirectories(byPath[reference])) yield return directory;
@@ -93,10 +102,16 @@ public sealed class ProjectGraph
             projects.Where(project => !BinaryReference(project)).SelectMany(project => project.PreprocessorInputs.DeclarationScopes)
                 .GroupBy(pair => pair.Key, ProjectModel.Paths).Select(group => group.First()));
         bool BinaryReference(ProjectModel project) => project != root && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary;
-        BinaryInterfaces = projects.Where(BinaryReference).Select(project => project.TargetPath! + ".gfi").ToArray();
+        BinaryInterfaces = projects.Where(project => BinaryReference(project) && !project.IsNative).Select(project => project.TargetPath! + ".gfi").ToArray();
+        var profiles = projects.Where(project => BinaryReference(project)).Select(project => project.RuntimeLibrary ??
+            (project.IsNative ? null : new BinaryProjectReference(project.TargetPath!, project.Kind == ProjectKind.DynamicLibrary).RuntimeLibrary))
+            .Append(root.RuntimeLibrary).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (profiles.Length > 1) throw new ProjectException(root.FilePath, "Referenced libraries use incompatible RuntimeLibrary settings.");
+        RuntimeLibrary = profiles.FirstOrDefault() ?? "MultiThreaded";
+        HasRuntimeLibrarySelection = profiles.Length != 0;
         NativeLinkInputs = NativeLinkProjectOrder.Aggregate(root.FilePath, projects.Select(project =>
             new NativeLinkProject(project.FilePath, BinaryReference(project) ? [] : project.References,
-                BinaryReference(project) ? new BinaryProjectReference(project.TargetPath!, project.Kind == ProjectKind.DynamicLibrary).NativeInputs : project.NativeLinkInputs)));
+                BinaryReference(project) && !project.IsNative ? new BinaryProjectReference(project.TargetPath!, project.Kind == ProjectKind.DynamicLibrary).NativeInputs : project.NativeLinkInputs)));
     }
 
     /// <summary>Evaluates the root normally and each dependency in reference context.</summary>
@@ -115,11 +130,13 @@ public sealed class ProjectGraph
         var projects = new List<ProjectModel>();
         var sources = new List<string>();
         var sourceSet = new HashSet<string>(ProjectModel.Paths);
+        var evaluated = new Dictionary<string, ProjectModel>(ProjectModel.Paths);
         ProjectModel Visit(string file, bool asReference)
         {
             file = Path.GetFullPath(file);
             if (!active.Add(file)) throw new ProjectException(file, "Cyclic project reference.");
             var project = loader(file, asReference);
+            evaluated[file] = project;
             if (asReference && project.Kind is ProjectKind.StaticLibrary or ProjectKind.DynamicLibrary)
             {
                 active.Remove(file);
@@ -142,6 +159,19 @@ public sealed class ProjectGraph
             return project;
         }
         var root = Visit(path, asReference: false);
-        return new ProjectGraph(root, projects, sources);
+        var inspected = new HashSet<string>(ProjectModel.Paths);
+        bool NeedsNativeEngine(ProjectModel project)
+        {
+            if (!inspected.Add(project.FilePath)) return false;
+            if (project.IsNative) return true;
+            foreach (string reference in project.References)
+            {
+                if (reference.EndsWith(".vcxproj", StringComparison.OrdinalIgnoreCase)) return true;
+                if (!evaluated.TryGetValue(reference, out var dependency)) evaluated[reference] = dependency = loader(reference, true);
+                if (NeedsNativeEngine(dependency)) return true;
+            }
+            return false;
+        }
+        return new ProjectGraph(root, projects, sources, NeedsNativeEngine(root));
     }
 }

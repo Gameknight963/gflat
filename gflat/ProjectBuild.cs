@@ -27,6 +27,7 @@ internal static class ProjectBuild
         Property("GflatProjectInputs", string.Join(";", sourceGraph.Projects
             .SelectMany(item => item.Imports.Prepend(item.FilePath)).Distinct(ProjectModel.Paths)
             .Select(ProjectSdk.EscapePropertyValue)));
+        if (sourceGraph.HasRuntimeLibrarySelection) Property("RuntimeLibrary", sourceGraph.RuntimeLibrary);
         if (project.Kind != ProjectKind.SourceLibrary && !emitIr && (target is "Build" or "Rebuild"))
         {
             try { Property("GflatDefaultClangInput", NativeToolchain.FindClang(clang)); }
@@ -63,6 +64,15 @@ internal static class ProjectBuild
         }
         try
         {
+            if (sourceGraph.RequiresVisualStudioMsBuild)
+            {
+                var nativeArguments = new List<string> { "-target:" + target, "-verbosity:minimal" };
+                nativeArguments.AddRange(properties.Select(pair => "-p:" + pair.Key + "=" + pair.Value));
+                var nativeResult = VisualStudioMsBuild.Run(project.FilePath, nativeArguments);
+                Console.Write(nativeResult.Output);
+                Console.Error.Write(nativeResult.Error);
+                return nativeResult.ExitCode;
+            }
             var result = NativeToolchain.Run(driver, arguments, 120000);
             Console.Write(result.StandardOutput);
             Console.Error.Write(result.StandardError);

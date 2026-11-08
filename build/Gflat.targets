@@ -68,7 +68,7 @@
     <PropertyPageSchema Include="$(MSBuildThisFileDirectory)Rules/Compile.xaml;$(MSBuildThisFileDirectory)Rules/None.xaml;$(MSBuildThisFileDirectory)Rules/Folder.xaml;$(MSBuildThisFileDirectory)Rules/ProjectReference.xaml"><Context>File;BrowseObject</Context></PropertyPageSchema>
   </ItemGroup>
   <Import Project="$(MSBuildProjectFullPath).user" Condition="Exists('$(MSBuildProjectFullPath).user')" />
-  <Target Name="_GflatBuildBinaryReference" Condition="'$(GflatAsReference)' == 'true' and ('$(OutputType)' == 'StaticLibrary' or '$(OutputType)' == 'DynamicLibrary')">
+  <Target Name="_GflatBuildBinaryReference" Condition="'$(BuildProjectReferences)' != 'false' and '$(GflatAsReference)' == 'true' and ('$(OutputType)' == 'StaticLibrary' or '$(OutputType)' == 'DynamicLibrary')">
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="Configuration=$(Configuration);Platform=$(Platform);GflatAsReference=false" />
   </Target>
   <Target Name="GflatGetSources" DependsOnTargets="_GflatBuildBinaryReference" Returns="@(_GflatSources)">
@@ -79,7 +79,12 @@
     <Error Condition="'$(OutputType)' == 'SourceLibrary' and '$(GflatAsReference)' != 'true' and '$(GflatEmitIR)' == 'true'" Text="SourceLibrary projects have no standalone output; build an executable referencing them." />
     <Error Condition="'$(GflatOptimizationLevel)' != '0' and '$(GflatOptimizationLevel)' != '1' and '$(GflatOptimizationLevel)' != '2' and '$(GflatOptimizationLevel)' != '3'" Text="GflatOptimizationLevel must be 0, 1, 2, or 3." />
     <Error Condition="'$(GflatAsReference)' == 'true' and '$(OutputType)' == 'Executable'" Text="Executable projects cannot be referenced." />
-    <MSBuild Condition="'$(GflatAsReference)' != 'true' or '$(OutputType)' == 'SourceLibrary'" Projects="@(ProjectReference)" Targets="GflatGetSources" Properties="Configuration=$(Configuration);Platform=$(Platform);GflatAsReference=true">
+    <ItemGroup>
+      <_GflatSourceProjectReferences Include="@(ProjectReference)" Condition="'%(ProjectReference.Extension)' != '.vcxproj'" />
+      <_GflatNativeProjectReferences Include="@(ProjectReference)" Condition="'%(ProjectReference.Extension)' == '.vcxproj'" />
+    </ItemGroup>
+    <MSBuild Condition="('$(GflatAsReference)' != 'true' or '$(OutputType)' == 'SourceLibrary') and '$(BuildProjectReferences)' != 'false'" Projects="@(_GflatNativeProjectReferences)" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64" />
+    <MSBuild Condition="'$(GflatAsReference)' != 'true' or '$(OutputType)' == 'SourceLibrary'" Projects="@(_GflatSourceProjectReferences)" Targets="GflatGetSources" Properties="Configuration=$(Configuration);Platform=$(Platform);GflatAsReference=true">
       <Output TaskParameter="TargetOutputs" ItemName="_GflatReferenceSources" />
     </MSBuild>
     <ItemGroup Condition="'$(GflatAsReference)' != 'true' or '$(OutputType)' == 'SourceLibrary'"><_GflatAllSources Include="@(Compile->'%(FullPath)');@(_GflatReferenceSources)" /></ItemGroup>
@@ -93,6 +98,7 @@
       <Output TaskParameter="DeclarationSources" ItemName="_GflatDeclarationSources" />
       <Output TaskParameter="BinaryInterfaces" ItemName="_GflatBinaryInterfaces" />
       <Output TaskParameter="RuntimeFiles" ItemName="_GflatRuntimeFiles" />
+      <Output TaskParameter="CompilerRuntimeLibrary" PropertyName="_GflatCompilerRuntimeLibrary" />
       <Output TaskParameter="ProjectInputs" ItemName="_GflatEvaluatedProjectInputs" />
       <Output TaskParameter="NativeLibraries" ItemName="_GflatNativeLibraries" />
       <Output TaskParameter="NativeLibraryDirectories" ItemName="_GflatNativeLibraryDirectories" />
@@ -102,6 +108,7 @@
     <PropertyGroup>
       <_GflatBinaryInterfaceOptions>@(_GflatBinaryInterfaces->'--library-interface &quot;%(Identity)&quot;', ' ')</_GflatBinaryInterfaceOptions>
       <_GflatRuntimeOptions>@(_GflatRuntimeFiles->'--runtime-file &quot;%(Identity)&quot;', ' ')</_GflatRuntimeOptions>
+      <_GflatRuntimeLibraryOption>--runtime-library $(_GflatCompilerRuntimeLibrary)</_GflatRuntimeLibraryOption>
     </PropertyGroup>
     <ReadLinesFromFile File="$(_GflatIncludeDependencies)" Condition="Exists('$(_GflatIncludeDependencies)')">
       <Output TaskParameter="Lines" ItemName="_GflatPreviousIncludePaths" />
@@ -201,7 +208,7 @@
   </Target>
   <Target Name="_GflatCompile" DependsOnTargets="_GflatPrepareBuild;_GflatCheckOutputProvenance" Inputs="@(_GflatBuildInputs);@(_GflatIncludeFiles);$(_GflatSourceList);$(_GflatBuildSettings)" Outputs="@(_GflatNativeOutputs);$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' == 'true'">
     <Delete Files="$(_GflatBuildSuccess)" />
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatBinaryInterfaceOptions) $(_GflatRuntimeOptions) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatBinaryInterfaceOptions) $(_GflatRuntimeOptions) $(_GflatRuntimeLibraryOption) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
     <Touch Files="$(_GflatBuildSuccess)" AlwaysCreate="true" />
   </Target>
   <Target Name="_GflatBeginBuild" DependsOnTargets="_GflatValidateOutputs" Condition="'$(BuildingInsideVisualStudio)' == 'true'">
@@ -211,12 +218,12 @@
   <Target Name="Build" DependsOnTargets="_GflatBeginBuild;_GflatPrepareBuild;_GflatCompile" Returns="$(_GflatBuildOutput)">
     <!-- Unknown commands and source-library checks stay uncached. -->
     <Delete Files="$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' != 'true'" />
-    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatBinaryInterfaceOptions) $(_GflatRuntimeOptions) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatBinaryInterfaceOptions) $(_GflatRuntimeOptions) $(_GflatRuntimeLibraryOption) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
     <GflatWriteUpToDateState Condition="'$(BuildingInsideVisualStudio)' == 'true'" ProjectFile="$(MSBuildProjectFullPath)" FilePath="$(_GflatUpToDateState)" BuildStartedUtcTicks="$(_GflatBuildStartedUtcTicks)" />
     <Copy SourceFiles="@(_GflatRuntimeFiles)" DestinationFolder="$([System.IO.Path]::GetDirectoryName('$(TargetPath)'))" SkipUnchangedFiles="true" Condition="'$(OutputType)' != 'SourceLibrary' and '$(GflatEmitIR)' != 'true' and '@(_GflatRuntimeFiles)' != ''" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatBinaryInterfaceOptions) $(_GflatRuntimeOptions) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatClangOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatBinaryInterfaceOptions) $(_GflatRuntimeOptions) $(_GflatRuntimeLibraryOption) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatClangOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup Condition="'$(OutputType)' != 'SourceLibrary'"><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>
@@ -229,6 +236,28 @@
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
   <Target Name="Restore" />
   <Target Name="GetTargetPath" Returns="$(TargetPath)" Condition="'$(OutputType)' != 'SourceLibrary'" />
+  <Target Name="GetProjectInfoForReference" DependsOnTargets="_GflatValidateOutputs" Returns="@(_GflatProjectReferenceInfo)">
+    <Error Condition="'$(OutputType)' != 'StaticLibrary' and '$(OutputType)' != 'DynamicLibrary'" Text="C++ references require a StaticLibrary or DynamicLibrary project." />
+    <PropertyGroup>
+      <_GflatReferenceLibrary>$(TargetPath)</_GflatReferenceLibrary>
+      <_GflatReferenceLibrary Condition="'$(_GflatImportLibrary)' != ''">$(_GflatImportLibrary)</_GflatReferenceLibrary>
+    </PropertyGroup>
+    <ItemGroup>
+      <_GflatReferenceDependency Include="@(_GflatNativeLibraries)">
+        <GflatLinkInput Condition="'%(_GflatNativeLibraries.Kind)' == 'File'">%(_GflatNativeLibraries.FullPath)</GflatLinkInput>
+        <GflatLinkInput Condition="'%(_GflatNativeLibraries.Kind)' == 'Name'">%(_GflatNativeLibraries.Identity).lib</GflatLinkInput>
+      </_GflatReferenceDependency>
+      <_GflatProjectReferenceInfo Include="$(_GflatReferenceLibrary);@(_GflatReferenceDependency->'%(GflatLinkInput)')">
+        <FileType>lib</FileType><ProjectType>$(OutputType)</ProjectType><ResolveableAssembly>false</ResolveableAssembly>
+        <LinkLibraryDependencies>true</LinkLibraryDependencies><RuntimeLibrary>$(_GflatCompilerRuntimeLibrary)</RuntimeLibrary>
+      </_GflatProjectReferenceInfo>
+      <_GflatProjectReferenceInfo Include="$([System.IO.Path]::GetDirectoryName('$(TargetPath)'))">
+        <FileType>IncludeDirectory</FileType><RuntimeLibrary>$(_GflatCompilerRuntimeLibrary)</RuntimeLibrary>
+      </_GflatProjectReferenceInfo>
+      <_GflatProjectReferenceInfo Include="@(_GflatRuntimeFiles)"><FileType>RuntimeFile</FileType></_GflatProjectReferenceInfo>
+      <_GflatProjectReferenceInfo Include="$(TargetPath)" Condition="'$(OutputType)' == 'DynamicLibrary'"><FileType>RuntimeFile</FileType></_GflatProjectReferenceInfo>
+    </ItemGroup>
+  </Target>
   <PropertyGroup>
     <ImportDirectoryBuildTargets Condition="'$(ImportDirectoryBuildTargets)' == ''">true</ImportDirectoryBuildTargets>
     <DirectoryBuildTargetsPath Condition="'$(DirectoryBuildTargetsPath)' == '' and '$(ImportDirectoryBuildTargets)' == 'true'">$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildProjectDirectory)'))</DirectoryBuildTargetsPath>

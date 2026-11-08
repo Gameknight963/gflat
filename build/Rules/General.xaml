@@ -13,6 +13,13 @@
   <StringProperty Name="RootNamespace" DisplayName="Default namespace" Description="Namespace prefix for new source files. Separate nested names with :: or a dot. This does not change existing source declarations." />
   <StringProperty Name="GflatNamespaceRoot" DisplayName="Namespace root directory" Description="Folders below this directory become namespaces in new files. Relative paths start at the project directory. Leave empty to use the project directory." />
   <StringProperty Name="GflatCompilerCommand" DisplayName="Compiler command" />
+  <EnumProperty Name="RuntimeLibrary" DisplayName="Runtime library" Description="Windows C runtime used by native code. Leave unset to match referenced binary libraries. Builds without a detected setting use MultiThreaded.">
+    <EnumValue Name="" DisplayName="Automatic" />
+    <EnumValue Name="MultiThreaded" DisplayName="Multi-threaded (/MT)" />
+    <EnumValue Name="MultiThreadedDLL" DisplayName="Multi-threaded DLL (/MD)" />
+    <EnumValue Name="MultiThreadedDebug" DisplayName="Multi-threaded Debug (/MTd)" />
+    <EnumValue Name="MultiThreadedDebugDLL" DisplayName="Multi-threaded Debug DLL (/MDd)" />
+  </EnumProperty>
   <BoolProperty Name="DebugSymbols" DisplayName="Generate debug symbols" Description="Debug defaults to true. Emit source locations and native variable/type descriptions (PDB on Windows, DWARF on Linux)." />
   <EnumProperty Name="GflatOptimizationLevel" DisplayName="Optimization level" Description="Debug defaults to 0; Release defaults to 2.">
     <EnumValue Name="0" DisplayName="0 — No optimization" />

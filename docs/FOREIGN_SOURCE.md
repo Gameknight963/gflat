@@ -74,7 +74,7 @@ must match Clang's layout for the active target. Native code and host code can
 read or write the same storage through pointers. Pointee and field `const`
 qualifiers remain readonly. Native pointer results remain borrowed and nullable.
 
-Public C++ instance methods with supported scalar and pointer signatures are
+Public C++ instance methods with supported scalar, record, and pointer signatures are
 called as ordinary host members. A `const` method accepts readonly receivers.
 Other methods require mutable storage. Native methods take precedence over host
 extensions with the same name. Overloads with distinct parameter types work.
@@ -85,8 +85,10 @@ This representation requires trivial construction, copying, and destruction.
 Records with private fields, bases, virtual members, explicit constructors or
 destructors, bitfields, arrays, nested record fields, or layout attributes are
 not imported. Anonymous typedef records are not imported yet. Record arguments
-and results passed by value are not imported. A binary library's generated
-interface does not export these types yet.
+and results passed by value use compiler-generated native bridges. Native calls
+receive independent copies, and a throwing call does not publish a partial
+record result. By-value records in callback signatures are not supported.
+A binary library's generated interface does not export these types yet.
 
 The following are also not imported yet:
 

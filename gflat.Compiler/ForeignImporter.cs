@@ -107,10 +107,11 @@ internal static partial class ForeignImporter
                     AddDeclaration(record.Qualified, record.Declaration, isRecord: true);
                     declarations.Add(new(record.Qualified, record.Declaration, IsRecord: true));
                 }
+                var recordTypes = records.Values.ToHashSet(StringComparer.Ordinal);
                 var signatures = functions.GroupBy(item => item.Scope + "::" + Text(item.Node, "name") + "(" +
                     string.Join(",", item.Node.TryGetProperty("inner", out var children)
                         ? children.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl")
-                            .Select(child => Regex.Replace(Type(Text(child.GetProperty("type"), "desugaredQualType", Text(child.GetProperty("type"), "qualType")), scope: item.Scope) ?? "?", "readonly\\(|\\)", ""))
+                            .Select(child => Regex.Replace(Type(Text(child.GetProperty("type"), "desugaredQualType", Text(child.GetProperty("type"), "qualType")), scope: item.Scope, allowRecord: true) ?? "?", "readonly\\(|\\)", ""))
                         : []) + ")");
                 foreach (var signature in signatures)
                 {
@@ -122,7 +123,7 @@ internal static partial class ForeignImporter
                     {
                         string qualified = scope.Length == 0 ? Text(node, "name") : scope + "::" + Text(node, "name");
                         if (!node.TryGetProperty("completeDefinition", out _) || !records.TryGetValue(qualified, out string? receiver)) continue;
-                        foreach (var method in RecordMethods(node, spelling => Type(spelling, scope: scope)))
+                        foreach (var method in RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true)))
                         {
                             string key = qualified + "::" + method.Name + "(" + string.Join(",", method.Parameters) + ")";
                             if (importedSymbols.TryGetValue(key, out string? previous))
@@ -132,27 +133,15 @@ internal static partial class ForeignImporter
                             }
                             importedSymbols.Add(key, method.Symbol);
                             string entry = "__gflat_foreign_" + identity + "_" + index++;
-                            string values = string.Join(", ", method.Parameters.Select((_, n) => "__arg" + n));
-                            var native = new StringBuilder();
-                            foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
-                                native.Append("namespace ").Append(part).Append(" { ");
-                            native.Append("extern \"C\" auto ").Append(entry).Append('(')
-                                .Append(method.ReadOnly ? "const " : "").Append("::").Append(qualified).Append("* __self");
-                            foreach (var (parameter, n) in method.NativeParameters.Select((parameter, n) => (parameter, n)))
-                                native.Append(", ").Append(Regex.IsMatch(parameter, @"\(\s*\*") ? "__typeof__(" + parameter + ")" : parameter)
-                                    .Append(" __arg").Append(n);
-                            native.Append(") -> decltype(__self->").Append(method.Name).Append('(').Append(values).Append(")) { ")
-                                .Append(method.Result == "void" ? "" : "return ").Append("__self->").Append(method.Name)
-                                .Append('(').Append(values).Append("); }");
-                            foreach (string _ in scope.Split("::", StringSplitOptions.RemoveEmptyEntries)) native.Append(" }");
-                            bridges.Add(entry, native.ToString());
                             string parameters = string.Join(", ", method.Parameters.Select((parameter, n) => parameter + " __arg" + n));
                             string objectType = method.ReadOnly ? "readonly(" + receiver + ")" : receiver;
-                            string declaration = "private extern \"C\" " + method.Result + " " + entry + "(" + objectType + "*? __self" +
-                                (parameters.Length == 0 ? "" : ", " + parameters) + ");\n" +
+                            var bridge = CreateCallBridge(entry, "cpp", scope, method.Result, "", method.Parameters,
+                                method.NativeParameters, recordTypes, arguments => "__self->" + method.Name + "(" + string.Join(", ", arguments) + ")",
+                                objectType, (method.ReadOnly ? "const " : "") + "::" + qualified);
+                            bridges.Add(entry, bridge.Native);
+                            string declaration = bridge.Extern + "\n" +
                                 "extension " + receiver + " { public " + (method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
-                                "(" + parameters + ") { " + (method.Result == "void" ? "" : "return ") + entry + "(this" +
-                                (values.Length == 0 ? "" : ", " + values) + "); } }";
+                                "(" + parameters + ") { " + bridge.Body + " } }";
                             AddDeclaration(key, declaration);
                             declarations.Add(new(key, declaration));
                         }
@@ -262,13 +251,13 @@ internal static partial class ForeignImporter
                     string signature = Text(function.GetProperty("type"), "qualType");
                     int opening = signature.IndexOf('(');
                     if (opening < 0) return;
-                    string? result = Type(signature[..opening], scope: scope);
+                    string? result = Type(signature[..opening], scope: scope, allowRecord: true);
                     if (result == null) return;
                     var parameters = function.TryGetProperty("inner", out var body)
                         ? body.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl").ToArray() : [];
                     var parameterTypes = parameters.Select(parameter => parameter.GetProperty("type"))
                         .Select(type => Text(type, "desugaredQualType", Text(type, "qualType"))).ToArray();
-                    var types = parameterTypes.Select(type => Type(type, scope: scope)).ToArray();
+                    var types = parameterTypes.Select(type => Type(type, scope: scope, allowRecord: true)).ToArray();
                     if (types.Any(type => type == null)) return;
                     string qualified = scope.Length == 0 ? name : scope + "::" + name;
                     if (!seen.Add(qualified + signature)) return;
@@ -279,8 +268,10 @@ internal static partial class ForeignImporter
                         if (previous == symbol) return;
                         throw new TypeCheckException("Foreign functions have conflicting imported signatures: " + qualified, group.First().Span);
                     }
-                    importedSymbols.Add(importKey, symbol);
                     bool variadic = function.TryGetProperty("variadic", out var flag) && flag.GetBoolean();
+                    if (variadic && (RecordValueType(result, recordTypes) != null ||
+                        types.Any(type => RecordValueType(type!, recordTypes) != null))) return;
+                    importedSymbols.Add(importKey, symbol);
                     string declaration;
                     if (variadic)
                     {
@@ -293,25 +284,11 @@ internal static partial class ForeignImporter
                     {
                         string entry = "__gflat_foreign_" + identity + "_" + index++;
                         string parametersText = string.Join(", ", types.Select((type, n) => type + " __arg" + n));
-                        string values = string.Join(", ", types.Select((_, n) => "__arg" + n));
-                        var native = new StringBuilder();
-                        if (group.Key == "cpp")
-                            foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
-                                native.Append("namespace ").Append(part).Append(" { ");
-                        if (group.Key == "cpp") native.Append("extern \"C\" ");
-                        native.Append(group.Key == "cpp" ? "auto" : signature[..opening].Trim()).Append(' ').Append(entry).Append('(')
-                            .Append(string.Join(", ", parameterTypes.Select((type, n) =>
-                                (Regex.IsMatch(type, @"\(\s*\*") ? "__typeof__(" + type + ")" : type) + " __arg" + n))).Append(')');
-                        if (group.Key == "cpp") native.Append(" -> decltype((::").Append(qualified).Append(")(").Append(values).Append("))");
-                        native.Append(" { ");
-                        if (result != "void") native.Append("return ");
-                        native.Append('(').Append(group.Key == "cpp" ? "::" : "").Append(qualified).Append(")(").Append(values).AppendLine("); }");
-                        if (group.Key == "cpp")
-                            foreach (string _ in scope.Split("::", StringSplitOptions.RemoveEmptyEntries)) native.Append(" }");
-                        bridges.Add(entry, native.ToString());
-                        declaration = "private extern \"C\" " + result + " " + entry + "(" + parametersText + ");\n" +
-                            "public " + result + " @" + name + "(" + parametersText + ") { " +
-                            (result == "void" ? "" : "return ") + entry + "(" + values + "); }";
+                        var bridge = CreateCallBridge(entry, group.Key, scope, result, signature[..opening].Trim(),
+                            types.Select(type => type!).ToArray(), parameterTypes, recordTypes,
+                            arguments => "(" + (group.Key == "cpp" ? "::" : "") + qualified + ")(" + string.Join(", ", arguments) + ")");
+                        bridges.Add(entry, bridge.Native);
+                        declaration = bridge.Extern + "\npublic " + result + " @" + name + "(" + parametersText + ") { " + bridge.Body + " }";
                     }
                     if (scope.Length != 0) declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) + " { " + declaration + " }";
                     AddDeclaration(qualified, declaration);

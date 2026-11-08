@@ -429,28 +429,27 @@ namespace gflat
 
         public bool HasDestructor(TypeExpression type)
         {
-            return HasDestructorInternal(type, new HashSet<string>());
+            return HasDestructorInternal(type, null);
         }
 
-        private bool HasDestructorInternal(TypeExpression type, HashSet<string> visited)
+        private bool HasDestructorInternal(TypeExpression type, HashSet<string>? visited)
         {
             type = ResolveAlias(type);
             if (type is ArrayTypeExpression array)
                 return array.Size != 0 && HasDestructorInternal(array.ElementType, visited);
             if (type is NamedTypeExpression named)
             {
-                if (!visited.Add(named.Name))
+                StructInfo? sInfo = GetStructByIdentity(named.Name);
+                ClassInfo? cInfo = sInfo == null ? GetClassByIdentity(named.Name) : null;
+                if (sInfo == null && cInfo == null) return false;
+                if (sInfo?.Destructor != null || cInfo?.Destructor != null) return true;
+                if (!(visited ??= new()).Add(named.Name))
                 {
                     return false;
                 }
 
-                StructInfo? sInfo = GetStructByIdentity(named.Name);
                 if (sInfo != null)
                 {
-                    if (sInfo.Destructor != null)
-                    {
-                        return true;
-                    }
                     foreach ((string Name, TypeExpression Type) f in sInfo.Fields)
                     {
                         using var context = EnterFieldLayoutContext(sInfo.Name, f.Name);
@@ -462,11 +461,10 @@ namespace gflat
                     return false;
                 }
 
-                ClassInfo? cInfo = GetClassByIdentity(named.Name);
                 if (cInfo != null)
                 {
-                    if (cInfo.Destructor != null || (cInfo.BaseClass != null &&
-                        HasDestructorInternal(NamedTypeExpression.Resolved(cInfo.BaseClass, 0), visited)))
+                    if (cInfo.BaseClass != null &&
+                        HasDestructorInternal(NamedTypeExpression.Resolved(cInfo.BaseClass, 0), visited))
                     {
                         return true;
                     }

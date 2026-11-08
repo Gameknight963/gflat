@@ -12,17 +12,30 @@ public partial class TypeChecker
             ?.FirstOrDefault(constructor => constructor.IsMove);
     }
 
-    public bool RequiresRelocation(TypeExpression type) => RequiresRelocation(type, new());
+    public bool RequiresRelocation(TypeExpression type) => RequiresRelocation(type, null);
 
-    private bool RequiresRelocation(TypeExpression type, HashSet<string> visited)
+    private bool RequiresRelocation(TypeExpression type, HashSet<string>? visited)
     {
         type = ResolveAlias(type);
         if (type is ArrayTypeExpression array) return array.Size != 0 && RequiresRelocation(array.ElementType, visited);
-        if (type is not NamedTypeExpression named || !visited.Add(named.Name)) return false;
-        if (MoveConstructor(type) != null) return true;
-        var cls = GetClassByIdentity(named.Name);
+        if (type is not NamedTypeExpression named) return false;
+        var structure = GetStructByIdentity(named.Name);
+        var cls = structure == null ? GetClassByIdentity(named.Name) : null;
+        if (structure == null && cls == null) return false;
+        foreach (var constructor in structure?.Constructors ?? cls!.Constructors)
+            if (constructor.IsMove) return true;
+        if (!(visited ??= new()).Add(named.Name)) return false;
         if (cls?.BaseClass is string parent && RequiresRelocation(NamedTypeExpression.Resolved(parent, type.Line), visited)) return true;
-        var fields = GetStructByIdentity(named.Name)?.Fields.Select(field => field.Type) ?? cls?.Fields.Select(field => field.Type);
-        return fields?.Any(field => RequiresRelocation(field, visited)) == true;
+        if (structure != null)
+        {
+            foreach (var field in structure.Fields)
+                if (RequiresRelocation(field.Type, visited)) return true;
+        }
+        else
+        {
+            foreach (var field in cls!.Fields)
+                if (RequiresRelocation(field.Type, visited)) return true;
+        }
+        return false;
     }
 }

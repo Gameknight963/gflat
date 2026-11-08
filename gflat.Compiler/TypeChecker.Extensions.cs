@@ -122,7 +122,8 @@ public partial class TypeChecker
             if (!IsExtensionObjectType(borrowedPointer.Inner)) continue;
             TryPreview(entry.Definition, borrowedPointer);
         }
-        return result;
+        var nativeMembers = result.Where(candidate => candidate.Definition.IsForeignImport).ToArray();
+        return nativeMembers.Length == 0 ? result : nativeMembers;
 
         void TryPreview(MethodDeclaration method, TypeExpression source)
         {

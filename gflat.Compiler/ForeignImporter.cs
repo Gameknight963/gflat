@@ -117,6 +117,46 @@ internal static partial class ForeignImporter
                     var distinct = signature.DistinctBy(item => Text(item.Node.GetProperty("type"), "qualType")).ToArray();
                     if (distinct.Length == 1) Function(distinct[0].Node, distinct[0].Scope);
                 }
+                if (group.Key == "cpp")
+                    foreach (var (node, scope) in recordNodes)
+                    {
+                        string qualified = scope.Length == 0 ? Text(node, "name") : scope + "::" + Text(node, "name");
+                        if (!node.TryGetProperty("completeDefinition", out _) || !records.TryGetValue(qualified, out string? receiver)) continue;
+                        foreach (var method in RecordMethods(node, spelling => Type(spelling, scope: scope)))
+                        {
+                            string key = qualified + "::" + method.Name + "(" + string.Join(",", method.Parameters) + ")";
+                            if (importedSymbols.TryGetValue(key, out string? previous))
+                            {
+                                if (previous == method.Symbol) continue;
+                                throw new TypeCheckException("Foreign methods have conflicting imported signatures: " + key, group.First().Span);
+                            }
+                            importedSymbols.Add(key, method.Symbol);
+                            string entry = "__gflat_foreign_" + identity + "_" + index++;
+                            string values = string.Join(", ", method.Parameters.Select((_, n) => "__arg" + n));
+                            var native = new StringBuilder();
+                            foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
+                                native.Append("namespace ").Append(part).Append(" { ");
+                            native.Append("extern \"C\" auto ").Append(entry).Append('(')
+                                .Append(method.ReadOnly ? "const " : "").Append("::").Append(qualified).Append("* __self");
+                            foreach (var (parameter, n) in method.NativeParameters.Select((parameter, n) => (parameter, n)))
+                                native.Append(", ").Append(Regex.IsMatch(parameter, @"\(\s*\*") ? "__typeof__(" + parameter + ")" : parameter)
+                                    .Append(" __arg").Append(n);
+                            native.Append(") -> decltype(__self->").Append(method.Name).Append('(').Append(values).Append(")) { ")
+                                .Append(method.Result == "void" ? "" : "return ").Append("__self->").Append(method.Name)
+                                .Append('(').Append(values).Append("); }");
+                            foreach (string _ in scope.Split("::", StringSplitOptions.RemoveEmptyEntries)) native.Append(" }");
+                            bridges.Add(entry, native.ToString());
+                            string parameters = string.Join(", ", method.Parameters.Select((parameter, n) => parameter + " __arg" + n));
+                            string objectType = method.ReadOnly ? "readonly(" + receiver + ")" : receiver;
+                            string declaration = "private extern \"C\" " + method.Result + " " + entry + "(" + objectType + "*? __self" +
+                                (parameters.Length == 0 ? "" : ", " + parameters) + ");\n" +
+                                "extension " + receiver + " { public " + (method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
+                                "(" + parameters + ") { " + (method.Result == "void" ? "" : "return ") + entry + "(this" +
+                                (values.Length == 0 ? "" : ", " + values) + "); } }";
+                            AddDeclaration(key, declaration);
+                            declarations.Add(new(key, declaration));
+                        }
+                    }
                 unit.ForeignSources.AddRange(group);
                 var nativeUnit = new ForeignTranslationUnit(group.Key, source.ToString(), arguments.AsReadOnly())
                 { Bridges = new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(bridges) };
@@ -304,6 +344,7 @@ internal static partial class ForeignImporter
                 {
                     if (node is MethodDeclaration method) method.IsForeignImport = true;
                     else if (node is NamespaceDeclaration ns) Mark(ns.Members);
+                    else if (node is ExtensionDeclaration extension) Mark(extension.Members);
                 }
             }
         }

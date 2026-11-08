@@ -61,7 +61,7 @@ public partial class TypeChecker
                         method.Body, method.Accessibility, false, false, false, false, method.Line,
                         method.IsReadOnly, method.IsConst, method.Attributes,
                         block.GenericParameters.Concat(method.GenericParameters).ToList(), method.IsNoThrow, method.IsImmutable) {
-                        Span = method.Span, IsInline = method.IsInline, ExtensionMemberName = method.Name,
+                        Span = method.Span, IsInline = method.IsInline, IsForeignImport = method.IsForeignImport, ExtensionMemberName = method.Name,
                         ExtensionReceiverType = block.Target, ExtensionBlockParameterCount = block.GenericParameters.Count };
                     extensionMethodSources[helper] = method;
                     namespaceHiddenDeclarations.Add(helper);

@@ -5,6 +5,35 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void ImportedRecordFieldsAndMembersHaveCallSiteHoversAndCompletion()
+    {
+        const string text = """
+            #lang cpp
+            namespace Native {
+                struct Counter { int value; int Read() const { return value; } };
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Counter counter = default(Native::Counter);
+                return counter.Read() + counter.value;
+            }
+            """;
+        var source = new SourceFile(Path.GetFullPath("foreign-record-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int field = text.LastIndexOf("value", StringComparison.Ordinal);
+        int method = text.LastIndexOf("Read", StringComparison.Ordinal);
+        Assert.Contains("int", JsonSerializer.Serialize(model.Hover(source.Path, field)));
+        Assert.Contains("Read", JsonSerializer.Serialize(model.Hover(source.Path, method)));
+        var completion = JsonSerializer.SerializeToElement(model.Completion(source.Path, field));
+        var labels = completion.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("label").GetString()).ToArray();
+        Assert.Contains("value", labels);
+        Assert.Contains("Read", labels);
+    }
+
+    [Fact]
     public void WorkspaceReusesForeignAnalysisAndInvalidatesOnNativeHeaderContentChanges()
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_editor_" + Guid.NewGuid().ToString("N"));

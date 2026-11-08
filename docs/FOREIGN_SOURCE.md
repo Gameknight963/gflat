@@ -74,6 +74,13 @@ must match Clang's layout for the active target. Native code and host code can
 read or write the same storage through pointers. Pointee and field `const`
 qualifiers remain readonly. Native pointer results remain borrowed and nullable.
 
+Public C++ instance methods with supported scalar and pointer signatures are
+called as ordinary host members. A `const` method accepts readonly receivers.
+Other methods require mutable storage. Native methods take precedence over host
+extensions with the same name. Overloads with distinct parameter types work.
+Private methods, static methods, reference-qualified methods, and overloads that
+differ only in receiver qualifiers are not imported yet.
+
 This representation requires trivial construction, copying, and destruction.
 Records with private fields, bases, virtual members, explicit constructors or
 destructors, bitfields, arrays, nested record fields, or layout attributes are
@@ -83,7 +90,7 @@ interface does not export these types yet.
 
 The following are also not imported yet:
 
-- Nontrivial classes, methods, constructors, references, and function-pointer return types
+- Nontrivial classes, constructors, references, and function-pointer return types
 - Templates, default arguments, globals, enum declarations, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

@@ -46,7 +46,18 @@ public sealed partial class Preprocessor
                 if (i + 1 >= text.Length) throw Error("Unterminated block comment", source.Span(offsets[start]));
                 i += 2; space = true; continue;
             }
-            if (c == '$' && i + 1 < text.Length && text[i + 1] == '"')
+            int rawPrefix = text.AsSpan(i).StartsWith("u8R\"") ? 2 :
+                text.AsSpan(i).StartsWith("uR\"") || text.AsSpan(i).StartsWith("UR\"") || text.AsSpan(i).StartsWith("LR\"") ? 1 : 0;
+            if (i + rawPrefix + 1 < text.Length && text[i + rawPrefix] == 'R' && text[i + rawPrefix + 1] == '"')
+            {
+                int opening = text.IndexOf('(', i + rawPrefix + 2);
+                if (opening < 0 || opening - i - rawPrefix > 18) throw Error("Invalid C++ raw string delimiter", source.Span(offsets[start]));
+                string closing = ")" + text[(i + rawPrefix + 2)..opening] + "\"";
+                int last = text.IndexOf(closing, opening + 1, StringComparison.Ordinal);
+                if (last < 0) throw Error("Unterminated C++ raw string", source.Span(offsets[start]));
+                i = last + closing.Length;
+            }
+            else if (c == '$' && i + 1 < text.Length && text[i + 1] == '"')
             {
                 try { Lexer.ReadInterpolatedString(text, i, out i, source.Span(offsets[start]).Line, tokenizeExpressions: false); }
                 catch (gflat.CompileExceptions.TypeCheckException error) { throw Error(error.Description, source.Span(offsets[start])); }
@@ -59,6 +70,7 @@ public sealed partial class Preprocessor
             {
                 i++;
                 while (i < text.Length && (char.IsAsciiLetterOrDigit(text[i]) || text[i] is '_' or '.' ||
+                    text[i] == '\'' && i + 1 < text.Length && char.IsAsciiLetterOrDigit(text[i + 1]) ||
                     text[i] is '+' or '-' && text[i - 1] is 'e' or 'E' or 'p' or 'P')) i++;
             }
             else if (c is '"' or '\'')

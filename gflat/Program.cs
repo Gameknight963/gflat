@@ -153,11 +153,14 @@ public static class Program
                     throw new ArgumentException("Output must differ from native library files and link manifests.");
             }
             ValidateOutput(outputPath);
+            if (irOnly) ValidateOutput(outputPath + ".foreign.json");
             if (dependencyFile != null)
             {
                 ValidateOutput(dependencyFile);
                 ValidateOutput(dependencyFile + ".state");
                 if (pathComparer.Equals(dependencyFile, outputPath) || pathComparer.Equals(dependencyFile + ".state", outputPath)) throw new ArgumentException("Dependencies and output must use different paths.");
+                if (irOnly && (pathComparer.Equals(dependencyFile, outputPath + ".foreign.json") || pathComparer.Equals(dependencyFile + ".state", outputPath + ".foreign.json")))
+                    throw new ArgumentException("Dependencies and foreign manifest output must use different paths.");
             }
             if (graph != null)
             {
@@ -172,10 +175,12 @@ public static class Program
             {
                 NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
                 IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
+                ForeignCompilerResolver = () => NativeToolchain.FindClang(clang),
+                ForeignCompilerArguments = NativeRuntime.HostCompilerArguments(cpp: true),
                 DependencyObserver = paths =>
                 {
                     included.UnionWith(paths);
-                    if (included.Contains(outputPath) || dependencyFile != null && (included.Contains(dependencyFile) || included.Contains(dependencyFile + ".state")))
+                    if (included.Contains(outputPath) || irOnly && included.Contains(outputPath + ".foreign.json") || dependencyFile != null && (included.Contains(dependencyFile) || included.Contains(dependencyFile + ".state")))
                         throw new ArgumentException("Output must differ from included source files.");
                 }
             };
@@ -190,7 +195,8 @@ public static class Program
                 if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
                 return 0;
             }
-            string ir = Compiler.Emit(sources, diagnostics, compilationOptions);
+            var program = Compiler.EmitProgram(sources, diagnostics, compilationOptions);
+            string ir = program.Ir;
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
             // Use the native toolchain's emitted-IR predicate to validate its PDB output.
             if (OperatingSystem.IsWindows() && !irOnly && NativeToolchain.HasDebugInformation(ir))
@@ -203,12 +209,22 @@ public static class Program
             }
             WriteDependencies();
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }
+            if (irOnly)
+            {
+                string manifest = outputPath + ".foreign.json";
+                ValidateOutput(manifest);
+                if (included.Contains(manifest)) throw new ArgumentException("Foreign manifest output must differ from included source files.");
+                if (program.ForeignUnits.Count > 0)
+                    File.WriteAllText(manifest, System.Text.Json.JsonSerializer.Serialize(program.ForeignUnits));
+                else if (File.Exists(manifest)) File.Delete(manifest);
+                File.WriteAllText(outputPath, ir);
+                return 0;
+            }
             string temporaryIr = Path.Combine(Path.GetTempPath(), "gflat_" + Guid.NewGuid().ToString("N") + ".ll");
             try
             {
                 File.WriteAllText(temporaryIr, ir);
-                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs);
+                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
                 return NativeToolchain.RunProgram(outputPath, programArguments);

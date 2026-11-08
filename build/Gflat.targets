@@ -193,12 +193,12 @@
     <GflatWriteUpToDateState Condition="'$(BuildingInsideVisualStudio)' == 'true'" ProjectFile="$(MSBuildProjectFullPath)" FilePath="$(_GflatUpToDateState)" BuildStartedUtcTicks="$(_GflatBuildStartedUtcTicks)" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatStdLibOption) $(_GflatBuiltinsOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatPreprocessorOption) $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatClangOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup Condition="'$(OutputType)' == 'Executable'"><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>
     <Error Condition="'$(OutputType)' == 'Executable' and '$(_GflatCleanExtension)' != '.exe'" Text="Clean requires an .exe TargetPath; custom output names must be cleaned explicitly." />
-    <Delete Files="$(_GflatFullTargetPath);$(_GflatFullIRPath);$(_GflatFullPdbPath)" Condition="'$(OutputType)' == 'Executable'" />
+    <Delete Files="$(_GflatFullTargetPath);$(_GflatFullIRPath);$(_GflatFullIRPath).foreign.json;$(_GflatFullPdbPath)" Condition="'$(OutputType)' == 'Executable'" />
     <Delete Files="$(_GflatSourceList);$(_GflatBuildSettings);$(_GflatBuildSuccess);$(_GflatUpToDateState);$(_GflatNativeLinkManifest);$(_GflatPreprocessorManifest);$(_GflatIncludeDependencies);$(_GflatIncludeDependencies).state" />
   </Target>
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />

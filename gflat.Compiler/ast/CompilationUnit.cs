@@ -6,6 +6,8 @@ namespace gflat.ast
         public Dictionary<SourceId, string[]> FileUsings { get; } = new();
         public List<NamespaceDeclaration> Namespaces { get; }
         public List<AstNode> Members { get; }
+        public List<ForeignTranslationUnit> ForeignUnits { get; } = [];
+        public List<ForeignSource> ForeignSources { get; } = [];
 
         public CompilationUnit(List<UsingDirective> usings, List<NamespaceDeclaration> namespaces, List<AstNode> members, int line) : base(line)
         {

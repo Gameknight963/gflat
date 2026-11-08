@@ -7,6 +7,30 @@
   ],
   "patterns": [
     {
+      "name": "meta.embedded.block.cpp.gflat",
+      "begin": "^\\s*(#)\\s*(lang)\\s+(cpp)\\b.*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.gflat" },
+        "2": { "name": "keyword.control.directive.gflat" },
+        "3": { "name": "keyword.other.gflat" }
+      },
+      "end": "(?=^\\s*#\\s*lang\\s+(?:c|cpp|gflat)\\b)",
+      "contentName": "source.cpp",
+      "patterns": [ { "include": "source.cpp" } ]
+    },
+    {
+      "name": "meta.embedded.block.c.gflat",
+      "begin": "^\\s*(#)\\s*(lang)\\s+(c)\\b.*$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.gflat" },
+        "2": { "name": "keyword.control.directive.gflat" },
+        "3": { "name": "keyword.other.gflat" }
+      },
+      "end": "(?=^\\s*#\\s*lang\\s+(?:c|cpp|gflat)\\b)",
+      "contentName": "source.c",
+      "patterns": [ { "include": "source.c" } ]
+    },
+    {
       "name": "meta.preprocessor.gflat",
       "begin": "^\\s*(#)\\s*(define)\\s+([A-Za-z_][A-Za-z0-9_]*)",
       "beginCaptures": {
@@ -35,7 +59,7 @@
     },
     {
       "name": "meta.preprocessor.gflat",
-      "begin": "^\\s*(#)\\s*(undef|if|ifdef|ifndef|elif|elifdef|elifndef|else|endif|pragma|error|warning)\\b",
+      "begin": "^\\s*(#)\\s*(lang|undef|if|ifdef|ifndef|elif|elifdef|elifndef|else|endif|pragma|error|warning)\\b",
       "beginCaptures": {
         "1": { "name": "punctuation.definition.directive.gflat" },
         "2": { "name": "keyword.control.directive.gflat" }

@@ -57,10 +57,18 @@ public static class Compiler
 
     public static string Emit(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
     {
+        var program = EmitProgram(sources, diagnostics, options);
+        if (program.ForeignUnits.Count != 0)
+            throw new InvalidOperationException("Use Compiler.EmitProgram for #lang source and link its ForeignUnits with the emitted IR.");
+        return program.Ir;
+    }
+
+    public static EmittedProgram EmitProgram(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
+    {
         var (ast, checker) = Check(sources, diagnostics, options);
         var emitter = new LlvmEmitter(checker, options?.InternalizeFunctions == true, options?.DebugSymbols == true,
             options?.NoBuiltins == true);
         ast.Accept(emitter);
-        return emitter.GetOutput();
+        return new(emitter.GetOutput(), ast.ForeignUnits.ToArray());
     }
 }

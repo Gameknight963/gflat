@@ -8,12 +8,18 @@ public sealed record SourceEdit(TextRange Range, string NewText);
 public static class SourceFormatter
 {
     public static SourceEdit[] Format(SourceFile source, FormattingOptions options, TextRange? range = null,
-        IReadOnlyList<AnalysisSnapshot.Syntax>? syntax = null)
+        IReadOnlyList<AnalysisSnapshot.Syntax>? syntax = null, IReadOnlyList<ForeignSource>? foreignSources = null)
     {
         if (options.TabSize is < 1 or > 16) throw new ArgumentException("Tab size must be between 1 and 16.");
         string text = source.Text;
         string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : text.Contains('\r') && !text.Contains('\n') ? "\r" : "\n";
-        syntax ??= new AnalysisSnapshot([source], new() { NoStdLib = true }, checkTypes: false).Nodes;
+        if (syntax == null || foreignSources == null && text.Contains("#lang", StringComparison.Ordinal))
+        {
+            var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true }, checkTypes: false);
+            syntax ??= snapshot.Nodes;
+            foreignSources ??= snapshot.ForeignSources;
+        }
+        var foreignSpans = (foreignSources ?? []).Where(segment => segment.Span.Source?.Path == source.Path).Select(segment => segment.Span).ToArray();
         var typeSpans = syntax.Where(n => n.Node is TypeExpression && n.Span.Source?.Path == source.Path).Select(n => n.Span).ToArray();
         var orderedTypes = typeSpans.OrderBy(span => span.Start).ToArray();
         var typeStarts = orderedTypes.Select(span => span.Start).ToArray();
@@ -115,6 +121,7 @@ public static class SourceFormatter
             : new string('\t', Math.Max(0, depth));
         void Edit(int start, int length, string replacement)
         {
+            if (foreignSpans.Any(span => start < span.Start + span.Length && start + length >= span.Start)) return;
             if (start < lower && start + length >= lower && replacement.AsSpan().IndexOfAny('\r', '\n') >= 0 &&
                 text.AsSpan(lower, start + length - lower).IndexOfAny('\r', '\n') < 0)
             {
@@ -129,6 +136,8 @@ public static class SourceFormatter
         }
         foreach (var token in tokens)
         {
+            if (foreignSpans.Any(span => token.Start >= span.Start && token.Start < span.Start + span.Length))
+            { previous = token; continue; }
             if (token.Kind == TokenKind.InterpolatedStringStart) interpolation++;
             bool protectedToken = directives.Contains(token.Line) || interpolation > 0;
             if (!protectedToken)

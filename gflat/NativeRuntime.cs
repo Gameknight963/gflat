@@ -5,6 +5,18 @@ namespace gflat;
 /// <summary>Build native C stream accessors and the host C++ exception transport.</summary>
 internal static class NativeRuntime
 {
+    internal static List<string> HostCompilerArguments(bool cpp)
+    {
+        var source = HostArguments(cpp);
+        var result = new List<string>();
+        for (int index = 0; index < source.Count; index++)
+        {
+            if (source[index] == "-Xlinker") { index++; continue; }
+            result.Add(source[index]);
+        }
+        return result;
+    }
+
     internal static List<string> HostArguments(bool requireCppHeaders = true)
     {
         if (!OperatingSystem.IsWindows()) return [];

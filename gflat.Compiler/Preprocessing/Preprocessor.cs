@@ -13,7 +13,10 @@ public sealed record MacroSymbol(string Name, SourceSpan Span, bool Definition, 
     IReadOnlyList<MacroExpansionStep>? Steps = null);
 
 public sealed record PreprocessingResult(List<Token> Tokens, IReadOnlyList<SourceFile> Sources,
-    IReadOnlyList<string> Dependencies, IReadOnlyList<MacroSymbol> Symbols);
+    IReadOnlyList<string> Dependencies, IReadOnlyList<MacroSymbol> Symbols)
+{
+    public IReadOnlyList<ForeignSource> ForeignSources { get; init; } = [];
+}
 
 public sealed partial class Preprocessor
 {
@@ -30,6 +33,9 @@ public sealed partial class Preprocessor
     private readonly HashSet<string> dependencies = new(Paths);
     private readonly HashSet<string> once = new(Paths);
     private readonly List<MacroSymbol> symbols = [];
+    private readonly List<ForeignSource> foreignSources = [];
+    private string language = "gflat";
+    public IReadOnlyList<ForeignSource> ForeignSources => foreignSources;
     public IReadOnlyList<SourceFile> Sources => files.Values.ToArray();
     public IReadOnlyList<string> Dependencies => dependencies.ToArray();
     public IReadOnlyList<MacroSymbol> Symbols => symbols;
@@ -51,6 +57,7 @@ public sealed partial class Preprocessor
     public PreprocessingResult Process(SourceFile source)
     {
         macros.Clear(); files.Clear(); dependencies.Clear(); once.Clear(); symbols.Clear(); expansions = 0;
+        foreignSources.Clear(); language = "gflat";
         foreach (var definition in options.Defines)
         {
             if (!Name(definition.Key)) throw Error($"Invalid macro name '{definition.Key}'", source.Span(0));
@@ -60,7 +67,8 @@ public sealed partial class Preprocessor
             Define(definitionTokens, commandLine.Span(0));
         }
         var pieces = Read(source, 0);
-        return new(Convert(pieces, source), files.Values.ToArray(), dependencies.ToArray(), symbols.ToArray());
+        return new(Convert(pieces, source), files.Values.ToArray(), dependencies.ToArray(), symbols.ToArray())
+        { ForeignSources = foreignSources.ToArray() };
     }
 
     private static string Key(string path) => path.StartsWith('<') ? path : Path.GetFullPath(path);

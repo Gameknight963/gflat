@@ -7,6 +7,8 @@ public sealed record CompilationOptions
     public IReadOnlyDictionary<string, string> Defines { get; init; } = new Dictionary<string, string>();
     public Func<string, SourceFile?>? IncludeLoader { get; init; }
     public Action<IReadOnlyList<string>>? DependencyObserver { get; init; }
+    public Func<string>? ForeignCompilerResolver { get; init; }
+    public IReadOnlyList<string> ForeignCompilerArguments { get; init; } = [];
     public bool NoStdLib { get; init; }
     public bool DebugSymbols { get; init; }
 

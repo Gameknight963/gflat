@@ -10,6 +10,7 @@ namespace gflat.ast
     public class MethodDeclaration : AstNode
     {
         public string Name { get; internal set; }
+        public bool IsForeignImport { get; internal set; }
         public FunctionImplementationKind ImplementationKind { get; set; }
         public string? StringLiteralPrefix { get; set; }
         public string? PropertyName { get; set; }

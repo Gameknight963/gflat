@@ -13,12 +13,13 @@ public sealed class Compilation
     public CompilationUnit Unit { get; }
     public IReadOnlyList<string> PreprocessorDependencies { get; private set; } = [];
     public IReadOnlyList<MacroSymbol> MacroSymbols { get; private set; } = [];
+    public IReadOnlyDictionary<string, ForeignDependency> ForeignDependencies { get; private set; } = new Dictionary<string, ForeignDependency>();
     public IReadOnlyDictionary<SourceId, IReadOnlyList<Token>> SourceTokens => sourceTokens;
     private readonly Dictionary<SourceId, IReadOnlyList<Token>> sourceTokens = new();
 
     public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false, CompilationOptions? options = null,
         CancellationToken cancellationToken = default, SourceTokenCache? tokenCache = null, bool captureTokens = false,
-        SourceSyntaxCache? syntaxCache = null)
+        SourceSyntaxCache? syntaxCache = null, bool importForeignDeclarations = true)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var captured = new List<SourceFile>();
@@ -34,6 +35,7 @@ public sealed class Compilation
             throw new ArgumentException("A source path may only occur once in a compilation.");
         var allSources = roots.ToDictionary(s => s.Id);
         var dependencies = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var foreignDependencies = new HashSet<string>(dependencies.Comparer);
         var macroSymbols = new List<MacroSymbol>();
         var loader = options?.IncludeLoader;
         var preprocessingOptions = (options ?? new()) with { IncludeLoader = path =>
@@ -50,10 +52,12 @@ public sealed class Compilation
             macroSymbols.AddRange(result.Symbols);
         }
         var includedByRoot = new Dictionary<SourceId, SourceId[]>();
+        var foreignSymbols = new Dictionary<string, string>();
         SyntaxTrees = roots.Select(source =>
         {
             cancellationToken.ThrowIfCancellationRequested();
             List<Token> tokens;
+            IReadOnlyList<ForeignSource> foreign = [];
             bool preprocessed = Preprocessor.IsNeeded(source, preprocessingOptions);
             if (preprocessed)
             {
@@ -67,6 +71,7 @@ public sealed class Compilation
                 finally
                 {
                     Register(new([], preprocessor.Sources, preprocessor.Dependencies, preprocessor.Symbols));
+                    foreign = preprocessor.ForeignSources.ToArray();
                     includedByRoot[source.Id] = preprocessor.Sources.Select(file => file.Id).ToArray();
                 }
             }
@@ -81,10 +86,20 @@ public sealed class Compilation
                 ? syntaxCache.Parse(source, tokens, diagnostics, recoverErrors, cancellationToken)
                 : Parser.Parse(tokens, diagnostics, recoverErrors);
             tree.Span = source.Span(0, source.Text.Length);
+            try
+            {
+                if (importForeignDeclarations) ForeignImporter.Import(tree, foreign, preprocessingOptions, diagnostics,
+                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignSymbols);
+                else tree.ForeignSources.AddRange(foreign);
+            }
+            catch (TypeCheckException error) when (recoverErrors)
+            { diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description); tree.ForeignSources.AddRange(foreign); }
             cancellationToken.ThrowIfCancellationRequested();
             return tree;
         }).ToArray();
         Unit = new CompilationUnit(new(), SyntaxTrees.SelectMany(t => t.Namespaces).ToList(), SyntaxTrees.SelectMany(t => t.Members).ToList(), 0);
+        Unit.ForeignUnits.AddRange(SyntaxTrees.SelectMany(tree => tree.ForeignUnits));
+        Unit.ForeignSources.AddRange(SyntaxTrees.SelectMany(tree => tree.ForeignSources));
         foreach (var tree in SyntaxTrees)
         {
             var rootId = tree.Span.SourceId!.Value;
@@ -99,6 +114,7 @@ public sealed class Compilation
         Sources = allSources.Values.ToArray();
         PreprocessorDependencies = dependencies.ToArray();
         MacroSymbols = macroSymbols.ToArray();
+        ForeignDependencies = foreignDependencies.ToDictionary(path => path, ForeignDependency.Capture, dependencies.Comparer);
         options?.DependencyObserver?.Invoke(PreprocessorDependencies);
         cancellationToken.ThrowIfCancellationRequested();
     }

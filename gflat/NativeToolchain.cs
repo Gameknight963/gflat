@@ -147,7 +147,8 @@ public static class NativeToolchain
         return Run(compiler, args, 60000);
     }
 
-    public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null, gflat.Projects.NativeLinkInputs? nativeLibraries = null)
+    public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null, gflat.Projects.NativeLinkInputs? nativeLibraries = null,
+        IReadOnlyList<ForeignTranslationUnit>? foreignUnits = null)
     {
         string optimization = optimizationLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
         using var timing = PipelineTimings.Measure("native.compile-link", $"O{optimization}, {(optimizationLevel.HasValue ? "explicit" : "default")}");
@@ -171,6 +172,9 @@ public static class NativeToolchain
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);
         }
         string compiler = FindClang(clang);
+        if (foreignUnits == null && File.Exists(irPath + ".foreign.json"))
+            foreignUnits = System.Text.Json.JsonSerializer.Deserialize<ForeignTranslationUnit[]>(File.ReadAllText(irPath + ".foreign.json"));
+        bool foreignCpp = foreignUnits?.Any(unit => unit.Language == "cpp") == true;
         if (debug)
         {
             args.Add("-g");
@@ -181,24 +185,52 @@ public static class NativeToolchain
         // do not by themselves require Clang's compiler-rt library.
         if (OperatingSystem.IsWindows() && RequiresWideIntegerRuntime(ir))
             args.Add("--rtlib=compiler-rt");
-        if (exceptions || stdio)
+        if (exceptions || stdio || foreignCpp)
         {
             var driverIdentity = NativeRuntimeCache.IdentifyDriver(compiler);
             // Keep the selected LLVM version, including names such as clang-18.
-            args.Add(exceptions ? "--driver-mode=g++" : "--driver-mode=gcc");
+            args.Add(exceptions || foreignCpp ? "--driver-mode=g++" : "--driver-mode=gcc");
             if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes, driverIdentity));
             // With EH, compile the C bridge against the same matched C++ host
             // toolset. Its language remains C even though its host profile is shared.
             if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler, cppHost: exceptions, driverIdentity));
-            args.AddRange(NativeRuntime.HostArguments(requireCppHeaders: exceptions));
+            args.AddRange(NativeRuntime.HostArguments(requireCppHeaders: exceptions || foreignCpp));
         }
         AddNativeLibraries(args, linkInputs);
         // LLVM may lower floating remainder to fmod/fmodf. A bare program uses
         // the C driver, which doesn't add libm as the C++ driver does on Linux.
         if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
             args.Add("-lm");
-        return Run(compiler, args, 60000);
+        if (foreignUnits is not { Count: > 0 }) return Run(compiler, args, 60000);
+        string scratch = Path.Combine(Path.GetTempPath(), "gflat_foreign_link_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            var usedBridges = LlvmForeignSymbols(ir);
+            for (int index = 0; index < foreignUnits.Count; index++)
+            {
+                var unit = foreignUnits[index];
+                string source = Path.Combine(scratch, index + (unit.Language == "cpp" ? ".cpp" : ".c"));
+                string obj = Path.Combine(scratch, index + ".o");
+                File.WriteAllText(source, unit.Text + "\n#line 1 \"<foreign-bridge>\"\n" +
+                    string.Concat(unit.Bridges.Where(bridge => usedBridges.Contains(bridge.Key)).Select(bridge => bridge.Value)));
+                var compile = new List<string>(unit.Arguments);
+                compile.AddRange(NativeRuntime.HostCompilerArguments(unit.Language == "cpp"));
+                compile.AddRange(["-x", unit.Language == "cpp" ? "c++" : "c", "-c", source, "-O" + optimization, "-o", obj]);
+                compile.AddRange(["-ffunction-sections", "-fdata-sections"]);
+                if (debug) compile.Add("-g");
+                ProcessResult result = Run(compiler, compile, 60000);
+                if (result.ExitCode != 0) return result;
+                args.Insert(1, obj);
+            }
+            return Run(compiler, args, 60000);
+        }
+        finally { Directory.Delete(scratch, recursive: true); }
     }
+
+    private static HashSet<string> LlvmForeignSymbols(string ir) => System.Text.RegularExpressions.Regex
+        .Matches(ir, @"(?m)^(?!declare\b)[^\r\n]*@(__gflat_foreign_[A-F0-9]+_[0-9]+)\(")
+        .Select(match => match.Groups[1].Value).ToHashSet(StringComparer.Ordinal);
 
     internal static void AddNativeLibraries(List<string> arguments, gflat.Projects.NativeLinkInputs inputs)
     {

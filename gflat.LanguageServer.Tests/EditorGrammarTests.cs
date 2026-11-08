@@ -9,6 +9,27 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Theory]
+    [InlineData("cpp", "source.cpp")]
+    [InlineData("c", "source.c")]
+    public void LanguageSwitchesEmbedTheForeignGrammarAndResumeGflat(string language, string scope)
+    {
+        var registry = new Registry(new EmptyThemeOptions(foreign: true));
+        registry.LoadGrammar(scope);
+        var grammar = registry.LoadGrammarFromPathSync(
+            Asset("gflat.tmLanguage.json"), 0, new Dictionary<string, int>());
+        var begin = grammar.TokenizeLine("#lang " + language);
+        Assert.True(begin.Tokens.SelectMany(token => token.Scopes).Any(item => item.StartsWith("meta.embedded.", StringComparison.Ordinal)),
+            string.Join(", ", begin.Tokens.SelectMany(token => token.Scopes)));
+        var foreign = grammar.TokenizeLine("int native() { return 42; }", begin.RuleStack, TimeSpan.FromSeconds(2));
+        Assert.Contains(foreign.Tokens.SelectMany(token => token.Scopes), item => item == scope);
+        AssertScope(foreign, 15, "keyword.control");
+        var end = grammar.TokenizeLine("#lang gflat", foreign.RuleStack, TimeSpan.FromSeconds(2));
+        AssertScope(end, 1, "keyword.control.directive");
+        var normal = grammar.TokenizeLine("reflection field;", end.RuleStack, TimeSpan.FromSeconds(2));
+        Assert.DoesNotContain(normal.Tokens.SelectMany(token => token.Scopes), item => item == scope);
+    }
+
     [Fact]
     public void DirectivesAndEscapedKeywordsHaveLexicalClassifications()
     {
@@ -184,11 +205,22 @@ public class EditorGrammarTests
     private static IGrammar Grammar() => new Registry(new EmptyThemeOptions()).LoadGrammarFromPathSync(
         Asset("gflat.tmLanguage.json"), 0, new Dictionary<string, int>());
 
-    private sealed class EmptyThemeOptions : IRegistryOptions, IRawTheme
+    private sealed class EmptyThemeOptions(bool foreign = false) : IRegistryOptions, IRawTheme
     {
         public IRawTheme GetDefaultTheme() => this;
         public IRawTheme GetTheme(string scopeName) => this;
-        public IRawGrammar GetGrammar(string scopeName) => null!;
+        public IRawGrammar GetGrammar(string scopeName)
+        {
+            if (!foreign || scopeName is not ("source.c" or "source.cpp")) return null!;
+            string language = scopeName == "source.cpp" ? "cpp" : "c";
+            string? installed = Environment.GetEnvironmentVariable("GFLAT_CPP_GRAMMAR_DIRECTORY");
+            using var reader = installed != null
+                ? File.OpenText(Path.Combine(installed, language + ".tmLanguage.json"))
+                : new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
+                    scopeName, patterns = new[] { new { match = @"\breturn\b", name = "keyword.control." + language } }
+                }))));
+            return TextMateSharp.Internal.Grammars.Reader.GrammarReader.ReadGrammarSync(reader);
+        }
         public ICollection<string> GetInjections(string scopeName) => [];
         public string GetName() => "test";
         public string GetInclude() => "";

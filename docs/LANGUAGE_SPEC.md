@@ -35,6 +35,9 @@ root source. Supported forms include `#define`, `#include`, conditional directiv
 Arguments expand before stringification and concatenation. `@NAME` and `@(tokens)`
 skip the current expansion scan.
 
+[C and C++ source sections](FOREIGN_SOURCE.md) use `#lang c`, `#lang cpp`, and
+`#lang gflat` to select the source language without changing `#include`.
+
 ## Lexical and grammar rules
 
 Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. `@NAME` permits a keyword identifier and excludes `@` from its name. Double-underscore names are used by compiler hooks. Comments are `//` to end of line or non-nesting `/* ... */`. Unterminated comments are errors.

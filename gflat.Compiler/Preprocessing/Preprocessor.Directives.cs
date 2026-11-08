@@ -20,6 +20,12 @@ public sealed partial class Preprocessor
         var conditions = new Stack<Conditional>();
         bool Active() => conditions.Count == 0 || conditions.Peek().Active;
         void Flush() { output.AddRange(Expand(pending)); pending.Clear(); }
+        int foreignStart = language == "gflat" ? -1 : 0;
+        void ForeignUntil(int end)
+        {
+            if (foreignStart >= 0 && end > foreignStart)
+                foreignSources.Add(new(language, source.Span(foreignStart, end - foreignStart)));
+        }
         for (int i = 0; i < input.Count;)
         {
             int end = i;
@@ -27,6 +33,25 @@ public sealed partial class Preprocessor
             var line = input.GetRange(i, end - i);
             i = Math.Min(input.Count, end + 1);
             if (line.Count == 0) continue;
+            bool languageDirective = line.Count > 1 && line[0].Text == "#" && line[1].Text == "lang";
+            if (language != "gflat" && !languageDirective) continue;
+            if (languageDirective && (language != "gflat" || Active()))
+            {
+                Flush();
+                if (line.Count != 3 || line[2].Text is not ("c" or "cpp" or "gflat"))
+                    throw Error("Expected #lang c, #lang cpp, or #lang gflat", line[1].Span);
+                if (language == "gflat" && line[2].Text != "gflat" &&
+                    output.Count(piece => piece.Text == "{") != output.Count(piece => piece.Text == "}"))
+                    throw Error("Foreign language sections must start at file scope", line[1].Span);
+                ForeignUntil(line[0].Span.Start);
+                language = line[2].Text;
+                foreignStart = language == "gflat" ? -1 : end < input.Count
+                    ? input[end].Span.Start + input[end].Span.Length : source.Text.Length;
+                symbols.Add(new("lang", source.Span(line[0].Span.Start,
+                    line[^1].Span.Start + line[^1].Span.Length - line[0].Span.Start), false, default,
+                    "#lang " + language, Classification: "preprocessor"));
+                continue;
+            }
             if (line[0].Text != "#")
             {
                 if (Active()) pending.AddRange(line);
@@ -80,6 +105,8 @@ public sealed partial class Preprocessor
                         name = string.Concat(header.Skip(1).Take(header.Count - 2).Select((piece, n) => (n > 0 && piece.Space ? " " : "") + piece.Text));
                     else throw Error("Expected a quoted or angle-bracket include name", location);
                     output.AddRange(Read(Include(source, name, quoted, location), depth + 1));
+                    foreignStart = language == "gflat" ? -1 : end < input.Count
+                        ? input[end].Span.Start + input[end].Span.Length : source.Text.Length;
                     break;
                 case "pragma":
                     if (arguments.Count == 1 && arguments[0].Text == "once") once.Add(key);
@@ -91,6 +118,7 @@ public sealed partial class Preprocessor
             }
         }
         Flush();
+        ForeignUntil(source.Text.Length);
         if (conditions.Count != 0) throw Error("Unterminated conditional directive", conditions.Peek().Start);
         return output;
     }

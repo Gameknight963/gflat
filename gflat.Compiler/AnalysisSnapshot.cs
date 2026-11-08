@@ -17,6 +17,8 @@ public sealed class AnalysisSnapshot
     public IReadOnlyList<SourceFile> Sources { get; private set; } = [];
     public IReadOnlyList<string> PreprocessorDependencies { get; private set; } = [];
     public IReadOnlyList<Preprocessing.MacroSymbol> MacroSymbols { get; private set; } = [];
+    public IReadOnlyList<ForeignSource> ForeignSources { get; private set; } = [];
+    public IReadOnlyDictionary<string, ForeignDependency> ForeignDependencies { get; private set; } = new Dictionary<string, ForeignDependency>();
     public IReadOnlyDictionary<SourceId, IReadOnlyList<Token>> SourceTokens { get; private set; } = new Dictionary<SourceId, IReadOnlyList<Token>>();
     public IReadOnlyList<Syntax> Nodes { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
@@ -43,11 +45,13 @@ public sealed class AnalysisSnapshot
         Imports = new Dictionary<SourceId, string[]>();
         try
         {
-            var compilation = new Compilation(RootSources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken, tokenCache: tokenCache, captureTokens: true, syntaxCache: syntaxCache);
+            var compilation = new Compilation(RootSources, diagnostics, recoverErrors: true, options: options, cancellationToken: cancellationToken, tokenCache: tokenCache, captureTokens: true, syntaxCache: syntaxCache, importForeignDeclarations: checkTypes);
             SourceTokens = compilation.SourceTokens;
             Sources = compilation.Sources;
             PreprocessorDependencies = compilation.PreprocessorDependencies;
             MacroSymbols = compilation.MacroSymbols;
+            ForeignSources = compilation.Unit.ForeignSources;
+            ForeignDependencies = compilation.ForeignDependencies;
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
             using (PipelineTimings.Measure("editor.syntax.capture")) Capture(compilation.Unit, null);
             var aliases = nodes.Select(n => n.Node).OfType<AliasDeclaration>().Select(a => a.Name).ToHashSet();

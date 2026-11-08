@@ -35,7 +35,7 @@ public sealed partial class EditorModel
     }
     public bool IsPartialAnalysis => snapshot.BodySources != null;
     public SourceEdit[] Format(string path, FormattingOptions options, TextRange? range = null)
-        => SourceFormatter.Format(sources[path], options, range, activeNodes);
+        => SourceFormatter.Format(sources[path], options, range, activeNodes, snapshot.ForeignSources);
     private readonly Dictionary<string, SourceFile> sources;
     private readonly Dictionary<string, Token[]> tokens = new(Workspace.Paths);
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
@@ -76,7 +76,7 @@ public sealed partial class EditorModel
         foreach (var file in allFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            try { tokens[file.Path] = (snapshot.SourceTokens.TryGetValue(file.Id, out var capturedTokens) ? capturedTokens : Lexer.Tokenize(file, new DiagnosticBag())).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
+            try { tokens[file.Path] = (snapshot.SourceTokens.TryGetValue(file.Id, out var capturedTokens) ? capturedTokens : Lexer.Tokenize(file, new DiagnosticBag())).Where(t => t.Kind != TokenKind.EndOfFile && !InForeignSource(file.Path, t.Start)).ToArray(); }
             catch (TypeCheckException) { tokens[file.Path] = []; }
             nodes[file.Path] = nodesBySource.GetValueOrDefault(file.Id) ?? [];
             var braces = new Stack<int>();
@@ -897,6 +897,7 @@ public sealed partial class EditorModel
 
     private int TokenAt(string path, int offset)
     {
+        if (InForeignSource(path, offset)) return -1;
         var ts = tokens[path];
         int index = TokenStartIndex(ts, offset);
         if (index < ts.Length && ts[index].Start == offset) return index;
@@ -917,6 +918,7 @@ public sealed partial class EditorModel
     private object Completion(string path, int offset, TextRange? replacementRange)
     {
         path = CanonicalQueryPath(path);
+        if (InForeignSource(path, offset)) return new { isIncomplete = false, items = Array.Empty<object>() };
         using var queryTiming = PipelineTimings.Measure("editor.query.completion");
         if (IncludeCompletion(path, offset) is { } include) return include;
         var ts = tokens[path];
@@ -996,6 +998,7 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         path = CanonicalQueryPath(path);
+        if (InForeignSource(path, offset)) return null;
         offset = EscapedIdentifierOffset(path, offset);
         using var queryTiming = PipelineTimings.Measure("editor.query.hover");
         options ??= new();
@@ -1112,6 +1115,7 @@ public sealed partial class EditorModel
     public object? SignatureHelp(string path, int offset, bool visualStudio = false)
     {
         path = CanonicalQueryPath(path);
+        if (InForeignSource(path, offset)) return null;
         using var queryTiming = PipelineTimings.Measure("editor.query.signature-help");
         var ts = tokens[path];
         var stack = new Stack<(int Index, int Commas)>();

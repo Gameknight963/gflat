@@ -5,6 +5,38 @@
     <key>settings</key>
     <array>
       <dict>
+        <key>scope</key><string>source.cpp comment, source.c comment</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>comment</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp keyword, source.cpp storage.type, source.cpp storage.modifier, source.c keyword, source.c storage.type, source.c storage.modifier</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>keyword</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp meta.preprocessor, source.c meta.preprocessor</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>preprocessor keyword</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp string, source.c string</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>string</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp constant.numeric, source.c constant.numeric</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>number</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp entity.name.function.preprocessor, source.c entity.name.function.preprocessor</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>cppMacro</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp entity.name.function, source.c entity.name.function</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>method name</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>source.cpp entity.name.type, source.c entity.name.type</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>type</string></dict>
+      </dict>
+      <dict>
         <key>scope</key><string>comment.line.documentation.gflat</string>
         <key>settings</key><dict><key>vsclassificationtype</key><string>xml doc comment - text</string></dict>
       </dict>

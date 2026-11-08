@@ -20,6 +20,7 @@ internal sealed class WorkspaceAnalysisCache
         // its configuration collections before requesting another snapshot.
         options = options with {
             IncludeDirectories = options.IncludeDirectories.ToArray(),
+            ForeignCompilerArguments = options.ForeignCompilerArguments.ToArray(),
             Defines = options.Defines.Count == 0 ? EmptyDefines : new Dictionary<string, string>(options.Defines, StringComparer.Ordinal)
         };
         SourceFile[]? automatic = ReadAutomaticSources(options);
@@ -52,8 +53,9 @@ internal sealed class WorkspaceAnalysisCache
     }
 
     private static bool SameOptions(CompilationOptions left, CompilationOptions right) =>
-        (left with { IncludeDirectories = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) ==
-        (right with { IncludeDirectories = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) &&
+        (left with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) ==
+        (right with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) &&
+        left.ForeignCompilerArguments.SequenceEqual(right.ForeignCompilerArguments) &&
         left.IncludeDirectories.SequenceEqual(right.IncludeDirectories, Workspace.Paths) &&
         left.Defines.Count == right.Defines.Count && left.Defines.All(pair => right.Defines.TryGetValue(pair.Key, out var value) && value == pair.Value);
 
@@ -66,6 +68,11 @@ internal sealed class WorkspaceAnalysisCache
             var previous = snapshot.Sources.Where(source => !source.Path.StartsWith('<')).ToDictionary(source => Path.GetFullPath(source.Path), Workspace.Paths);
             foreach (string path in snapshot.PreprocessorDependencies.Where(path => !path.StartsWith('<')))
             {
+                if (snapshot.ForeignDependencies.TryGetValue(path, out var foreign))
+                {
+                    if (!foreign.IsCurrent()) return false;
+                    continue;
+                }
                 var current = options.IncludeLoader?.Invoke(path) ?? (File.Exists(path) ? new SourceFile(path, File.ReadAllText(path)) : null);
                 if (previous.TryGetValue(path, out var source) ? current?.Text != source.Text : current != null) return false;
             }

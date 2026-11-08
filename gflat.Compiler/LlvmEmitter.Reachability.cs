@@ -5,11 +5,12 @@ namespace gflat;
 public partial class LlvmEmitter
 {
     private bool _registerFunctions;
+    private bool _emittingDeferredFunction;
     private readonly Dictionary<string, Action> _deferredFunctions = new(StringComparer.Ordinal);
 
-    private bool DeferFunction(string name, Action emit)
+    private bool DeferFunction(string name, Action emit, bool foreignImport = false)
     {
-        if (!_registerFunctions) return false;
+        if (!_registerFunctions && (!foreignImport || _emittingDeferredFunction)) return false;
         var ownerClass = _currentClass;
         var ownerStruct = _currentStruct;
         string ns = _currentNamespacePath;
@@ -39,7 +40,9 @@ public partial class LlvmEmitter
             if (!done.Add(name)) continue;
             if (!graph.Defines(name) && _deferredFunctions.TryGetValue(name, out var emit))
             {
-                emit();
+                _emittingDeferredFunction = true;
+                try { emit(); }
+                finally { _emittingDeferredFunction = false; }
                 AddOutput();
             }
             foreach (string reference in graph.References(name)) pending.Enqueue(reference);

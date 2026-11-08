@@ -1122,7 +1122,7 @@ public partial class LlvmEmitter : IVisitor
         EmitIsInstanceHelper();
         EmitExceptionDestroyHelper();
         _registerFunctions = false;
-        if (_internalizeFunctions) EmitReachableFunctions();
+        if (_internalizeFunctions || _deferredFunctions.Count > 0) EmitReachableFunctions();
     }
 
     public void Visit(UsingDirective node) { }
@@ -2217,7 +2217,7 @@ public partial class LlvmEmitter : IVisitor
         else
             name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
 
-        if (DeferFunction(name, () => Visit(node))) return;
+        if (DeferFunction(name, () => Visit(node), node.IsForeignImport)) return;
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>
             $"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}"));

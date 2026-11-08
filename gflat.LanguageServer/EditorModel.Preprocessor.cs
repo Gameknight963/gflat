@@ -4,6 +4,10 @@ namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
+    private bool InForeignSource(string path, int offset) => snapshot.ForeignSources.Any(segment =>
+        Workspace.Paths.Equals(segment.Span.Source?.Path, path) && offset >= segment.Span.Start &&
+        offset < segment.Span.Start + segment.Span.Length);
+
     private MacroSymbol? MacroAt(string path, int offset) => snapshot.MacroSymbols.FirstOrDefault(symbol =>
         symbol.Span.Source != null && Workspace.Paths.Equals(symbol.Span.Source.Path, path) &&
         offset >= symbol.Span.Start && offset < symbol.Span.Start + symbol.Span.Length);

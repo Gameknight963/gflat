@@ -78,7 +78,7 @@ public partial class TypeChecker
             if (!selectedFunctionValues.Contains(expression) && target is MethodDeclaration method &&
                 (method.IsGeneric || importedFunctionValueCandidates.ContainsKey(expression) || overloadFamilies.TryGetValue(method, out var family) && family.Count > 1))
                 throw new TypeCheckException($"Overloaded function '{method.Name}' requires a target function pointer signature", expression.Span);
-            if (target is MethodDeclaration selected) ValidateNamespaceFunctionAccess(selected, expression.Span);
+            if (target is MethodDeclaration selected) ValidateNamespaceFunctionAccess(selected, expression.Span, expression);
         }
     }
 
@@ -131,7 +131,7 @@ public partial class TypeChecker
         if (target is not MethodDeclaration method) return true;
         if (!method.IsGeneric && !overloadFamilies.ContainsKey(method) && !importedFunctionValueCandidates.ContainsKey(expression))
         {
-            ValidateNamespaceFunctionAccess(method, expression.Span);
+            ValidateNamespaceFunctionAccess(method, expression.Span, expression);
             return true;
         }
         var matches = MatchingFunctionValues(method, expected, expression.Line, expression);
@@ -144,7 +144,7 @@ public partial class TypeChecker
         var selected = matches[0].Definition;
         ValidateReflectedFunctionSelection(expression, selected);
         if (name != null) ResolveStaticMethod(name, selectedValue: selected);
-        ValidateNamespaceFunctionAccess(selected, expression.Span);
+        ValidateNamespaceFunctionAccess(selected, expression.Span, expression);
         var genericArguments = selected.IsGeneric ? matches[0].TypeArguments : null;
         if (selected.IsGeneric) selected = MonomorphizeFunction(selected, matches[0].TypeArguments, expression.Line);
         ValidateFunctionAddress(selected, expression.Line);

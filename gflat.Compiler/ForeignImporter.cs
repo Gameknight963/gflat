@@ -12,7 +12,7 @@ namespace gflat;
 internal static partial class ForeignImporter
 {
     private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false,
-        NativeRecordLayout? OpaqueLayout = null, string? Owner = null);
+        NativeRecordLayout? OpaqueLayout = null, string? Owner = null, CallableRole Role = CallableRole.Member);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
     private sealed record CachedImport(ForeignTranslationUnit Unit, CachedDeclaration[] Declarations,
         Dictionary<string, string> Symbols, Dictionary<string, InputStamp> Inputs, string[] Dependencies);
@@ -63,7 +63,7 @@ internal static partial class ForeignImporter
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
                     foreach (var declaration in cached.Declarations)
                     { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text,
-                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner); }
+                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner, declaration.Role); }
                     unit.ForeignSources.AddRange(group);
                     unit.ForeignUnits.Add(cached.Unit);
                     continue;
@@ -151,6 +151,37 @@ internal static partial class ForeignImporter
                                 "(" + parameters + ") { " + bridge.Body + " }";
                             AddDeclaration(key, declaration, owner: qualified);
                             declarations.Add(new(key, declaration, Owner: qualified));
+                        }
+                        if (!opaqueRecords.Contains(receiver)) continue;
+                        string ownerIdentity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(qualified)))[..24];
+                        string constructorFactory = "__gflat_native_construct_" + ownerIdentity;
+                        foreach (var constructor in RecordConstructors(node, spelling => Type(spelling, scope: scope, allowRecord: true)))
+                        {
+                            string key = qualified + "::.constructor(" + string.Join(",", constructor.Parameters) + ")";
+                            if (importedSymbols.ContainsKey(key)) continue;
+                            importedSymbols.Add(key, constructor.Symbol);
+                            string entry = "__gflat_foreign_" + identity + "_" + index++;
+                            var bridge = CreateCallBridge(entry, "cpp", scope, receiver + "*?", "", constructor.Parameters,
+                                constructor.NativeParameters, recordTypes, arguments => "new " + Text(node, "tagUsed") + " ::" + qualified +
+                                    "(" + string.Join(", ", arguments) + ")");
+                            bridges.Add(entry, bridge.Native);
+                            string declaration = bridge.Extern + "\nprivate " + receiver + "*? " + constructorFactory + "(" +
+                                string.Join(", ", constructor.Parameters.Select((parameter, n) => parameter + " __arg" + n)) + ") { " + bridge.Body + " }";
+                            AddDeclaration(key, declaration, owner: qualified, role: CallableRole.Construction);
+                            declarations.Add(new(key, declaration, Owner: qualified, Role: CallableRole.Construction));
+                        }
+                        string deleteKey = qualified + "::.destruction";
+                        if (HasPublicNativeDestructor(node) && !importedSymbols.ContainsKey(deleteKey))
+                        {
+                            importedSymbols.Add(deleteKey, deleteKey);
+                            string factory = "__gflat_native_destroy_" + ownerIdentity;
+                            string entry = "__gflat_foreign_" + identity + "_" + index++;
+                            var bridge = CreateCallBridge(entry, "cpp", scope, "void", "void", [receiver + "*?"],
+                                [Text(node, "tagUsed") + " ::" + qualified + "*"], recordTypes, arguments => "delete " + arguments[0]);
+                            bridges.Add(entry, bridge.Native);
+                            string declaration = bridge.Extern + "\nprivate void " + factory + "(" + receiver + "*? __arg0) { " + bridge.Body + " }";
+                            AddDeclaration(deleteKey, declaration, owner: qualified, role: CallableRole.Destruction);
+                            declarations.Add(new(deleteKey, declaration, Owner: qualified, Role: CallableRole.Destruction));
                         }
                     }
                 unit.ForeignSources.AddRange(group);
@@ -308,7 +339,7 @@ internal static partial class ForeignImporter
         finally { Directory.Delete(directory, recursive: true); }
 
         void AddDeclaration(string qualified, string declaration, bool isRecord = false,
-            NativeRecordLayout? opaqueLayout = null, string? owner = null)
+            NativeRecordLayout? opaqueLayout = null, string? owner = null, CallableRole role = CallableRole.Member)
         {
             if (isRecord)
             {
@@ -325,9 +356,15 @@ internal static partial class ForeignImporter
             Mark(imported.Members);
             foreach (var ns in imported.Namespaces) Mark(ns.Members);
             foreach (var member in imported.Members)
-                if (owner != null && member is MethodDeclaration)
-                    state.Records[owner].Members.Add(member);
-                else unit.Members.Add(member);
+            {
+                if (owner != null && member is MethodDeclaration method)
+                {
+                    if (role == CallableRole.Member) { state.Records[owner].Members.Add(member); continue; }
+                    if (role == CallableRole.Construction) state.Records[owner].NativeConstructorFactory = method.Name;
+                    else state.Records[owner].NativeDeleteFactory = method.Name;
+                }
+                unit.Members.Add(member);
+            }
             unit.Namespaces.AddRange(imported.Namespaces);
             void Mark(IEnumerable<AstNode> nodes)
             {

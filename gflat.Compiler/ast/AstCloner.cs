@@ -72,7 +72,7 @@ namespace gflat.ast
             }
             List<AstNode> clonedMembers = s.Members.Select(scope.CloneNode).ToList();
             var genericParams = scope.CloneGenericParameters(s.Name, s.GenericParameters, isTypeDeclaration: true);
-            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, scope.CloneAttributes(s), genericParameters: genericParams, sourceName: s.SourceName) { BaseTypes = s.BaseTypes.Select(scope.CloneType).ToList(), NativeOpaqueLayout = s.NativeOpaqueLayout, IsForeignImport = s.IsForeignImport };
+            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, scope.CloneAttributes(s), genericParameters: genericParams, sourceName: s.SourceName) { BaseTypes = s.BaseTypes.Select(scope.CloneType).ToList(), NativeOpaqueLayout = s.NativeOpaqueLayout, IsForeignImport = s.IsForeignImport, NativeConstructorFactory = s.NativeConstructorFactory, NativeDeleteFactory = s.NativeDeleteFactory };
         }
 
         public ClassDeclaration CloneClass(ClassDeclaration c)

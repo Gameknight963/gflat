@@ -2320,6 +2320,8 @@ namespace gflat
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
                         qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
+                        qualifiedStruct.NativeConstructorFactory = nestedStruct.NativeConstructorFactory;
+                        qualifiedStruct.NativeDeleteFactory = nestedStruct.NativeDeleteFactory;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -2425,6 +2427,8 @@ namespace gflat
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
                         qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
+                        qualifiedStruct.NativeConstructorFactory = nestedStruct.NativeConstructorFactory;
+                        qualifiedStruct.NativeDeleteFactory = nestedStruct.NativeDeleteFactory;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -3411,6 +3415,7 @@ namespace gflat
             }
 
             TypeExpression inner = ResolveAlias(ptr.Inner);
+            if (TryCheckNativeDeletion(node, inner)) return;
             RejectNativeOpaqueValue(inner, node.Line);
             RequireMemoryFunction("Free", node);
             if (inner is NamedTypeExpression namedCls && _classes.TryGetValue(namedCls.Name, out ClassInfo? clsInfo))
@@ -4596,7 +4601,7 @@ namespace gflat
             if (TryCheckPrimitiveInterfaceCall(node)) return;
             if (TryCheckExtensionCall(node)) return;
             RecordExceptionCall(node);
-            bool argumentsChecked = checkedExtensionArguments.Contains(node);
+            bool argumentsChecked = checkedExtensionArguments.Contains(node) || checkedNativeArguments.Contains(node);
             void CheckArguments()
             {
                 if (argumentsChecked) return;
@@ -4963,7 +4968,7 @@ namespace gflat
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
             else ValidateReflectionOwnerMethodCall(node, method, []);
-            ValidateNamespaceFunctionAccess(method, node.Callee.Span);
+            ValidateNamespaceFunctionAccess(method, node.Callee.Span, node.Callee);
             _resolvedCalls[node] = method;
             AddDefaultArguments(node.Arguments, declaredMemberParameters.GetValueOrDefault(node) ?? VisibleFunctionParameters(method, node.Callee.Span), node);
 
@@ -5343,6 +5348,7 @@ namespace gflat
                 return;
             }
             TypeExpression resolvedType = ResolveAlias(node.Type);
+            if (TryCheckNativeCreation(node, resolvedType)) return;
             RejectNativeOpaqueValue(resolvedType, node.Line);
             ValidateArrayValueShape(resolvedType, node.Line);
             node.Type = resolvedType;

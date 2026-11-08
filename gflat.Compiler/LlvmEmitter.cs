@@ -3919,6 +3919,15 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
 
+        if (_typeChecker.GetNativeCreation(node) is { } nativeCreation)
+        {
+            nativeCreation.Accept(this);
+            string pointer = Pop();
+            GuardNonNull(pointer, EmitType(_typeChecker.GetType(nativeCreation)));
+            Push(pointer);
+            return;
+        }
+
         TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
         if (resolvedType is not NamedTypeExpression namedType)
         {
@@ -4339,6 +4348,11 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitDelete(DeleteStatement node)
     {
+        if (_typeChecker.GetNativeDeletion(node) is { } nativeDeletion)
+        {
+            nativeDeletion.Accept(this);
+            return;
+        }
         node.Target.Accept(this);
         string ptrVal = Pop();
         TypeExpression ptrType = _typeChecker.GetType(node.Target);

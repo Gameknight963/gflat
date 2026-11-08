@@ -99,12 +99,41 @@ pointers and borrowed host references. Their fields remain opaque. Public
 methods declared on the native type work through native entry points, including
 virtual dispatch. `sizeof` and `alignof` report Clang's native layout.
 
-Keep construction and destruction in native code. Call native factory and
-destruction functions, and keep borrowed pointers within the native object's
-lifetime. Host `new`, `default`, whole-object assignment, `move`, explicit
-destructor calls, and `delete` cannot manage these objects. They cannot be stored
-by value or allocated through a host garbage collector. These restrictions also
-apply through aliases, fields, parameters, and arrays.
+For a C++ class with a supported public constructor, `new* Type(arguments)` uses
+C++ allocation and construction. `delete pointer` invokes C++ deletion when the
+native destructor is public. Virtual destruction stays in C++. Constructor
+failures unwind through the host's cleanup and catch-all handlers. `Unique<T>`
+can own these objects, including early destruction through `Reset()`.
+
+Use the matching native destruction API for library-owned objects. A factory
+result is not automatically an owning allocation suitable for `delete`.
+Keep borrowed pointers within the native object's lifetime. Classes with private
+constructors or destructors still require their native factory/release API.
+
+Opaque objects cannot be constructed as host values, copied, assigned as whole
+objects, relocated with `move`, or allocated through a host garbage collector.
+These restrictions also apply through aliases, fields, parameters, and arrays.
+Placement construction and explicit native destructor calls are not imported yet.
+
+```gflat
+#lang cpp
+namespace Native {
+    class Counter {
+        int value;
+    public:
+        explicit Counter(int initial) : value(initial) {}
+        int Read() const { return value; }
+    };
+}
+#lang gflat
+int main()
+{
+    Native::Counter* counter = new* Native::Counter(42);
+    int value = counter.Read();
+    delete counter;
+    return value - 42;
+}
+```
 
 Native base-pointer conversions and inherited member discovery are not inferred
 yet. Consume a native function returning the appropriate base pointer when
@@ -112,7 +141,7 @@ calling through a base interface. This does not change host-defined class ABIs.
 
 The following are also not imported yet:
 
-- Native constructors, native reference signatures, and function-pointer return types
+- Native reference signatures, copy/move constructors, and function-pointer return types
 - Templates, default arguments, globals, enum declarations, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

@@ -16,7 +16,7 @@ public sealed class NativeOpaqueClassTests
             class Widget : public Base {
                 int value;
             public:
-                explicit Widget(int initial) : value(initial) {}
+                explicit Widget(int initial) : value(initial) { if (initial < 0) throw 7; }
                 ~Widget() override { ++destroyed; }
                 int Read() const override { return value; }
                 void Set(int next) { value = next; }
@@ -41,6 +41,9 @@ public sealed class NativeOpaqueClassTests
     public void NativeFactoriesVirtualDispatchAndDestructionPreserveNativeObjects(int optimization)
     {
         Run(Native + """
+            int evaluations = 0;
+            int Next() { evaluations++; return 42; }
+            Native::Widget* Once(Native::Widget* value) { evaluations++; return value; }
             int ReadBorrowed(ref Native::Base value) => value.Read();
             int main()
             {
@@ -62,7 +65,17 @@ public sealed class NativeOpaqueClassTests
                 if (created.Read() != 42) return 9;
                 Native::Widget::Dispose(created);
                 if (Native::Destroyed() != 3) return 10;
-                return 42;
+                Native::Widget* owned = new* Native::Widget(Next());
+                if (owned.Read() != 42 || evaluations != 1) return 11;
+                delete Once(owned);
+                if (Native::Destroyed() != 4 || evaluations != 2) return 12;
+                try { owned = new* Native::Widget(-1); }
+                catch
+                {
+                    if (Native::Destroyed() != 4) return 13;
+                    return 42;
+                }
+                return 14;
             }
             """, optimization);
     }
@@ -71,11 +84,10 @@ public sealed class NativeOpaqueClassTests
     [InlineData("Native::Widget value;")]
     [InlineData("Native::Widget copy = *value;")]
     [InlineData("Native::Widget copy = default(Native::Widget);")]
-    [InlineData("Native::Widget* created = new* Native::Widget();")]
+    [InlineData("Native::Widget created = new Native::Widget(42);")]
     [InlineData("Native::Widget[2] values;")]
     [InlineData("*value = *value;")]
     [InlineData("move *value;")]
-    [InlineData("delete value;")]
     [InlineData("value.~Native::Widget();")]
     [InlineData("Native::Widget^? tracked = null;")]
     public void NativeLifetimesCannotBeBypassedByHostValueOperations(string statement)

@@ -154,6 +154,8 @@ namespace gflat.semantics
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
                         qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
+                        qualifiedStruct.NativeConstructorFactory = nestedStruct.NativeConstructorFactory;
+                        qualifiedStruct.NativeDeleteFactory = nestedStruct.NativeDeleteFactory;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -263,6 +265,8 @@ namespace gflat.semantics
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
                         qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
+                        qualifiedStruct.NativeConstructorFactory = nestedStruct.NativeConstructorFactory;
+                        qualifiedStruct.NativeDeleteFactory = nestedStruct.NativeDeleteFactory;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }

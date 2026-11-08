@@ -94,6 +94,7 @@ internal static partial class ForeignImporter
                 using var json = JsonDocument.Parse(jsonText);
                 var aliases = new Dictionary<string, string>();
                 var records = new Dictionary<string, string>();
+                var enums = new Dictionary<string, string>();
                 var opaqueRecords = new HashSet<string>();
                 CollectAliases(json.RootElement, "");
                 var seen = new HashSet<string>();
@@ -101,7 +102,15 @@ internal static partial class ForeignImporter
                 int index = 0;
                 var functions = new List<(JsonElement Node, string Scope)>();
                 var recordNodes = new List<(JsonElement Node, string Scope)>();
+                var enumNodes = new List<(JsonElement Node, string Scope)>();
                 Walk(json.RootElement, "");
+                foreach (var item in enumNodes)
+                {
+                    if (ImportEnum(item.Node, item.Scope, spelling => Type(spelling, scope: item.Scope)) is not { } enumeration) continue;
+                    enums[enumeration.Qualified] = enumeration.Type;
+                    AddDeclaration(enumeration.Qualified, enumeration.Declaration, isRecord: true);
+                    declarations.Add(new(enumeration.Qualified, enumeration.Declaration, IsRecord: true));
+                }
                 var importedRecords = recordNodes.Select(item => ImportRecord(item.Node, item.Scope, layouts,
                     spelling => Type(spelling, scope: item.Scope)) ?? ImportOpaqueRecord(item.Node, item.Scope, layouts))
                     .OfType<ImportedRecord>().ToArray();
@@ -212,6 +221,7 @@ internal static partial class ForeignImporter
                 {
                     string kind = Text(node, "kind");
                     if (kind == "FunctionDecl") { functions.Add((node, scope)); return; }
+                    if (kind == "EnumDecl") { enumNodes.Add((node, scope)); return; }
                     if (kind is "RecordDecl" or "CXXRecordDecl") { recordNodes.Add((node, scope)); return; }
                     if (kind == "NamespaceDecl")
                     {
@@ -257,6 +267,7 @@ internal static partial class ForeignImporter
                     if (readOnly) spelling = spelling.StartsWith("const ", StringComparison.Ordinal) ? spelling[6..] : spelling[..^6];
                     if (spelling.StartsWith("struct ", StringComparison.Ordinal)) spelling = spelling[7..];
                     else if (spelling.StartsWith("class ", StringComparison.Ordinal)) spelling = spelling[6..];
+                    else if (spelling.StartsWith("enum ", StringComparison.Ordinal)) spelling = spelling[5..];
                     string? primitive = spelling.Trim() switch
                     {
                         "void" => "void", "bool" or "_Bool" => "bool", "char" => "char",
@@ -271,7 +282,7 @@ internal static partial class ForeignImporter
                     string alias = spelling.StartsWith("::", StringComparison.Ordinal) ? spelling[2..] : spelling;
                     for (string parent = scope; parent.Length > 0;)
                     {
-                        if (aliases.ContainsKey(parent + "::" + alias) || records.ContainsKey(parent + "::" + alias))
+                        if (aliases.ContainsKey(parent + "::" + alias) || records.ContainsKey(parent + "::" + alias) || enums.ContainsKey(parent + "::" + alias))
                         { alias = parent + "::" + alias; break; }
                         int separator = parent.LastIndexOf("::", StringComparison.Ordinal);
                         parent = separator < 0 ? "" : parent[..separator];
@@ -286,6 +297,7 @@ internal static partial class ForeignImporter
                     }
                     if (primitive == null && allowRecord && records.TryGetValue(alias, out var record) &&
                         (allowOpaqueRecord || !opaqueRecords.Contains(record))) primitive = record;
+                    if (primitive == null && enums.TryGetValue(alias, out var enumeration)) primitive = enumeration;
                     return primitive == null ? null : readOnly && primitive != "void" ? "readonly(" + primitive + ")" : primitive;
                 }
 

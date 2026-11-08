@@ -72,6 +72,15 @@ Functions are called by their declared names without handwritten foreign
 declarations. The compiler generates native ABI entry points as needed. Only
 entry points referenced by the emitted program are compiled.
 
+## Imported enums
+
+Named C++ enums with a fixed underlying integer type are imported as host enums,
+including scoped enums whose underlying type defaults to `int`. Their constants
+and storage width come from Clang. Use `EnumType::Member` in host code. These
+enums can cross native function and method calls by value, pointer, or lvalue
+reference. Enums whose storage type is selected by the native compiler are not
+imported yet.
+
 ## Imported records
 
 Named C structs and trivial C++ structs or classes with public scalar and pointer

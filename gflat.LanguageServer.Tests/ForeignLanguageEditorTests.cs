@@ -5,6 +5,30 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void NativeEnumConstantsAndFunctionParametersHaveTypeAwareHovers()
+    {
+        const string text = """
+            #lang cpp
+            namespace Native {
+                enum class Mode : unsigned short { Answer = 42 };
+                Mode Echo(Mode input) { return input; }
+            }
+            #lang gflat
+            int main() => (int)Native::Echo(Native::Mode::Answer);
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-enum-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        string member = JsonSerializer.Serialize(model.Hover(source.Path, text.LastIndexOf("Answer", StringComparison.Ordinal)));
+        Assert.Contains("Mode", member);
+        Assert.Contains("Answer", member);
+        string signature = JsonSerializer.Serialize(model.SignatureHelp(source.Path, text.LastIndexOf("Echo(", StringComparison.Ordinal) + 5));
+        Assert.Contains("Mode", signature);
+        Assert.Contains("input", signature);
+    }
+
+    [Fact]
     public void NativeConstructionShowsPublicConstructorAndOriginalParameterName()
     {
         const string text = """

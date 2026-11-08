@@ -2,6 +2,7 @@
   <Rule.DataSource><DataSource Persistence="ProjectFile" HasConfigurationCondition="false" /></Rule.DataSource>
   <EnumProperty Name="OutputType" DisplayName="Output type">
     <EnumValue Name="Executable" DisplayName="Executable" /><EnumValue Name="SourceLibrary" DisplayName="Source library" />
+    <EnumValue Name="StaticLibrary" DisplayName="Static library" /><EnumValue Name="DynamicLibrary" DisplayName="Dynamic library" />
   </EnumProperty>
   <BoolProperty Name="NoStdLib" DisplayName="Exclude standard library" Description="Compile only the explicitly selected sources and project references. No bundled std declarations are added." />
   <BoolProperty Name="NoBuiltins" DisplayName="Disable libc builtin recognition" Description="Prevent LLVM recognizing libc builtin patterns. Defaults to false, independently of NoStdLib. Explicit calls and intrinsics may still require runtime helpers." />

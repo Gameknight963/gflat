@@ -20,6 +20,7 @@ public static class Program
             var sourcePaths = new List<string>();
             string? outputPath = null, clang = null;
             string configuration = "Debug", platform = "AnyCPU";
+            string outputType = "Executable";
             bool run = false, irOnly = false, check = false, clean = false, noStdLib = false;
             bool explicitConfiguration = false, explicitPlatform = false;
             string? projectPath = null;
@@ -50,6 +51,7 @@ public static class Program
                         Console.WriteLine("Libc builtin recognition: --no-builtins disables it; --builtins overrides the project's NoBuiltins setting. Explicit calls/intrinsics may still require runtime helpers.");
                         Console.WriteLine("Native linking: repeat --native-library NAME, --native-library-file PATH, and --native-library-dir PATH. Project options append to declared requirements.");
                         Console.WriteLine("Source lists contain one source-file path per line. Pass project files directly.");
+                        Console.WriteLine("Binary output: --output-type Executable|StaticLibrary|DynamicLibrary. Projects use the OutputType property.");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
@@ -62,6 +64,11 @@ public static class Program
                     case "--no-builtins": noBuiltins = true; break;
                     case "--builtins": noBuiltins = false; break;
                     case "-o": outputPath = Value(); break;
+                    case "--output-type":
+                        outputType = Value();
+                        if (outputType is not ("Executable" or "StaticLibrary" or "DynamicLibrary"))
+                            throw new ArgumentException("Output type must be Executable, StaticLibrary, or DynamicLibrary.");
+                        break;
                     case "--clang": clang = Value(); break;
                     case "--exception-reserve-bytes": exceptionReserveBytes = ExceptionReserve.Parse(Value()); break;
                     case "--optimization": optimizationLevel = OptimizationLevel.Parse(Value()); break;
@@ -118,10 +125,16 @@ public static class Program
                 graph = ProjectGraph.Load(projectPath, (path, asReference) => !asReference ? root
                     : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference: true, debugSymbols: debugSymbols, noBuiltins: noBuiltins));
                 sourcePaths = graph.Sources.ToList();
-                if (graph.Root.Kind == ProjectKind.Executable)
+                if (graph.Root.Kind != ProjectKind.SourceLibrary)
+                {
+                    if (args.Contains("--output-type") && outputType != graph.Root.Kind.ToString())
+                        throw new ArgumentException("Set OutputType in the project rather than overriding its artifact type on the command line.");
+                    outputType = graph.Root.Kind.ToString();
                     outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
+                }
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
                 {
+                    if (args.Contains("--output-type")) throw new ArgumentException("Set OutputType in the project to build a binary library.");
                     if (run || irOnly || args.Contains("-o")) throw new ArgumentException("SourceLibrary projects have no standalone output; build an executable referencing them.");
                 }
             }
@@ -135,11 +148,14 @@ public static class Program
             if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (check && (run || irOnly)) throw new ArgumentException("--check cannot be combined with --run or --emit-ir.");
             if (run && irOnly) throw new ArgumentException("--run cannot be combined with --emit-ir.");
+            if (run && outputType != "Executable") throw new ArgumentException("--run requires executable output.");
             if (graph?.Root.Kind == ProjectKind.SourceLibrary)
                 return ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
                     clang: clang, exceptionReserveBytes: exceptionReserveBytes, optimizationLevel: optimizationLevel,
                     sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs, preprocessorOverrides: preprocessing);
-            outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : ".exe"));
+            string extension = outputType switch { "StaticLibrary" => OperatingSystem.IsWindows() ? ".lib" : ".a",
+                "DynamicLibrary" => OperatingSystem.IsWindows() ? ".dll" : ".so", _ => ".exe" };
+            outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : extension));
             var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
                 throw new ArgumentException("A source file may only be supplied once.");
@@ -173,7 +189,7 @@ public static class Program
             var included = new HashSet<string>(pathComparer);
             var compilationOptions = new CompilationOptions
             {
-                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
+                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly && outputType == "Executable", DebugSymbols = debugSymbols == true,
                 IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
                 FileDeclarationScopes = preprocessing.DeclarationScopes.ToDictionary(pair => pair.Key,
                     pair => Enum.Parse<DeclarationScope>(pair.Value), pathComparer),
@@ -209,6 +225,17 @@ public static class Program
                     throw new ArgumentException("PDB and dependency outputs must use different paths.");
                 if (included.Contains(pdb)) throw new ArgumentException("PDB output must differ from included source files.");
             }
+            if (OperatingSystem.IsWindows() && !irOnly && outputType == "DynamicLibrary")
+            {
+                foreach (string suffix in new[] { ".lib", ".exp" })
+                {
+                    string companion = Path.ChangeExtension(outputPath, suffix);
+                    ValidateOutput(companion);
+                    if (pathComparer.Equals(companion, outputPath) || included.Contains(companion) || pathComparer.Equals(companion, dependencyFile) ||
+                        pathComparer.Equals(companion, dependencyFile == null ? null : dependencyFile + ".state"))
+                        throw new ArgumentException("Library companion outputs must differ from the library, included files, and dependency outputs.");
+                }
+            }
             WriteDependencies();
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             if (irOnly)
@@ -226,7 +253,11 @@ public static class Program
             try
             {
                 File.WriteAllText(temporaryIr, ir);
-                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits);
+                ProcessResult compiled = outputType == "StaticLibrary"
+                    ? NativeToolchain.CompileStaticLibrary(temporaryIr, outputPath, clang,
+                        optimizationLevel ?? OptimizationLevel.Parse(Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0"),
+                        program.ForeignUnits, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes)
+                    : NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits, sharedLibrary: outputType == "DynamicLibrary");
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
                 return NativeToolchain.RunProgram(outputPath, programArguments);

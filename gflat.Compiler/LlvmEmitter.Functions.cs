@@ -36,7 +36,8 @@ public partial class LlvmEmitter
         var function = new FunctionEmission(_output, exceptionBoundary);
         _functions.Push(function);
         _output = function.Output;
-        string linkage = _internalizeFunctions && !isEntryPoint ? "internal " : "";
+        bool moduleHelper = name is "gflat_get_parent_vtable" or "gflat_is_instance" or "gflat_destroy_exception";
+        string linkage = moduleHelper || _internalizeFunctions && !isEntryPoint ? "internal " : "";
         string header = $"define {linkage}{returnType} @{name}({parameters})" + (inline ? " inlinehint" : "");
         if (exceptionBoundary) header += " nounwind";
         header += NoBuiltinsAttribute;

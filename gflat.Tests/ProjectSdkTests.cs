@@ -267,10 +267,10 @@ public sealed class ProjectSdkTests
         {
             string project = Path.Combine(root, "bad.gfproj");
             File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports($"<Project><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>"));
-            Assert.Contains("OutputType must be Executable or SourceLibrary", Assert.Throws<ProjectException>(() => ProjectModel.Load(project)).Message);
+            Assert.Contains("OutputType must be Executable, SourceLibrary, StaticLibrary, or DynamicLibrary", Assert.Throws<ProjectException>(() => ProjectModel.Load(project)).Message);
             var result = NativeToolchain.Run("dotnet", ["msbuild", project, "-nologo", "-v:q", "-t:GflatGetSources"], 30000);
             Assert.NotEqual(0, result.ExitCode);
-            Assert.Contains("OutputType must be Executable or SourceLibrary", result.StandardOutput + result.StandardError);
+            Assert.Contains("OutputType must be Executable, SourceLibrary, StaticLibrary, or DynamicLibrary", result.StandardOutput + result.StandardError);
         }
         finally { Directory.Delete(root, true); }
     }

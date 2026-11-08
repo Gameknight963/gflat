@@ -97,6 +97,17 @@ without separately building or checking the library first.
 Project references name source libraries. Transitive references are supported,
 diamond dependencies are deduplicated, and cycles are rejected.
 
+`StaticLibrary` produces a native archive (`.lib` on Windows, `.a` on Linux).
+`DynamicLibrary` produces a `.dll` with an import `.lib` on Windows or a `.so`
+on Linux. These outputs contain compiled code. Callers provide declarations and
+link the archive or import library through `NativeLibraryFile`. Binary project
+reference interfaces are not available yet.
+
+For individual source files, use `--output-type StaticLibrary` or
+`--output-type DynamicLibrary`. A library cannot be launched with `--run`.
+Native C++ consumers should link with their C++ driver when the library uses
+the exception runtime or C++ source sections.
+
 ## Standard library selection
 
 Projects reference the bundled `Standard/Standard.gfproj` by default.

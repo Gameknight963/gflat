@@ -84,6 +84,7 @@ internal static class NativeRuntime
     {
         var args = new List<string> { cpp ? "--driver-mode=g++" : "--driver-mode=gcc", cpp ? "-std=c++17" : "-std=c11", "-O2" };
         if (cpp) args.Add("-fexceptions");
+        if (OperatingSystem.IsLinux()) args.Add("-fPIC");
         args.AddRange(["-ffunction-sections", "-fdata-sections", "-c", source, "-o", output]);
         args.AddRange(options);
         args.AddRange(hostArguments);

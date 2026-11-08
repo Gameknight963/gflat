@@ -1,6 +1,6 @@
 namespace gflat.Projects;
 
-public enum ProjectKind { Executable, SourceLibrary }
+public enum ProjectKind { Executable, SourceLibrary, StaticLibrary, DynamicLibrary }
 
 public sealed class ProjectException(string path, string message, int line = 1, int column = 1) : Exception(message)
 {

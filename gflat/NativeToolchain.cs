@@ -4,7 +4,7 @@ namespace gflat;
 
 public record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
-public static class NativeToolchain
+public static partial class NativeToolchain
 {
     private static readonly Lazy<string> DefaultClang = new(DiscoverClang);
     private static readonly Lazy<string?> LibraryDirectory = new(() => FindMsvcLibraryDirectory(VisualStudioInstallations()));
@@ -148,7 +148,7 @@ public static class NativeToolchain
     }
 
     public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null, gflat.Projects.NativeLinkInputs? nativeLibraries = null,
-        IReadOnlyList<ForeignTranslationUnit>? foreignUnits = null)
+        IReadOnlyList<ForeignTranslationUnit>? foreignUnits = null, bool sharedLibrary = false)
     {
         string optimization = optimizationLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
         using var timing = PipelineTimings.Measure("native.compile-link", $"O{optimization}, {(optimizationLevel.HasValue ? "explicit" : "default")}");
@@ -161,9 +161,21 @@ public static class NativeToolchain
         var (exceptions, stdio) = RequiredNativeRuntimes(ir);
         if (linkInputs.Libraries.Any(library => library.Kind == "File" &&
             (paths.Equals(library.Value, fullOutput) ||
+             (sharedLibrary && OperatingSystem.IsWindows() && paths.Equals(library.Value, Path.ChangeExtension(fullOutput, ".lib"))) ||
              (debug && OperatingSystem.IsWindows() && paths.Equals(library.Value, Path.ChangeExtension(fullOutput, ".pdb"))))))
             throw new ArgumentException("Output must differ from native library files.");
         var args = new List<string> { irPath, "-O" + optimization, "-o", outputPath };
+        if (sharedLibrary)
+        {
+            args.Add("-shared");
+            if (OperatingSystem.IsLinux()) args.Add("-fPIC");
+            if (OperatingSystem.IsWindows())
+            {
+                args.AddRange(["-Xlinker", "/IMPLIB:" + Path.ChangeExtension(fullOutput, ".lib")]);
+                foreach (string symbol in ExportedSymbols(ir)) args.AddRange(["-Xlinker", "/EXPORT:" + symbol]);
+            }
+            else args.AddRange(["-Xlinker", "-soname", "-Xlinker", Path.GetFileName(fullOutput)]);
+        }
         AddUnusedCodeElimination(args);
         // Runtime compilation supplies a matched native header/library toolset below.
         // Do not prepend a different, possibly headerless bare-link fallback.
@@ -197,6 +209,10 @@ public static class NativeToolchain
             args.AddRange(NativeRuntime.HostArguments(requireCppHeaders: exceptions || foreignCpp));
         }
         AddNativeLibraries(args, linkInputs);
+        if (OperatingSystem.IsLinux())
+            foreach (string directory in linkInputs.Libraries.Where(library => library.Kind == "File" && library.Value.Contains(".so", StringComparison.Ordinal))
+                .Select(library => Path.GetDirectoryName(library.Value)!).Distinct())
+                args.AddRange(["-Xlinker", "-rpath", "-Xlinker", directory]);
         // LLVM may lower floating remainder to fmod/fmodf. A bare program uses
         // the C driver, which doesn't add libm as the C++ driver does on Linux.
         if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
@@ -218,6 +234,7 @@ public static class NativeToolchain
                 compile.AddRange(NativeRuntime.HostCompilerArguments(unit.Language == "cpp"));
                 compile.AddRange(["-x", unit.Language == "cpp" ? "c++" : "c", "-c", source, "-O" + optimization, "-o", obj]);
                 compile.AddRange(["-ffunction-sections", "-fdata-sections"]);
+                if (sharedLibrary && OperatingSystem.IsLinux()) compile.Add("-fPIC");
                 if (debug) compile.Add("-g");
                 ProcessResult result = Run(compiler, compile, 60000);
                 if (result.ExitCode != 0) return result;

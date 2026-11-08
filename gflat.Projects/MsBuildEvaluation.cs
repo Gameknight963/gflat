@@ -26,14 +26,16 @@ internal static class MsBuildEvaluation
             {
                 "executable" => ProjectKind.Executable,
                 "sourcelibrary" => ProjectKind.SourceLibrary,
-                _ => throw new ProjectException(path, "OutputType must be Executable or SourceLibrary. Import Gflat.props and Gflat.targets.")
+                "staticlibrary" => ProjectKind.StaticLibrary,
+                "dynamiclibrary" => ProjectKind.DynamicLibrary,
+                _ => throw new ProjectException(path, "OutputType must be Executable, SourceLibrary, StaticLibrary, or DynamicLibrary.")
             };
             if (!bool.TryParse(project.GetPropertyValue("NoStdLib"), out bool excludesStd))
                 throw new ProjectException(path, "NoStdLib must be true or false.");
             if (!bool.TryParse(project.GetPropertyValue("NoBuiltins"), out bool disablesBuiltins))
                 throw new ProjectException(path, "NoBuiltins must be true or false.");
-            string? target = kind == ProjectKind.Executable ? project.GetPropertyValue("TargetPath") : null;
-            if (kind == ProjectKind.Executable && string.IsNullOrEmpty(target))
+            string? target = kind != ProjectKind.SourceLibrary ? project.GetPropertyValue("TargetPath") : null;
+            if (kind != ProjectKind.SourceLibrary && string.IsNullOrEmpty(target))
                 throw new ProjectException(path, "TargetPath is missing. Import Gflat.targets.");
             string[] Files(string type) => project.GetItems(type).Select(i => i.GetMetadataValue("FullPath"))
                 .Distinct(ProjectModel.Paths).ToArray();

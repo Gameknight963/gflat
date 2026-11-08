@@ -109,9 +109,11 @@ public sealed class NativeConstructorTests
                     if (owner.Value.Read() != 42) return 1;
                     owner.Reset();
                     if (!owner.IsEmpty || Destroyed() != 1) return 2;
-                    owner = new Unique<Widget>(new* Widget(42));
+                    owner.Reset(new* Widget(42));
+                    owner.Reset(new* Widget(43));
+                    if (Destroyed() != 2 || owner.Value.Read() != 43) return 3;
                 }
-                if (Destroyed() != 2) return 3;
+                if (Destroyed() != 3) return 4;
                 return 42;
             }
             """, optimization, unique: true);

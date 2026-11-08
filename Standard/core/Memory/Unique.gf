@@ -20,10 +20,15 @@ public struct Unique<T>
     }
 
     // Deletes the owned object now and leaves an empty, reusable owner.
-    public void Reset()
+    public void Reset() => this.Reset(null);
+
+    // Takes ownership before deleting the previous object.
+    // Passing the current pointer does nothing.
+    public void Reset(T*? value)
     {
+        if (storage == value) return;
         T*? previous = storage;
-        storage = null;
+        storage = value;
         if (previous != null) delete previous!;
     }
 

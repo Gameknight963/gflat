@@ -29,6 +29,7 @@ int main() {
 | `Value` | Borrows the object as `ref T` |
 | `ValueImmutable` | Borrows as `ref immutable(T)` |
 | `Reset()` | Deletes the object and leaves an empty owner |
+| `Reset(T*? pointer)` | Adopts a replacement and deletes the previous object |
 | `Swap(ref other)` | Exchanges deletion responsibility without moving the objects |
 
 Adopt a pointer for which ordinary `delete` is valid, usually from `new*`.
@@ -82,6 +83,11 @@ that code takes ownership. An unowned interval has no automatic cleanup.
 Use `Reset()` to end the object's lifetime before the owner leaves scope. Resetting
 an empty owner does nothing. The owner remains usable and can receive another
 owning value through assignment.
+
+`Reset(pointer)` takes deletion responsibility for a replacement before destroying
+the previous object. Passing null empties the owner. Passing its current pointer
+leaves it unchanged. If creating the argument fails, the previous object remains
+owned because the call has not begun.
 
 `Swap(ref other)` exchanges two owners without allocating, copying, or relocating
 their pointees. Borrowed pointers retain their addresses, but the other owner now

@@ -4,6 +4,80 @@ namespace gflat.Tests.Std.Memory;
 
 public sealed class UniqueResetSwapTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ResetAdoptsReplacementAndIgnoresItsCurrentPointer(int optimization)
+    {
+        Run("""
+            using Standard::Memory;
+
+            int destroyed = 0;
+            struct Payload
+            {
+                public int Number;
+                public Payload(int number) { Number = number; }
+                ~Payload() { destroyed += Number; }
+            }
+            int main()
+            {
+                {
+                    Unique<Payload> owner = new(new* Payload(7));
+                    Payload* original = &owner.Value;
+                    owner.Reset(original);
+                    if (&owner.Value != original || destroyed != 0) return 1;
+                    Payload* replacement = new* Payload(42);
+                    owner.Reset(replacement);
+                    if (&owner.Value != replacement || destroyed != 7) return 2;
+                    owner.Reset(null);
+                    if (!owner.IsEmpty || destroyed != 49) return 3;
+                    owner.Reset(null);
+                    owner.Reset(new* Payload(3));
+                }
+                if (destroyed != 52) return 4;
+                return 0;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void FailedReplacementConstructionPreservesTheCurrentOwner(int optimization)
+    {
+        Run("""
+            using Standard;
+            using Standard::Memory;
+
+            int destroyed = 0;
+            struct Payload
+            {
+                public int Number;
+                public Payload(int number, bool fail)
+                {
+                    Number = number;
+                    if (fail) throw new Exception("construct", 73);
+                }
+                ~Payload() { destroyed++; }
+            }
+            int main()
+            {
+                {
+                    Unique<Payload> owner = new(new* Payload(7, false));
+                    Payload* original = &owner.Value;
+                    bool caught = false;
+                    try { owner.Reset(new* Payload(99, true)); }
+                    catch (ref Exception error) { caught = error.GetCode() == 73; }
+                    if (!caught || destroyed != 0 || &owner.Value != original || owner.Value.Number != 7) return 1;
+                    owner.Reset(new* Payload(42, false));
+                    if (destroyed != 1 || owner.Value.Number != 42) return 2;
+                }
+                if (destroyed != 2) return 3;
+                return 0;
+            }
+            """, optimization);
+    }
+
     [Fact]
     public void GuideExampleCompiles() => StandardLibraryGuideTests.CheckProgram("UNIQUE.md", 2);
 

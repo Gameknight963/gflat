@@ -195,8 +195,10 @@ int main()
     @'
 namespace LibraryInterop
 {
+    public enum Status : byte { Answer = 42 }
     public void Increment(ref int value) nothrow { value++; }
     public int Read(ref readonly(int) value) nothrow => value;
+    public Status GetStatus() nothrow => Status::Answer;
 }
 '@ | Set-Content -LiteralPath $binarySource -Encoding Ascii
     foreach ($kind in @('StaticLibrary', 'DynamicLibrary')) {
@@ -212,7 +214,7 @@ namespace LibraryInterop
             throw "Packaged $kind CMake import is missing its target"
         }
         $consumer = Join-Path $extracted ($stem + '-consumer.gf')
-        $body = 'int main() { int value = 41; LibraryInterop::Increment(ref value); return LibraryInterop::Read(ref value) - 42; }'
+        $body = 'int main() { if (LibraryInterop::GetStatus() != LibraryInterop::Status::Answer) return 1; int value = 41; LibraryInterop::Increment(ref value); return LibraryInterop::Read(ref value) - 42; }'
         $body | Set-Content -LiteralPath $consumer -Encoding Ascii
         & $compiler $consumer --no-stdlib --library-interface ($binary + '.gfi') -o (Join-Path $extracted ($stem + '-consumer.exe')) --run
         if ($LASTEXITCODE -ne 0) { throw "Packaged $kind binary interface consumer failed" }
@@ -789,6 +791,12 @@ int SmokeCore() {
     borrowedOwner.Value++;
     Unique<int> transferredOwner = move firstOwner;
     if (transferredOwner.IsEmpty || transferredOwner.Value != 42) return 50;
+    Unique<int> emptyPointerOwner = new();
+    if (emptyPointerOwner.Get() != null || emptyPointerOwner.GetImmutable() != null || *transferredOwner.GetImmutable()! != 42) return 19001;
+    transferredOwner.Reset(new* int(44));
+    if (*transferredOwner.Get()! != 44) return 19002;
+    transferredOwner.Reset();
+    if (transferredOwner.Get() != null || transferredOwner.GetImmutable() != null) return 19003;
     Vector<String> fragments = new(); fragments.Add(s"left"); fragments.Add(s"right");
     String joined = fragments.AsImmutable().Join(",");
     if (!CString::Equals(joined.Data, "left,right")) return 52;

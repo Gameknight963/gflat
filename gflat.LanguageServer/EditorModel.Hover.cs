@@ -313,6 +313,15 @@ public sealed partial class EditorModel
             }
             Add("}", "punctuation");
         }
+        if (symbol.Syntax.Node is EnumMemberDeclaration member && snapshot.Checker is { } enumChecker &&
+            Parents(symbol.Syntax).Select(parent => parent.Node).OfType<EnumDeclaration>().FirstOrDefault() is { } enumeration &&
+            enumChecker.GetEnum(enumeration.Name) is { } enumInfo && enumInfo.Members.TryGetValue(member.Name, out long enumValue))
+        {
+            Add(" = ", "punctuation");
+            Add(enumChecker.IsUnsignedInteger(enumInfo.UnderlyingType)
+                ? unchecked((ulong)enumValue).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : enumValue.ToString(System.Globalization.CultureInfo.InvariantCulture), "number");
+        }
         return parts.ToArray();
     }
 

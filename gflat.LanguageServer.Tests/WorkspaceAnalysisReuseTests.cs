@@ -33,6 +33,7 @@ public sealed class WorkspaceAnalysisReuseTests : IDisposable
         Assert.NotSame(first.Snapshot, changed.Snapshot);
         Assert.Empty(changed.Snapshot.Diagnostics);
         Assert.Equal(41L, changed.Snapshot.Checker!.GetEnum("Status")!.Members["Answer"]);
+        Assert.Contains(" = 41", JsonSerializer.Serialize(changed.Model.Hover(caller.Path, member), Protocol.JsonOptions));
     }
 
     [Fact]

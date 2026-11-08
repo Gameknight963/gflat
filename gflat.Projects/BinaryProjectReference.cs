@@ -30,7 +30,7 @@ public sealed class BinaryProjectReference
             var root = XElement.Load(InterfacePath);
             RuntimeLibrary = (string?)root.Attribute("RuntimeLibrary");
             if (RuntimeLibrary != null) RuntimeLibrary = gflat.Projects.RuntimeLibrary.Parse(RuntimeLibrary);
-            if (root.Name != "GflatInterface" || (string?)root.Attribute("Version") != "1")
+            if (root.Name != "GflatInterface" || (string?)root.Attribute("Version") is not ("1" or "2"))
                 throw new InvalidDataException("Unsupported binary library interface: " + InterfacePath);
             foreach (var library in root.Element("NativeLibraries")?.Elements("Library") ?? Enumerable.Empty<XElement>())
             {

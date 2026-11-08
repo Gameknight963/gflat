@@ -45,6 +45,7 @@ public sealed class BinaryLibraryReferenceTests : IDisposable
         string library = Path.Combine(root, OperatingSystem.IsWindows() ? "answer.lib" : "libanswer.a");
         Assert.Equal(0, Program.Main([source, "--no-stdlib", "--output-type", "StaticLibrary", "-o", library]));
         Assert.DoesNotContain("Hidden", File.ReadAllText(library + ".gfi.gfh"));
+        Assert.Equal("1", (string?)System.Xml.Linq.XElement.Load(library + ".gfi").Attribute("Version"));
         string cpp = Write("consumer.cpp", "#include \"" + library.Replace('\\', '/') + ".hpp\"\nint main() { int value = 41; Example::Increment(value); return Example::Answer(Example::Read(value)); }");
         string executable = Path.Combine(root, "consumer.exe");
         var linked = NativeToolchain.CompileCpp(cpp, executable, [library]);
@@ -61,7 +62,7 @@ public sealed class BinaryLibraryReferenceTests : IDisposable
     [InlineData("DynamicLibrary")]
     public void IncludedDefinitionsBelongToTheirExportingRoot(string kind)
     {
-        Write("library/api.gfh", "namespace Included { int Answer() => 42; }");
+        Write("library/api.gfh", "namespace Included { public enum Status : byte { Answer = 42 } Status Answer() => Status::Answer; }");
         string source = Write("library/main.gf", "#include \"api.gfh\"\n");
         string library = Path.Combine(root, OperatingSystem.IsWindows() ? "included." + (kind == "StaticLibrary" ? "lib" : "dll") :
             "libincluded." + (kind == "StaticLibrary" ? "a" : "so"));
@@ -69,7 +70,7 @@ public sealed class BinaryLibraryReferenceTests : IDisposable
         Assert.Contains("Answer", File.ReadAllText(library + ".gfi.gfh"));
         File.Delete(source);
         File.Delete(Path.Combine(root, "library", "api.gfh"));
-        string consumer = Write("consumer.gf", "int main() => Included::Answer();");
+        string consumer = Write("consumer.gf", "int main() => (int)Included::Answer();");
         string executable = Path.Combine(root, "consumer.exe");
         Assert.Equal(0, Program.Main([consumer, "--no-stdlib", "--library-interface", library + ".gfi", "-o", executable]));
         Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);

@@ -1,9 +1,40 @@
 using gflat.TestSupport;
+using System.Text.Json;
 
 namespace gflat.LanguageServer.Tests;
 
 public sealed class WorkspaceAnalysisReuseTests : IDisposable
 {
+    [Fact]
+    public void BinaryEnumInterfacesProvideNavigationAndInvalidateEvaluatedMembers()
+    {
+        string implementation = Path.Combine(root, "enum-library.gf"), metadata = Path.Combine(root, "enum-library.lib.gfi");
+        void Publish(int value)
+        {
+            var source = new SourceFile(implementation, $"public enum Status : byte {{ Answer = {value} }} public Status Echo(Status value) => value;");
+            var program = Compiler.EmitProgram([source], options: new() { NoStdLib = true, ExportSources = [implementation] });
+            Directory.CreateDirectory(root);
+            File.WriteAllText(metadata, program.Interface!.ToXml().ToString());
+            File.WriteAllText(metadata + ".gfh", program.Interface.HeaderText);
+        }
+        Publish(42);
+        var caller = new SourceFile(Path.Combine(root, "enum-main.gf"), "int main() => (int)Echo(Status::Answer);");
+        var options = new CompilationOptions { NoStdLib = true, BinaryInterfaces = [metadata] };
+        var cache = new WorkspaceAnalysisCache();
+        var first = cache.Get([caller], options);
+        Assert.Empty(first.Snapshot.Diagnostics);
+        int member = caller.Text.IndexOf("Answer", StringComparison.Ordinal);
+        Assert.Contains("Status", JsonSerializer.Serialize(first.Model.Hover(caller.Path, member), Protocol.JsonOptions));
+        Assert.Contains(Workspace.FileUri(metadata + ".gfh"), JsonSerializer.Serialize(first.Model.Definition(caller.Path, member), Protocol.JsonOptions));
+        Assert.DoesNotContain(first.Snapshot.Sources, source => Workspace.Paths.Equals(source.Path, implementation));
+        Assert.Same(first.Snapshot, cache.Get([caller], options).Snapshot);
+        Publish(41);
+        var changed = cache.Get([caller], options);
+        Assert.NotSame(first.Snapshot, changed.Snapshot);
+        Assert.Empty(changed.Snapshot.Diagnostics);
+        Assert.Equal(41L, changed.Snapshot.Checker!.GetEnum("Status")!.Members["Answer"]);
+    }
+
     [Fact]
     public void BinaryInterfacesSupportNavigationAndInvalidateWhenRebuilt()
     {

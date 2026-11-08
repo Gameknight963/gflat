@@ -107,11 +107,16 @@ copied beside the consuming artifact.
 Binary builds generate `.gfi` interface metadata, a `.gfi.gfh` declaration header,
 and a `.hpp` header for C++ callers beside the artifact. A `.cmake` companion
 imports the binary and its native dependencies into CMake. The initial interface
-exports public namespace functions with scalar and raw-pointer signatures,
+exports public namespace functions with scalar, public enum, and raw-pointer signatures,
 including `ref` parameters to those types. The C++ header exposes these parameters
 as lvalue references and retains readonly access as `const`.
 Declarations retain exact linker names, overloads, and representable constant
-defaults. Generic bodies, compile-time functions, and type declarations require
+defaults. Public namespace enums retain their storage type and evaluated member
+values. These enums must belong to the exporting project's sources. Storage
+aliases and constant expressions are resolved before export.
+The C++ header uses scoped enums. Enum and member names must be usable as C++
+identifiers. Private enums cannot appear in an exported function signature.
+Generic bodies, compile-time functions, classes, structs, and nested types require
 source libraries. Generated declaration headers open read-only in Visual Studio.
 
 For a distributed binary, pass `--library-interface path/to/library.lib.gfi`.

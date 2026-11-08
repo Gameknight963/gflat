@@ -76,7 +76,12 @@ public sealed class NativeRecordImportTests
             var options = Options() with { IncludeDirectories = [root] };
             for (int iteration = 0; iteration < 2; iteration++)
             {
-                var checkedProgram = Compiler.Check(new SourceFile(Path.Combine(root, "main.gf"), code), options: options);
+                var checkedProgram = Compiler.Check(new[]
+                {
+                    new SourceFile(Path.Combine(root, "main.gf"), code),
+                    new SourceFile(Path.Combine(root, "second.gf"),
+                        "#lang cpp\n#include \"native-record-shared.gfh\"\nShared* Second(Shared* p) { return p; }")
+                }, options: options);
                 Assert.Single(checkedProgram.Ast.Members.OfType<ast.StructDeclaration>(), declaration => declaration.Name == "Shared");
                 checkedProgram.Ast.Members.Clear();
             }

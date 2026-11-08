@@ -20,11 +20,12 @@ internal static partial class ForeignImporter
 
     internal static void Import(CompilationUnit unit, IReadOnlyList<ForeignSource> segments,
         CompilationOptions options, DiagnosticBag diagnostics, Action<string> dependency,
-        CancellationToken cancellation, Dictionary<string, string>? importedSymbols = null)
+        CancellationToken cancellation, Dictionary<string, string>? importedSymbols = null,
+        Dictionary<string, string>? recordDeclarations = null)
     {
         if (segments.Count == 0) return;
         importedSymbols ??= new();
-        var recordDeclarations = new Dictionary<string, string>();
+        recordDeclarations ??= new();
         string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try

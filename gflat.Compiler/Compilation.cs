@@ -67,6 +67,7 @@ public sealed class Compilation
         }
         var includedByRoot = new Dictionary<SourceId, SourceId[]>();
         var foreignSymbols = new Dictionary<string, string>();
+        var foreignRecords = new Dictionary<string, string>();
         SyntaxTrees = roots.Select(source =>
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -108,7 +109,7 @@ public sealed class Compilation
             try
             {
                 if (importForeignDeclarations) ForeignImporter.Import(tree, foreign, preprocessingOptions, diagnostics,
-                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignSymbols);
+                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignSymbols, foreignRecords);
                 else tree.ForeignSources.AddRange(foreign);
             }
             catch (TypeCheckException error) when (recoverErrors)

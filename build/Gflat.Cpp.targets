@@ -3,8 +3,12 @@
     <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$([System.IO.Path]::GetFullPath("$(MSBuildThisFileDirectory).."))</GflatSdkRoot>
   </PropertyGroup>
   <Target Name="GflatPrepareProjectReferences" BeforeTargets="AssignProjectConfiguration;PrepareProjectReferences">
+    <ItemGroup>
+      <_GflatCppCompile Remove="@(_GflatCppCompile)" />
+      <_GflatCppCompile Include="@(ClCompile)" Condition="'%(ClCompile.ExcludedFromBuild)' != 'true'" />
+    </ItemGroup>
     <PropertyGroup>
-      <_GflatCppRuntimeLibrary>@(ClCompile->Metadata('RuntimeLibrary')->Distinct())</_GflatCppRuntimeLibrary>
+      <_GflatCppRuntimeLibrary>@(_GflatCppCompile->Metadata('RuntimeLibrary')->Distinct())</_GflatCppRuntimeLibrary>
       <_GflatCppRuntimeLibrary Condition="'$(_GflatCppRuntimeLibrary)' == '' and '$(UseDebugLibraries)' == 'true'">MultiThreadedDebugDLL</_GflatCppRuntimeLibrary>
       <_GflatCppRuntimeLibrary Condition="'$(_GflatCppRuntimeLibrary)' == ''">MultiThreadedDLL</_GflatCppRuntimeLibrary>
       <_GflatCppMixedRuntime>$([System.String]::Copy("$(_GflatCppRuntimeLibrary)").Contains(";"))</_GflatCppMixedRuntime>
@@ -32,6 +36,7 @@
         <DeploymentPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(OutDir)', '%(_GflatCppReferenceInfo.Filename)%(_GflatCppReferenceInfo.Extension)'))</DeploymentPath>
       </_GflatCppRuntimeFiles>
       <_GflatCppDeployments Include="@(_GflatCppRuntimeFiles)" Condition="'%(_GflatCppRuntimeFiles.FullPath)' != '%(_GflatCppRuntimeFiles.DeploymentPath)'" />
+      <None Include="@(_GflatCppRuntimeFiles)"><DeploymentContent>true</DeploymentContent></None>
     </ItemGroup>
     <Error Condition="'%(_GflatCppReferenceInfo.RuntimeLibrary)' != '' and '%(_GflatCppReferenceInfo.RuntimeLibrary)' != '$(_GflatCppRuntimeLibrary)'" Text="Referenced libraries use incompatible RuntimeLibrary settings." />
     <Error Condition="'%(_GflatCppDeployments.DeploymentPath)' == '$(TargetPath)'" Text="Runtime library deployment conflicts with the C++ project's output." />

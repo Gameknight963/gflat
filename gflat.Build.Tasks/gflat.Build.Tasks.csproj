@@ -19,6 +19,7 @@
     <Compile Include="../gflat.Projects/NativeLinkInputs.cs" Link="NativeLinkInputs.cs" />
     <Compile Include="../gflat.Projects/BinaryProjectReference.cs" Link="BinaryProjectReference.cs" />
     <Compile Include="../gflat.Projects/RuntimeLibrary.cs" Link="RuntimeLibrary.cs" />
+    <Compile Include="../gflat.Projects/NativeDeploymentRecipe.cs" Link="NativeDeploymentRecipe.cs" />
     <Compile Include="../gflat.Projects/PreprocessorInputs.cs" Link="PreprocessorInputs.cs" />
     <Compile Include="../gflat.Projects/BuildUpToDateState.cs" Link="BuildUpToDateState.cs" />
     <Reference Include="System.Xml.Linq" Condition="'$(TargetFramework)' == 'net472'" />

@@ -86,7 +86,8 @@ public static class VisualStudioMsBuild
                 _ => throw new ProjectException(path, "A referenced Visual C++ project must produce a static or dynamic library.")
             };
             var files = json.RootElement.GetProperty("Items").GetProperty("ClCompile").EnumerateArray().ToArray();
-            var runtimes = files.Where(file => !file.TryGetProperty("ExcludedFromBuild", out var excluded) || excluded.GetString() != "true")
+            var runtimes = files.Where(file => !file.TryGetProperty("ExcludedFromBuild", out var excluded) ||
+                    !string.Equals(excluded.GetString(), "true", StringComparison.OrdinalIgnoreCase))
                 .Where(file => file.TryGetProperty("RuntimeLibrary", out _)).Select(file => file.GetProperty("RuntimeLibrary").GetString()!)
                 .Where(value => value.Length != 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (runtimes.Length > 1) throw new ProjectException(path, "Native project sources use different RuntimeLibrary settings.");
@@ -98,7 +99,7 @@ public static class VisualStudioMsBuild
             var model = new ProjectModel(path, kind, Property("TargetPath"), [], [],
                 Property("MSBuildAllProjects").Split(';', StringSplitOptions.RemoveEmptyEntries), _ => false,
                 ExceptionReserve.DefaultBytes, 0, noStdLib: true, configuration: Property("Configuration"), platform: platform,
-                nativeLinkInputs: new(links, []), preprocessorInputs: new(includes, []), runtimeLibrary: runtimes.FirstOrDefault() ?? "MultiThreaded", isNative: true);
+                nativeLinkInputs: new(links, []), preprocessorInputs: new(includes, []), runtimeLibrary: runtimes.FirstOrDefault(), isNative: true);
             return model;
         }
         finally { if (File.Exists(resultPath)) File.Delete(resultPath); }

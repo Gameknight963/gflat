@@ -69,7 +69,7 @@ public sealed class GflatReadProjectInputs : Task
                             throw new ArgumentException("Visual C++ project references require Visual Studio MSBuild.");
                         string kind = project.GetPropertyValue("ConfigurationType");
                         if (kind != "StaticLibrary" && kind != "DynamicLibrary") throw new ArgumentException("Referenced Visual C++ projects must produce a native library.");
-                        runtimeProfiles.AddRange(project.GetItems("ClCompile").Where(item => item.GetMetadataValue("ExcludedFromBuild") != "true")
+                        runtimeProfiles.AddRange(project.GetItems("ClCompile").Where(item => !item.GetMetadataValue("ExcludedFromBuild").Equals("true", StringComparison.OrdinalIgnoreCase))
                             .Select(item => item.GetMetadataValue("RuntimeLibrary")).Where(value => value.Length != 0));
                         var output = new System.Collections.Hashtable();
                         properties["BuildProjectReferences"] = "false";
@@ -80,6 +80,8 @@ public sealed class GflatReadProjectInputs : Task
                             .Select(item => new NativeLibraryInput("File", item.GetMetadata("FullPath"))).ToArray();
                         includeDirectories.AddRange(information.Where(item => item.GetMetadata("FileType") == "IncludeDirectory").Select(item => item.ItemSpec));
                         if (kind == "DynamicLibrary") runtimeFiles.Add(project.GetPropertyValue("TargetPath"));
+                        foreach (var recipe in information.Where(item => item.GetMetadata("FileType") == "recipe"))
+                            runtimeFiles.AddRange(NativeDeploymentRecipe.ReadRuntimeFiles(recipe.GetMetadata("FullPath")));
                         nativeProjects.Add(new NativeLinkProject(file, [], new NativeLinkInputs(nativeLibraries, [])));
                         return;
                     }

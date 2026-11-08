@@ -90,6 +90,7 @@
     <Compile Include="../../gflat.Projects/NativeLinkInputs.cs"><Link>NativeLinkInputs.cs</Link></Compile>
     <Compile Include="../../gflat.Projects/BinaryProjectReference.cs"><Link>BinaryProjectReference.cs</Link></Compile>
     <Compile Include="../../gflat.Projects/RuntimeLibrary.cs"><Link>RuntimeLibrary.cs</Link></Compile>
+    <Compile Include="../../gflat.Projects/NativeDeploymentRecipe.cs"><Link>NativeDeploymentRecipe.cs</Link></Compile>
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.txt"><Link>Licenses/MSBuild.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/Roslyn.txt"><Link>Licenses/Roslyn.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>

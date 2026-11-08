@@ -196,6 +196,7 @@
       <_GflatSetting Include="Optimization"><Value>$(GflatOptimizationLevel)</Value></_GflatSetting>
       <_GflatSetting Include="DebugSymbols"><Value>$(DebugSymbols)</Value></_GflatSetting>
       <_GflatSetting Include="RuntimeLibrary"><Value>$(_GflatCompilerRuntimeLibrary)</Value></_GflatSetting>
+      <_GflatSetting Include="RuntimeFiles"><Value>@(_GflatRuntimeFiles)</Value></_GflatSetting>
       <_GflatSetting Include="Mode"><Value>$(GflatEmitIR)</Value></_GflatSetting>
       <_GflatSetting Include="Output"><Value>$(_GflatBuildOutput)</Value></_GflatSetting>
       <_GflatSetting Include="Platform"><Value>$(Platform)</Value></_GflatSetting>

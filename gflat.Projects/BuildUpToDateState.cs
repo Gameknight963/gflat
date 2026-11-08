@@ -199,6 +199,17 @@ public sealed class BuildUpToDateState
                         foreach (string file in File.ReadAllLines(log))
                             if (file.Length != 0 && file[0] != '^' && Path.IsPathRooted(file)) Required(file);
                     }
+                    string recipe = project.GetPropertyValue("DesktopDeployRecipeFile");
+                    if (recipe.Length != 0)
+                    {
+                        recipe = Absolute(recipe, directory);
+                        Required(recipe);
+                        foreach (string runtime in NativeDeploymentRecipe.ReadRuntimeFiles(recipe))
+                        {
+                            Required(runtime);
+                            if (nativeOutput) outputs.Add(Path.Combine(outputDirectory, Path.GetFileName(runtime)));
+                        }
+                    }
                     if (project.GetPropertyValue("ConfigurationType") == "DynamicLibrary")
                     {
                         if (project.ItemDefinitions.TryGetValue("Link", out var link) && link.GetMetadataValue("ImportLibrary") is { Length: > 0 } importLibrary)

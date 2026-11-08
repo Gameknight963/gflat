@@ -140,6 +140,9 @@ This supplies the generated header directory, native
 link inputs, and dynamic-library deployment. Source-library references require
 a G♭ binary library wrapper.
 
+Transitive native DLL deployment follows Visual C++'s desktop deployment recipe.
+Projects disabling recipe generation must deploy those dependencies themselves.
+
 Windows projects sharing native code must agree on `RuntimeLibrary`:
 `MultiThreaded`, `MultiThreadedDLL`, `MultiThreadedDebug`, or
 `MultiThreadedDebugDLL`, corresponding to `/MT`, `/MD`, `/MTd`, and `/MDd`.

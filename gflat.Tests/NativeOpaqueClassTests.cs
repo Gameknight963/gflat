@@ -20,6 +20,8 @@ public sealed class NativeOpaqueClassTests
                 ~Widget() override { ++destroyed; }
                 int Read() const override { return value; }
                 void Set(int next) { value = next; }
+                static Widget* Create(int value) { return new Widget(value); }
+                static void Dispose(Widget* value) { delete value; }
             };
             Base* Create(int value) { return new Widget(value); }
             void Destroy(Base* value) { delete value; }
@@ -56,6 +58,10 @@ public sealed class NativeOpaqueClassTests
                 if ((int)alignof(Native::Widget) != Native::Alignment()) return 6;
                 Native::DestroyWidget(widget);
                 if (Native::Destroyed() != 2) return 7;
+                Native::Widget* created = Native::Widget::Create(42)!;
+                if (created.Read() != 42) return 9;
+                Native::Widget::Dispose(created);
+                if (Native::Destroyed() != 3) return 10;
                 return 42;
             }
             """, optimization);

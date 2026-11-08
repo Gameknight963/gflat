@@ -10,13 +10,13 @@ public sealed class ForeignLanguageEditorTests
         const string text = """
             #lang cpp
             namespace Native {
-                struct Counter { int value; int Read() const { return value; } };
+                struct Counter { int value; int Read() const { return value; } static int Twice(int value) { return value * 2; } };
             }
             #lang gflat
             int main()
             {
                 Native::Counter counter = default(Native::Counter);
-                return counter.Read() + counter.value;
+                return counter.Read() + counter.value + Native::Counter::Twice(21);
             }
             """;
         var source = new SourceFile(Path.GetFullPath("foreign-record-editor.gf"), text);
@@ -31,6 +31,10 @@ public sealed class ForeignLanguageEditorTests
         var labels = completion.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("label").GetString()).ToArray();
         Assert.Contains("value", labels);
         Assert.Contains("Read", labels);
+        int staticMethod = text.LastIndexOf("Twice", StringComparison.Ordinal);
+        Assert.Contains("Twice", JsonSerializer.Serialize(model.Hover(source.Path, staticMethod)));
+        var statics = JsonSerializer.SerializeToElement(model.Completion(source.Path, staticMethod));
+        Assert.Contains(statics.GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "Twice");
     }
 
     [Fact]

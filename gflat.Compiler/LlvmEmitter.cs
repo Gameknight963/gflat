@@ -1661,16 +1661,15 @@ public partial class LlvmEmitter : IVisitor
     {
         if (node.IsGeneric) return;
         if (node.NativeOpaqueLayout is { } native)
-        {
             EmitGlobal($"%{node.Name} = type {{ [{native.Size} x i8] }}");
-            return;
+        else
+        {
+            string fields = string.Join(", ", node.Members
+                .OfType<FieldDeclaration>()
+                .Where(f => !f.IsStatic)
+                .Select(f => EmitType(f.Type)));
+            EmitGlobal($"%{node.Name} = type {{ {fields} }}");
         }
-
-        string fields = string.Join(", ", node.Members
-            .OfType<FieldDeclaration>()
-            .Where(f => !f.IsStatic)
-            .Select(f => EmitType(f.Type)));
-        EmitGlobal($"%{node.Name} = type {{ {fields} }}");
 
         TypeChecker.StructInfo? prevStruct = _currentStruct;
         TypeChecker.ClassInfo? prevClass = _currentClass;
@@ -1744,7 +1743,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             bool hasEmptyCtor = _currentStruct!.Constructors.Any(c => c.Parameters.Count == 0);
-            if (!hasEmptyCtor && (_currentStruct.Constructors.Count == 0 || _currentStruct.FieldDeclarations.Any(f => f.Initializer != null)))
+            if (node.NativeOpaqueLayout == null && !hasEmptyCtor && (_currentStruct.Constructors.Count == 0 || _currentStruct.FieldDeclarations.Any(f => f.Initializer != null)))
             {
                 EmitStructDefaultConstructor(node.Name);
             }
@@ -1866,7 +1865,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
         if (node.IsGeneric || _typeChecker.IsCompileTimeOnly(node)) return;
-        if (DeferFunction(GetMethodMangledName(structName, node, _currentNamespacePath, isClass: false), () => EmitStructMethod(structName, node))) return;
+        if (DeferFunction(GetMethodMangledName(structName, node, _currentNamespacePath, isClass: false), () => EmitStructMethod(structName, node), node.IsForeignImport)) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();

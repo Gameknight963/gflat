@@ -6,7 +6,7 @@ namespace gflat;
 internal static partial class ForeignImporter
 {
     private sealed record RecordMethod(string Name, string Symbol, string Result, string[] Parameters,
-        string[] NativeParameters, bool ReadOnly);
+        string[] NativeParameters, bool ReadOnly, bool IsStatic);
 
     private static IEnumerable<RecordMethod> RecordMethods(JsonElement record, Func<string, string?> type)
     {
@@ -16,11 +16,11 @@ internal static partial class ForeignImporter
         {
             string kind = Text(child, "kind");
             if (kind == "AccessSpecDecl") { access = Text(child, "access"); continue; }
-            if (kind != "CXXMethodDecl" || access != "public" || Text(child, "storageClass") == "static" ||
+            if (kind != "CXXMethodDecl" || access != "public" ||
                 child.TryGetProperty("isImplicit", out _) || child.TryGetProperty("explicitlyDeleted", out _) ||
                 child.TryGetProperty("variadic", out _)) continue;
             string name = Text(child, "name"), signature = Text(child.GetProperty("type"), "qualType");
-            if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$")) continue;
+            if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || name == "reinterpret") continue;
             int opening = signature.IndexOf('('), closing = -1, depth = 0;
             for (int index = opening; index >= 0 && index < signature.Length; index++)
             {
@@ -39,10 +39,11 @@ internal static partial class ForeignImporter
             var mapped = nativeParameters.Select(type).ToArray();
             if (mapped.Any(parameter => parameter == null)) continue;
             methods.Add(new(name, Text(child, "mangledName"), result, mapped.Select(parameter => parameter!).ToArray(),
-                nativeParameters, suffix.StartsWith("const", StringComparison.Ordinal)));
+                nativeParameters, suffix.StartsWith("const", StringComparison.Ordinal), Text(child, "storageClass") == "static"));
         }
         // Native overloads erased to one host signature need a richer selection rule.
-        return methods.GroupBy(method => method.Name + "(" + string.Join(",", method.Parameters.Select(parameter =>
+        return methods.GroupBy(method => method.Name).Where(group => group.Select(method => method.IsStatic).Distinct().Count() == 1)
+            .SelectMany(group => group).GroupBy(method => method.Name + "(" + string.Join(",", method.Parameters.Select(parameter =>
                 Regex.Replace(parameter, "readonly\\(|\\)", ""))) + ")")
             .Where(group => group.Count() == 1).Select(group => group.Single());
     }

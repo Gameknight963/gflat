@@ -75,11 +75,13 @@ read or write the same storage through pointers. Pointee and field `const`
 qualifiers remain readonly. Native pointer results remain borrowed and nullable.
 
 Public C++ instance methods with supported scalar, record, and pointer signatures are
-called as ordinary host members. A `const` method accepts readonly receivers.
+called as ordinary host members. Static methods use `Type::Method(...)`.
+A `const` method accepts readonly receivers.
 Other methods require mutable storage. Native methods take precedence over host
 extensions with the same name. Overloads with distinct parameter types work.
-Private methods, static methods, reference-qualified methods, and overloads that
-differ only in receiver qualifiers are not imported yet.
+Private methods, reference-qualified methods, overload families mixing static
+and instance methods, and overloads that differ only in receiver qualifiers are
+not imported yet.
 
 This representation requires trivial construction, copying, and destruction.
 Records with private fields, bases, virtual members, explicit constructors or

@@ -11,7 +11,8 @@ namespace gflat;
 
 internal static partial class ForeignImporter
 {
-    private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false, NativeRecordLayout? OpaqueLayout = null);
+    private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false,
+        NativeRecordLayout? OpaqueLayout = null, string? Owner = null);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
     private sealed record CachedImport(ForeignTranslationUnit Unit, CachedDeclaration[] Declarations,
         Dictionary<string, string> Symbols, Dictionary<string, InputStamp> Inputs, string[] Dependencies);
@@ -20,12 +21,12 @@ internal static partial class ForeignImporter
 
     internal static void Import(CompilationUnit unit, IReadOnlyList<ForeignSource> segments,
         CompilationOptions options, DiagnosticBag diagnostics, Action<string> dependency,
-        CancellationToken cancellation, Dictionary<string, string>? importedSymbols = null,
-        Dictionary<string, string>? recordDeclarations = null)
+        CancellationToken cancellation, ForeignImportState? state = null)
     {
         if (segments.Count == 0) return;
-        importedSymbols ??= new();
-        recordDeclarations ??= new();
+        state ??= new();
+        var importedSymbols = state.Symbols;
+        var recordDeclarations = state.RecordSignatures;
         string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
@@ -61,7 +62,8 @@ internal static partial class ForeignImporter
                     foreach (string file in cached.Dependencies) dependency(file);
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
                     foreach (var declaration in cached.Declarations)
-                    { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text, declaration.IsRecord, declaration.OpaqueLayout); }
+                    { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text,
+                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner); }
                     unit.ForeignSources.AddRange(group);
                     unit.ForeignUnits.Add(cached.Unit);
                     continue;
@@ -139,14 +141,16 @@ internal static partial class ForeignImporter
                             string parameters = string.Join(", ", method.Parameters.Select((parameter, n) => parameter + " __arg" + n));
                             string objectType = method.ReadOnly ? "readonly(" + receiver + ")" : receiver;
                             var bridge = CreateCallBridge(entry, "cpp", scope, method.Result, "", method.Parameters,
-                                method.NativeParameters, recordTypes, arguments => "__self->" + method.Name + "(" + string.Join(", ", arguments) + ")",
-                                objectType, (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified);
+                                method.NativeParameters, recordTypes, arguments =>
+                                    (method.IsStatic ? "::" + qualified + "::" : "__self->") + method.Name + "(" + string.Join(", ", arguments) + ")",
+                                method.IsStatic ? null : objectType,
+                                method.IsStatic ? null : (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified);
                             bridges.Add(entry, bridge.Native);
                             string declaration = bridge.Extern + "\n" +
-                                "extension " + receiver + " { public " + (method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
-                                "(" + parameters + ") { " + bridge.Body + " } }";
-                            AddDeclaration(key, declaration);
-                            declarations.Add(new(key, declaration));
+                                "public " + (method.IsStatic ? "static " : method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
+                                "(" + parameters + ") { " + bridge.Body + " }";
+                            AddDeclaration(key, declaration, owner: qualified);
+                            declarations.Add(new(key, declaration, Owner: qualified));
                         }
                     }
                 unit.ForeignSources.AddRange(group);
@@ -303,7 +307,8 @@ internal static partial class ForeignImporter
         }
         finally { Directory.Delete(directory, recursive: true); }
 
-        void AddDeclaration(string qualified, string declaration, bool isRecord = false, NativeRecordLayout? opaqueLayout = null)
+        void AddDeclaration(string qualified, string declaration, bool isRecord = false,
+            NativeRecordLayout? opaqueLayout = null, string? owner = null)
         {
             if (isRecord)
             {
@@ -319,7 +324,10 @@ internal static partial class ForeignImporter
             var imported = Parser.Parse(Lexer.Tokenize(new SourceFile("<foreign:" + qualified + ">", declaration)), diagnostics);
             Mark(imported.Members);
             foreach (var ns in imported.Namespaces) Mark(ns.Members);
-            unit.Members.AddRange(imported.Members);
+            foreach (var member in imported.Members)
+                if (owner != null && member is MethodDeclaration)
+                    state.Records[owner].Members.Add(member);
+                else unit.Members.Add(member);
             unit.Namespaces.AddRange(imported.Namespaces);
             void Mark(IEnumerable<AstNode> nodes)
             {
@@ -332,6 +340,7 @@ internal static partial class ForeignImporter
                     {
                         structure.IsForeignImport = isRecord;
                         structure.NativeOpaqueLayout = opaqueLayout;
+                        if (isRecord) state.Records[qualified] = structure;
                     }
                 }
             }

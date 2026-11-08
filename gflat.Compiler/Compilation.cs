@@ -66,8 +66,7 @@ public sealed class Compilation
             macroSymbols.AddRange(result.Symbols);
         }
         var includedByRoot = new Dictionary<SourceId, SourceId[]>();
-        var foreignSymbols = new Dictionary<string, string>();
-        var foreignRecords = new Dictionary<string, string>();
+        var foreignImports = new ForeignImportState();
         SyntaxTrees = roots.Select(source =>
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -109,7 +108,7 @@ public sealed class Compilation
             try
             {
                 if (importForeignDeclarations) ForeignImporter.Import(tree, foreign, preprocessingOptions, diagnostics,
-                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignSymbols, foreignRecords);
+                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignImports);
                 else tree.ForeignSources.AddRange(foreign);
             }
             catch (TypeCheckException error) when (recoverErrors)

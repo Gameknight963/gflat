@@ -126,7 +126,7 @@ public partial class TypeChecker
                     case InterfaceDeclaration i: Walk(i.Members, scope + i.Name + "."); break;
                     case MethodDeclaration m when m.StringLiteralPrefix == null:
                         string key = scope + (m.ExtensionReceiverType != null
-                            ? (m.IsForeignImport ? "$native-member-family$" : "$extension-family$") + ExtensionMemberName(m) : m.Name);
+                            ? "$extension-family$" + ExtensionMemberName(m) : m.Name);
                         if (!groups.TryGetValue(key, out var group)) groups[key] = group = new();
                         group.Add(m);
                         break;

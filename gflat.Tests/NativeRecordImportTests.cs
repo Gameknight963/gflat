@@ -84,10 +84,11 @@ public sealed class NativeRecordImportTests
     public void SharedHeaderRecordsAreDeduplicatedAcrossCAndCppAndCachedSnapshots()
     {
         var header = new SourceFile(Path.GetFullPath("native-record-shared.gfh"),
-            "typedef struct Shared { int value; } Shared;");
+            "typedef struct Shared { int value;\n#ifdef __cplusplus\n" +
+            "int Read() const { return value; } static int Twice(int value) { return value * 2; }\n#endif\n} Shared;");
         string code = "#lang c\n#include \"native-record-shared.gfh\"\nShared* InC(Shared* p) { return p; }\n" +
             "#lang cpp\n#include \"native-record-shared.gfh\"\nShared* InCpp(Shared* p) { return p; }\n" +
-            "#lang gflat\nint main() { Shared value = default(Shared); return 0; }";
+            "#lang gflat\nint main() { Shared value = default(Shared); return Shared::Twice(value.Read()); }";
         string root = Path.Combine(Path.GetTempPath(), "gflat-native-record-header-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try

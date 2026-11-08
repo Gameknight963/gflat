@@ -13,6 +13,8 @@ public sealed class NativeRecordMethodTests
                 int Add(int amount) { value += amount; return value; }
                 int Over(int amount) const { return value + amount; }
                 double Over(double amount) const { return value + amount; }
+                static int Twice(int value) { return value * 2; }
+                static double Twice(double value) { return value * 2; }
             private:
                 int Secret() const { return 99; }
             };
@@ -39,6 +41,7 @@ public sealed class NativeRecordMethodTests
                 readonly(Native::Counter)* borrowed = &counter;
                 if (borrowed.Read() != 40) return 3;
                 if (counter.Over(2) != 42 || borrowed.Over(2.5) != 42.5) return 4;
+                if (Native::Counter::Twice(21) != 42 || Native::Counter::Twice(21.25) != 42.5) return 5;
                 return borrowed.Over(2);
             }
             """, optimization);

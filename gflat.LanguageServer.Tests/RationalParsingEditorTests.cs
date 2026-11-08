@@ -31,9 +31,10 @@ public sealed class RationalParsingEditorTests
             Assert.Equal(expected,model.Definition(source.Path,use));
             var help=Json(model.SignatureHelp(source.Path,use+row.Name.Length+1+row.Argument));
             Assert.Equal(row.Arity-1,help.GetProperty("activeParameter").GetInt32());
-            var signatures=help.GetProperty("signatures");Assert.Equal(2,signatures.GetArrayLength());
+            var signatures=help.GetProperty("signatures");Assert.Equal(3,signatures.GetArrayLength());
             var selected=signatures[help.GetProperty("activeSignature").GetInt32()];
             Assert.Equal(row.Arity,selected.GetProperty("parameters").GetArrayLength());
+            Assert.Contains("readonly(char)* text",selected.GetProperty("label").GetString());
             if(row.Name=="TryParse")Assert.Contains("ref Standard::Numerics::Rational result",selected.GetProperty("label").GetString());
         }
     }

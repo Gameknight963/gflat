@@ -40,9 +40,10 @@ public sealed class DateTimeOffsetEditorTests
         Assert.Contains("Standard::Time::TimeSpan offset",selected.GetProperty("label").GetString());
         int parse=text.IndexOf("DateTimeOffset::Parse(",StringComparison.Ordinal)+"DateTimeOffset::Parse(".Length;
         var parseHelp=Json(model.SignatureHelp(source.Path,parse));
-        Assert.Equal(2,parseHelp.GetProperty("signatures").GetArrayLength());
+        Assert.Equal(3,parseHelp.GetProperty("signatures").GetArrayLength());
         var parseSignature=parseHelp.GetProperty("signatures")[parseHelp.GetProperty("activeSignature").GetInt32()];
         Assert.Single(parseSignature.GetProperty("parameters").EnumerateArray());
+        Assert.Contains("readonly(char)* text",parseSignature.GetProperty("label").GetString());
         int conversion=text.IndexOf("ToOffset(",StringComparison.Ordinal)+"ToOffset(".Length;
         var conversionHelp=Json(model.SignatureHelp(source.Path,conversion));
         var signature=Assert.Single(conversionHelp.GetProperty("signatures").EnumerateArray());

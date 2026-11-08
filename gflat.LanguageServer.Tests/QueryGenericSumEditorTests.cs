@@ -36,11 +36,11 @@ public sealed class QueryGenericSumEditorTests
         string displayElement=element=="immutable(long)"?"readonly(long)":element;
         Assert.Contains("long",hover);Assert.Contains("Sum()",hover);
         Assert.Equal(displayElement,snapshot.Checker!.DisplayTypeName(snapshot.Checker.GetGenericCallTypeArguments(call)![0]));Assert.DoesNotContain('$',hover);
-        int declaration=EditorSourceDeclarations.ExtensionMethod(library,"Sum");Assert.True(declaration>=0);
+        int declaration=EditorSourceDeclarations.ExtensionMethod(library,"Sum",parameterCount:0,receiver:"Enumerable<T,S,E>");Assert.True(declaration>=0);
         var expected=model.Definition(library.Path,declaration);Assert.NotNull(expected);
         Assert.Equal(expected,model.Definition(source.Path,use));Assert.Contains("enumerable_sum.gf",JsonSerializer.Serialize(expected,Protocol.JsonOptions));
         var help=Json(model.SignatureHelp(source.Path,text.IndexOf('(',use)+1));
-        var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        var signature=help.GetProperty("signatures")[help.GetProperty("activeSignature").GetInt32()];
         Assert.Empty(signature.GetProperty("parameters").EnumerateArray());
         string label=signature.GetProperty("label").GetString()!;
         Assert.Contains("long",label);Assert.Contains("Sum()",label);Assert.DoesNotContain('$',label);

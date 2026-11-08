@@ -74,15 +74,16 @@ public sealed class QualifiedExtensionReceiverTests
         Assert.Contains("no field or method 'Read'",error.Message);
     }
 
-    [Fact]
-    public void GenericParentTypeIsNotMistakenForANamespace()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void GenericParentTypeInfersReceiverArguments(int optimization)
     {
         SourceFile[] sources=[
             new("types.gf","struct Holder<T>{public struct Box {public T Value;public Box(T value){Value=value;}}}"),
             new("extension.gf","namespace Helpers {T Read<T>(Holder<T>::Box self)=>self.Value;\nextension<T> Holder<T>::Box { public T Read() =>(*this).Value; }}"),
             new("main.gf","using Helpers;int main(){Holder<int>::Box box=new(42);return box.Read();}")];
-        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Emit(sources));
-        Assert.Contains("no field or method 'Read'",error.Message);
+        Assert.Equal(42,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 
     [Fact]

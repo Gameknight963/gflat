@@ -22,10 +22,11 @@ public sealed class TimeOfDayEditorTests
         Assert.Equal(1,help.GetProperty("activeParameter").GetInt32());
         var signatures=help.GetProperty("signatures");
         var selected=signatures[help.GetProperty("activeSignature").GetInt32()];
-        Assert.Equal(4,selected.GetProperty("parameters").GetArrayLength());
+        Assert.Equal(5,selected.GetProperty("parameters").GetArrayLength());
         string label=selected.GetProperty("label").GetString()!;
         Assert.Contains("TimeOfDay",label);Assert.Contains("int hour",label);Assert.Contains("int minute",label);
         Assert.Matches(@"\bint\s+second\s*=\s*0\b",label);Assert.Matches(@"\bint\s+millisecond\s*=\s*0\b",label);Assert.DoesNotContain('$',label);
+        Assert.Matches(@"\bint\s+microsecond\s*=\s*0\b",label);
         foreach(var member in new[]{(Name:"Hour",Type:"int"),(Name:"Ticks",Type:"long")})
         {
             int use=text.IndexOf("value."+member.Name,StringComparison.Ordinal)+"value.".Length;
@@ -49,14 +50,15 @@ public sealed class TimeOfDayEditorTests
         {
             string hover=Hover(model,source,row.Use);Assert.Contains("bool",hover);Assert.Contains("TryParse",hover);Assert.Contains("nothrow",hover);Assert.DoesNotContain('$',hover);
             var method=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==library.Id).Select(node=>node.Node).OfType<MethodDeclaration>(),
-                declaration=>declaration.Name=="TryParse"&&declaration.Parameters.Count==row.Arity);
+                declaration=>declaration.Name=="TryParse"&&declaration.Parameters.Count==row.Arity&&declaration.Parameters[0].Type is PointerTypeExpression);
             int declaration=library.Text.IndexOf("TryParse",method.Span.Start,StringComparison.Ordinal);
             Definition(model,source,row.Use,library,declaration);
             int output=text.IndexOf("&output",row.Use,StringComparison.Ordinal)+1;
-            var help=Json(model.SignatureHelp(source.Path,output));var signatures=help.GetProperty("signatures");Assert.Equal(2,signatures.GetArrayLength());
+            var help=Json(model.SignatureHelp(source.Path,output));var signatures=help.GetProperty("signatures");Assert.Equal(3,signatures.GetArrayLength());
             Assert.Equal(row.Arity-1,help.GetProperty("activeParameter").GetInt32());
             var selected=signatures[help.GetProperty("activeSignature").GetInt32()];Assert.Equal(row.Arity,selected.GetProperty("parameters").GetArrayLength());
             string label=selected.GetProperty("label").GetString()!;
+            Assert.Contains("readonly(char)* text",label);
             Assert.Contains("bool",label);Assert.Contains("TryParse",label);Assert.Contains("TimeOfDay",label);Assert.Contains("nothrow",label);Assert.DoesNotContain('$',label);
         }
         Assert.NotEqual(model.Definition(source.Path,counted),model.Definition(source.Path,terminated));

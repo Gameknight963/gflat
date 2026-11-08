@@ -35,7 +35,8 @@ public sealed class BigIntegerTryFormatEditorTests
         int outputArgument=text.IndexOf("ref written",call,StringComparison.Ordinal)+"ref ".Length;
         var help=Json(model.SignatureHelp(source.Path,outputArgument));
         Assert.Equal(2,help.GetProperty("activeParameter").GetInt32());
-        var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        Assert.Equal(2,help.GetProperty("signatures").GetArrayLength());
+        var signature=help.GetProperty("signatures")[help.GetProperty("activeSignature").GetInt32()];
         Assert.Equal(3,signature.GetProperty("parameters").GetArrayLength());
         string label=signature.GetProperty("label").GetString()!;
         // The callable label may include its qualified owner before the method name.

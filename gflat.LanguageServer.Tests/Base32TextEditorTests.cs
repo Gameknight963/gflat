@@ -35,11 +35,13 @@ public sealed class Base32TextEditorTests
         Assert.Contains("Base32Text.gf",JsonSerializer.Serialize(expected,Protocol.JsonOptions));
         int secondArgument=text.IndexOf(',' ,call)+1;
         var help=Json(model.SignatureHelp(source.Path,secondArgument));
-        var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        Assert.Equal(member=="Encode"?2:1,help.GetProperty("signatures").GetArrayLength());
+        var signature=help.GetProperty("signatures")[help.GetProperty("activeSignature").GetInt32()];
         string label=signature.GetProperty("label").GetString()!;
         Assert.Contains("String",label);Assert.Contains(member+"(",label);Assert.Contains("nuint count",label);
         Assert.DoesNotContain('$',label);Assert.Equal(1,help.GetProperty("activeParameter").GetInt32());
         Assert.Equal(2,signature.GetProperty("parameters").GetArrayLength());
+        Assert.Contains("readonly(char)*",label);
         int use=text.LastIndexOf("result",StringComparison.Ordinal);
         Assert.Contains("String result",Hover(model,source,use));
         var resultDefinition=model.Definition(source.Path,text.IndexOf("result=",StringComparison.Ordinal));

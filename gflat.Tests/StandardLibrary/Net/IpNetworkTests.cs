@@ -186,7 +186,7 @@ public sealed class IpNetworkTests
     [Fact]
     public void TryObserversCompileNothrowWithoutStringCollectorOrLibcSource()
     {
-        string[] names=["Net/IpNetwork.gf","Net/IpAddress.gf","ITextWriter.gf", "IFormattable.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
+        string[] names=["Net/IpNetwork.gf","Net/IpAddress.gf","Memory/Span.gf","Collections/IEnumerable.gf","Queries/Enumerable.gf","ITextWriter.gf", "IFormattable.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("network-contract.gf","""
                 using Standard; using Standard::Text; using Standard::IO; using Standard::Net; using Standard::Memory; using Standard::Collections;namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}

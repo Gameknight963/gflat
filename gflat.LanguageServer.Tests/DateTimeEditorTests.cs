@@ -33,7 +33,8 @@ public sealed class DateTimeEditorTests
         int argument = text.IndexOf("ref written", call, StringComparison.Ordinal) + "ref ".Length;
         var help = Json(model.SignatureHelp(source.Path, argument));
         Assert.Equal(2, help.GetProperty("activeParameter").GetInt32());
-        Assert.Equal(3, Assert.Single(help.GetProperty("signatures").EnumerateArray()).GetProperty("parameters").GetArrayLength());
+        Assert.Equal(2, help.GetProperty("signatures").GetArrayLength());
+        Assert.Equal(3, help.GetProperty("signatures")[help.GetProperty("activeSignature").GetInt32()].GetProperty("parameters").GetArrayLength());
     }
 
     [Fact]
@@ -48,13 +49,14 @@ public sealed class DateTimeEditorTests
             Assert.Contains("nothrow", hover);
             Assert.DoesNotContain('$', hover);
             var method = Assert.Single(snapshot.Nodes.Where(node => node.Span.SourceId == library.Id).Select(node => node.Node).OfType<MethodDeclaration>(),
-                method => method.Name == "TryParse" && method.Parameters.Count == row.Arity);
+                method => method.Name == "TryParse" && method.Parameters.Count == row.Arity && method.Parameters[0].Type is PointerTypeExpression);
             Definition(model, source, row.Use, library, library.Text.IndexOf("TryParse", method.Span.Start, StringComparison.Ordinal));
             int argument = text.IndexOf("&value", row.Use, StringComparison.Ordinal) + 1;
             var help = Json(model.SignatureHelp(source.Path, argument));
             var signatures = help.GetProperty("signatures");
-            Assert.Equal(2, signatures.GetArrayLength());
+            Assert.Equal(3, signatures.GetArrayLength());
             Assert.Equal(row.Arity, signatures[help.GetProperty("activeSignature").GetInt32()].GetProperty("parameters").GetArrayLength());
+            Assert.Contains("readonly(char)* text", signatures[help.GetProperty("activeSignature").GetInt32()].GetProperty("label").GetString());
         }
     }
 

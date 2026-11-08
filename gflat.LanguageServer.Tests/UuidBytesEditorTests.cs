@@ -35,12 +35,13 @@ public sealed class UuidBytesEditorTests
     {
         Assert.Single(Json(model.Completion(source.Path,call)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()==member);
         var method=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==library.Id).Select(node=>node.Node).OfType<MethodDeclaration>(),
-            declaration=>declaration.Name==member);
+            declaration=>declaration.Name==member&&declaration.Parameters.Count==3);
         int name=library.Text.IndexOf(member+"(",method.Span.Start,StringComparison.Ordinal);Assert.True(name>=0);
         var expected=model.Definition(library.Path,name);Assert.NotNull(expected);
         Assert.Equal(expected,model.Definition(source.Path,call));Assert.Contains("Uuid.gf",JsonSerializer.Serialize(expected,Protocol.JsonOptions));
         var help=Json(model.SignatureHelp(source.Path,argument));Assert.Equal(2,help.GetProperty("activeParameter").GetInt32());
-        var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        Assert.Equal(2,help.GetProperty("signatures").GetArrayLength());
+        var signature=help.GetProperty("signatures")[help.GetProperty("activeSignature").GetInt32()];
         Assert.Equal(3,signature.GetProperty("parameters").GetArrayLength());
         string label=signature.GetProperty("label").GetString()!;
         Assert.Contains("bool",label);Assert.Contains(member,label);Assert.Contains("nothrow",label);Assert.Matches(outputPattern,label);Assert.DoesNotContain('$',label);
@@ -49,7 +50,8 @@ public sealed class UuidBytesEditorTests
     private static (EditorModel Model,SourceFile Source,SourceFile Library,AnalysisSnapshot Snapshot) Analyze(string text)
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["Uuid.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf"];
+        string[] names=["Uuid.gf","Memory/Span.gf","Collections/IEnumerable.gf","Queries/Enumerable.gf",
+            "IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf"];
         var files=names.Select(name=>Path.Combine(root,name)).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="Uuid.gf");
         var source=new SourceFile(Path.GetFullPath("uuid-bytes-editor.gf"),text);files.Add(source);

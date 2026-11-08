@@ -622,7 +622,9 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         Assert.Contains("public int",seedlessHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("enumerable_aggregate.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
-        Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        Assert.Equal(3,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        var aggregateSignature=aggregateHelp.GetProperty("signatures")[aggregateHelp.GetProperty("activeSignature").GetInt32()];
+        Assert.Single(aggregateSignature.GetProperty("parameters").EnumerateArray());
         foreach(var array in new[]{("nativeCounts","nuint[3]"),("byteValues","byte[3]"),
             ("aliasedCounts","NativeCount[2]"),("countGrid","NativeCount[2][2]")})
         {

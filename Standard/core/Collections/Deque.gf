@@ -177,6 +177,40 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         if (count == 0) head = 0;
     }
 
+    public nuint RemoveAll(bool(immutable(T)*)* predicate)
+    {
+        // Keep every slot initialized during callbacks, then destroy discarded owners.
+        nuint originalCount = count;
+        nuint read = 0;
+        nuint write = 0;
+        try
+        {
+            while (read < originalCount)
+            {
+                if (!predicate(data! + this.Physical(read)))
+                {
+                    if (read != write)
+                    {
+                        T* source = data! + this.Physical(read);
+                        T* destination = data! + this.Physical(write);
+                        T retained = move *source;
+                        move *destination at source;
+                        move retained at destination;
+                    }
+                    write++;
+                }
+                read++;
+            }
+        }
+        catch
+        {
+            this.RemoveRange(write, read - write);
+            throw;
+        }
+        this.RemoveRange(write, originalCount - write);
+        return originalCount - write;
+    }
+
     public T RemoveFirst()
     {
         if (count == 0) throw new Exception("Cannot remove from an empty deque");

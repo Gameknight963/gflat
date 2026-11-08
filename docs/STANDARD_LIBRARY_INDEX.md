@@ -84,6 +84,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | Priority-queue `EnqueueRange` | [Enqueue batches with staged input](PRIORITY_QUEUE_RANGE.md) |
 | Deque `PeekFirst`, `PeekLast`, and try-peek helpers | [Copy deque endpoints](DEQUE_PEEK.md) |
 | `Deque<T>.RemoveRange` | [Removing a deque range](DEQUE_REMOVE_RANGE.md) |
+| `Deque<T>.RemoveAll` | [Remove deque elements by predicate](DEQUE_REMOVE_ALL.md) |
 | Vector `FindIndex` ranges | [Searching with predicates](VECTOR_PREDICATE_RANGES.md) |
 | Vector `IndexOf` ranges | [Searching part of a vector](VECTOR_RANGE_SEARCH.md) |
 | Borrowed `Vector<T>.ForEach` | [Visiting vector elements](VECTOR_FOR_EACH.md) |

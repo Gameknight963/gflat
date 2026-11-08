@@ -26,7 +26,7 @@ public partial class TypeChecker
         }
         Add(generic);
         Add(ordinary);
-        return methods.ToArray();
+        return methods.Where(method => IsDeclarationDiscoverable(method, SourceContext.Current ?? default)).ToArray();
     }
 
     private NamespaceCallableGroup ResolveNamespaceCallables(string name)
@@ -71,5 +71,7 @@ public partial class TypeChecker
 
     private MethodDeclaration[] FunctionValueDefinitions(MethodDeclaration method, AstNode expression)
         => importedFunctionValueCandidates.TryGetValue(expression, out var imported) ? imported
-            : overloadFamilies.TryGetValue(method, out var family) ? family.ToArray() : [method];
+            : (overloadFamilies.TryGetValue(method, out var family) ? family : [method])
+                .Where(candidate => ! _functionNamespaces.ContainsKey(candidate) || TryGetMethodOwner(candidate, out _, out _) ||
+                    IsDeclarationDiscoverable(candidate, expression.Span)).ToArray();
 }

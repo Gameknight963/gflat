@@ -4,6 +4,8 @@ namespace gflat.ast
     {
         public List<UsingDirective> Usings { get; }
         public Dictionary<SourceId, string[]> FileUsings { get; } = new();
+        public DeclarationScope DeclarationScope { get; set; }
+        public Dictionary<SourceId, DeclarationScope> FileDeclarationScopes { get; } = new();
         public List<NamespaceDeclaration> Namespaces { get; }
         public List<AstNode> Members { get; }
         public List<ForeignTranslationUnit> ForeignUnits { get; } = [];

@@ -20,6 +20,8 @@ public partial class TypeChecker
         IReadOnlyDictionary<MethodDeclaration, IReadOnlyDictionary<string, TypeExpression>>? seeds = null)
     {
         definitions = ReflectedCallDefinitions(call, definitions);
+        definitions = definitions.Where(method => !_functionNamespaces.ContainsKey(method) ||
+            TryGetMethodOwner(method, out _, out _) || IsDeclarationDiscoverable(method, call.Callee.Span));
         var methods = definitions.Distinct().ToArray();
         foreach (var argument in call.Arguments)
             if (!_types.ContainsKey(argument)) argument.Accept(this);

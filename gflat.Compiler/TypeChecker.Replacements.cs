@@ -25,6 +25,7 @@ public partial class TypeChecker
                 _currentClass = group.Key.Owner is ClassDeclaration cls ? GetClassByIdentity(cls.Name) : null;
                 _currentStruct = group.Key.Owner is StructDeclaration str ? GetStructByIdentity(str.Name) : null;
                 var functions = group.ToList();
+                if (group.Key.Owner == null) ResolveFunctionDeclarations(functions);
                 foreach (FunctionEntry entry in functions)
                 {
                     MethodDeclaration method = entry.Method;

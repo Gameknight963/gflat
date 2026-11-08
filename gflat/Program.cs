@@ -175,6 +175,8 @@ public static class Program
             {
                 NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
                 IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
+                FileDeclarationScopes = preprocessing.DeclarationScopes.ToDictionary(pair => pair.Key,
+                    pair => Enum.Parse<DeclarationScope>(pair.Value), pathComparer),
                 ForeignCompilerResolver = () => NativeToolchain.FindClang(clang),
                 ForeignCompilerArguments = NativeRuntime.HostCompilerArguments(cpp: true),
                 DependencyObserver = paths =>

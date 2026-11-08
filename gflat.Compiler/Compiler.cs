@@ -66,6 +66,7 @@ public static class Compiler
     public static EmittedProgram EmitProgram(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
     {
         var (ast, checker) = Check(sources, diagnostics, options);
+        CppLinkage.Resolve(ast, checker, options ?? new());
         var emitter = new LlvmEmitter(checker, options?.InternalizeFunctions == true, options?.DebugSymbols == true,
             options?.NoBuiltins == true);
         ast.Accept(emitter);

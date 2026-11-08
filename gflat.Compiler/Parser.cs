@@ -34,7 +34,7 @@ namespace gflat
         private static SourceSpan Range(Token start, Token end) => Range(start.Span, end);
         private static SourceSpan Range(SourceSpan start, Token end) => start.Source != null &&
             start.Source.Id == end.Source?.Id && end.End >= start.Start
-            ? start.Source.Span(start.Start, end.End + 1 - start.Start) : start;
+            ? start.Source.Span(start.Start, end.End + 1 - start.Start) with { RootSourceId = start.RootSourceId } : start;
 
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
@@ -105,9 +105,9 @@ namespace gflat
                 Token pair = Current;
                 bool expanded = pair.ExpandedStart.HasValue;
                 _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, expanded ? pair.End : pair.Start, column: pair.Column)
-                    { Source = pair.Source, ExpandedStart = pair.ExpandedStart, ExpandedEnd = pair.ExpandedStart };
+                    { Source = pair.Source, RootSourceId = pair.RootSourceId, ExpandedStart = pair.ExpandedStart, ExpandedEnd = pair.ExpandedStart };
                 _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, expanded ? pair.Start : pair.Start + 1, pair.End, column: pair.Column + (expanded ? 0 : 1))
-                    { Source = pair.Source, ExpandedStart = pair.ExpandedEnd, ExpandedEnd = pair.ExpandedEnd });
+                    { Source = pair.Source, RootSourceId = pair.RootSourceId, ExpandedStart = pair.ExpandedEnd, ExpandedEnd = pair.ExpandedEnd });
                 return Consume();
             }
             if (Current.Kind != kind)
@@ -375,7 +375,9 @@ namespace gflat
             {
                 if (isAbstract) RejectDeclarationModifier(modifierStart, modifierEnd, TokenKind.Abstract,
                     "Namespace functions cannot be abstract");
-                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect, isImmutable: isImmutable));
+                var method = ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: true, isImmutable: isImmutable);
+                method.IsPrototype = method.Body == null && implementation == FunctionImplementationKind.Ordinary;
+                return Finish(method);
             }
 
             if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
@@ -1090,12 +1092,14 @@ namespace gflat
         {
             Expect(TokenKind.Extern);
             bool cLinkage = false;
+            bool cppLinkage = false;
             if (Check(TokenKind.StringLiteral))
             {
                 var linkage = Consume();
-                if (linkage.Text != "\"C\"")
-                    throw new TypeCheckException("Supported explicit extern linkage is \"C\"", linkage.Span);
-                cLinkage = true;
+                if (linkage.Text is not ("\"C\"" or "\"C++\""))
+                    throw new TypeCheckException("Supported explicit extern linkage is \"C\" or \"C++\"", linkage.Span);
+                cLinkage = linkage.Text == "\"C\"";
+                cppLinkage = linkage.Text == "\"C++\"";
             }
             while (Check(TokenKind.Public) || Check(TokenKind.Private) || Check(TokenKind.Protected) || Check(TokenKind.Internal))
                 ParseAccessibilityModifier(ref accessibility, ref firstAccessibility);
@@ -1125,7 +1129,7 @@ namespace gflat
             Expect(TokenKind.CloseParen);
             bool isNoThrow = Match(TokenKind.NoThrow);
             Expect(TokenKind.Semicolon);
-            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility, isNoThrow) { IsCLinkage = cLinkage };
+            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility, isNoThrow) { IsCLinkage = cLinkage, IsCppLinkage = cppLinkage };
         }
 
         private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false) => Located(() => ParseConstructorDeclarationCoreLocated(name, accessibility, line, attributes, isConst));

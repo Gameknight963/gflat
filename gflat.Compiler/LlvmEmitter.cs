@@ -2140,6 +2140,7 @@ public partial class LlvmEmitter : IVisitor
 
     private string ExternSymbol(ExternDeclaration node)
     {
+        if (node.NativeSymbol is { } native) return "\"" + native.Replace("\\", "\\5C").Replace("\"", "\\22") + "\"";
         if (node.IsCLinkage) return node.Name;
         string scope = (_typeChecker.DeclarationNamespace(node) ?? "").Replace("::", "$");
         return "gflat$" + (scope.Length == 0 ? "" : scope + "$") + node.Name;
@@ -2217,6 +2218,13 @@ public partial class LlvmEmitter : IVisitor
         else
             name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
 
+        if (node.IsPrototype)
+        {
+            string declarationParameters = string.Join(", ", node.Parameters.Select(parameter => EmitAbiParamType(parameter.Type)));
+            declarationParameters = WithManagedResultParameter(node.ReturnType, declarationParameters, named: false);
+            EmitGlobal($"declare {EmitAbiFunctionReturnType(node.ReturnType)} @{name}({declarationParameters})" + (node.IsNoThrow ? " nounwind" : ""));
+            return;
+        }
         if (DeferFunction(name, () => Visit(node), node.IsForeignImport)) return;
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>

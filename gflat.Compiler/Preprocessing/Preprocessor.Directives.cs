@@ -89,6 +89,16 @@ public sealed partial class Preprocessor
             if (!Active()) continue;
             switch (directive)
             {
+                case "scope":
+                    if (depth != 0) throw Error("#scope belongs in a root source file, not an included header", location);
+                    if (output.Count != 0 || foreignSources.Count != 0) throw Error("#scope must precede declarations", location);
+                    DeclarationScope = arguments.Count == 1 ? arguments[0].Text switch
+                    {
+                        "file" => gflat.DeclarationScope.File,
+                        "project" => gflat.DeclarationScope.Project,
+                        _ => throw Error("Expected #scope file or #scope project", location)
+                    } : throw Error("Expected #scope file or #scope project", location);
+                    break;
                 case "define": Define(arguments, location); break;
                 case "undef":
                     RequireName(arguments, location);

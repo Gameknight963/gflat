@@ -70,6 +70,39 @@ compare its fields using `static foreach`. Such a header allows repeated
 inclusion so each receiving type gets its own members. See
 [reusable members with includes](../examples/member-includes/README.md).
 
+## Require explicit function declarations
+
+Put `#scope file` before declarations in an implementation file to keep its
+namespace functions out of other files' automatic lookup:
+
+```cpp
+#scope file
+
+int Answer() => 42;
+```
+
+A caller supplies a matching declaration, either directly or through `#include`:
+
+```cpp
+int Answer();
+int main() => Answer();
+```
+
+The definition retains external linkage. A declaration without a definition in
+the compilation emits an external symbol for the linker to resolve. Return types,
+parameter types, accessibility, constraints, and modifiers must match. Ordinary
+declarations do not participate in `expect` and `replace` selection. A generic
+function needs its definition to instantiate.
+
+`DeclarationScope` can also be set to `File` or `Project` in a project property
+or on an individual `Compile` item. Referenced source projects retain their own
+settings. A root file's `#scope file` or `#scope project` overrides its configured
+setting. An included header cannot change this setting.
+
+Default arguments belong to visible declarations. A default in a file-scoped
+header declaration is available to roots that include it. Conflicting visible
+defaults produce an error.
+
 ## Define and expand macros
 
 ```cpp

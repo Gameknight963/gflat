@@ -8,6 +8,7 @@
     <RootNamespace Condition="'$(RootNamespace)' == ''">$(MSBuildProjectName)</RootNamespace>
     <NoStdLib Condition="'$(NoStdLib)' == ''">false</NoStdLib>
     <NoBuiltins Condition="'$(NoBuiltins)' == ''">false</NoBuiltins>
+    <DeclarationScope Condition="'$(DeclarationScope)' == ''">Project</DeclarationScope>
     <OutputType Condition="'$(OutputType)' == ''">Executable</OutputType>
     <GflatExceptionReserveBytes Condition="'$(GflatExceptionReserveBytes)' == ''">65536</GflatExceptionReserveBytes>
     <EnableDefaultCompileItems Condition="'$(EnableDefaultCompileItems)' == ''">true</EnableDefaultCompileItems>

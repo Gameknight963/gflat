@@ -16,6 +16,43 @@ public sealed class PreprocessorProjectTests : IDisposable
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 
     [Fact]
+    public void DeclarationScopesPreserveProjectAndItemSettingsAcrossReferences()
+    {
+        string library = Write("lib/value.gf", "int Answer()=>42;");
+        Write("lib/lib.gfproj", ProjectFileFixture.Xml("SourceLibrary", "<PropertyGroup><DeclarationScope>File</DeclarationScope></PropertyGroup>"));
+        string main = Write("main.gf", "int main()=>Answer();");
+        string project = Write("app.gfproj", ProjectFileFixture.Xml(content:
+            "<ItemGroup><ProjectReference Include=\"lib/lib.gfproj\"/><Compile Update=\"main.gf\" DeclarationScope=\"File\"/></ItemGroup>"));
+        var graph = ProjectGraph.Load(project);
+        Assert.Equal("File", graph.PreprocessorInputs.DeclarationScopes[library]);
+        Assert.Equal("File", graph.PreprocessorInputs.DeclarationScopes[main]);
+        Assert.NotEqual(0, Program.Main(["build", project, "--emit-ir"]));
+        File.WriteAllText(main, "int Answer(); int main()=>Answer();");
+        Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
+    }
+
+    [Fact]
+    public void SourceDirectiveOverridesProjectScope()
+    {
+        Write("value.gf", "#scope project\nint Answer()=>42;");
+        Write("main.gf", "int main()=>Answer();");
+        string project = Write("app.gfproj", ProjectFileFixture.Xml(content:
+            "<PropertyGroup><DeclarationScope>File</DeclarationScope></PropertyGroup>"));
+        Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
+    }
+
+    [Fact]
+    public void DeclarationScopeManifestRoundTripsAndRejectsUnknownValues()
+    {
+        string source = Write("value.gf", "");
+        var inputs = new PreprocessorInputs([], [], [new(source, "file")]);
+        string manifest = Path.Combine(root, "inputs.xml");
+        inputs.Write(manifest);
+        Assert.Equal("File", PreprocessorInputs.Read(manifest).DeclarationScopes[source]);
+        Assert.Throws<ArgumentException>(() => new PreprocessorInputs([], [], [new(source, "invalid")]));
+    }
+
+    [Fact]
     public void CliOptionsAndDependencyOutputsPreserveInputFiles()
     {
         string header = Write("include/value.gfh", "#define ANSWER VALUE");

@@ -60,7 +60,13 @@ internal static class MsBuildEvaluation
             }
             catch (ArgumentException error) { throw new ProjectException(path, "Native link inputs: " + error.Message); }
             PreprocessorInputs preprocessing;
-            try { preprocessing = new(Files("IncludeDirectory"), project.GetItems("Define").Select(item => item.EvaluatedInclude)); }
+            try
+            {
+                string scope = PreprocessorInputs.ParseDeclarationScope(project.GetPropertyValue("DeclarationScope"));
+                preprocessing = new(Files("IncludeDirectory"), project.GetItems("Define").Select(item => item.EvaluatedInclude),
+                    project.GetItems("Compile").Select(item => new KeyValuePair<string, string>(item.GetMetadataValue("FullPath"),
+                        item.GetMetadataValue("DeclarationScope") is { Length: > 0 } itemScope ? itemScope : scope)));
+            }
             catch (ArgumentException error) { throw new ProjectException(path, "Preprocessor inputs: " + error.Message); }
             // MSBuild's evaluated glob expressions match paths relative to the project.
             return new ProjectModel(path, kind, target == null ? null : Path.GetFullPath(target, Path.GetDirectoryName(path)!),

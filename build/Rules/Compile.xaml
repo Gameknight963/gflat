@@ -1,6 +1,9 @@
 <Rule Name="Compile" DisplayName="Compile" PageTemplate="generic" xmlns="http://schemas.microsoft.com/build/2009/properties">
   <Rule.DataSource><DataSource Persistence="ProjectFile" ItemType="Compile" HasConfigurationCondition="false" /></Rule.DataSource>
   <StringProperty Name="Identity" DisplayName="Path" ReadOnly="true" />
+  <EnumProperty Name="DeclarationScope" DisplayName="Declaration scope" Description="Override this file's project declaration scope. A leading #scope directive takes precedence.">
+    <EnumValue Name="" DisplayName="Use project setting" /><EnumValue Name="Project" DisplayName="Project" /><EnumValue Name="File" DisplayName="File" />
+  </EnumProperty>
   <BoolProperty Name="Visible" Visible="false" />
   <StringProperty Name="Link" Visible="false" />
 </Rule>

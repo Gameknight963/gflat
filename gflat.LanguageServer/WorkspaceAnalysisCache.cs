@@ -21,6 +21,8 @@ internal sealed class WorkspaceAnalysisCache
         options = options with {
             IncludeDirectories = options.IncludeDirectories.ToArray(),
             ForeignCompilerArguments = options.ForeignCompilerArguments.ToArray(),
+            FileDeclarationScopes = options.FileDeclarationScopes.Count == 0 ? EmptyDeclarationScopes :
+                new Dictionary<string, DeclarationScope>(options.FileDeclarationScopes, Workspace.Paths),
             Defines = options.Defines.Count == 0 ? EmptyDefines : new Dictionary<string, string>(options.Defines, StringComparer.Ordinal)
         };
         SourceFile[]? automatic = ReadAutomaticSources(options);
@@ -53,13 +55,16 @@ internal sealed class WorkspaceAnalysisCache
     }
 
     private static bool SameOptions(CompilationOptions left, CompilationOptions right) =>
-        (left with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) ==
-        (right with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, IncludeLoader = null, DependencyObserver = null }) &&
+        (left with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, FileDeclarationScopes = EmptyDeclarationScopes, IncludeLoader = null, DependencyObserver = null }) ==
+        (right with { IncludeDirectories = [], ForeignCompilerArguments = [], Defines = EmptyDefines, FileDeclarationScopes = EmptyDeclarationScopes, IncludeLoader = null, DependencyObserver = null }) &&
+        left.FileDeclarationScopes.Count == right.FileDeclarationScopes.Count &&
+        left.FileDeclarationScopes.All(pair => right.FileDeclarationScopes.TryGetValue(pair.Key, out var scope) && scope == pair.Value) &&
         left.ForeignCompilerArguments.SequenceEqual(right.ForeignCompilerArguments) &&
         left.IncludeDirectories.SequenceEqual(right.IncludeDirectories, Workspace.Paths) &&
         left.Defines.Count == right.Defines.Count && left.Defines.All(pair => right.Defines.TryGetValue(pair.Key, out var value) && value == pair.Value);
 
     private static readonly IReadOnlyDictionary<string, string> EmptyDefines = new Dictionary<string, string>();
+    private static readonly IReadOnlyDictionary<string, DeclarationScope> EmptyDeclarationScopes = new Dictionary<string, DeclarationScope>();
 
     private static bool SameIncludes(AnalysisSnapshot snapshot, CompilationOptions options)
     {

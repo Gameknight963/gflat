@@ -281,7 +281,7 @@ internal static class ForeignImporter
     private static string Text(JsonElement node, string name, string fallback = "")
         => node.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : fallback;
 
-    private static string Run(string compiler, IEnumerable<string> arguments, SourceSpan span, CancellationToken cancellation)
+    internal static string Run(string compiler, IEnumerable<string> arguments, SourceSpan span, CancellationToken cancellation)
     {
         var info = new ProcessStartInfo(compiler) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
         foreach (string argument in arguments) info.ArgumentList.Add(argument);

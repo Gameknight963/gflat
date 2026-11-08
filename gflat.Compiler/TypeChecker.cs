@@ -139,7 +139,7 @@ namespace gflat
 
 
         private readonly HashSet<string> _usingNamespaces = new();
-        private IEnumerable<string> CurrentUsings => SourceContext.Current?.SourceId is SourceId id &&
+        private IEnumerable<string> CurrentUsings => SourceContext.Current?.DeclarationSourceId is SourceId id &&
             _compilationUnit?.FileUsings.TryGetValue(id, out var usings) == true ? usings : _usingNamespaces;
         private string _currentNamespacePath
         {
@@ -1016,6 +1016,8 @@ namespace gflat
 
         private MethodDeclaration MonomorphizeFunction(MethodDeclaration genericDef, List<TypeExpression> typeArgs, int line)
         {
+            if (genericDef.IsPrototype)
+                throw new TypeCheckException($"Generic function '{DisplayName(genericDef.Name)}' requires a definition to instantiate", line);
             ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
@@ -1050,6 +1052,8 @@ namespace gflat
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName, renameTypeOwner: false);
             MethodDeclaration specialized = cloner.CloneMethod(genericDef);
+            if (functionDeclarations.TryGetValue(genericDef, out var declarations))
+                functionDeclarations[specialized] = declarations;
             RegisterAliasSpecialization(genericDef, typeArgs, specialized);
 
             _compilationUnit?.Members.Add(specialized);
@@ -3104,8 +3108,18 @@ namespace gflat
             ValidatePropertyAccessor(node);
             ValidateStaticConstructor(node);
             ValidateReinterpretDeclaration(node);
-            if (node.Body == null)
+            if (node.Body == null && !node.IsPrototype)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
+            if (node.IsPrototype)
+            {
+                if (node.Name == "main") throw new TypeCheckException("The entry point must provide a body", node.Span);
+                if (node.IsGeneric) return;
+                BindMethodSignature(node);
+                ValidateReturnType(node.ReturnType, node.Line);
+                foreach (var parameter in node.Parameters) ValidateParameterType(parameter.Type, parameter.Line);
+                ValidateParameterDefaults(node, node.Parameters);
+                return;
+            }
             if (node.IsGeneric) return;
             if (node.IsConst && ShouldCheckEditorBody(node)) checkedConstMethodBodies.Add(node);
             BindMethodSignature(node);
@@ -5799,8 +5813,13 @@ namespace gflat
             if (ContainsReflectionValue(ResolveAlias(node.ReturnType)) ||
                 node.Parameters.Any(parameter => ContainsReflectionValue(ResolveAlias(parameter.Type))))
                 throw new TypeCheckException("Extern signatures cannot contain reflection values", node.Span);
-            if (node.IsVariadic && !node.IsCLinkage)
-                throw new TypeCheckException("Variadic extern functions require explicit C linkage", node.Span);
+            if (node.IsVariadic && !node.IsCLinkage && !node.IsCppLinkage)
+                throw new TypeCheckException("Variadic extern functions require explicit C or C++ linkage", node.Span);
+            if (node.IsCppLinkage)
+            {
+                _ = CppLinkage.Type(ResolveAlias(node.ReturnType));
+                foreach (var parameter in node.Parameters) _ = CppLinkage.Type(ResolveAlias(parameter.Type));
+            }
             ValidateReturnType(node.ReturnType, node.Line);
             if (ContainsManagedReference(node.ReturnType) ||
                 node.Parameters.Any(p => ContainsManagedReference(p.Type)))

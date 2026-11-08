@@ -5,6 +5,36 @@ namespace gflat.LanguageServer.Tests;
 public sealed class WorkspaceAnalysisReuseTests : IDisposable
 {
     [Fact]
+    public void DeclarationScopeChangesInvalidateAnalysisWithoutDefeatingReuse()
+    {
+        var implementation = new SourceFile(Path.GetFullPath("scoped-cache-implementation.gf"), "int Answer()=>42;");
+        var caller = new SourceFile(Path.GetFullPath("scoped-cache-main.gf"), "int main()=>Answer();");
+        var scopes = new Dictionary<string, DeclarationScope> { [implementation.Path] = DeclarationScope.Project };
+        var options = new CompilationOptions { NoStdLib = true, FileDeclarationScopes = scopes };
+        var cache = new WorkspaceAnalysisCache();
+        var first = cache.Get([implementation, caller], options);
+        Assert.Empty(first.Snapshot.Diagnostics);
+        Assert.Same(first.Snapshot, cache.Get([implementation, caller], options with {
+            FileDeclarationScopes = new Dictionary<string, DeclarationScope>(scopes) }).Snapshot);
+        scopes[implementation.Path] = DeclarationScope.File;
+        var changed = cache.Get([implementation, caller], options);
+        Assert.NotSame(first.Snapshot, changed.Snapshot);
+        Assert.NotEmpty(changed.Snapshot.Diagnostics);
+        Assert.Equal(DeclarationScope.Project, first.Snapshot.Options.FileDeclarationScopes[implementation.Path]);
+    }
+
+    [Fact]
+    public void FileScopedFunctionsAreExcludedFromOtherFilesCompletion()
+    {
+        var implementation = new SourceFile(Path.GetFullPath("scoped-completion-implementation.gf"), "#scope file\nint HiddenAnswer()=>42;");
+        var caller = new SourceFile(Path.GetFullPath("scoped-completion-main.gf"), "int main() { Hidden; return 0; }");
+        var cache = new WorkspaceAnalysisCache();
+        var result = cache.Get([implementation, caller], new() { NoStdLib = true });
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(result.Model.Completion(caller.Path, caller.Text.IndexOf("Hidden", StringComparison.Ordinal) + 6));
+        Assert.DoesNotContain(json.GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "HiddenAnswer");
+    }
+
+    [Fact]
     public void MutatingMacroOptionsDoesNotReuseThePreviousAnalysis()
     {
         var source = new SourceFile(Path.GetFullPath("mutable-cache-defines.gf"), "int Read()=>VALUE;");

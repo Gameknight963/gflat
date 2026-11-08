@@ -76,7 +76,7 @@ internal static class SourceContext
     private static readonly AsyncLocal<Frame?> current = new();
     public static SourceSpan? Current => current.Value?.Span;
     public static SourceSpan ForLine(int line) => current.Value?.Span is { Source: not null } span
-        ? (span.Line == line || line == 0 ? span : span.Source.LineSpan(line))
+        ? (span.Line == line || line == 0 ? span : span.Source.LineSpan(line) with { RootSourceId = span.RootSourceId })
         : new(0, 0, line, 0);
     public static Scope Enter(SourceSpan span)
     {

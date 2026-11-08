@@ -655,6 +655,8 @@ public sealed partial class EditorModel
     }
     private bool Accessible(Symbol s, string path, int offset)
     {
+        if (s.Owner == null && s.Syntax.Node is MethodDeclaration method && sources.TryGetValue(path, out var source) &&
+            snapshot.Checker?.IsDeclarationDiscoverable(method, source.Span(offset, 0)) == false) return false;
         if ((s.Syntax.Node is ExternDeclaration || s.Syntax.Node is MethodDeclaration or PropertyDeclaration or FieldDeclaration && s.Owner == null) && s.Access == TokenKind.Private)
             return Workspace.Paths.Equals(s.Syntax.Span.Source?.Path, path);
         if (s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null) return true;

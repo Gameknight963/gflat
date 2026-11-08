@@ -87,7 +87,9 @@ public sealed class ProjectGraph
             foreach (string reference in project.References)
                 foreach (string directory in IncludeDirectories(byPath[reference])) yield return directory;
         }
-        PreprocessorInputs = new(IncludeDirectories(root), root.PreprocessorInputs.Defines.Select(pair => pair.Key + "=" + pair.Value));
+        PreprocessorInputs = new(IncludeDirectories(root), root.PreprocessorInputs.Defines.Select(pair => pair.Key + "=" + pair.Value),
+            projects.SelectMany(project => project.PreprocessorInputs.DeclarationScopes)
+                .GroupBy(pair => pair.Key, ProjectModel.Paths).Select(group => group.First()));
         NativeLinkInputs = NativeLinkProjectOrder.Aggregate(root.FilePath, projects.Select(project =>
             new NativeLinkProject(project.FilePath, project.References, project.NativeLinkInputs)));
     }

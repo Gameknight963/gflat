@@ -71,7 +71,9 @@ public static class Workspace
                     configured.UnionWith(files);
                     watched.UnionWith(files);
                     var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = result.Graph.PreprocessorInputs.Directories,
-                        Defines = result.Graph.PreprocessorInputs.Defines };
+                        Defines = result.Graph.PreprocessorInputs.Defines,
+                        FileDeclarationScopes = result.Graph.PreprocessorInputs.DeclarationScopes.ToDictionary(pair => pair.Key,
+                            pair => Enum.Parse<DeclarationScope>(pair.Value), ProjectModel.Paths) };
                     Check(files, options);
                     // Excluded open files still use the surrounding project's references.
                     // Their diagnostics and models belong only to the excluded document.

@@ -69,6 +69,27 @@ The following are not imported yet:
 C-linkage variadic functions are imported directly. Foreign functions cannot
 participate in host constant evaluation. C++ exception conversion is not implemented.
 
+## Declare a separately linked C++ function
+
+Use `extern "C++"` when its definition is supplied by a native library:
+
+```cpp
+namespace Native
+{
+    extern "C++" int Answer(int value);
+}
+```
+
+Clang supplies its mangled symbol using the configured native target. Calls and
+function addresses use that symbol. The initial explicit-linkage form accepts
+scalar types and raw pointers. Host `long` and `ulong` map to C++ `long long` and
+`unsigned long long`, including on Linux. For native declarations using C++
+`long`, consume the original declaration in a `#lang cpp` section. `readonly(T)*`
+maps to a pointer to `const T`. Native libraries still need to be linked through
+the project's native library inputs.
+
+Bare `extern` retains host-language mangling. `extern "C"` uses C linkage.
+
 ## Editor and emitted artifacts
 
 Foreign sections use lexical C/C++ highlighting through TextMate grammars when

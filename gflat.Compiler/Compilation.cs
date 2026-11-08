@@ -58,6 +58,8 @@ public sealed class Compilation
             cancellationToken.ThrowIfCancellationRequested();
             List<Token> tokens;
             IReadOnlyList<ForeignSource> foreign = [];
+            DeclarationScope declarationScope = (options ?? new()).FileDeclarationScopes.GetValueOrDefault(source.Path,
+                options?.DeclarationScope ?? DeclarationScope.Project);
             bool preprocessed = Preprocessor.IsNeeded(source, preprocessingOptions);
             if (preprocessed)
             {
@@ -72,6 +74,7 @@ public sealed class Compilation
                 {
                     Register(new([], preprocessor.Sources, preprocessor.Dependencies, preprocessor.Symbols));
                     foreign = preprocessor.ForeignSources.ToArray();
+                    declarationScope = preprocessor.DeclarationScope;
                     includedByRoot[source.Id] = preprocessor.Sources.Select(file => file.Id).ToArray();
                 }
             }
@@ -86,6 +89,7 @@ public sealed class Compilation
                 ? syntaxCache.Parse(source, tokens, diagnostics, recoverErrors, cancellationToken)
                 : Parser.Parse(tokens, diagnostics, recoverErrors);
             tree.Span = source.Span(0, source.Text.Length);
+            tree.DeclarationScope = declarationScope;
             try
             {
                 if (importForeignDeclarations) ForeignImporter.Import(tree, foreign, preprocessingOptions, diagnostics,
@@ -105,6 +109,7 @@ public sealed class Compilation
             var rootId = tree.Span.SourceId!.Value;
             var imports = tree.Usings.Select(u => u.Name).ToArray();
             Unit.FileUsings[rootId] = imports;
+            Unit.FileDeclarationScopes[rootId] = tree.DeclarationScope;
             foreach (var includedId in includedByRoot.GetValueOrDefault(rootId) ?? [])
                 Unit.FileUsings.TryAdd(includedId, imports);
         }

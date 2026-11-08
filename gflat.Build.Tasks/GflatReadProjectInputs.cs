@@ -25,6 +25,7 @@ public sealed class GflatReadProjectInputs : Task
     public string PreprocessorOverrides { get; set; } = "";
     [Output] public ITaskItem[] IncludeDirectories { get; set; } = [];
     [Output] public ITaskItem[] Defines { get; set; } = [];
+    [Output] public ITaskItem[] DeclarationSources { get; set; } = [];
 
     public override bool Execute()
     {
@@ -41,6 +42,7 @@ public sealed class GflatReadProjectInputs : Task
             var nativeProjects = new List<NativeLinkProject>();
             var includeDirectories = new List<string>();
             var definitions = new List<string>();
+            var declarationScopes = new Dictionary<string, string>(comparer);
             using (var collection = new ProjectCollection())
             {
                 void Visit(string file, bool asReference)
@@ -54,6 +56,10 @@ public sealed class GflatReadProjectInputs : Task
                     foreach (var import in project.Imports) inputs.Add(import.ImportedProject.FullPath);
                     includeDirectories.AddRange(project.GetItems("IncludeDirectory").Select(item => item.GetMetadataValue("FullPath")));
                     if (!asReference) definitions.AddRange(project.GetItems("Define").Select(item => item.EvaluatedInclude));
+                    string scope = PreprocessorInputs.ParseDeclarationScope(project.GetPropertyValue("DeclarationScope"));
+                    foreach (var item in project.GetItems("Compile"))
+                        declarationScopes[item.GetMetadataValue("FullPath")] = PreprocessorInputs.ParseDeclarationScope(
+                            item.GetMetadataValue("DeclarationScope") is { Length: > 0 } itemScope ? itemScope : scope);
                     var references = project.GetItems("ProjectReference").Select(reference => reference.GetMetadataValue("FullPath")).ToArray();
                     var libraries = new List<NativeLibraryInput>();
                     var directories = new List<string>();
@@ -70,10 +76,16 @@ public sealed class GflatReadProjectInputs : Task
                 Visit(ProjectFile, false);
             }
             ProjectInputs = inputs.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
-            var preprocessing = new PreprocessorInputs(includeDirectories, definitions);
+            var preprocessing = new PreprocessorInputs(includeDirectories, definitions, declarationScopes);
             if (PreprocessorOverrides.Length != 0) preprocessing = preprocessing.Append(PreprocessorInputs.Read(PreprocessorOverrides));
             IncludeDirectories = preprocessing.Directories.Select(path => (ITaskItem)new TaskItem(path)).ToArray();
             Defines = preprocessing.Defines.Select(pair => (ITaskItem)new TaskItem(pair.Key + "=" + pair.Value)).ToArray();
+            DeclarationSources = preprocessing.DeclarationScopes.Select(pair =>
+            {
+                var item = new TaskItem(pair.Key);
+                item.SetMetadata("DeclarationScope", pair.Value);
+                return (ITaskItem)item;
+            }).ToArray();
             NativeLinkInputs nativeInputs = NativeLinkProjectOrder.Aggregate(Path.GetFullPath(ProjectFile), nativeProjects);
             if (NativeLinkOverrides.Length != 0) nativeInputs = nativeInputs.Append(NativeLinkInputs.Read(NativeLinkOverrides));
             NativeLibraries = nativeInputs.Libraries.Select(library =>

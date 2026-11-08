@@ -68,7 +68,7 @@ public partial class TypeChecker
             if (family.Select(m => m.IsStatic).Distinct().Count() > 1)
                 throw new TypeCheckException("An overload family cannot mix static and instance methods", family[0].Line);
             // Existing virtual tables use names as slots.
-            if (family.Any(m => m.IsVirtual || m.IsOverride || m.IsAbstract || m.Body == null))
+            if (family.Any(m => m.IsVirtual || m.IsOverride || m.IsAbstract || m.Body == null && !m.IsPrototype))
                 throw new TypeCheckException("Overloaded virtual and interface methods are not yet supported", family[0].Line);
             foreach (var method in family) overloadFamilies[method] = family;
         }
@@ -140,6 +140,13 @@ public partial class TypeChecker
         if (TrySelectReflectedOverload(method, call, out var reflected)) return reflected;
         if (SelectDeclaredMemberOverload(method, call) is { } declaredMember) return declaredMember;
         overloadFamilies.TryGetValue(method, out var family);
+        if (_functionNamespaces.ContainsKey(method) && !TryGetMethodOwner(method, out _, out _))
+        {
+            var visible = (family ?? [method]).Where(candidate => IsDeclarationDiscoverable(candidate, call.Callee.Span)).ToList();
+            if (visible.Count == 0) ValidateNamespaceFunctionAccess(method, call.Callee.Span);
+            method = visible[0];
+            family = visible;
+        }
         foreach (var candidate in (family ?? [method]).ToArray()) BindMethodSignature(candidate);
         if (method.IsGeneric || family?.Any(candidate => candidate.IsGeneric) == true)
         {
@@ -149,11 +156,14 @@ public partial class TypeChecker
             return selected.Definition;
         }
         if (family == null) return method;
-        var candidates = family.Select(definition => new CallableOverloadCandidate(definition, [], definition.Parameters.Select(parameter =>
+        var candidates = family.Select(definition => new CallableOverloadCandidate(definition, [], VisibleFunctionParameters(definition, call.Callee.Span).Select(parameter =>
             new Parameter(parameter.Name, BindCallableOwnerType(definition, call.Callee, parameter.Type), parameter.Line,
                 parameter.IsConst, parameter.DefaultValue)).ToList())).ToList();
-        return SelectBestOverload(candidates, candidate => candidate.Parameters, call.Arguments, method.Name, call.Line,
-            useDeclaredTypes: !HasUnconstrainedGenericReceiver(call)).Definition;
+        var selectedCandidate = SelectBestOverload(candidates, candidate => candidate.Parameters, call.Arguments, method.Name, call.Line,
+            useDeclaredTypes: !HasUnconstrainedGenericReceiver(call));
+        if (functionDeclarations.ContainsKey(selectedCandidate.Definition))
+            declaredMemberParameters[call] = VisibleFunctionParameters(selectedCandidate.Definition, call.Callee.Span);
+        return selectedCandidate.Definition;
     }
 
     private bool HasUnconstrainedGenericReceiver(CallExpression call)

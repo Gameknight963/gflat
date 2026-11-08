@@ -14,11 +14,12 @@ namespace gflat
         public int Column { get; }
         public bool IsEscapedIdentifier { get; internal init; }
         public SourceFile? Source { get; internal set; }
+        internal SourceId? RootSourceId { get; set; }
         internal int? ExpandedStart { get; init; }
         internal int? ExpandedEnd { get; init; }
         internal int SyntaxStart => ExpandedStart ?? Start;
         internal int SyntaxEnd => ExpandedEnd ?? End;
-        public SourceSpan Span => new(Start, Kind == TokenKind.EndOfFile ? 0 : End - Start + 1, Line, Column, Source);
+        public SourceSpan Span => new(Start, Kind == TokenKind.EndOfFile ? 0 : End - Start + 1, Line, Column, Source) { RootSourceId = RootSourceId };
 
         public Token(TokenKind kind, int line, int start, int end, string? text = null, int column = 0)
         {

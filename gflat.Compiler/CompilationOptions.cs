@@ -3,6 +3,8 @@ namespace gflat;
 /// <summary>Source selection and code generation options for a compilation.</summary>
 public sealed record CompilationOptions
 {
+    public DeclarationScope DeclarationScope { get; init; }
+    public IReadOnlyDictionary<string, DeclarationScope> FileDeclarationScopes { get; init; } = new Dictionary<string, DeclarationScope>();
     public IReadOnlyList<string> IncludeDirectories { get; init; } = [];
     public IReadOnlyDictionary<string, string> Defines { get; init; } = new Dictionary<string, string>();
     public Func<string, SourceFile?>? IncludeLoader { get; init; }

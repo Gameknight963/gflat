@@ -12,12 +12,15 @@ public sealed class GflatWritePreprocessorInputs : Task
     [Required] public string ManifestPath { get; set; } = "";
     public ITaskItem[] Directories { get; set; } = [];
     public ITaskItem[] Defines { get; set; } = [];
+    public ITaskItem[] DeclarationSources { get; set; } = [];
 
     public override bool Execute()
     {
         try
         {
-            new PreprocessorInputs(Directories.Select(item => item.ItemSpec), Defines.Select(item => item.ItemSpec)).Write(ManifestPath);
+            new PreprocessorInputs(Directories.Select(item => item.ItemSpec), Defines.Select(item => item.ItemSpec),
+                DeclarationSources.Select(item => new System.Collections.Generic.KeyValuePair<string, string>(
+                    item.ItemSpec, item.GetMetadata("DeclarationScope")))).Write(ManifestPath);
             return true;
         }
         catch (Exception error) when (error is ArgumentException || error is IOException || error is UnauthorizedAccessException)

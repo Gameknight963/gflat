@@ -15,6 +15,7 @@ public sealed record MacroSymbol(string Name, SourceSpan Span, bool Definition, 
 public sealed record PreprocessingResult(List<Token> Tokens, IReadOnlyList<SourceFile> Sources,
     IReadOnlyList<string> Dependencies, IReadOnlyList<MacroSymbol> Symbols)
 {
+    public DeclarationScope DeclarationScope { get; init; }
     public IReadOnlyList<ForeignSource> ForeignSources { get; init; } = [];
 }
 
@@ -36,6 +37,7 @@ public sealed partial class Preprocessor
     private readonly List<ForeignSource> foreignSources = [];
     private string language = "gflat";
     public IReadOnlyList<ForeignSource> ForeignSources => foreignSources;
+    public DeclarationScope DeclarationScope { get; private set; }
     public IReadOnlyList<SourceFile> Sources => files.Values.ToArray();
     public IReadOnlyList<string> Dependencies => dependencies.ToArray();
     public IReadOnlyList<MacroSymbol> Symbols => symbols;
@@ -58,6 +60,7 @@ public sealed partial class Preprocessor
     {
         macros.Clear(); files.Clear(); dependencies.Clear(); once.Clear(); symbols.Clear(); expansions = 0;
         foreignSources.Clear(); language = "gflat";
+        DeclarationScope = options.FileDeclarationScopes.GetValueOrDefault(source.Path, options.DeclarationScope);
         foreach (var definition in options.Defines)
         {
             if (!Name(definition.Key)) throw Error($"Invalid macro name '{definition.Key}'", source.Span(0));
@@ -68,7 +71,7 @@ public sealed partial class Preprocessor
         }
         var pieces = Read(source, 0);
         return new(Convert(pieces, source), files.Values.ToArray(), dependencies.ToArray(), symbols.ToArray())
-        { ForeignSources = foreignSources.ToArray() };
+        { ForeignSources = foreignSources.ToArray(), DeclarationScope = DeclarationScope };
     }
 
     private static string Key(string path) => path.StartsWith('<') ? path : Path.GetFullPath(path);
@@ -126,6 +129,8 @@ public sealed partial class Preprocessor
                 token.Text, origin.Column) { Source = origin.Source ?? root, ExpandedStart = token.Start, ExpandedEnd = token.End,
                     IsEscapedIdentifier = token.IsEscapedIdentifier });
         }
+        foreach (var token in result)
+            if (token.Source?.Id != root.Id) token.RootSourceId = root.Id;
         return result;
     }
 }

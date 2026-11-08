@@ -81,6 +81,7 @@
     <GflatReadProjectInputs ProjectFile="$(MSBuildProjectFullPath)" Configuration="$(Configuration)" Platform="$(Platform)" NativeLinkOverrides="$(GflatNativeLinkOverrides)" PreprocessorOverrides="$(GflatPreprocessorOverrides)">
       <Output TaskParameter="IncludeDirectories" ItemName="_GflatIncludeDirectories" />
       <Output TaskParameter="Defines" ItemName="_GflatDefines" />
+      <Output TaskParameter="DeclarationSources" ItemName="_GflatDeclarationSources" />
       <Output TaskParameter="ProjectInputs" ItemName="_GflatEvaluatedProjectInputs" />
       <Output TaskParameter="NativeLibraries" ItemName="_GflatNativeLibraries" />
       <Output TaskParameter="NativeLibraryDirectories" ItemName="_GflatNativeLibraryDirectories" />
@@ -121,7 +122,7 @@
     <!-- Keep the task's default UTF-8 encoding: explicit UTF-8 adds a BOM and
          prevents WriteOnlyWhenDifferent from preserving unchanged timestamps. -->
     <WriteLinesToFile File="$(_GflatSourceList)" Lines="@(_GflatSources)" Overwrite="true" WriteOnlyWhenDifferent="true" />
-    <GflatWritePreprocessorInputs ManifestPath="$(_GflatPreprocessorManifest)" Directories="@(_GflatIncludeDirectories)" Defines="@(_GflatDefines)" />
+    <GflatWritePreprocessorInputs ManifestPath="$(_GflatPreprocessorManifest)" Directories="@(_GflatIncludeDirectories)" Defines="@(_GflatDefines)" DeclarationSources="@(_GflatDeclarationSources)" />
     <GflatWriteNativeLinkInputs ManifestPath="$(_GflatNativeLinkManifest)" Libraries="@(_GflatNativeLibraries)" Directories="@(_GflatNativeLibraryDirectories)" />
   </Target>
   <Target Name="_GflatPrepareBuild" DependsOnTargets="_GflatPrepare">

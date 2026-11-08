@@ -103,6 +103,8 @@ namespace gflat
                     _copyTokensOnSplit = false;
                 }
                 Token pair = Current;
+                if (tokenProbeDepth != 0)
+                    (tokenSplits ??= []).Add(new TokenSplit(_tokens, _pos, pair));
                 bool expanded = pair.ExpandedStart.HasValue;
                 _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, expanded ? pair.End : pair.Start, column: pair.Column)
                     { Source = pair.Source, RootSourceId = pair.RootSourceId, ExpandedStart = pair.ExpandedStart, ExpandedEnd = pair.ExpandedStart };
@@ -538,26 +540,31 @@ namespace gflat
                 return false;
             // A comparison may also contain a later `>(` (for example a cast).
             // Validate actual type syntax rather than balancing arbitrary angles.
-            var probe = new Parser { _tokens = _tokens, _pos = _pos + 1, _copyTokensOnSplit = true };
-            if (!probe.IsTypeStart()) return false;
-            // Parsing nested types can split >> into two tokens. Keep that and
-            // speculative diagnostics separate from the caller's parser state.
-            // Share the read-only list until a split actually needs to detach it.
+            using var probe = new TokenProbe(this);
+            int mark = _diagnostics.Count;
+            var previousConstraints = extensionParameterConstraints;
+            extensionParameterConstraints = null;
+            Consume(); // <
             try
             {
                 do
                 {
-                    if (!probe.IsTypeStart()) return false;
-                    probe.ParseTypeExpression();
-                    if (probe._diagnostics.HasErrors) return false;
-                } while (probe.Match(TokenKind.Comma));
-                if (!probe.Check(TokenKind.Greater)) return false;
-                probe.Expect(TokenKind.Greater);
-                return !probe._diagnostics.HasErrors && probe.Check(following);
+                    if (!IsTypeStart()) return false;
+                    ParseTypeExpression();
+                    if (_diagnostics.Count != mark) return false;
+                } while (Match(TokenKind.Comma));
+                if (!Check(TokenKind.Greater)) return false;
+                Expect(TokenKind.Greater);
+                return _diagnostics.Count == mark && Check(following);
             }
-            catch (TypeCheckException)
+            catch (Exception error) when (error is TypeCheckException or SpeculativeParseException)
             {
                 return false;
+            }
+            finally
+            {
+                _diagnostics.ClearSince(mark);
+                extensionParameterConstraints = previousConstraints;
             }
         }
 
@@ -1562,18 +1569,19 @@ namespace gflat
             if (IsTypeStart() && IsVariableDeclaration(out missingName))
                 return ParseVariableDeclaration();
 
-            int saved = _pos;
-            var savedTokens = _tokens;
-            bool savedCopyTokensOnSplit = _copyTokensOnSplit;
+            using var probe = missingName != null ? new TokenProbe(this, failFast: false) : null;
             int mark = _diagnostics.Count;
             AstNode expression;
-            _copyTokensOnSplit = savedCopyTokensOnSplit || missingName != null;
             try
             {
                 expression = ParseExpression();
                 Expect(TokenKind.Semicolon);
             }
-            finally { _copyTokensOnSplit = savedCopyTokensOnSplit; }
+            catch
+            {
+                probe?.Commit();
+                throw;
+            }
 
             // A valid expression always wins over the speculative type probe.
             // Explicit parser exceptions retain their specific messages. Only
@@ -1585,11 +1593,11 @@ namespace gflat
                 if (firstError != null && missingName.Start > firstError.Span.Start)
                 {
                     _diagnostics.ClearSince(mark);
-                    _pos = saved;
-                    _tokens = savedTokens;
+                    probe!.Rollback();
                     return ParseVariableDeclaration();
                 }
             }
+            probe?.Commit();
             return new ExpressionStatement(expression, line) { Span = expression.Span };
         }
 

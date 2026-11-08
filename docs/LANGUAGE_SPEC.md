@@ -1220,10 +1220,17 @@ parameters, nullability, immutable qualifiers, and calling conventions still obe
 normal function-pointer compatibility. Inference does not add conversions or
 untyped lambda parameters.
 
-Ordinary function declarations require a body, including generic functions and
-struct methods. A declaration such as `int Missing();` is an error. Use `extern`
-for a function implemented elsewhere. Interface and abstract method declarations
-retain their bodyless forms. Bare extern declarations use Gflat symbol mangling. Use `extern "C"` to declare a native C symbol. Variadic declarations require C linkage.
+Namespace functions can have a bodyless declaration, such as `int Missing();`.
+Matching declarations share one definition and retain their visible defaults.
+A generic function needs its body for instantiation. Struct and class methods
+still require bodies unless abstract. Interface declarations remain bodyless.
+`#scope file` disables automatic discovery of a root file's namespace functions
+from other files without changing their linker symbols. Callers supply matching
+declarations, often through headers. See [declaration scope](PREPROCESSOR.md).
+
+Bare extern declarations use Gflat symbol mangling. Use `extern "C"` for a native
+C symbol or `extern "C++"` for Clang-selected C++ mangling. Explicit C++ linkage
+currently accepts scalars and raw pointers. Variadic declarations require C linkage.
 
 Namespace extern declarations support accessibility
 modifiers: `private extern "C" int abs(int value);` and `extern "C" private int abs(int value);`
@@ -1260,7 +1267,7 @@ Scalar function boundaries use the host C ABI consistently for ordinary function
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.
 
-Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across G♭ frames, but G♭ types do not yet have C++ RTTI or typed C++ catch interoperability.
+Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across G♭ frames. C++ can catch a G♭ exception through `const std::exception&` and read its message with `what()`. G♭ classes do not yet have native C++ RTTI, and typed G♭ catches across binary libraries are unsupported. See [native exception behavior](FOREIGN_SOURCE.md#exceptions-across-native-calls).
 
 Exception payloads first use `Memory::Allocate`. If it returns null, the native
 exception runtime uses a process-wide emergency reserve. Its own ownership records
@@ -1645,8 +1652,8 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 ## Future work
 
 Possible additions include more target ABIs, verified output parameters, partial
-moves, managed finalizers, moving collectors, general macros, private-access grants, and C++
-interoperability. The compiler currently shares a control-flow graph across its
+moves, moving collectors, general macros, private-access grants, and native C++
+class interoperability. The compiler currently shares a control-flow graph across its
 analyses. A richer checked representation could replace parts of AST-based lowering.
 
 ## Name queries

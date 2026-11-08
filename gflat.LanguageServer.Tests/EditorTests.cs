@@ -77,10 +77,13 @@ public class EditorTests
     }
 
     [Fact]
-    public void BodylessFreeFunctionHasAnEditorDiagnostic()
+    public void FreeFunctionPrototypeHasHoverWithoutAnEditorError()
     {
-        var snapshot = new AnalysisSnapshot([new SourceFile("missing.gf", "int SomeNonExistantFunction();")]);
-        Assert.Contains(snapshot.Diagnostics, d => d.Severity == gflat.diagnostics.DiagnosticSeverity.Error && d.Message.Contains("body"));
+        var source = new SourceFile("declaration.gf", "int Declared(int value);");
+        var snapshot = new AnalysisSnapshot([source]);
+        Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == gflat.diagnostics.DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        Assert.Contains("int Declared(int value)", Json(model.Hover(source.Path, source.Text.IndexOf("Declared", StringComparison.Ordinal))).ToString());
     }
 
     [Fact]

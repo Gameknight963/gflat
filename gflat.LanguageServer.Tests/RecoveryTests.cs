@@ -8,7 +8,7 @@ namespace gflat.LanguageServer.Tests;
 public class RecoveryTests
 {
     private static readonly string[] BrokenPrefixes = [
-        "@\n", "int Missing();\n", "int Broken = ;\n", "immutable(char*) Bad() => \"unterminated\n",
+        "@\n", "struct Broken { public int Missing(); }\n", "int Broken = ;\n", "immutable(char*) Bad() => \"unterminated\n",
         "int Broken() { int bad = ; return 0; }\n", "int Broken() { unknown(); return 0; }\n",
         "int Broken() { int bad = \"wrong\"; return 0; }\n", "}\n",
         "int Broken = 1__2;\n", "int Broken() { missing; missingAgain; }\n",

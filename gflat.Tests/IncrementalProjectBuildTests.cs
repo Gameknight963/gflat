@@ -3,6 +3,42 @@ namespace gflat.Tests;
 public sealed class IncrementalProjectBuildTests
 {
     [Fact]
+    public void ChangingTheRuntimeLibraryRebuildsTheNativeOutput()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        WithProject((directory, project) => {
+            File.WriteAllText(Path.Combine(directory, "main.gf"), """
+                #lang cpp
+                int RuntimeMode()
+                {
+                #ifdef _DLL
+                    return 42;
+                #else
+                    return 7;
+                #endif
+                }
+                #lang gflat
+                int main() => RuntimeMode();
+                """);
+            string output = Path.Combine(directory, "bin", "Debug", "app.exe");
+            string compiler = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location)!, "gflat.exe");
+            void BuildWithRuntime(string profile)
+            {
+                var result = NativeToolchain.Run(compiler, ["--msbuild", project, "Build", "RuntimeLibrary", profile,
+                    "GflatCompilerPath", compiler, "GflatProjectInputs", project,
+                    "GflatDefaultClangInput", NativeToolchain.FindClang()], 120000);
+                Assert.True(result.ExitCode == 0, result.StandardOutput + result.StandardError);
+            }
+            BuildWithRuntime("MultiThreaded");
+            Assert.Equal(7, NativeToolchain.Run(output, []).ExitCode);
+            BuildWithRuntime("MultiThreadedDLL");
+            Assert.Equal(42, NativeToolchain.Run(output, []).ExitCode);
+            BuildWithRuntime("MultiThreaded");
+            Assert.Equal(7, NativeToolchain.Run(output, []).ExitCode);
+        });
+    }
+
+    [Fact]
     public void UnchangedBuildSkipsCompilationButMissingOutputAndRebuildForceIt()
     {
         WithProject((directory, project) => {

@@ -36,8 +36,12 @@ public class DeclarationTests
     [InlineData("int Missing();")]
     [InlineData("int Missing<T>();")]
     [InlineData("namespace Test { int Missing(); }")]
+    public void NamespaceFunctionPrototypesAreValid(string source) => Compiler.Check(source);
+
+    [Theory]
     [InlineData("struct Test { public int Missing(); }")]
-    public void OrdinaryDeclarationsRequireBodies(string source)
+    [InlineData("class Test { public int Missing(); }")]
+    public void ConcreteMemberDeclarationsRequireBodies(string source)
         => Assert.Contains("body", Assert.Throws<TypeCheckException>(() => Compiler.Check(source)).Message);
 
     [Fact]

@@ -191,6 +191,37 @@ int main()
     & $compiler $foreignConsumer --no-stdlib -o (Join-Path $extracted 'foreign-consumer.exe') --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged foreign language consumer failed' }
     Write-Host 'Packaged C++ headers, enums, records, references, native object lifetime, inherited dispatch, and IR companion passed.'
+    $binarySource = Join-Path $extracted 'binary-interop-library.gf'
+    @'
+namespace LibraryInterop
+{
+    public void Increment(ref int value) nothrow { value++; }
+    public int Read(ref readonly(int) value) nothrow => value;
+}
+'@ | Set-Content -LiteralPath $binarySource -Encoding Ascii
+    foreach ($kind in @('StaticLibrary', 'DynamicLibrary')) {
+        $stem = if ($kind -eq 'StaticLibrary') { 'interop-static' } else { 'interop-shared' }
+        $suffix = if ($kind -eq 'StaticLibrary') { '.lib' } else { '.dll' }
+        $binary = Join-Path $extracted ($stem + $suffix)
+        & $compiler $binarySource --no-stdlib --output-type $kind --optimization 2 -o $binary
+        if ($LASTEXITCODE -ne 0) { throw "Packaged $kind interop build failed" }
+        foreach ($companion in @('.gfi', '.gfi.gfh', '.hpp', '.cmake')) {
+            if (-not (Test-Path -LiteralPath ($binary + $companion))) { throw "Packaged $kind is missing $companion" }
+        }
+        if (-not (Get-Content -Raw -LiteralPath ($binary + '.cmake')).Contains("add_library(Gflat::$stem ")) {
+            throw "Packaged $kind CMake import is missing its target"
+        }
+        $consumer = Join-Path $extracted ($stem + '-consumer.gf')
+        $body = 'int main() { int value = 41; LibraryInterop::Increment(ref value); return LibraryInterop::Read(ref value) - 42; }'
+        $body | Set-Content -LiteralPath $consumer -Encoding Ascii
+        & $compiler $consumer --no-stdlib --library-interface ($binary + '.gfi') -o (Join-Path $extracted ($stem + '-consumer.exe')) --run
+        if ($LASTEXITCODE -ne 0) { throw "Packaged $kind binary interface consumer failed" }
+        ("#lang cpp`n#include `"$stem$suffix.hpp`"`n#lang gflat`n" + $body) | Set-Content -LiteralPath $consumer -Encoding Ascii
+        $linkLibrary = if ($kind -eq 'StaticLibrary') { $binary } else { [IO.Path]::ChangeExtension($binary, '.lib') }
+        & $compiler $consumer --no-stdlib --native-library-file $linkLibrary -o (Join-Path $extracted ($stem + '-cpp-consumer.exe')) --run
+        if ($LASTEXITCODE -ne 0) { throw "Packaged $kind C++ header consumer failed" }
+    }
+    Write-Host 'Packaged static and shared libraries passed reference calls through binary declarations and C++ headers, with CMake imports.'
     & (Join-Path $PSScriptRoot 'test-sdk-installation.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-sdk-elevation.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-explorer-installation.ps1') -PackageDirectory $extracted

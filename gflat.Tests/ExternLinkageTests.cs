@@ -15,6 +15,8 @@ public sealed class ExternLinkageTests
                 extern "C++" int Answer(int value);
                 extern "C++" long Wide(long value);
                 extern "C++" int Read(readonly(int)* value) nothrow;
+                extern "C++" void Increment(ref int value) nothrow;
+                extern "C++" int ReadRef(ref readonly(int) value) nothrow;
             }
             int main()
             {
@@ -22,6 +24,9 @@ public sealed class ExternLinkageTests
                 int value = 7;
                 if (Native::Wide(8000000000l) != 8000000000l) return 1;
                 if (Native::Read(&value) != 7) return 2;
+                Native::Increment(ref value);
+                int(ref readonly(int))* read = Native::ReadRef;
+                if (read(ref value) != 8) return 3;
                 return answer(42);
             }
             """;
@@ -36,7 +41,7 @@ public sealed class ExternLinkageTests
         {
             string input = Path.Combine(directory, "program.ll"), executable = Path.Combine(directory, "program.exe");
             File.WriteAllText(input, ir);
-            var native = new ForeignTranslationUnit("cpp", "namespace Native { int Answer(int x) { return x; } long long Wide(long long x) { return x; } int Read(const int* x) noexcept { return *x; } }", arguments);
+            var native = new ForeignTranslationUnit("cpp", "namespace Native { int Answer(int x) { return x; } long long Wide(long long x) { return x; } int Read(const int* x) noexcept { return *x; } void Increment(int& x) noexcept { ++x; } int ReadRef(const int& x) noexcept { return x; } }", arguments);
             var compiled = NativeToolchain.Compile(input, executable, optimizationLevel: optimization, foreignUnits: [native]);
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);
             Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);

@@ -106,7 +106,9 @@ copied beside the consuming artifact.
 
 Binary builds generate `.gfi` interface metadata, a `.gfi.gfh` declaration header,
 and a `.hpp` header for C++ callers beside the artifact. The initial interface
-exports public namespace functions with scalar and raw-pointer signatures.
+exports public namespace functions with scalar and raw-pointer signatures,
+including `ref` parameters to those types. The C++ header exposes these parameters
+as lvalue references and retains readonly access as `const`.
 Declarations retain exact linker names, overloads, and representable constant
 defaults. Generic bodies, compile-time functions, and type declarations require
 source libraries. Generated declaration headers open read-only in Visual Studio.

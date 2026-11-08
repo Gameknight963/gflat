@@ -5840,7 +5840,7 @@ namespace gflat
             if (node.IsCppLinkage)
             {
                 _ = CppLinkage.Type(ResolveAlias(node.ReturnType));
-                foreach (var parameter in node.Parameters) _ = CppLinkage.Type(ResolveAlias(parameter.Type));
+                foreach (var parameter in node.Parameters) _ = CppLinkage.Type(ResolveAlias(parameter.Type), allowReference: true);
             }
             ValidateReturnType(node.ReturnType, node.Line);
             if (ContainsManagedReference(node.ReturnType) ||

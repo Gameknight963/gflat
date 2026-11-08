@@ -42,7 +42,7 @@ public sealed class BinaryInterface(IReadOnlyList<BinaryFunction> functions)
                     checker.DisplayTypeName(checker.ResolveAlias(parameter.Type)) + " @" + parameter.Name + checker.ExportParameterDefault(parameter))) + ")" + (method.IsNoThrow ? " nothrow" : "") + ";";
                 string scope = checker.GetFunctionNamespace(method).Replace("$", "::");
                 functions.Add(new(scope, method.Name, checker.GetNamespaceFunctionSymbol(method), signature,
-                    CppLinkage.Type(checker.ResolveAlias(method.ReturnType)), method.Parameters.Select(parameter => CppLinkage.Type(checker.ResolveAlias(parameter.Type))).ToArray()));
+                    CppLinkage.Type(checker.ResolveAlias(method.ReturnType)), method.Parameters.Select(parameter => CppLinkage.Type(checker.ResolveAlias(parameter.Type), allowReference: true)).ToArray()));
             }
         }
     }

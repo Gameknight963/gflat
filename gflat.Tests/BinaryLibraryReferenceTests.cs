@@ -41,15 +41,19 @@ public sealed class BinaryLibraryReferenceTests : IDisposable
     [Fact]
     public void GeneratedCppHeaderCallsTheExportedFunctions()
     {
-        string source = Write("library.gf", "namespace Example { int Answer(int value)=>value; } private int Hidden()=>7;");
+        string source = Write("library.gf", "namespace Example { int Answer(int value)=>value; void Increment(ref int value) nothrow { value++; } int Read(ref readonly(int) value) nothrow => value; } private int Hidden()=>7;");
         string library = Path.Combine(root, OperatingSystem.IsWindows() ? "answer.lib" : "libanswer.a");
         Assert.Equal(0, Program.Main([source, "--no-stdlib", "--output-type", "StaticLibrary", "-o", library]));
         Assert.DoesNotContain("Hidden", File.ReadAllText(library + ".gfi.gfh"));
-        string cpp = Write("consumer.cpp", "#include \"" + library.Replace('\\', '/') + ".hpp\"\nint main() { return Example::Answer(42); }");
+        string cpp = Write("consumer.cpp", "#include \"" + library.Replace('\\', '/') + ".hpp\"\nint main() { int value = 41; Example::Increment(value); return Example::Answer(Example::Read(value)); }");
         string executable = Path.Combine(root, "consumer.exe");
         var linked = NativeToolchain.CompileCpp(cpp, executable, [library]);
         Assert.True(linked.ExitCode == 0, linked.StandardError);
         Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);
+        string host = Write("consumer.gf", "int main() { int value = 41; Example::Increment(ref value); return Example::Read(ref value); }");
+        string hostExecutable = Path.Combine(root, "host-consumer.exe");
+        Assert.Equal(0, Program.Main([host, "--no-stdlib", "--library-interface", library + ".gfi", "-o", hostExecutable]));
+        Assert.Equal(42, NativeToolchain.Run(hostExecutable, []).ExitCode);
     }
 
     [Theory]

@@ -199,7 +199,9 @@ namespace Native
 
 Clang supplies its mangled symbol using the configured native target. Calls and
 function addresses use that symbol. The initial explicit-linkage form accepts
-scalar types and raw pointers. Host `long` and `ulong` map to C++ `long long` and
+scalar types, raw pointers, and `ref` parameters to those types. Reference
+parameters use native lvalue-reference mangling, including `const` for readonly
+data. Host `long` and `ulong` map to C++ `long long` and
 `unsigned long long`, including on Linux. For native declarations using C++
 `long`, consume the original declaration in a `#lang cpp` section. `readonly(T)*`
 maps to a pointer to `const T`. Native libraries still need to be linked through

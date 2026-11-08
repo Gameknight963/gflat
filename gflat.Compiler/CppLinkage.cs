@@ -8,7 +8,7 @@ namespace gflat;
 // Clang chooses the native spelling for the configured target ABI.
 internal static class CppLinkage
 {
-    internal static string Type(TypeExpression type)
+    internal static string Type(TypeExpression type, bool allowReference = false)
     {
         string spelling = type.WithoutValueProtection() switch
         {
@@ -21,13 +21,14 @@ internal static class CppLinkage
                 _ => throw Unsupported(type)
             },
             PointerTypeExpression pointer => Type(pointer.Inner) + "*",
+            ReferenceTypeExpression reference when allowReference => Type(reference.Inner) + "&",
             _ => throw Unsupported(type)
         };
         return spelling + (type.IsReadOnlyValue ? " const" : "");
     }
 
     private static TypeCheckException Unsupported(TypeExpression type) => new(
-        "Explicit C++ linkage currently accepts fixed-width scalar types and raw pointers. This signature requires native type interop support", type.Span);
+        "Explicit C++ linkage currently accepts fixed-width scalar types, raw pointers, and reference parameters to these types. This signature requires native type interop support", type.Span);
 
     internal static void Resolve(CompilationUnit unit, TypeChecker checker, CompilationOptions options)
     {
@@ -43,7 +44,7 @@ internal static class CppLinkage
             foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
                 source.Append("namespace ").Append(part).Append(" { ");
             source.Append(Type(function.ReturnType)).Append(' ').Append(function.Name).Append('(')
-                .Append(string.Join(", ", function.Parameters.Select(parameter => Type(parameter.Type))))
+                .Append(string.Join(", ", function.Parameters.Select(parameter => Type(parameter.Type, allowReference: true))))
                 .Append(function.IsVariadic ? (function.Parameters.Count == 0 ? "..." : ", ...") : "")
                 .Append(')').Append(function.IsNoThrow ? " noexcept" : "").Append(';');
             foreach (string _ in scope.Split("::", StringSplitOptions.RemoveEmptyEntries)) source.Append(" }");

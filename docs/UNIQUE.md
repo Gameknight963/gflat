@@ -24,7 +24,7 @@ int main() {
 | Member | Effect |
 | --- | --- |
 | Default constructor | Empty owner |
-| `Unique(T* pointer)` | Adopts responsibility for deleting one live object |
+| `Unique(T*? pointer)` | Adopts responsibility for deleting one live object, or stays empty for null |
 | `IsEmpty` | Whether the owner has an object |
 | `Value` | Borrows the object as `ref T` |
 | `ValueImmutable` | Borrows as `ref immutable(T)` |
@@ -34,7 +34,9 @@ int main() {
 | `Reset(T*? pointer)` | Adopts a replacement and deletes the previous object |
 | `Swap(ref other)` | Exchanges deletion responsibility without moving the objects |
 
-Adopt a pointer for which ordinary `delete` is valid, usually from `new*`.
+Adopt an owned pointer for which ordinary `delete` is valid, usually from `new*`.
+Nullable owned factory results and pointers returned by `Release()` can be adopted
+directly. A null result creates an empty owner.
 Delete responsibility belongs to this owner until moved or released. `Value`
 and `ValueImmutable` throw `Exception("Unique is empty")` on an empty owner.
 
@@ -74,7 +76,7 @@ int main()
         raw = owner.Release();
         // This empty owner can leave scope without deleting the released object.
     }
-    Unique<Widget> receiver = new(raw!); // Explicitly take deletion responsibility.
+    Unique<Widget> receiver = new(raw); // Explicitly take deletion responsibility.
     return receiver.Value.Value - 42;
 }
 ```

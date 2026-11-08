@@ -6,9 +6,16 @@ public struct Unique<T>
 {
     private T*? storage;
 
-    public Unique() nothrow { storage = null; }
-    // Takes ownership of a live object suitable for delete.
-    public Unique(T* value) nothrow { storage = value; }
+    public Unique() nothrow
+    {
+        storage = null;
+    }
+
+    // Takes ownership of an object suitable for delete, or stays empty for null.
+    public Unique(T*? value) nothrow
+    {
+        storage = value;
+    }
 
     // Transfers the stored pointer to the caller and leaves this owner empty.
     // An empty owner returns null. The caller takes responsibility for deletion.

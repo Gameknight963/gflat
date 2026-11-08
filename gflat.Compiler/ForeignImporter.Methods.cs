@@ -18,7 +18,7 @@ internal static partial class ForeignImporter
             if (kind == "AccessSpecDecl") { access = Text(child, "access"); continue; }
             if (kind != "CXXMethodDecl" || access != "public" || Text(child, "storageClass") == "static" ||
                 child.TryGetProperty("isImplicit", out _) || child.TryGetProperty("explicitlyDeleted", out _) ||
-                child.TryGetProperty("variadic", out _) || child.TryGetProperty("virtual", out _)) continue;
+                child.TryGetProperty("variadic", out _)) continue;
             string name = Text(child, "name"), signature = Text(child.GetProperty("type"), "qualType");
             if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$")) continue;
             int opening = signature.IndexOf('('), closing = -1, depth = 0;

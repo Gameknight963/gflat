@@ -60,6 +60,26 @@ public sealed class NativeRecordImportTests
             """, optimization);
     }
 
+    [Theory]
+    [InlineData("c", 0)]
+    [InlineData("c", 2)]
+    [InlineData("cpp", 0)]
+    [InlineData("cpp", 2)]
+    public void NativeTagNamesCanAlsoNameFunctions(string language, int optimization)
+    {
+        Run("#lang " + language + "\n" + """
+            struct Record { int value; };
+            int Record(const struct Record* value) { return value->value; }
+            #lang gflat
+            int main()
+            {
+                Record value = default(Record);
+                value.value = 42;
+                return Record(&value);
+            }
+            """, optimization);
+    }
+
     [Fact]
     public void SharedHeaderRecordsAreDeduplicatedAcrossCAndCppAndCachedSnapshots()
     {
@@ -97,12 +117,13 @@ public sealed class NativeRecordImportTests
     [InlineData("struct Data { Data() {} int value; };")]
     [InlineData("class Data { int value; };")]
     [InlineData("struct Data { virtual int Read() { return 42; } int value; };")]
-    public void UnsupportedLayoutsAndLifetimesAreNotImportedAsPlainRecords(string declaration)
+    public void UnsupportedLayoutsAndLifetimesCannotBeMaterializedAsHostValues(string declaration)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(
-            "#lang cpp\n" + declaration + "\n#lang gflat\nint main() { return (int)sizeof(Data); }",
+            "#lang cpp\n" + declaration + "\n#lang gflat\nint main() { Data value = default(Data); return 0; }",
             options: Options()));
         Assert.Contains("Data", error.Description);
+        Assert.Contains("pointer-only", error.Description);
     }
 
     private static CompilationOptions Options() => new()

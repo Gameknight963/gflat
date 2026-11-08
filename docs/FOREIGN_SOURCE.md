@@ -84,15 +84,33 @@ differ only in receiver qualifiers are not imported yet.
 This representation requires trivial construction, copying, and destruction.
 Records with private fields, bases, virtual members, explicit constructors or
 destructors, bitfields, arrays, nested record fields, or layout attributes are
-not imported. Anonymous typedef records are not imported yet. Record arguments
+exposed through opaque native pointers instead. Anonymous typedef records are not imported yet. Record arguments
 and results passed by value use compiler-generated native bridges. Native calls
 receive independent copies, and a throwing call does not publish a partial
 record result. By-value records in callback signatures are not supported.
 A binary library's generated interface does not export these types yet.
 
+## Native-owned classes
+
+Other complete named native records and classes are available through raw
+pointers and borrowed host references. Their fields remain opaque. Public
+methods declared on the native type work through native entry points, including
+virtual dispatch. `sizeof` and `alignof` report Clang's native layout.
+
+Keep construction and destruction in native code. Call native factory and
+destruction functions, and keep borrowed pointers within the native object's
+lifetime. Host `new`, `default`, whole-object assignment, `move`, explicit
+destructor calls, and `delete` cannot manage these objects. They cannot be stored
+by value or allocated through a host garbage collector. These restrictions also
+apply through aliases, fields, parameters, and arrays.
+
+Native base-pointer conversions and inherited member discovery are not inferred
+yet. Consume a native function returning the appropriate base pointer when
+calling through a base interface. This does not change host-defined class ABIs.
+
 The following are also not imported yet:
 
-- Nontrivial classes, constructors, references, and function-pointer return types
+- Native constructors, native reference signatures, and function-pointer return types
 - Templates, default arguments, globals, enum declarations, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

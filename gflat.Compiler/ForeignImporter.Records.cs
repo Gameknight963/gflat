@@ -7,7 +7,22 @@ namespace gflat;
 internal static partial class ForeignImporter
 {
     private sealed record RecordLayout(int Size, int Alignment, int[] Offsets);
-    private sealed record ImportedRecord(string Qualified, string Type, string Declaration);
+    private sealed record ImportedRecord(string Qualified, string Type, string Declaration, NativeRecordLayout? OpaqueLayout = null);
+
+    private static ImportedRecord? ImportOpaqueRecord(JsonElement node, string scope, IReadOnlyDictionary<string, RecordLayout> layouts)
+    {
+        string name = Text(node, "name");
+        if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || Text(node, "tagUsed") is not ("struct" or "class") ||
+            !node.TryGetProperty("completeDefinition", out var complete) || !complete.GetBoolean()) return null;
+        string qualified = scope.Length == 0 ? name : scope + "::" + name;
+        if (!layouts.TryGetValue(qualified, out var layout) || layout.Size <= 0 || layout.Size % 8 != 0 ||
+            layout.Alignment <= 0 || layout.Alignment % 8 != 0) return null;
+        string type = string.Join("::", qualified.Split("::").Select(part => "@" + part));
+        string declaration = "public struct @" + name + " { }";
+        if (scope.Length != 0) declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) +
+            " { " + declaration + " }";
+        return new(qualified, type, declaration, new(layout.Size / 8, layout.Alignment / 8));
+    }
 
     private static Dictionary<string, RecordLayout> ReadRecordLayouts(string output, out string json)
     {

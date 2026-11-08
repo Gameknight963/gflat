@@ -152,6 +152,8 @@ namespace gflat.semantics
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
+                        qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
+                        qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -259,6 +261,8 @@ namespace gflat.semantics
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
+                        qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
+                        qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }

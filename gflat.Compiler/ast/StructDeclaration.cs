@@ -4,6 +4,8 @@ namespace gflat.ast
     {
         public string Name { get; internal set; }
         public string SourceName { get; }
+        public bool IsForeignImport { get; internal set; }
+        internal NativeRecordLayout? NativeOpaqueLayout { get; set; }
         public List<string> Interfaces { get; }
         public List<TypeExpression> BaseTypes { get; internal set; } = new();
         public List<AstNode> Members { get; }

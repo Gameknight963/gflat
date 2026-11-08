@@ -11,7 +11,7 @@ namespace gflat;
 
 internal static partial class ForeignImporter
 {
-    private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false);
+    private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false, NativeRecordLayout? OpaqueLayout = null);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
     private sealed record CachedImport(ForeignTranslationUnit Unit, CachedDeclaration[] Declarations,
         Dictionary<string, string> Symbols, Dictionary<string, InputStamp> Inputs, string[] Dependencies);
@@ -61,7 +61,7 @@ internal static partial class ForeignImporter
                     foreach (string file in cached.Dependencies) dependency(file);
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
                     foreach (var declaration in cached.Declarations)
-                    { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text, declaration.IsRecord); }
+                    { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text, declaration.IsRecord, declaration.OpaqueLayout); }
                     unit.ForeignSources.AddRange(group);
                     unit.ForeignUnits.Add(cached.Unit);
                     continue;
@@ -92,6 +92,7 @@ internal static partial class ForeignImporter
                 using var json = JsonDocument.Parse(jsonText);
                 var aliases = new Dictionary<string, string>();
                 var records = new Dictionary<string, string>();
+                var opaqueRecords = new HashSet<string>();
                 CollectAliases(json.RootElement, "");
                 var seen = new HashSet<string>();
                 string identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source.ToString())))[..24];
@@ -100,14 +101,16 @@ internal static partial class ForeignImporter
                 var recordNodes = new List<(JsonElement Node, string Scope)>();
                 Walk(json.RootElement, "");
                 var importedRecords = recordNodes.Select(item => ImportRecord(item.Node, item.Scope, layouts,
-                    spelling => Type(spelling, scope: item.Scope))).OfType<ImportedRecord>().ToArray();
+                    spelling => Type(spelling, scope: item.Scope)) ?? ImportOpaqueRecord(item.Node, item.Scope, layouts))
+                    .OfType<ImportedRecord>().ToArray();
                 foreach (var record in importedRecords)
                 {
                     records[record.Qualified] = record.Type;
-                    AddDeclaration(record.Qualified, record.Declaration, isRecord: true);
-                    declarations.Add(new(record.Qualified, record.Declaration, IsRecord: true));
+                    if (record.OpaqueLayout != null) opaqueRecords.Add(record.Type);
+                    AddDeclaration(record.Qualified, record.Declaration, isRecord: true, record.OpaqueLayout);
+                    declarations.Add(new(record.Qualified, record.Declaration, IsRecord: true, record.OpaqueLayout));
                 }
-                var recordTypes = records.Values.ToHashSet(StringComparer.Ordinal);
+                var recordTypes = records.Values.Where(type => !opaqueRecords.Contains(type)).ToHashSet(StringComparer.Ordinal);
                 var signatures = functions.GroupBy(item => item.Scope + "::" + Text(item.Node, "name") + "(" +
                     string.Join(",", item.Node.TryGetProperty("inner", out var children)
                         ? children.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl")
@@ -137,7 +140,7 @@ internal static partial class ForeignImporter
                             string objectType = method.ReadOnly ? "readonly(" + receiver + ")" : receiver;
                             var bridge = CreateCallBridge(entry, "cpp", scope, method.Result, "", method.Parameters,
                                 method.NativeParameters, recordTypes, arguments => "__self->" + method.Name + "(" + string.Join(", ", arguments) + ")",
-                                objectType, (method.ReadOnly ? "const " : "") + "::" + qualified);
+                                objectType, (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified);
                             bridges.Add(entry, bridge.Native);
                             string declaration = bridge.Extern + "\n" +
                                 "extension " + receiver + " { public " + (method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
@@ -184,7 +187,8 @@ internal static partial class ForeignImporter
                         foreach (var child in children.EnumerateArray()) Walk(child, scope);
                 }
 
-                string? Type(string spelling, HashSet<string>? resolving = null, string scope = "", bool allowRecord = false)
+                string? Type(string spelling, HashSet<string>? resolving = null, string scope = "", bool allowRecord = false,
+                    bool allowOpaqueRecord = false)
                 {
                     spelling = spelling.Trim();
                     var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?:const\s*)?\)\s*\((?<parameters>.*)\)$");
@@ -199,12 +203,12 @@ internal static partial class ForeignImporter
                     if (spelling.EndsWith("const", StringComparison.Ordinal) && spelling.Length > 5 &&
                         (char.IsWhiteSpace(spelling[^6]) || spelling[^6] == '*'))
                     {
-                        string? inner = Type(spelling[..^5], resolving, scope, allowRecord);
+                        string? inner = Type(spelling[..^5], resolving, scope, allowRecord, allowOpaqueRecord);
                         return inner == null ? null : "readonly(" + inner + ")";
                     }
                     if (spelling.EndsWith('*'))
                     {
-                        string? inner = Type(spelling[..^1], resolving, scope, allowRecord: true);
+                        string? inner = Type(spelling[..^1], resolving, scope, allowRecord: true, allowOpaqueRecord: true);
                         return inner == null ? null : inner + "*?";
                     }
                     bool readOnly = spelling.StartsWith("const ", StringComparison.Ordinal) || spelling.EndsWith(" const", StringComparison.Ordinal);
@@ -235,10 +239,11 @@ internal static partial class ForeignImporter
                         resolving ??= [];
                         if (!resolving.Add(alias)) return null;
                         int separator = alias.LastIndexOf("::", StringComparison.Ordinal);
-                        primitive = Type(target, resolving, separator < 0 ? "" : alias[..separator], allowRecord);
+                        primitive = Type(target, resolving, separator < 0 ? "" : alias[..separator], allowRecord, allowOpaqueRecord);
                         resolving.Remove(alias);
                     }
-                    if (primitive == null && allowRecord) records.TryGetValue(alias, out primitive);
+                    if (primitive == null && allowRecord && records.TryGetValue(alias, out var record) &&
+                        (allowOpaqueRecord || !opaqueRecords.Contains(record))) primitive = record;
                     return primitive == null ? null : readOnly && primitive != "void" ? "readonly(" + primitive + ")" : primitive;
                 }
 
@@ -298,30 +303,36 @@ internal static partial class ForeignImporter
         }
         finally { Directory.Delete(directory, recursive: true); }
 
-        void AddDeclaration(string qualified, string declaration, bool isRecord = false)
+        void AddDeclaration(string qualified, string declaration, bool isRecord = false, NativeRecordLayout? opaqueLayout = null)
         {
             if (isRecord)
             {
+                string signature = declaration + "\n" + opaqueLayout;
                 if (recordDeclarations.TryGetValue(qualified, out string? previous))
                 {
-                    if (previous != declaration)
+                    if (previous != signature)
                         throw new TypeCheckException("Foreign records have conflicting imported definitions: " + qualified, segments[0].Span);
                     return;
                 }
-                recordDeclarations.Add(qualified, declaration);
+                recordDeclarations.Add(qualified, signature);
             }
             var imported = Parser.Parse(Lexer.Tokenize(new SourceFile("<foreign:" + qualified + ">", declaration)), diagnostics);
             Mark(imported.Members);
             foreach (var ns in imported.Namespaces) Mark(ns.Members);
             unit.Members.AddRange(imported.Members);
             unit.Namespaces.AddRange(imported.Namespaces);
-            static void Mark(IEnumerable<AstNode> nodes)
+            void Mark(IEnumerable<AstNode> nodes)
             {
                 foreach (var node in nodes)
                 {
                     if (node is MethodDeclaration method) method.IsForeignImport = true;
                     else if (node is NamespaceDeclaration ns) Mark(ns.Members);
                     else if (node is ExtensionDeclaration extension) Mark(extension.Members);
+                    else if (node is StructDeclaration structure)
+                    {
+                        structure.IsForeignImport = isRecord;
+                        structure.NativeOpaqueLayout = opaqueLayout;
+                    }
                 }
             }
         }

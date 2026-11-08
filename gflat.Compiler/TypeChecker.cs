@@ -1368,9 +1368,10 @@ namespace gflat
                 throw new TypeCheckException("void has no value storage; use it as a return type or through an opaque pointer", line);
         }
 
-        private void ValidateTypeUsage(TypeExpression type, int line)
+        private void ValidateTypeUsage(TypeExpression type, int line, bool allowNativeOpaque = false)
         {
             TypeExpression resolved = ResolveAlias(type);
+            if (!allowNativeOpaque) RejectNativeOpaqueValue(resolved, line);
             if (resolved is NamedTypeExpression staticType && GetClassByIdentity(staticType.Name) is { IsStatic: true })
                 throw new TypeCheckException($"Static class '{DisplayName(staticType.Name)}' cannot be used as an instance type", type.Span.Source != null ? type.Span : SourceContext.ForLine(line));
             if (resolved is NamedTypeExpression unknown && !IsPrimitive(unknown.Name) && !IsError(unknown) &&
@@ -1379,13 +1380,14 @@ namespace gflat
                 throw new TypeCheckException($"Unknown type '{unknown.Name}'", line);
             if (resolved is ReferenceTypeExpression reference)
             {
-                ValidateTypeUsage(reference.Inner, line);
+                ValidateTypeUsage(reference.Inner, line, allowNativeOpaque: true);
                 if (ResolveAlias(reference.Inner) is NamedTypeExpression { Name: "void" } or ReferenceTypeExpression)
                     throw new TypeCheckException("ref requires a concrete value type", line);
                 return;
             }
             if (resolved is ManagedTypeExpression managed)
             {
+                RejectNativeOpaqueValue(managed.Inner, line);
                 if (ContainsReflectionValue(ResolveAlias(managed.Inner)))
                     throw new TypeCheckException("reflection values have no runtime address", line);
                 ValidateInterfaceReference(managed.Inner, line);
@@ -1412,7 +1414,7 @@ namespace gflat
                     throw new TypeCheckException("reflection values have no runtime address", line);
                 ValidateInterfaceReference(ptr.Inner, line);
                 if (ResolveAlias(ptr.Inner) is not NamedTypeExpression inner || !IsInterface(inner))
-                    ValidateTypeUsage(ptr.Inner, line);
+                    ValidateTypeUsage(ptr.Inner, line, allowNativeOpaque: true);
             }
             else if (resolved is FunctionPointerTypeExpression function)
             {
@@ -1483,6 +1485,7 @@ namespace gflat
 
         public int GetStructAlignment(StructInfo structInfo)
         {
+            if (structInfo.Declaration?.NativeOpaqueLayout is { } native) return native.Alignment;
             using var layout = EnterLayoutQuery(structInfo.Name, SourceContext.Current?.Line ?? 0);
             int maxAlign = 1;
             foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
@@ -1499,6 +1502,7 @@ namespace gflat
 
         public int GetStructSize(StructInfo structInfo)
         {
+            if (structInfo.Declaration?.NativeOpaqueLayout is { } native) return native.Size;
             using var layout = EnterLayoutQuery(structInfo.Name, SourceContext.Current?.Line ?? 0);
             long offset = 0;
             int maxAlign = 1;
@@ -2122,6 +2126,7 @@ namespace gflat
                 SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration,
                     _recoverErrors ? AnalyzeSafely : null, DisplayName);
                 collectionPass.Execute(node);
+                hasNativeOpaqueRecords = _structs.Values.Any(info => info.Declaration?.NativeOpaqueLayout != null);
                 ResolveFunctionReplacements(node);
                 collectionPass.Execute(node);
                 PrepareOverloads(node, resolveSignatures: false);
@@ -2275,6 +2280,7 @@ namespace gflat
                     Namespace = nsPath,
                     Interfaces = new List<string>(str.Interfaces)
                 };
+                if (str.NativeOpaqueLayout != null) hasNativeOpaqueRecords = true;
                 for (int i = 0; i < str.Members.Count; i++)
                 {
                     AstNode m = str.Members[i];
@@ -2312,6 +2318,8 @@ namespace gflat
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
+                        qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
+                        qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -2415,6 +2423,8 @@ namespace gflat
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
+                        qualifiedStruct.NativeOpaqueLayout = nestedStruct.NativeOpaqueLayout;
+                        qualifiedStruct.IsForeignImport = nestedStruct.IsForeignImport;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -3401,6 +3411,7 @@ namespace gflat
             }
 
             TypeExpression inner = ResolveAlias(ptr.Inner);
+            RejectNativeOpaqueValue(inner, node.Line);
             RequireMemoryFunction("Free", node);
             if (inner is NamedTypeExpression namedCls && _classes.TryGetValue(namedCls.Name, out ClassInfo? clsInfo))
             {
@@ -4055,7 +4066,8 @@ namespace gflat
                 }
                 if (ResolveAlias(operandType) is NamedTypeExpression { Name: "null" })
                     throw new TypeCheckException("null has no value storage; cast it to a nullable pointer type before taking its address", node.Span);
-                ValidateValueType(operandType, node.Line);
+                if (NativeOpaqueLayout(operandType) != null) ValidateTypeUsage(operandType, node.Line, allowNativeOpaque: true);
+                else ValidateValueType(operandType, node.Line);
                 ValidateAssignmentResultAddress(node.Operand);
                 bool isReadOnly = IsExpressionReadOnly(node.Operand);
                 RecordType(node, new PointerTypeExpression(operandType, false, node.Line, isReadOnly: isReadOnly));
@@ -4132,7 +4144,7 @@ namespace gflat
                     {
                         throw new TypeCheckException("Cannot dereference 'void*'", node.Line);
                     }
-                    ValidateTypeUsage(inner, node.Line);
+                    ValidateTypeUsage(inner, node.Line, allowNativeOpaque: true);
                     ValidateArrayValueShape(inner, node.Line);
                     RecordType(node, inner);
                     break;
@@ -4296,6 +4308,7 @@ namespace gflat
 
         private void CheckAssignmentTarget(AstNode target, int line)
         {
+            RejectNativeOpaqueValue(GetType(target), line);
             CheckAssignmentTargetCore(target, line);
             if (ResolveAlias(GetType(target)).IsReadOnlyValue && !CanInitializeReadOnlyField(target))
                 throw new TypeCheckException("Cannot assign to readonly storage", line);
@@ -4557,6 +4570,7 @@ namespace gflat
             node.Target.Accept(this);
             TypeExpression receiver = ResolveAlias(GetType(node.Target));
             TypeExpression target = ResolveAlias(node.TargetType);
+            RejectNativeOpaqueValue(target, node.Line);
             ValidateTypeUsage(new PointerTypeExpression(target, false, node.Line), node.Line);
             if (IsError(receiver)) { RecordType(node, Void); return; }
             if (receiver is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } pointer)
@@ -5329,6 +5343,7 @@ namespace gflat
                 return;
             }
             TypeExpression resolvedType = ResolveAlias(node.Type);
+            RejectNativeOpaqueValue(resolvedType, node.Line);
             ValidateArrayValueShape(resolvedType, node.Line);
             node.Type = resolvedType;
             if (node.Kind == AllocationKind.Managed)
@@ -5609,7 +5624,7 @@ namespace gflat
             {
                 targetType = ResolveAlias(varType);
             }
-            ValidateTypeUsage(targetType, node.Line);
+            ValidateTypeUsage(targetType, node.Line, allowNativeOpaque: true);
             ValidateArrayValueShape(targetType, node.Line);
             int size = alignment ? GetTypeAlignment(targetType) : GetTypeSize(targetType);
             RecordType(node, Int);
@@ -5698,7 +5713,8 @@ namespace gflat
                     throw new TypeCheckException($"Interface '{DisplayName(iface.Name)}' has no indexer", node.Line);
                 if (ptr.IsNullable)
                     throw new TypeCheckException("Cast a nullable pointer to non-null before indexing", node.Line);
-                ValidateValueType(ptr.Inner, node.Line);
+                if (NativeOpaqueLayout(ptr.Inner) != null) ValidateTypeUsage(ptr.Inner, node.Line, allowNativeOpaque: true);
+                else ValidateValueType(ptr.Inner, node.Line);
                 ValidateArrayValueShape(ptr.Inner, node.Line);
                 RecordType(node, ptr.Inner);
             }

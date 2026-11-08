@@ -26,7 +26,8 @@ public partial class TypeChecker
                 };
                 if (name == null) continue;
                 if (declarations.TryGetValue((scope, name), out var previous) &&
-                    !(previous is MethodDeclaration && node is MethodDeclaration))
+                    !(previous is MethodDeclaration && node is MethodDeclaration) &&
+                    !NativeTagAndFunction(previous, node) && !NativeTagAndFunction(node, previous))
                 {
                     try
                     {
@@ -44,6 +45,9 @@ public partial class TypeChecker
                 if (node is StructDeclaration str) Walk(str.Members, scope + "::" + name);
             }
         }
+
+        static bool NativeTagAndFunction(AstNode type, AstNode callable) => type is StructDeclaration { IsForeignImport: true } &&
+            callable is MethodDeclaration { IsForeignImport: true } or ExternDeclaration { IsCLinkage: true } or ExternDeclaration { IsCppLinkage: true };
     }
 
     private void DuplicateDeclaration(AstNode first, AstNode second, string message)

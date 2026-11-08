@@ -1660,6 +1660,11 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(StructDeclaration node)
     {
         if (node.IsGeneric) return;
+        if (node.NativeOpaqueLayout is { } native)
+        {
+            EmitGlobal($"%{node.Name} = type {{ [{native.Size} x i8] }}");
+            return;
+        }
 
         string fields = string.Join(", ", node.Members
             .OfType<FieldDeclaration>()

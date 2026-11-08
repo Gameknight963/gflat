@@ -128,8 +128,15 @@ and C++ tools. Native declarations still come from headers in `#lang cpp` or
 `#lang c` sections. The native project controls its own compilation and exports.
 
 A Visual C++ project can reference a G♭ binary library using an ordinary
-`ProjectReference`. Import `build/Gflat.Cpp.targets` from the SDK after
-`Microsoft.Cpp.targets`. This supplies the generated header directory, native
+`ProjectReference`. After registering the SDK, add this import after
+`Microsoft.Cpp.targets`:
+
+```xml
+<Import Project="$(MSBuildSDKsPath)/Gflat.Sdk/Sdk/Cpp.targets" />
+```
+
+For a repository checkout, import `build/Gflat.Cpp.targets` by its full path.
+This supplies the generated header directory, native
 link inputs, and dynamic-library deployment. Source-library references require
 a G♭ binary library wrapper.
 

@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $instance = Get-GflatVisualStudio $VisualStudioPath
 if (-not $SdkRoot) { $SdkRoot = Find-GflatExtensionSdk $instance }
 $SdkRoot = [IO.Path]::GetFullPath($SdkRoot)
-foreach ($file in @('build/Gflat.props', 'build/Gflat.targets')) {
+foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Gflat.Cpp.targets')) {
     if (-not (Test-Path -LiteralPath (Join-Path $SdkRoot $file) -PathType Leaf)) { throw "The gflat SDK is incomplete: $SdkRoot is missing $file" }
 }
 $target = Get-GflatSdkTarget $instance.installationPath
@@ -26,6 +26,8 @@ if ($PSCmdlet.ShouldProcess($target, "Install gflat SDK imports pointing to $Sdk
             $import = ConvertTo-GflatImportPath (Join-Path $SdkRoot "build/Gflat.$kind")
             "<Project><Import Project=`"$import`" /></Project>" | Set-Content -LiteralPath (Join-Path $target "Sdk/Sdk.$kind") -Encoding UTF8
         }
+        $cppImport = ConvertTo-GflatImportPath (Join-Path $SdkRoot 'build/Gflat.Cpp.targets')
+        "<Project><Import Project=`"$cppImport`" /></Project>" | Set-Content -LiteralPath (Join-Path $target 'Sdk/Cpp.targets') -Encoding UTF8
     } catch [UnauthorizedAccessException] {
         if (Start-GflatSdkElevated -ScriptPath $PSCommandPath -VisualStudioPath $instance.installationPath -SdkRoot $SdkRoot) { return }
         throw 'Cannot write to the Visual Studio installation with administrator privileges. Check its directory permissions.'

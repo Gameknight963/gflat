@@ -18,12 +18,12 @@ foreach ($entry in Get-ChildItem -LiteralPath $target -Force) {
 $sdk = Join-Path $target 'Sdk'
 if (Test-Path -LiteralPath $sdk) {
     foreach ($entry in Get-ChildItem -LiteralPath $sdk -Force) {
-        if ($entry.PSIsContainer -or $entry.Name -notin @('Sdk.props', 'Sdk.targets')) { throw "Unexpected SDK content; nothing removed: $($entry.FullName)" }
+        if ($entry.PSIsContainer -or $entry.Name -notin @('Sdk.props', 'Sdk.targets', 'Cpp.targets')) { throw "Unexpected SDK content; nothing removed: $($entry.FullName)" }
     }
 }
 if ($PSCmdlet.ShouldProcess($target, 'Remove script-installed gflat SDK imports')) {
     try {
-        foreach ($file in @('Sdk/Sdk.props', 'Sdk/Sdk.targets')) {
+        foreach ($file in @('Sdk/Sdk.props', 'Sdk/Sdk.targets', 'Sdk/Cpp.targets')) {
             $path = Join-Path $target $file
             if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
         }

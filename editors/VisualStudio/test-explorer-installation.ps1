@@ -25,6 +25,7 @@ foreach ($vs in @($first, $second)) {
 }
 [IO.Directory]::CreateDirectory((Join-Path $sdk 'build')) | Out-Null
 foreach ($kind in @('props', 'targets')) { [IO.File]::WriteAllText((Join-Path $sdk "build/Gflat.$kind"), '<Project />') }
+[IO.File]::WriteAllText((Join-Path $sdk 'build/Gflat.Cpp.targets'), '<Project />')
 $install = Join-Path $PackageDirectory 'install-explorer.ps1'
 $remove = Join-Path $PackageDirectory 'uninstall-explorer.ps1'
 $one = Get-GflatExplorerRegistration $first $classes

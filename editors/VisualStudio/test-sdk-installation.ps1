@@ -37,6 +37,11 @@ function Assert-Build([string]$ExpectedSdk) {
     if ($resolved.ExitCode -ne 0 -or $resolved.Log.TrimEnd('\', '/') -ne $ExpectedSdk.TrimEnd('\', '/')) { throw "SDK resolved incorrectly: $($resolved.Log)" }
     $build = Invoke-SdkMSBuild @($project, '/nologo', '/t:Build', '/v:minimal', '/nr:false')
     if ($build.ExitCode -ne 0) { throw "SDK-style build, including build-task reevaluation, failed: $($build.Log)" }
+    $cppProject = Join-Path $testRoot 'CppImports.proj'
+    $cppImport = [Security.SecurityElement]::Escape((Join-Path $target 'Sdk/Cpp.targets'))
+    "<Project><Import Project=`"$cppImport`" /></Project>" | Set-Content -LiteralPath $cppProject
+    $cpp = Invoke-SdkMSBuild @($cppProject, '/nologo', '/getProperty:GflatSdkRoot')
+    if ($cpp.ExitCode -ne 0 -or $cpp.Log.TrimEnd('\', '/') -ne $ExpectedSdk.TrimEnd('\', '/')) { throw "C++ SDK import resolved incorrectly: $($cpp.Log)" }
 }
 $oldSearchPath = $env:MSBuildSDKsPath
 try {

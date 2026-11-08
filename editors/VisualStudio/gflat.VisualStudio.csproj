@@ -130,7 +130,7 @@
       <Link>Sdk/build/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="Sdk/Sdk.props;Sdk/Sdk.targets">
+    <Content Include="Sdk/Sdk.props;Sdk/Sdk.targets;Sdk/Cpp.targets">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="../../build/Rules/**/*">

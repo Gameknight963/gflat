@@ -55,6 +55,7 @@ if (-not $actuallyAdministrator) {
     [IO.Directory]::CreateDirectory($sdks) | Out-Null
     [IO.Directory]::CreateDirectory((Join-Path $source 'build')) | Out-Null
     foreach ($kind in @('props', 'targets')) { [IO.File]::WriteAllText((Join-Path $source "build/Gflat.$kind"), '<Project />') }
+    [IO.File]::WriteAllText((Join-Path $source 'build/Gflat.Cpp.targets'), '<Project />')
     $previousAcl = Get-Acl -LiteralPath $sdks
     $deniedAcl = Get-Acl -LiteralPath $sdks
     $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User

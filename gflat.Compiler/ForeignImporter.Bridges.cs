@@ -7,6 +7,23 @@ internal static partial class ForeignImporter
 {
     private sealed record CallBridge(string Native, string Extern, string Body);
 
+    private static string[] ParameterNames(IEnumerable<System.Text.Json.JsonElement> parameters)
+    {
+        var names = new List<string>();
+        var used = new HashSet<string>(StringComparer.Ordinal) { "this", "__gflat_result" };
+        foreach (var parameter in parameters)
+        {
+            string name = Text(parameter, "name");
+            if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || !used.Add(name))
+            {
+                name = "arg" + names.Count;
+                while (!used.Add(name)) name += "_";
+            }
+            names.Add("@" + name);
+        }
+        return names.ToArray();
+    }
+
     private static string? RecordValueType(string type, IReadOnlySet<string> records)
     {
         while (type.StartsWith("readonly(", StringComparison.Ordinal) && type.EndsWith(')')) type = type[9..^1];
@@ -16,7 +33,7 @@ internal static partial class ForeignImporter
     private static CallBridge CreateCallBridge(string entry, string language, string scope, string result,
         string nativeResult, IReadOnlyList<string> parameters, IReadOnlyList<string> nativeParameters,
         IReadOnlySet<string> records, Func<IReadOnlyList<string>, string> call,
-        string? receiver = null, string? nativeReceiver = null)
+        string? receiver = null, string? nativeReceiver = null, IReadOnlyList<string>? parameterNames = null)
     {
         string? recordResult = RecordValueType(result, records);
         var externParameters = new List<string>();
@@ -42,7 +59,7 @@ internal static partial class ForeignImporter
             externParameters.Add((record != null ? "readonly(" + record + ")*" : parameters[index]) + " " + name);
             nativeDeclarations.Add((record != null ? "const __typeof__(" + native + ")*" :
                 Regex.IsMatch(native, @"\(\s*\*") ? "__typeof__(" + native + ")" : native) + " " + name);
-            hostValues.Add((record == null ? "" : "&") + name);
+            hostValues.Add((record == null ? "" : "&") + (parameterNames?[index] ?? name));
             nativeValues.Add((record == null ? "" : "*") + name);
         }
         string expression = call(nativeValues);

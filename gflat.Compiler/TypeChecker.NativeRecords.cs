@@ -14,6 +14,16 @@ public partial class TypeChecker
     public CallExpression? GetNativeCreation(NewExpression node) => nativeCreations.GetValueOrDefault(node);
     public CallExpression? GetNativeDeletion(DeleteStatement node) => nativeDeletions.GetValueOrDefault(node);
 
+    public IReadOnlyList<MethodDeclaration> GetNativeConstructorCandidates(TypeExpression type)
+    {
+        if (!hasNativeOpaqueRecords) return [];
+        type = ResolveAlias(type);
+        if (type is not NamedTypeExpression named ||
+            GetStructByIdentity(named.Name)?.Declaration?.NativeConstructorFactory is not { } factory ||
+            !_globalScope.Functions.TryGetValue(factory, out var method)) return [];
+        return (overloadFamilies.GetValueOrDefault(method) ?? [method]).Where(candidate => candidate.IsForeignImport).ToArray();
+    }
+
     private CallExpression NativeFactoryCall(string factory, List<AstNode> arguments, AstNode site)
     {
         var callee = new NamespaceAccessExpression(new GlobalExpression(site.Line) { Span = site.Span }, factory, site.Line) { Span = site.Span };

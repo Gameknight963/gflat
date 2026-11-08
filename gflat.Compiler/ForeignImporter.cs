@@ -138,13 +138,13 @@ internal static partial class ForeignImporter
                             }
                             importedSymbols.Add(key, method.Symbol);
                             string entry = "__gflat_foreign_" + identity + "_" + index++;
-                            string parameters = string.Join(", ", method.Parameters.Select((parameter, n) => parameter + " __arg" + n));
+                            string parameters = string.Join(", ", method.Parameters.Select((parameter, n) => parameter + " " + method.ParameterNames[n]));
                             string objectType = method.ReadOnly ? "readonly(" + receiver + ")" : receiver;
                             var bridge = CreateCallBridge(entry, "cpp", scope, method.Result, "", method.Parameters,
                                 method.NativeParameters, recordTypes, arguments =>
                                     (method.IsStatic ? "::" + qualified + "::" : "__self->") + method.Name + "(" + string.Join(", ", arguments) + ")",
                                 method.IsStatic ? null : objectType,
-                                method.IsStatic ? null : (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified);
+                                method.IsStatic ? null : (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified, method.ParameterNames);
                             bridges.Add(entry, bridge.Native);
                             string declaration = bridge.Extern + "\n" +
                                 "public " + (method.IsStatic ? "static " : method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
@@ -163,10 +163,10 @@ internal static partial class ForeignImporter
                             string entry = "__gflat_foreign_" + identity + "_" + index++;
                             var bridge = CreateCallBridge(entry, "cpp", scope, receiver + "*?", "", constructor.Parameters,
                                 constructor.NativeParameters, recordTypes, arguments => "new " + Text(node, "tagUsed") + " ::" + qualified +
-                                    "(" + string.Join(", ", arguments) + ")");
+                                    "(" + string.Join(", ", arguments) + ")", parameterNames: constructor.ParameterNames);
                             bridges.Add(entry, bridge.Native);
                             string declaration = bridge.Extern + "\nprivate " + receiver + "*? " + constructorFactory + "(" +
-                                string.Join(", ", constructor.Parameters.Select((parameter, n) => parameter + " __arg" + n)) + ") { " + bridge.Body + " }";
+                                string.Join(", ", constructor.Parameters.Select((parameter, n) => parameter + " " + constructor.ParameterNames[n])) + ") { " + bridge.Body + " }";
                             AddDeclaration(key, declaration, owner: qualified, role: CallableRole.Construction);
                             declarations.Add(new(key, declaration, Owner: qualified, Role: CallableRole.Construction));
                         }
@@ -298,6 +298,7 @@ internal static partial class ForeignImporter
                     var parameterTypes = parameters.Select(parameter => parameter.GetProperty("type"))
                         .Select(type => Text(type, "desugaredQualType", Text(type, "qualType"))).ToArray();
                     var types = parameterTypes.Select(type => Type(type, scope: scope, allowRecord: true)).ToArray();
+                    var parameterNames = ParameterNames(parameters);
                     if (types.Any(type => type == null)) return;
                     string qualified = scope.Length == 0 ? name : scope + "::" + name;
                     if (!seen.Add(qualified + signature)) return;
@@ -317,16 +318,17 @@ internal static partial class ForeignImporter
                     {
                         // A variadic bridge cannot forward its unnamed arguments.
                         if (group.Key == "cpp" && Text(function, "mangledName") != name) return;
-                        declaration = "extern \"C\" " + result + " @" + name + "(" + string.Join(", ", types.Select((type, n) => type + " __arg" + n)) +
+                        declaration = "extern \"C\" " + result + " @" + name + "(" + string.Join(", ", types.Select((type, n) => type + " " + parameterNames[n])) +
                             (types.Length == 0 ? "" : ", ") + "...);";
                     }
                     else
                     {
                         string entry = "__gflat_foreign_" + identity + "_" + index++;
-                        string parametersText = string.Join(", ", types.Select((type, n) => type + " __arg" + n));
+                        string parametersText = string.Join(", ", types.Select((type, n) => type + " " + parameterNames[n]));
                         var bridge = CreateCallBridge(entry, group.Key, scope, result, signature[..opening].Trim(),
                             types.Select(type => type!).ToArray(), parameterTypes, recordTypes,
-                            arguments => "(" + (group.Key == "cpp" ? "::" : "") + qualified + ")(" + string.Join(", ", arguments) + ")");
+                            arguments => "(" + (group.Key == "cpp" ? "::" : "") + qualified + ")(" + string.Join(", ", arguments) + ")",
+                            parameterNames: parameterNames);
                         bridges.Add(entry, bridge.Native);
                         declaration = bridge.Extern + "\npublic " + result + " @" + name + "(" + parametersText + ") { " + bridge.Body + " }";
                     }

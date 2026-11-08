@@ -4,6 +4,27 @@ namespace gflat.Tests;
 
 public sealed class NativeConstructorTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NativeParameterNamesCannotCaptureGeneratedBridgeLocals(int optimization)
+    {
+        Run("""
+            #lang cpp
+            struct Pair { int value; };
+            Pair Create(int __gflat_result, int immutable, int arg0) {
+                return Pair{__gflat_result + immutable + arg0};
+            }
+            int Unnamed(int, int arg0) { return arg0; }
+            #lang gflat
+            int main()
+            {
+                Pair pair = Create(10, 20, 12);
+                return Unnamed(0, pair.value);
+            }
+            """, optimization);
+    }
+
     [Fact]
     public void NativeConstructionGuideRuns()
     {

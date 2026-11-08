@@ -5,6 +5,44 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void NativeConstructionShowsPublicConstructorAndOriginalParameterName()
+    {
+        const string text = """
+            #lang cpp
+            namespace Native {
+                class Widget {
+                    int value;
+                public:
+                    Widget(int initial) : value(initial) {}
+                    int Read() const { return value; }
+                };
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Widget* widget = new* Native::Widget(42);
+                int result = widget.Read();
+                delete widget;
+                return result;
+            }
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-constructor-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int creation = text.IndexOf("new*", StringComparison.Ordinal);
+        string hover = JsonSerializer.Serialize(model.Hover(source.Path, creation));
+        string signature = JsonSerializer.Serialize(model.SignatureHelp(source.Path, text.IndexOf("(42)", creation, StringComparison.Ordinal) + 1));
+        foreach (string display in new[] { hover, signature })
+        {
+            Assert.Contains("Widget", display);
+            Assert.Contains("initial", display);
+            Assert.DoesNotContain("__gflat_native_", display);
+            Assert.DoesNotContain("private", display);
+        }
+    }
+
+    [Fact]
     public void ImportedRecordFieldsAndMembersHaveCallSiteHoversAndCompletion()
     {
         const string text = """

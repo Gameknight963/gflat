@@ -49,10 +49,30 @@ public sealed partial class EditorModel
             if (syntax.Node is NewExpression creation && syntax.Span.Source?.Path is { } creationPath)
             {
                 if (snapshot.BodySources is { } focus && syntax.Span.SourceId is { } sourceId &&
-                    !focus.Contains(sourceId) && checker.GetResolvedConstructor(creation) == null) continue;
+                    !focus.Contains(sourceId) && checker.GetResolvedConstructor(creation) == null && checker.GetNativeCreation(creation) == null) continue;
                 var creationToken = tokens[creationPath].FirstOrDefault(t => t.Start == syntax.Span.Start && t.Kind == TokenKind.New);
                 Symbol[] creationFamily;
-                if (creation.Type is NamedTypeExpression creationType &&
+                var nativeConstructors = checker.GetNativeConstructorCandidates(creation.Type);
+                Symbol? NativeConstructorSymbol(MethodDeclaration method)
+                {
+                    if (SourceCallable(method) is not { } source) return null;
+                    string owner = checker.DisplayTypeName(creation.Type);
+                    string name = owner.Split("::").Last();
+                    var constructor = new ConstructorDeclaration(name, method.Parameters, new BlockStatement([], method.Line), TokenKind.Public, method.Line)
+                    {
+                        Span = method.Span,
+                        IsNoThrow = method.IsNoThrow
+                    };
+                    return source with {
+                        Name = name, Owner = owner, Type = null, BoundType = null, Static = false,
+                        Access = TokenKind.Public, Classification = "struct", Kind = 4,
+                        Syntax = new(constructor, source.Syntax.Span, source.Syntax.Parent),
+                        BoundParameters = method.Parameters
+                    };
+                }
+                if (nativeConstructors.Count > 0)
+                    creationFamily = nativeConstructors.Select(NativeConstructorSymbol).OfType<Symbol>().ToArray();
+                else if (creation.Type is NamedTypeExpression creationType &&
                     (checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors) is { } constructors)
                 {
                     creationFamily = constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
@@ -77,6 +97,10 @@ public sealed partial class EditorModel
                             Owner = creation.Type is NamedTypeExpression named ? checker.DisplayName(named.Name) : creationSource.Owner,
                             BoundParameters = creationConstructor.Parameters
                         };
+                    else if (checker.GetNativeCreation(creation) is { } nativeCall &&
+                        checker.GetResolvedCall(nativeCall) is MethodDeclaration nativeConstructor &&
+                        NativeConstructorSymbol(nativeConstructor) is { } nativeSource)
+                        boundCallableReferences[creationToken] = nativeSource;
                 }
             }
             CallExpression? call = syntax.Node as CallExpression;

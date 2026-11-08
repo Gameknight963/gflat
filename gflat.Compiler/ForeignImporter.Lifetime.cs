@@ -6,7 +6,7 @@ namespace gflat;
 internal static partial class ForeignImporter
 {
     private enum CallableRole { Member, Construction, Destruction }
-    private sealed record NativeConstructor(string Symbol, string[] Parameters, string[] NativeParameters);
+    private sealed record NativeConstructor(string Symbol, string[] Parameters, string[] NativeParameters, string[] ParameterNames);
 
     private static IEnumerable<NativeConstructor> RecordConstructors(JsonElement record, Func<string, string?> type)
     {
@@ -25,17 +25,17 @@ internal static partial class ForeignImporter
             if ((!implicitConstructor && access != "public") || child.TryGetProperty("explicitlyDeleted", out _) ||
                 child.TryGetProperty("variadic", out _)) continue;
             var parameters = child.TryGetProperty("inner", out var children)
-                ? children.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl") : [];
+                ? children.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl").ToArray() : [];
             var native = parameters.Select(parameter => parameter.GetProperty("type"))
                 .Select(parameter => Text(parameter, "desugaredQualType", Text(parameter, "qualType"))).ToArray();
             var mapped = native.Select(type).ToArray();
             if (mapped.Any(parameter => parameter == null)) continue;
-            constructors.Add(new(Text(child, "mangledName"), mapped.Select(parameter => parameter!).ToArray(), native));
+            constructors.Add(new(Text(child, "mangledName"), mapped.Select(parameter => parameter!).ToArray(), native, ParameterNames(parameters)));
         }
         if (!explicitConstructor && constructors.All(constructor => constructor.Parameters.Length != 0) &&
             record.TryGetProperty("definitionData", out data) && data.TryGetProperty("defaultCtor", out var defaultCtor) &&
             defaultCtor.TryGetProperty("exists", out var exists) && exists.GetBoolean())
-            constructors.Add(new("implicit-default-constructor", [], []));
+            constructors.Add(new("implicit-default-constructor", [], [], []));
         return constructors.GroupBy(constructor => string.Join(",", constructor.Parameters.Select(parameter =>
                 Regex.Replace(parameter, "readonly\\(|\\)", ""))))
             .Where(group => group.Count() == 1).Select(group => group.Single());

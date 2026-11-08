@@ -55,13 +55,20 @@ to supported scalars or `void`. Scalar typedefs, C++ namespaces, and overloads w
 parameter types are supported. Pointers are nullable and retain pointee `const`
 as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
 
+Function-pointer parameters support callbacks with scalar and raw-pointer
+signatures, including nested callback parameters and callback typedefs. Pass an
+ordinary G♭ function pointer. Native callback pointers are nullable. Keep the
+callback and any context storage alive while native code can invoke them.
+Captured managed callbacks, variadic callbacks, and non-default native calling
+conventions are not supported.
+
 Functions are called by their declared names without handwritten foreign
 declarations. The compiler generates native ABI entry points as needed. Only
 entry points referenced by the emitted program are compiled.
 
 The following are not imported yet:
 
-- Record layouts, classes, methods, constructors, references, and function-pointer signatures
+- Record layouts, classes, methods, constructors, references, and function-pointer return types
 - Templates, default arguments, globals, enum declarations, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

@@ -142,6 +142,15 @@ internal static class ForeignImporter
                 string? Type(string spelling, HashSet<string>? resolving = null, string scope = "")
                 {
                     spelling = spelling.Trim();
+                    var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?:const\s*)?\)\s*\((?<parameters>.*)\)$");
+                    if (callback.Success)
+                    {
+                        string? result = Type(callback.Groups["result"].Value, resolving, scope);
+                        var parameters = SplitParameters(callback.Groups["parameters"].Value);
+                        if (result == null || parameters == null) return null;
+                        var types = parameters.Select(parameter => Type(parameter, resolving, scope)).ToArray();
+                        return types.Any(type => type == null) ? null : result + "(" + string.Join(", ", types) + ")*?";
+                    }
                     if (spelling.EndsWith("const", StringComparison.Ordinal) && spelling.Length > 5 &&
                         (char.IsWhiteSpace(spelling[^6]) || spelling[^6] == '*'))
                     {
@@ -228,7 +237,8 @@ internal static class ForeignImporter
                         var native = new StringBuilder();
                         if (group.Key == "cpp") native.Append("extern \"C\" ");
                         native.Append(group.Key == "cpp" ? "auto" : signature[..opening].Trim()).Append(' ').Append(entry).Append('(')
-                            .Append(string.Join(", ", parameterTypes.Select((type, n) => type + " __arg" + n))).Append(')');
+                            .Append(string.Join(", ", parameterTypes.Select((type, n) =>
+                                (Regex.IsMatch(type, @"\(\s*\*") ? "__typeof__(" + type + ")" : type) + " __arg" + n))).Append(')');
                         if (group.Key == "cpp") native.Append(" -> decltype((::").Append(qualified).Append(")(").Append(values).Append("))");
                         native.Append(" { ");
                         if (result != "void") native.Append("return ");
@@ -262,6 +272,26 @@ internal static class ForeignImporter
                 }
             }
         }
+    }
+
+    private static string[]? SplitParameters(string text)
+    {
+        if (text.Trim() is "" or "void") return [];
+        var parameters = new List<string>();
+        int depth = 0, start = 0;
+        for (int index = 0; index < text.Length; index++)
+        {
+            if (text[index] == '(') depth++;
+            else if (text[index] == ')' && --depth < 0) return null;
+            else if (text[index] == ',' && depth == 0)
+            {
+                parameters.Add(text[start..index].Trim());
+                start = index + 1;
+            }
+        }
+        if (depth != 0) return null;
+        parameters.Add(text[start..].Trim());
+        return parameters.ToArray();
     }
 
     private static InputStamp Stamp(string path, bool contents = true)

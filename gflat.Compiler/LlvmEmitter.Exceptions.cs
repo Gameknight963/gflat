@@ -174,7 +174,9 @@ public partial class LlvmEmitter
     {
         if (_exceptionMessageGetters.TryGetValue(type.Name, out var existing)) return existing;
         if (!type.Methods.TryGetValue("GetMessage", out var member) || member.Method.IsStatic ||
-            member.Method.Parameters.Count != 0 || EmitType(member.Method.ReturnType) != "i8*")
+            member.Method.Parameters.Count != 0 ||
+            _typeChecker.ResolveAlias(member.Method.ReturnType).WithoutValueProtection() is not PointerTypeExpression pointer ||
+            _typeChecker.ResolveAlias(pointer.Inner).WithoutValueProtection() is not NamedTypeExpression { Name: "char" })
         {
             _exceptionMessageGetters[type.Name] = null;
             return null;

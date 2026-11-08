@@ -52,6 +52,25 @@ public sealed class BinaryLibraryReferenceTests : IDisposable
         Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);
     }
 
+    [Theory]
+    [InlineData("StaticLibrary")]
+    [InlineData("DynamicLibrary")]
+    public void IncludedDefinitionsBelongToTheirExportingRoot(string kind)
+    {
+        Write("library/api.gfh", "namespace Included { int Answer() => 42; }");
+        string source = Write("library/main.gf", "#include \"api.gfh\"\n");
+        string library = Path.Combine(root, OperatingSystem.IsWindows() ? "included." + (kind == "StaticLibrary" ? "lib" : "dll") :
+            "libincluded." + (kind == "StaticLibrary" ? "a" : "so"));
+        Assert.Equal(0, Program.Main([source, "--no-stdlib", "--output-type", kind, "-o", library]));
+        Assert.Contains("Answer", File.ReadAllText(library + ".gfi.gfh"));
+        File.Delete(source);
+        File.Delete(Path.Combine(root, "library", "api.gfh"));
+        string consumer = Write("consumer.gf", "int main() => Included::Answer();");
+        string executable = Path.Combine(root, "consumer.exe");
+        Assert.Equal(0, Program.Main([consumer, "--no-stdlib", "--library-interface", library + ".gfi", "-o", executable]));
+        Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);
+    }
+
     [Fact]
     public void SourceDependenciesRemainPrivateToTheCompiledLibrary()
     {

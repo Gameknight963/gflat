@@ -34,7 +34,7 @@ public sealed class BinaryInterface(IReadOnlyList<BinaryFunction> functions)
                 if (member is NamespaceDeclaration ns) { Walk(ns.Members); continue; }
                 if (member is not MethodDeclaration method || method.IsGeneric || method.IsPrototype || method.IsForeignImport ||
                     method.Accessibility != TokenKind.Public || checker.IsCompileTimeOnly(method) ||
-                    method.Span.Source is not { } source || source.Path.StartsWith('<') || !paths.Contains(Path.GetFullPath(source.Path))) continue;
+                    method.Span.DeclarationSourceId is not { } owner || owner.Path.StartsWith('<') || !paths.Contains(Path.GetFullPath(owner.Path))) continue;
                 if (method.ExtensionReceiverType != null || method.StringLiteralPrefix != null || method.Name.Contains('$')) continue;
                 if (checker.IsEntryPoint(method)) throw new TypeCheckException("A binary library cannot define the program entry point", method.Span);
                 string result = checker.DisplayTypeName(checker.ResolveAlias(method.ReturnType));

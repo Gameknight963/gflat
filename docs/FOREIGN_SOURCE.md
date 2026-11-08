@@ -50,8 +50,8 @@ and foreign source-level macros do not enter the host macro environment.
 
 ## Calling imported functions
 
-The initial importer exposes free functions using primitive scalars and pointers
-to supported scalars or `void`. Scalar typedefs, C++ namespaces, and overloads with distinct imported
+The importer exposes free functions using primitive scalars and pointers
+to supported scalars, imported records, or `void`. Scalar typedefs, C++ namespaces, and overloads with distinct imported
 parameter types are supported. Pointers are nullable and retain pointee `const`
 as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
 
@@ -66,9 +66,24 @@ Functions are called by their declared names without handwritten foreign
 declarations. The compiler generates native ABI entry points as needed. Only
 entry points referenced by the emitted program are compiled.
 
-The following are not imported yet:
+## Imported records
 
-- Record layouts, classes, methods, constructors, references, and function-pointer return types
+Named C structs and trivial C++ structs or classes with public scalar and pointer
+fields are available as host structs. Their size, alignment, and field offsets
+must match Clang's layout for the active target. Native code and host code can
+read or write the same storage through pointers. Pointee and field `const`
+qualifiers remain readonly. Native pointer results remain borrowed and nullable.
+
+This representation requires trivial construction, copying, and destruction.
+Records with private fields, bases, virtual members, explicit constructors or
+destructors, bitfields, arrays, nested record fields, or layout attributes are
+not imported. Anonymous typedef records are not imported yet. Record arguments
+and results passed by value are not imported. A binary library's generated
+interface does not export these types yet.
+
+The following are also not imported yet:
+
+- Nontrivial classes, methods, constructors, references, and function-pointer return types
 - Templates, default arguments, globals, enum declarations, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

@@ -9,9 +9,9 @@ using gflat.diagnostics;
 
 namespace gflat;
 
-internal static class ForeignImporter
+internal static partial class ForeignImporter
 {
-    private sealed record CachedDeclaration(string Qualified, string Text);
+    private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
     private sealed record CachedImport(ForeignTranslationUnit Unit, CachedDeclaration[] Declarations,
         Dictionary<string, string> Symbols, Dictionary<string, InputStamp> Inputs, string[] Dependencies);
@@ -24,6 +24,7 @@ internal static class ForeignImporter
     {
         if (segments.Count == 0) return;
         importedSymbols ??= new();
+        var recordDeclarations = new Dictionary<string, string>();
         string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
@@ -58,7 +59,8 @@ internal static class ForeignImporter
                 {
                     foreach (string file in cached.Dependencies) dependency(file);
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
-                    foreach (var declaration in cached.Declarations) { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text); }
+                    foreach (var declaration in cached.Declarations)
+                    { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text, declaration.IsRecord); }
                     unit.ForeignSources.AddRange(group);
                     unit.ForeignUnits.Add(cached.Unit);
                     continue;
@@ -73,7 +75,8 @@ internal static class ForeignImporter
                 string depfile = Path.Combine(directory, "source.d");
                 File.WriteAllText(path, source.ToString());
                 var command = new List<string>(arguments);
-                command.AddRange(["-x", group.Key == "cpp" ? "c++" : "c", "-fsyntax-only", "-Xclang", "-ast-dump=json",
+                command.AddRange(["-x", group.Key == "cpp" ? "c++" : "c", "-fsyntax-only",
+                    "-Xclang", "-fdump-record-layouts-complete", "-Xclang", "-fdump-record-layouts-simple", "-Xclang", "-ast-dump=json",
                     "-MD", "-MF", depfile, path]);
                 string ast;
                 try { ast = Run(compiler, command, group.First().Span, cancellation); }
@@ -84,14 +87,25 @@ internal static class ForeignImporter
                             if (!string.Equals(file, path, StringComparison.OrdinalIgnoreCase))
                             { dependency(file); headerDependencies.Add(file); inputs[file] = Stamp(file); }
                 }
-                using var json = JsonDocument.Parse(ast);
+                var layouts = ReadRecordLayouts(ast, out string jsonText);
+                using var json = JsonDocument.Parse(jsonText);
                 var aliases = new Dictionary<string, string>();
+                var records = new Dictionary<string, string>();
                 CollectAliases(json.RootElement, "");
                 var seen = new HashSet<string>();
                 string identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source.ToString())))[..24];
                 int index = 0;
                 var functions = new List<(JsonElement Node, string Scope)>();
+                var recordNodes = new List<(JsonElement Node, string Scope)>();
                 Walk(json.RootElement, "");
+                var importedRecords = recordNodes.Select(item => ImportRecord(item.Node, item.Scope, layouts,
+                    spelling => Type(spelling, scope: item.Scope))).OfType<ImportedRecord>().ToArray();
+                foreach (var record in importedRecords)
+                {
+                    records[record.Qualified] = record.Type;
+                    AddDeclaration(record.Qualified, record.Declaration, isRecord: true);
+                    declarations.Add(new(record.Qualified, record.Declaration, IsRecord: true));
+                }
                 var signatures = functions.GroupBy(item => item.Scope + "::" + Text(item.Node, "name") + "(" +
                     string.Join(",", item.Node.TryGetProperty("inner", out var children)
                         ? children.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl")
@@ -129,6 +143,7 @@ internal static class ForeignImporter
                 {
                     string kind = Text(node, "kind");
                     if (kind == "FunctionDecl") { functions.Add((node, scope)); return; }
+                    if (kind is "RecordDecl" or "CXXRecordDecl") { recordNodes.Add((node, scope)); return; }
                     if (kind == "NamespaceDecl")
                     {
                         string name = Text(node, "name");
@@ -139,7 +154,7 @@ internal static class ForeignImporter
                         foreach (var child in children.EnumerateArray()) Walk(child, scope);
                 }
 
-                string? Type(string spelling, HashSet<string>? resolving = null, string scope = "")
+                string? Type(string spelling, HashSet<string>? resolving = null, string scope = "", bool allowRecord = false)
                 {
                     spelling = spelling.Trim();
                     var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?:const\s*)?\)\s*\((?<parameters>.*)\)$");
@@ -154,16 +169,18 @@ internal static class ForeignImporter
                     if (spelling.EndsWith("const", StringComparison.Ordinal) && spelling.Length > 5 &&
                         (char.IsWhiteSpace(spelling[^6]) || spelling[^6] == '*'))
                     {
-                        string? inner = Type(spelling[..^5], resolving, scope);
+                        string? inner = Type(spelling[..^5], resolving, scope, allowRecord);
                         return inner == null ? null : "readonly(" + inner + ")";
                     }
                     if (spelling.EndsWith('*'))
                     {
-                        string? inner = Type(spelling[..^1], resolving, scope);
+                        string? inner = Type(spelling[..^1], resolving, scope, allowRecord: true);
                         return inner == null ? null : inner + "*?";
                     }
                     bool readOnly = spelling.StartsWith("const ", StringComparison.Ordinal) || spelling.EndsWith(" const", StringComparison.Ordinal);
                     if (readOnly) spelling = spelling.StartsWith("const ", StringComparison.Ordinal) ? spelling[6..] : spelling[..^6];
+                    if (spelling.StartsWith("struct ", StringComparison.Ordinal)) spelling = spelling[7..];
+                    else if (spelling.StartsWith("class ", StringComparison.Ordinal)) spelling = spelling[6..];
                     string? primitive = spelling.Trim() switch
                     {
                         "void" => "void", "bool" or "_Bool" => "bool", "char" => "char",
@@ -178,7 +195,8 @@ internal static class ForeignImporter
                     string alias = spelling.StartsWith("::", StringComparison.Ordinal) ? spelling[2..] : spelling;
                     for (string parent = scope; parent.Length > 0;)
                     {
-                        if (aliases.ContainsKey(parent + "::" + alias)) { alias = parent + "::" + alias; break; }
+                        if (aliases.ContainsKey(parent + "::" + alias) || records.ContainsKey(parent + "::" + alias))
+                        { alias = parent + "::" + alias; break; }
                         int separator = parent.LastIndexOf("::", StringComparison.Ordinal);
                         parent = separator < 0 ? "" : parent[..separator];
                     }
@@ -187,9 +205,10 @@ internal static class ForeignImporter
                         resolving ??= [];
                         if (!resolving.Add(alias)) return null;
                         int separator = alias.LastIndexOf("::", StringComparison.Ordinal);
-                        primitive = Type(target, resolving, separator < 0 ? "" : alias[..separator]);
+                        primitive = Type(target, resolving, separator < 0 ? "" : alias[..separator], allowRecord);
                         resolving.Remove(alias);
                     }
+                    if (primitive == null && allowRecord) records.TryGetValue(alias, out primitive);
                     return primitive == null ? null : readOnly && primitive != "void" ? "readonly(" + primitive + ")" : primitive;
                 }
 
@@ -235,6 +254,9 @@ internal static class ForeignImporter
                         string parametersText = string.Join(", ", types.Select((type, n) => type + " __arg" + n));
                         string values = string.Join(", ", types.Select((_, n) => "__arg" + n));
                         var native = new StringBuilder();
+                        if (group.Key == "cpp")
+                            foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
+                                native.Append("namespace ").Append(part).Append(" { ");
                         if (group.Key == "cpp") native.Append("extern \"C\" ");
                         native.Append(group.Key == "cpp" ? "auto" : signature[..opening].Trim()).Append(' ').Append(entry).Append('(')
                             .Append(string.Join(", ", parameterTypes.Select((type, n) =>
@@ -243,6 +265,8 @@ internal static class ForeignImporter
                         native.Append(" { ");
                         if (result != "void") native.Append("return ");
                         native.Append('(').Append(group.Key == "cpp" ? "::" : "").Append(qualified).Append(")(").Append(values).AppendLine("); }");
+                        if (group.Key == "cpp")
+                            foreach (string _ in scope.Split("::", StringSplitOptions.RemoveEmptyEntries)) native.Append(" }");
                         bridges.Add(entry, native.ToString());
                         declaration = "private extern \"C\" " + result + " " + entry + "(" + parametersText + ");\n" +
                             "public " + result + " @" + name + "(" + parametersText + ") { " +
@@ -256,8 +280,18 @@ internal static class ForeignImporter
         }
         finally { Directory.Delete(directory, recursive: true); }
 
-        void AddDeclaration(string qualified, string declaration)
+        void AddDeclaration(string qualified, string declaration, bool isRecord = false)
         {
+            if (isRecord)
+            {
+                if (recordDeclarations.TryGetValue(qualified, out string? previous))
+                {
+                    if (previous != declaration)
+                        throw new TypeCheckException("Foreign records have conflicting imported definitions: " + qualified, segments[0].Span);
+                    return;
+                }
+                recordDeclarations.Add(qualified, declaration);
+            }
             var imported = Parser.Parse(Lexer.Tokenize(new SourceFile("<foreign:" + qualified + ">", declaration)), diagnostics);
             Mark(imported.Members);
             foreach (var ns in imported.Namespaces) Mark(ns.Members);

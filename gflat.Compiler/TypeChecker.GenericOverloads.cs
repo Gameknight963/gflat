@@ -33,7 +33,8 @@ public partial class TypeChecker
         foreach (var method in methods)
         {
             if (explicitTypes.Count != 0 && (!method.IsGeneric || method.GenericParameters.Count != explicitTypes.Count)) continue;
-            if (!AcceptsArgumentCount(method.Parameters, call.Arguments.Count)) continue;
+            var visibleParameters = VisibleFunctionParameters(method, call.Callee.Span);
+            if (!AcceptsArgumentCount(visibleParameters, call.Arguments.Count)) continue;
             using var context = EnterMethodSignatureContext(method);
             var names = method.GenericParameters.Select(parameter => parameter.Name).ToHashSet();
             var bindings = new Dictionary<string, TypeExpression>();
@@ -52,7 +53,7 @@ public partial class TypeChecker
                     if (NeedsCreationTarget(argument) || IsOverloadedFunctionValue(argument) ||
                         argument is DefaultExpression { TargetType: null } ||
                         GetType(argument) is NamedTypeExpression { Name: "null" }) continue;
-                    if (!InferCallableBindings(GenericFormalType(method, method.Parameters[i].Type), GetType(argument), names, bindings))
+                    if (!InferCallableBindings(GenericFormalType(method, visibleParameters[i].Type), GetType(argument), names, bindings))
                     { consistent = false; break; }
                 }
                 if (!consistent)
@@ -75,7 +76,7 @@ public partial class TypeChecker
                 break;
             }
             if (!constraintsSatisfied) continue;
-            var parameters = method.Parameters.Select(parameter =>
+            var parameters = visibleParameters.Select(parameter =>
             {
                 var closed = BindCallableOwnerType(method, call.Callee,
                     SubstituteExtensionType(GenericFormalType(method, parameter.Type), bindings));
@@ -92,7 +93,7 @@ public partial class TypeChecker
                 throw new TypeCheckException($"Function '{name}' is not generic", call.Span);
             if (explicitTypes.Count != 0 && explicitTypes.Count != method.GenericParameters.Count)
                 throw new TypeCheckException($"Generic function '{name}' expects {method.GenericParameters.Count} type arguments, but got {explicitTypes.Count}", call.Span);
-            if (!AcceptsArgumentCount(method.Parameters, call.Arguments.Count))
+            if (!AcceptsArgumentCount(VisibleFunctionParameters(method, call.Callee.Span), call.Arguments.Count))
                 throw new TypeCheckException($"Function '{name}' expects {method.Parameters.Count} arguments but got {call.Arguments.Count}", call.Span);
             if (missingParameter != null)
                 throw new TypeCheckException($"Could not infer type parameter '{missingParameter}' for generic function '{name}'", call.Span);

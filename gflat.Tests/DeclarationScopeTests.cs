@@ -5,6 +5,52 @@ namespace gflat.Tests;
 
 public sealed class DeclarationScopeTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void GenericPrototypeDefaultsUseTheInstantiatedTypeDespiteRenamedParameters(int optimization)
+    {
+        var result = CompilerTestHelper.Run("""
+            T Identity<T>(T value = default(T));
+            U Identity<U>(U value) => value;
+            int Size<T>(nuint value = (nuint)sizeof(T));
+            int Size<U>(nuint value) => (int)value;
+            int main()
+            {
+                if (Identity<int>() != 0) return 1;
+                if (Identity<long>() != 0l) return 2;
+                if (Size<long>() != 8 || Size<int>() != 4) return 3;
+                return Identity<int>(42);
+            }
+            """, optimization);
+        Assert.Equal(42, result.ExitCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NestedGenericPrototypeSignaturesStaySymbolicUntilCalled(int optimization)
+    {
+        var result = CompilerTestHelper.Run("""
+            struct Outer<T>
+            {
+                public struct Item
+                {
+                    public T Value;
+                    public Item(T value) { Value = value; }
+                }
+            }
+            int Read<T>(Outer<T>::Item value);
+            int Read<U>(Outer<U>::Item value) => value.Value;
+            int main()
+            {
+                Outer<int>::Item item = new(42);
+                return Read<int>(item);
+            }
+            """, optimization);
+        Assert.Equal(42, result.ExitCode);
+    }
+
     [Fact]
     public void HeaderDeclarationsKeepTheirIncludingRootIdentity()
     {

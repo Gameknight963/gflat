@@ -113,6 +113,14 @@ public partial class TypeChecker
         // Preserve generic shapes without instantiating them during symbol selection.
         if (type is NamedTypeExpression { TypeArguments.Count: > 0 } applied)
             return (ResolveTypeIdentity(applied.Name, applied.Namespace) ?? applied.Namespace + "::" + applied.Name) + "<" + string.Join(",", applied.TypeArguments.Select(t => SignatureType(t, method))) + ">";
+        if (type is NestedTypeExpression nested &&
+            HasUnboundExtensionType(nested, method.GenericParameters.Select(parameter => parameter.Name).ToHashSet()))
+        {
+            var formal = GenericFormalType(method, nested);
+            if (formal is not NestedTypeExpression member) return SignatureType(formal, method);
+            return SignatureType(member.Parent, method) + "::" + member.Member +
+                (member.TypeArguments.Count == 0 ? "" : "<" + string.Join(",", member.TypeArguments.Select(argument => SignatureType(argument, method))) + ">");
+        }
         // Resolve aliases without instantiating generic pointees during this pre-body pass.
         if (type is NamedTypeExpression or NestedTypeExpression)
         {

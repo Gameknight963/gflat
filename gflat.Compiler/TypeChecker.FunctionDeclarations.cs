@@ -24,9 +24,10 @@ public partial class TypeChecker
         foreach (var declaration in visible)
         {
             using var context = EnterMethodSignatureContext(method);
-            ValidateParameterDefaults(declaration, declaration.Parameters);
+            if (method.IsGeneric) RegisterParameterDefaults(declaration, declaration.Parameters);
+            else ValidateParameterDefaults(declaration, declaration.Parameters);
         }
-        for (int index = 0; index < method.Parameters.Count; index++)
+        for (int index = 0; !method.IsGeneric && index < method.Parameters.Count; index++)
         {
             var defaults = visible.Select(declaration => declaration.Parameters[index])
                 .Where(parameter => parameter.DefaultValue != null).ToArray();
@@ -58,7 +59,17 @@ public partial class TypeChecker
             foreach (var entry in declarations)
                 if (!ContractMatches(selected.Method, entry.Method))
                     throw new TypeCheckException($"Declaration of '{entry.Method.Name}' must match the function's return type, constraints, accessibility and modifiers", entry.Method.Span);
-            functionDeclarations[selected.Method] = declarations.Select(entry => entry.Method).ToArray();
+            functionDeclarations[selected.Method] = declarations.Select(entry =>
+            {
+                var declaration = entry.Method;
+                if (!selected.Method.IsGeneric || declaration.GenericParameters.Select(parameter => parameter.Name)
+                    .SequenceEqual(selected.Method.GenericParameters.Select(parameter => parameter.Name))) return declaration;
+                var names = declaration.GenericParameters.Zip(selected.Method.GenericParameters).ToDictionary(
+                    pair => pair.First.Name, pair => (TypeExpression)new NamedTypeExpression(pair.Second.Name, null, pair.Second.Line));
+                var normalized = new AstCloner(names, declaration.Name, declaration.Name, renameTypeOwner: false).CloneMethod(declaration);
+                normalized.GenericParameters.AddRange(selected.Method.GenericParameters);
+                return normalized;
+            }).ToArray();
             foreach (var entry in prototypes)
             {
                 if (ReferenceEquals(entry, selected)) continue;

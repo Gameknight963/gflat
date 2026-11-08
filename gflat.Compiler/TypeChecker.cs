@@ -1053,7 +1053,7 @@ namespace gflat
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName, renameTypeOwner: false);
             MethodDeclaration specialized = cloner.CloneMethod(genericDef);
             if (functionDeclarations.TryGetValue(genericDef, out var declarations))
-                functionDeclarations[specialized] = declarations;
+                functionDeclarations[specialized] = declarations.Select(cloner.CloneMethod).ToArray();
             RegisterAliasSpecialization(genericDef, typeArgs, specialized);
 
             _compilationUnit?.Members.Add(specialized);
@@ -4951,7 +4951,7 @@ namespace gflat
             else ValidateReflectionOwnerMethodCall(node, method, []);
             ValidateNamespaceFunctionAccess(method, node.Callee.Span);
             _resolvedCalls[node] = method;
-            AddDefaultArguments(node.Arguments, declaredMemberParameters.GetValueOrDefault(node) ?? method.Parameters, node);
+            AddDefaultArguments(node.Arguments, declaredMemberParameters.GetValueOrDefault(node) ?? VisibleFunctionParameters(method, node.Callee.Span), node);
 
             if (!method.IsNoThrow)
             {

@@ -114,6 +114,7 @@ public sealed class NativeConstructorTests
                 int Read() const { return value; }
             };
             int Destroyed() { return destroyed; }
+            int MaybeRead(const Widget* value) { return value == nullptr ? 0 : value->Read(); }
             #lang gflat
             using Standard::Memory;
 
@@ -121,9 +122,9 @@ public sealed class NativeConstructorTests
             {
                 {
                     Unique<Widget> owner = new(new* Widget(42));
-                    if (owner.Value.Read() != 42) return 1;
+                    if (owner.Value.Read() != 42 || MaybeRead(owner.Get()) != 42 || owner.GetImmutable() != owner.Get()) return 1;
                     owner.Reset();
-                    if (!owner.IsEmpty || Destroyed() != 1) return 2;
+                    if (!owner.IsEmpty || Destroyed() != 1 || MaybeRead(owner.Get()) != 0) return 2;
                     owner.Reset(new* Widget(42));
                     owner.Reset(new* Widget(43));
                     if (Destroyed() != 2 || owner.Value.Read() != 43) return 3;

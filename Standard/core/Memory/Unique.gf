@@ -42,6 +42,11 @@ public struct Unique<T>
 
     public bool IsEmpty { immutable get nothrow => storage == null; }
 
+    // Borrows the current object. Empty owners return null.
+    public readonly T*? Get() nothrow => storage;
+
+    public immutable immutable(T)*? GetImmutable() nothrow => storage;
+
     // Borrows the object by mutable reference, throwing when empty.
     // Keep the owner alive. Shallow readonly owners permit this access.
     public ref T Value

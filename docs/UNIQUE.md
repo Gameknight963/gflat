@@ -28,6 +28,8 @@ int main() {
 | `IsEmpty` | Whether the owner has an object |
 | `Value` | Borrows the object as `ref T` |
 | `ValueImmutable` | Borrows as `ref immutable(T)` |
+| `Get()` | Borrows as `T*?`, returning null when empty |
+| `GetImmutable()` | Borrows as `immutable(T)*?`, returning null when empty |
 | `Reset()` | Deletes the object and leaves an empty owner |
 | `Reset(T*? pointer)` | Adopts a replacement and deletes the previous object |
 | `Swap(ref other)` | Exchanges deletion responsibility without moving the objects |
@@ -36,8 +38,10 @@ Adopt a pointer for which ordinary `delete` is valid, usually from `new*`.
 Delete responsibility belongs to this owner until moved or released. `Value`
 and `ValueImmutable` throw `Exception("Unique is empty")` on an empty owner.
 
-The `Value` getter accepts shallow readonly owners. `ValueImmutable` also accepts
-immutable owners. Other mutable aliases can still modify the same object.
+`Value` and `Get()` accept shallow readonly owners. `ValueImmutable` and
+`GetImmutable()` also accept immutable owners. Other mutable aliases can still
+modify the same object. Pointer borrows keep deletion responsibility with the
+owner. Reacquire them after replacing its object.
 
 Moving consumes the source variable and transfers the allocation's lifetime to
 the destination. Existing pointee addresses stay the same. Replacing or destroying

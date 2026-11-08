@@ -39,6 +39,7 @@ public partial class TypeChecker
 
     private void ResolveFunctionDeclarations(List<FunctionEntry> functions)
     {
+        if (!functions.Any(entry => entry.Method.IsPrototype)) return;
         foreach (var group in functions.GroupBy(entry => ParameterKey(entry.Method)).ToArray())
         {
             var declarations = group.ToArray();

@@ -28,6 +28,8 @@ int main() {
 | `IsEmpty` | Whether the owner has an object |
 | `Value` | Borrows the object as `ref T` |
 | `ValueImmutable` | Borrows as `ref immutable(T)` |
+| `Reset()` | Deletes the object and leaves an empty owner |
+| `Swap(ref other)` | Exchanges deletion responsibility without moving the objects |
 
 Adopt a pointer for which ordinary `delete` is valid, usually from `new*`.
 Delete responsibility belongs to this owner until moved or released. `Value`
@@ -74,5 +76,31 @@ int main()
 
 Re-adopt or delete the result before calling potentially throwing code unless
 that code takes ownership. An unowned interval has no automatic cleanup.
+
+## Early cleanup and exchanging owners
+
+Use `Reset()` to end the object's lifetime before the owner leaves scope. Resetting
+an empty owner does nothing. The owner remains usable and can receive another
+owning value through assignment.
+
+`Swap(ref other)` exchanges two owners without allocating, copying, or relocating
+their pointees. Borrowed pointers retain their addresses, but the other owner now
+controls their lifetime. Swapping an owner with itself leaves it unchanged.
+Both operations require mutable owners.
+
+```csharp
+using Standard::Memory;
+
+int main()
+{
+    Unique<int> first = new(new* int(7));
+    Unique<int> second = new(new* int(42));
+    first.Swap(ref second);
+    if (first.Value != 42 || second.Value != 7) return 1;
+    second.Reset();
+    if (!second.IsEmpty) return 2;
+    return 0;
+}
+```
 
 Source: `core/Memory/Unique.gf`

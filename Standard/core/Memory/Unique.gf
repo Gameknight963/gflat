@@ -19,6 +19,22 @@ public struct Unique<T>
         return result;
     }
 
+    // Deletes the owned object now and leaves an empty, reusable owner.
+    public void Reset()
+    {
+        T*? previous = storage;
+        storage = null;
+        if (previous != null) delete previous!;
+    }
+
+    // Exchanges deletion responsibility without moving either object in memory.
+    public void Swap(ref Unique<T> other) nothrow
+    {
+        T*? previous = storage;
+        storage = other.storage;
+        other.storage = previous;
+    }
+
     public bool IsEmpty { immutable get nothrow => storage == null; }
 
     // Borrows the object by mutable reference, throwing when empty.
@@ -45,6 +61,6 @@ public struct Unique<T>
 
     ~Unique()
     {
-        if (storage != null) delete storage!;
+        this.Reset();
     }
 }

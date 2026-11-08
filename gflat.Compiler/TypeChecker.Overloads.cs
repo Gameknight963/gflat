@@ -145,7 +145,7 @@ public partial class TypeChecker
             var visible = (family ?? [method]).Where(candidate => IsDeclarationDiscoverable(candidate, call.Callee.Span)).ToList();
             if (visible.Count == 0) ValidateNamespaceFunctionAccess(method, call.Callee.Span);
             method = visible[0];
-            family = visible;
+            family = visible.Count == 1 ? null : visible;
         }
         foreach (var candidate in (family ?? [method]).ToArray()) BindMethodSignature(candidate);
         if (method.IsGeneric || family?.Any(candidate => candidate.IsGeneric) == true)
@@ -155,7 +155,12 @@ public partial class TypeChecker
             else selectedGenericCallArguments.Remove(call);
             return selected.Definition;
         }
-        if (family == null) return method;
+        if (family == null)
+        {
+            if (functionDeclarations.ContainsKey(method))
+                declaredMemberParameters[call] = VisibleFunctionParameters(method, call.Callee.Span);
+            return method;
+        }
         var candidates = family.Select(definition => new CallableOverloadCandidate(definition, [], VisibleFunctionParameters(definition, call.Callee.Span).Select(parameter =>
             new Parameter(parameter.Name, BindCallableOwnerType(definition, call.Callee, parameter.Type), parameter.Line,
                 parameter.IsConst, parameter.DefaultValue)).ToList())).ToList();

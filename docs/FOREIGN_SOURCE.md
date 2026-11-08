@@ -111,8 +111,11 @@ A binary library's generated interface does not export these types yet.
 
 Other complete named native records and classes are available through raw
 pointers and borrowed host references. Their fields remain opaque. Public
-methods declared on the native type work through native entry points, including
-virtual dispatch. `sizeof` and `alignof` report Clang's native layout.
+methods work through native entry points, including virtual dispatch and methods
+inherited through public bases. Native calls perform base-pointer adjustment.
+Hidden names and names reached through multiple direct bases are not imported.
+Using-declarations do not reintroduce hidden overloads yet. `sizeof` and `alignof`
+report Clang's native layout.
 
 For a C++ class with a supported public constructor, `new* Type(arguments)` uses
 C++ allocation and construction. `delete pointer` invokes C++ deletion when the

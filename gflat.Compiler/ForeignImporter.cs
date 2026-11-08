@@ -104,6 +104,10 @@ internal static partial class ForeignImporter
                 var recordNodes = new List<(JsonElement Node, string Scope)>();
                 var enumNodes = new List<(JsonElement Node, string Scope)>();
                 Walk(json.RootElement, "");
+                var recordDefinitions = recordNodes.Where(item => item.Node.TryGetProperty("completeDefinition", out _))
+                    .GroupBy(item => item.Scope.Length == 0 ? Text(item.Node, "name") : item.Scope + "::" + Text(item.Node, "name"))
+                    .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+                var recordMethods = new Dictionary<string, RecordMethod[]>(StringComparer.Ordinal);
                 foreach (var item in enumNodes)
                 {
                     if (ImportEnum(item.Node, item.Scope, spelling => Type(spelling, scope: item.Scope)) is not { } enumeration) continue;
@@ -137,8 +141,7 @@ internal static partial class ForeignImporter
                     {
                         string qualified = scope.Length == 0 ? Text(node, "name") : scope + "::" + Text(node, "name");
                         if (!node.TryGetProperty("completeDefinition", out _) || !records.TryGetValue(qualified, out string? receiver)) continue;
-                        foreach (var method in RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true),
-                            spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true)))
+                        foreach (var method in Methods(node, scope))
                         {
                             string key = qualified + "::" + method.Name + "(" + string.Join(",", method.Parameters) + ")";
                             if (importedSymbols.TryGetValue(key, out string? previous))
@@ -203,6 +206,32 @@ internal static partial class ForeignImporter
                     if (Cache.Count >= 8) Cache.Remove(Cache.Keys.First());
                     Cache[cacheKey] = new(nativeUnit, declarations.ToArray(),
                         importedSymbols.Where(pair => !previousSymbols.Contains(pair.Key)).ToDictionary(), inputs, headerDependencies.ToArray());
+                }
+
+                IEnumerable<RecordMethod> Methods(JsonElement node, string scope)
+                {
+                    string identity = scope.Length == 0 ? Text(node, "name") : scope + "::" + Text(node, "name");
+                    if (recordMethods.TryGetValue(identity, out var cached)) return cached;
+                    var declared = RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true),
+                        spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true)).ToArray();
+                    if (!node.TryGetProperty("bases", out var bases)) return recordMethods[identity] = declared;
+                    var hidden = node.GetProperty("inner").EnumerateArray().Select(child => Text(child, "name").Split("::").Last()).ToHashSet(StringComparer.Ordinal);
+                    var inherited = new List<(int Base, RecordMethod Method)>();
+                    int index = 0;
+                    foreach (var parent in bases.EnumerateArray())
+                    {
+                        index++;
+                        if (Text(parent, "access") != "public") continue;
+                        var native = parent.GetProperty("type");
+                        string name = Text(native, "desugaredQualType", Text(native, "qualType"));
+                        name = Type(name, scope: scope, allowRecord: true, allowOpaqueRecord: true)?.Replace("@", "", StringComparison.Ordinal) ?? name;
+                        if (!recordDefinitions.TryGetValue(name, out var definition)) continue;
+                        foreach (var method in Methods(definition.Node, definition.Scope))
+                            if (!hidden.Contains(method.Name)) inherited.Add((index, method));
+                    }
+                    return recordMethods[identity] = declared.Concat(inherited.GroupBy(item => item.Method.Name)
+                        .Where(group => group.Select(item => item.Base).Distinct().Count() == 1)
+                        .SelectMany(group => group.Select(item => item.Method))).ToArray();
                 }
 
                 void CollectAliases(JsonElement node, string scope)

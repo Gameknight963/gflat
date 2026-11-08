@@ -4,6 +4,52 @@ namespace gflat.Tests;
 
 public sealed class NativeRecordMethodTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void InheritedMethodsUseNativeBaseAdjustmentAndVirtualDispatch(int optimization)
+    {
+        Run("""
+            #lang cpp
+            namespace Native {
+                struct Prefix { long long padding = 123; virtual ~Prefix() {} };
+                struct Base {
+                    virtual ~Base() {}
+                    virtual int Value() const { return 1; }
+                    int Read() const { return Value(); }
+                    static int Twice(int input) { return input * 2; }
+                };
+                class Derived : public Prefix, public Base {
+                public:
+                    Derived() {}
+                    int Value() const override { return 42; }
+                };
+                struct Further : Derived {};
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Further* value = new* Native::Further();
+                readonly(Native::Further)* borrowed = value;
+                int result = borrowed.Read();
+                delete value;
+                if (Native::Further::Twice(21) != 42) return 1;
+                return result;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData("struct Hidden : public Base { private: int Read() const { return 0; } };", "Hidden")]
+    [InlineData("struct Hidden : private Base {};", "Hidden")]
+    [InlineData("struct Hidden : public Base { private: using Base::Read; };", "Hidden")]
+    [InlineData("struct Other { int Read() const { return 0; } }; struct Hidden : Base, Other {};", "Hidden")]
+    public void NativeInheritanceDoesNotExposeHiddenPrivateOrAmbiguousMembers(string declaration, string type)
+    {
+        Assert.Throws<TypeCheckException>(() => Compiler.Check("#lang cpp\nstruct Base { int Read() const { return 42; } };\n" +
+            declaration + "\n#lang gflat\nint Invalid(" + type + "* value) => value.Read();", options: Options()));
+    }
+
     private const string Native = """
         #lang cpp
         namespace Native {

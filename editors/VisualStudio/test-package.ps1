@@ -147,9 +147,41 @@ try {
 namespace Native
 {
     static int Next(int value) { return value + 1; }
+    enum class Mode : unsigned short { Answer = 42 };
+    struct Pair { int value; };
+    Pair Make(Mode mode) { return Pair{(int)mode}; }
+    int destroyed = 0;
+    int Destroyed() { return destroyed; }
+    void Bump(int& value) { ++value; }
+    struct Base
+    {
+        virtual ~Base() {}
+        virtual int Read() const { return 0; }
+        int Inherited() const { return Read(); }
+    };
+    class Counter : public Base
+    {
+        int value;
+    public:
+        explicit Counter(const int& initial) : value(initial) {}
+        ~Counter() { ++destroyed; }
+        int Read() const override { return value; }
+    };
 }
 #lang gflat
-int main() { return Native::Next(41) - 42; }
+int main()
+{
+    if (Native::Next(41) != 42) return 1;
+    Native::Pair pair = Native::Make(Native::Mode::Answer);
+    if (pair.value != 42) return 2;
+    int initial = 41;
+    Native::Bump(ref initial);
+    Native::Counter* counter = new* Native::Counter(ref initial);
+    int result = counter.Inherited();
+    delete counter;
+    if (result != 42 || Native::Destroyed() != 1) return 3;
+    return 0;
+}
 '@ | Set-Content -LiteralPath $foreignConsumer -Encoding Ascii
     $foreignIr = Join-Path $extracted 'foreign-consumer.ll'
     & $compiler $foreignConsumer --no-stdlib --emit-ir -o $foreignIr
@@ -158,7 +190,7 @@ int main() { return Native::Next(41) - 42; }
     }
     & $compiler $foreignConsumer --no-stdlib -o (Join-Path $extracted 'foreign-consumer.exe') --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged foreign language consumer failed' }
-    Write-Host 'Packaged C++ source switch, header import, static function call, and IR companion passed.'
+    Write-Host 'Packaged C++ headers, enums, records, references, native object lifetime, inherited dispatch, and IR companion passed.'
     & (Join-Path $PSScriptRoot 'test-sdk-installation.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-sdk-elevation.ps1') -PackageDirectory $extracted
     & (Join-Path $PSScriptRoot 'test-explorer-installation.ps1') -PackageDirectory $extracted

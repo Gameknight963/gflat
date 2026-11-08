@@ -5,6 +5,30 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void InheritedNativeMethodsAppearInCompletionAndHovers()
+    {
+        const string text = """
+            #lang cpp
+            namespace Native {
+                struct Base { int Read() const { return 42; } };
+                struct Derived : Base {};
+            }
+            #lang gflat
+            int Read(Native::Derived* value) => value.Read();
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-inheritance-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int method = text.LastIndexOf("Read", StringComparison.Ordinal);
+        string hover = JsonSerializer.Serialize(model.Hover(source.Path, method));
+        Assert.Contains("Read", hover);
+        Assert.Contains("Derived", hover);
+        var completion = JsonSerializer.SerializeToElement(model.Completion(source.Path, method));
+        Assert.Contains(completion.GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "Read");
+    }
+
+    [Fact]
     public void NativeEnumConstantsAndFunctionParametersHaveTypeAwareHovers()
     {
         const string text = """

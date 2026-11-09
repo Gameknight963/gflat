@@ -11,6 +11,8 @@ namespace gflat;
 
 internal static partial class ForeignImporter
 {
+    private static readonly string[] RestrictionQualifiers = ["__restrict__", "__restrict", "restrict"];
+
     private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false,
         NativeRecordLayout? OpaqueLayout = null, string? Owner = null, CallableRole Role = CallableRole.Member);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
@@ -290,6 +292,26 @@ internal static partial class ForeignImporter
                     bool allowOpaqueRecord = false, bool allowReference = false)
                 {
                     spelling = spelling.Trim();
+                    foreach (string restriction in RestrictionQualifiers)
+                    {
+                        // Clang can print qualifiers before a typedef name, including
+                        // inside a pointer declarator: 'restrict Pointer *restrict'.
+                        if (spelling.StartsWith(restriction, StringComparison.Ordinal) && spelling.Length > restriction.Length &&
+                            char.IsWhiteSpace(spelling[restriction.Length]))
+                        {
+                            string? unrestricted = Type(spelling[restriction.Length..], resolving, scope, allowRecord, allowOpaqueRecord, allowReference);
+                            if (unrestricted != null) return unrestricted;
+                        }
+                        int end = spelling.Length - restriction.Length;
+                        if (end > 0 && spelling.EndsWith(restriction, StringComparison.Ordinal) &&
+                            (char.IsWhiteSpace(spelling[end - 1]) || spelling[end - 1] is '*' or '&'))
+                        {
+                            // Resolve the prefix before discarding a qualifier: a C++
+                            // record named 'restrict' must remain an ordinary type.
+                            string? unrestricted = Type(spelling[..end], resolving, scope, allowRecord, allowOpaqueRecord, allowReference);
+                            if (unrestricted != null) return unrestricted;
+                        }
+                    }
                     if (spelling.EndsWith('&'))
                     {
                         if (!allowReference || spelling.EndsWith("&&", StringComparison.Ordinal)) return null;

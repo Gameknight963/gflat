@@ -4,6 +4,24 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ForeignLanguageEditorTests
 {
+    [Theory]
+    [InlineData("c", "restrict")]
+    [InlineData("cpp", "__restrict")]
+    public void NativeRestrictedPointersExposeTheirPointeeQualifiers(string language, string qualifier)
+    {
+        string text = "#lang " + language + "\nint Read(const int* " + qualifier + " value) { return *value; }\n" + """
+            #lang gflat
+            int Use(readonly(int)* value) => Read(value);
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-restrict-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        Assert.Equal("public int Read(readonly(int)*? value)", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+    }
+
     [Fact]
     public void ForwardDeclaredNativeHandlesAppearInCallSignatures()
     {

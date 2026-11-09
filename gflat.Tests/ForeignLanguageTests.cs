@@ -5,6 +5,42 @@ namespace gflat.Tests;
 
 public sealed class ForeignLanguageTests
 {
+    [Theory]
+    [InlineData("<input>")]
+    [InlineData("source & name.gf")]
+    [InlineData("source + name.gf")]
+    [InlineData("source's name.gf")]
+    [InlineData("source \u00e9.gf")]
+    [InlineData("<quoted\"input>")]
+    public void SourceNamesRemainValidNativeLineFilenames(string path)
+    {
+        foreach (string language in new[] { "c", "cpp" })
+        {
+            string code = "#lang " + language + "\nint Answer(void) { return 42; }\n" +
+                "#lang gflat\nint Read() => Answer();";
+            var (ast, _) = Compiler.Check([new SourceFile(path, code)], options: new() { NoStdLib = true });
+            Assert.Single(ast.ForeignUnits);
+        }
+    }
+
+    [Theory]
+    [InlineData("<input>")]
+    [InlineData("source & name.gf")]
+    [InlineData("source + name.gf")]
+    [InlineData("source's name.gf")]
+    [InlineData("source \u00e9.gf")]
+    [InlineData("<quoted\"input>")]
+    public void NativeDiagnosticsPreserveSourceNamesAndLines(string path)
+    {
+        foreach (string language in new[] { "c", "cpp" })
+        {
+            string code = "#lang " + language + "\nint Answer(void) { return missing_name; }\n#lang gflat\n";
+            var error = Assert.Throws<TypeCheckException>(() => Compiler.Check([new SourceFile(path, code)], options: new() { NoStdLib = true }));
+            Assert.True(error.Description.Contains(path + ":2:", StringComparison.Ordinal), error.Description);
+            Assert.Contains("missing_name", error.Description);
+        }
+    }
+
     [Fact]
     public void SwitchesPreserveForeignSourceAndGflatLocations()
     {

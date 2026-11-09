@@ -45,7 +45,7 @@ internal static partial class ForeignImporter
                 foreach (var segment in group)
                 {
                     source.Append("#line ").Append(segment.Span.Line).Append(' ')
-                        .Append(JsonSerializer.Serialize(segment.Span.Source!.Path.Replace('\\', '/'))).AppendLine();
+                        .Append(SourcePathLiteral(segment.Span.Source!.Path)).AppendLine();
                     source.Append(segment.Span.Source.Text.AsSpan(segment.Span.Start, segment.Span.Length)).AppendLine();
                 }
                 string compiler = options.ForeignCompilerResolver?.Invoke() ?? Environment.GetEnvironmentVariable("GFLAT_CLANG") ?? "clang";
@@ -475,7 +475,9 @@ internal static partial class ForeignImporter
 
     internal static string Run(string compiler, IEnumerable<string> arguments, SourceSpan span, CancellationToken cancellation)
     {
-        var info = new ProcessStartInfo(compiler) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+        var info = new ProcessStartInfo(compiler) { UseShellExecute = false, RedirectStandardOutput = true,
+            RedirectStandardError = true, CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8 };
         foreach (string argument in arguments) info.ArgumentList.Add(argument);
         using var process = new Process { StartInfo = info };
         try { process.Start(); }

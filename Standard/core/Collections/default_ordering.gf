@@ -9,6 +9,9 @@ public void Sort<T : IComparable<T>>(Span<T> values)
 public void StableSort<T : IComparable<T>>(Span<T> values)
     => Standard::Collections::StableSort<T>(values, Comparer<T>::Compare);
 
+public void PartialSort<T : IComparable<T>>(Span<T> values, nuint count)
+    => Standard::Collections::PartialSort<T>(values, count, Comparer<T>::Compare);
+
 public nuint LowerBound<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
     => Standard::Collections::LowerBound<T>(values, key, Comparer<T>::Compare);
 

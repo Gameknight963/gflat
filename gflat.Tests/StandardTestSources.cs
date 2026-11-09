@@ -147,6 +147,7 @@ internal static class StandardTestSources
         "core/Collections/default_ordering.gf",
         "core/Collections/hash_set_algebra.gf",
         "core/Collections/nth_element.gf",
+        "core/Collections/partial_sort.gf",
         "core/Collections/span_algorithms.gf",
         "core/Collections/span_find_run.gf",
         "core/Collections/span_permutations.gf",

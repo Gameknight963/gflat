@@ -257,7 +257,8 @@ public sealed class StandardQueryDistinctByTests
             """;
         Compiler.Check(Sources(borrowed.Replace(".DistinctBy(Id)", "", StringComparison.Ordinal)));
         var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Check(Sources(borrowed)));
-        Assert.Contains("Argument 1 of indirect call: cannot pass 'Unique' as 'Unique'", error.Message);
+        Assert.Contains("Argument 1 of indirect call", error.Message);
+        Assert.Contains("'Unique' by value because it does not support copying", error.Message);
     }
 
     [Theory]

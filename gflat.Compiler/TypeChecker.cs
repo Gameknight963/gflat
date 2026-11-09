@@ -4726,7 +4726,7 @@ namespace gflat
                         TypeExpression paramType = ifaceMethod.Parameters[i].Type;
                         if (!IsAssignable(paramType, argType, node.Arguments[i]))
                             throw new TypeCheckException(
-                                $"Argument {i + 1} of '{DisplayName(namedIface.Name)}.{memberAccess.Member}': cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
+                                $"Argument {i + 1} of '{DisplayName(namedIface.Name)}.{memberAccess.Member}': {DescribeArgumentMismatch(node.Arguments[i], argType, paramType)}",
                                 node.Arguments[i].Span);
 
                         if (ifaceMethod.Parameters[i].IsConst)
@@ -4926,7 +4926,7 @@ namespace gflat
                     {
                         DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                         throw new TypeCheckException(
-                            $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
+                            $"Argument {i + 1} of '{funcName}': {DescribeArgumentMismatch(node.Arguments[i], argType, paramType)}",
                             node.Arguments[i].Span);
                     }
 
@@ -4992,7 +4992,7 @@ namespace gflat
                     DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                     string callable = method.PropertyName == null ? $"'{funcName}'" : DescribeSourceCallable(method);
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of {callable}: cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
+                        $"Argument {i + 1} of {callable}: {DescribeArgumentMismatch(node.Arguments[i], argType, paramType)}",
                         node.Arguments[i].Span);
                 }
 
@@ -5048,7 +5048,7 @@ namespace gflat
                 {
                     DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of indirect call: cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
+                        $"Argument {i + 1} of indirect call: {DescribeArgumentMismatch(node.Arguments[i], argType, paramType)}",
                         node.Arguments[i].Span);
                 }
             }

@@ -85,7 +85,7 @@ public sealed class VectorResizeTests
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(
             unique.Replace("// RESIZE", "values.Resize(0,new Unique(&destroyed));"))));
         Assert.Contains("Unique", error.Message);
-        Assert.Contains("cannot pass 'Unique' as 'Unique'", error.Message);
+        Assert.Contains("'Unique' by value because it does not support copying", error.Message);
         Assert.Contains("Argument 1", error.Message);
     }
 

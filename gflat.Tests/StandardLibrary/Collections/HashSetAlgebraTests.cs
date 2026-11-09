@@ -145,7 +145,7 @@ public sealed class HashSetAlgebraTests
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources(program)));
         // Without a copy constructor the immutable borrowed source key cannot
         // become the independent mutable owning argument required by Add.
-        Assert.Contains("cannot pass 'immutable(Key)' as 'Key'",error.Description,StringComparison.Ordinal);
+        Assert.Contains("'Key' by value because it does not support copying", error.Description, StringComparison.Ordinal);
         Assert.Contains(".Add",error.Description,StringComparison.Ordinal);
     }
 

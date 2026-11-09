@@ -73,6 +73,21 @@ public partial class TypeChecker
     public bool CopiesValue(AstNode expression, TypeExpression target)
         => !IsFreshValue(expression) && RequiresCopy(target);
 
+    private string DescribeArgumentMismatch(AstNode expression, TypeExpression actual, TypeExpression expected)
+    {
+        var actualValue = ResolveAlias(actual);
+        var expectedValue = ResolveAlias(expected);
+        if (actualValue is NamedTypeExpression && expectedValue is NamedTypeExpression &&
+            TypesMatchPublic(actualValue.WithoutValueProtection(), expectedValue.WithoutValueProtection()) && CopiesValue(expression, expectedValue))
+        {
+            if (!CanCopy(expectedValue))
+                return $"cannot pass '{DisplayTypeName(expected)}' by value because it does not support copying";
+            if (!CanAccessCopy(expectedValue, _currentClass?.Name ?? _currentStruct?.Name))
+                return $"cannot pass '{DisplayTypeName(expected)}' by value because the required copy operation is not accessible here";
+        }
+        return $"cannot pass '{DisplayExpressionTypeName(expression, actual)}' as '{DisplayTypeName(expected)}'";
+    }
+
     private void ValidateAssignmentResultAddress(AstNode expression)
     {
         // Projected receivers validate their container while it is checked.

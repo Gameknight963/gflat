@@ -182,7 +182,7 @@ public sealed class StandardQueryTakeLastTests
         Compiler.Check(Sources(borrowed.Replace(".TakeLast(1)", "", StringComparison.Ordinal)));
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(borrowed)));
         Assert.Contains("AddLast", error.Message, StringComparison.Ordinal);
-        Assert.Contains("cannot pass 'Unique' as 'Unique'", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("'Unique' by value because it does not support copying", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

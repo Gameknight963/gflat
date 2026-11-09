@@ -163,6 +163,6 @@ public sealed class VectorInsertRangeTests
         Run(program, 0);
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(
             program.Replace("// INSERT", "values.InsertRange(0,values.AsImmutable());"))));
-        Assert.Contains("cannot pass 'immutable(Unique)' as 'Unique'", error.Message);
+        Assert.Contains("'Unique' by value because it does not support copying", error.Message);
     }
 }

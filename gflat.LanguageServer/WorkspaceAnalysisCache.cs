@@ -74,14 +74,12 @@ internal sealed class WorkspaceAnalysisCache
     {
         try
         {
+            foreach (var foreign in snapshot.ForeignDependencies.Values)
+                if (!foreign.IsCurrent()) return false;
             var previous = snapshot.Sources.Where(source => !source.Path.StartsWith('<')).ToDictionary(source => Path.GetFullPath(source.Path), Workspace.Paths);
             foreach (string path in snapshot.PreprocessorDependencies.Where(path => !path.StartsWith('<')))
             {
-                if (snapshot.ForeignDependencies.TryGetValue(path, out var foreign))
-                {
-                    if (!foreign.IsCurrent()) return false;
-                    continue;
-                }
+                if (snapshot.ForeignDependencies.ContainsKey(path)) continue;
                 var current = options.IncludeLoader?.Invoke(path) ?? (File.Exists(path) ? new SourceFile(path, File.ReadAllText(path)) : null);
                 if (previous.TryGetValue(path, out var source) ? current?.Text != source.Text : current != null) return false;
             }

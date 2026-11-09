@@ -157,6 +157,34 @@ public sealed class ForeignLanguageEditorTests
     }
 
     [Fact]
+    public void WorkspaceInvalidatesWhenAnEarlierNestedNativeHeaderAppears()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_header_order_" + Guid.NewGuid().ToString("N"));
+        string first = Path.Combine(directory, "first"), second = Path.Combine(directory, "second");
+        Directory.CreateDirectory(Path.Combine(first, "headers"));
+        Directory.CreateDirectory(Path.Combine(second, "headers"));
+        try
+        {
+            File.WriteAllText(Path.Combine(second, "headers", "api.h"), "int FromHeader(void);");
+            var source = new SourceFile(Path.Combine(directory, "main.gf"),
+                "#lang c\n#include <headers/api.h>\n#lang gflat\ndouble Read() => (double)FromHeader();");
+            File.WriteAllText(source.Path, source.Text);
+            var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = [first, second] };
+            var cache = new WorkspaceAnalysisCache();
+            var before = cache.Get([source], options).Snapshot;
+            Assert.Empty(before.Diagnostics);
+            Assert.Same(before, cache.Get([source], options).Snapshot);
+            File.WriteAllText(Path.Combine(first, "headers", "api.h"), "double FromHeader(void);");
+            var after = cache.Get([source], options).Snapshot;
+            Assert.NotSame(before, after);
+            Assert.Empty(after.Diagnostics);
+            var method = after.Nodes.Select(node => node.Node).OfType<gflat.ast.MethodDeclaration>().Single(method => method.Name == "FromHeader");
+            Assert.Equal("double", TypeChecker.TypeName(method.ReturnType));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
     public void WorkspaceReusesForeignAnalysisAndInvalidatesOnNativeHeaderContentChanges()
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_editor_" + Guid.NewGuid().ToString("N"));
@@ -172,7 +200,7 @@ public sealed class ForeignLanguageEditorTests
             var options = new CompilationOptions { NoStdLib = true };
             var first = cache.Get([source], options).Snapshot;
             Assert.Empty(first.Diagnostics);
-            Assert.Single(first.ForeignDependencies);
+            Assert.Single(first.ForeignDependencies.Values, input => !input.IsDirectory);
             Assert.DoesNotContain(first.PreprocessorDependencies, path => path.EndsWith("clang.exe", StringComparison.OrdinalIgnoreCase));
             Assert.Same(first, cache.Get([source], options).Snapshot);
             File.WriteAllText(header, "static int native() { return 2; }");

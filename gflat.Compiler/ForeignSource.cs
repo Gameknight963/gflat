@@ -16,9 +16,20 @@ public sealed record EmittedProgram(string Ir, IReadOnlyList<ForeignTranslationU
 
 public sealed record ForeignDependency(string Path, string? ContentHash)
 {
-    public bool IsCurrent() => ContentHash != null && Hash(Path) == ContentHash;
+    public long? DirectoryTimestampUtcTicks { get; init; }
+    public bool IsDirectory => DirectoryTimestampUtcTicks != null;
 
-    internal static ForeignDependency Capture(string path) => new(path, Hash(path));
+    public bool IsCurrent() => IsDirectory ? DirectoryTimestamp(Path) == DirectoryTimestampUtcTicks :
+        ContentHash != null && Hash(Path) == ContentHash;
+
+    internal static ForeignDependency Capture(string path) => Directory.Exists(path)
+        ? new(path, null) { DirectoryTimestampUtcTicks = DirectoryTimestamp(path) } : new(path, Hash(path));
+
+    private static long? DirectoryTimestamp(string path)
+    {
+        try { return Directory.Exists(path) ? Directory.GetLastWriteTimeUtc(path).Ticks : null; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return null; }
+    }
 
     private static string? Hash(string path)
     {

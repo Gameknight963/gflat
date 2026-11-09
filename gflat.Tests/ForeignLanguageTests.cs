@@ -191,6 +191,31 @@ public sealed class ForeignLanguageTests
     }
 
     [Fact]
+    public void NewHeaderInAnEarlierNestedIncludeDirectoryInvalidatesCachedImports()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "gflat foreign include order " + Guid.NewGuid().ToString("N"));
+        string first = Path.Combine(directory, "first"), second = Path.Combine(directory, "second");
+        Directory.CreateDirectory(Path.Combine(first, "headers"));
+        Directory.CreateDirectory(Path.Combine(second, "headers"));
+        try
+        {
+            File.WriteAllText(Path.Combine(second, "headers", "api.h"), "int FromHeader(void);");
+            var source = new SourceFile(Path.Combine(directory, "main.gf"),
+                "#lang c\n#include <headers/api.h>\n#lang gflat\ndouble Read() => (double)FromHeader();");
+            var options = new CompilationOptions { NoStdLib = true, IncludeDirectories = [first, second],
+                ForeignCompilerResolver = () => NativeToolchain.FindClang() };
+            var before = Compiler.Check(source, options: options).Ast;
+            Assert.Equal("int", TypeChecker.TypeName(before.Members.OfType<ast.MethodDeclaration>().Single(method => method.Name == "FromHeader").ReturnType));
+            DateTime topLevelTime = Directory.GetLastWriteTimeUtc(first);
+            File.WriteAllText(Path.Combine(first, "headers", "api.h"), "double FromHeader(void);");
+            Directory.SetLastWriteTimeUtc(first, topLevelTime);
+            var after = Compiler.Check(source, options: options).Ast;
+            Assert.Equal("double", TypeChecker.TypeName(after.Members.OfType<ast.MethodDeclaration>().Single(method => method.Name == "FromHeader").ReturnType));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
     public void HeaderDependenciesInvalidateCachedDeclarationsAndSnapshotsStayIndependent()
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat foreign headers " + Guid.NewGuid().ToString("N"));

@@ -108,7 +108,8 @@ public sealed class Compilation
             try
             {
                 if (importForeignDeclarations) ForeignImporter.Import(tree, foreign, preprocessingOptions, diagnostics,
-                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignImports);
+                    path => { dependencies.Add(path); foreignDependencies.Add(path); }, cancellationToken, foreignImports,
+                    searchDependency: path => foreignDependencies.Add(path));
                 else tree.ForeignSources.AddRange(foreign);
             }
             catch (TypeCheckException error) when (recoverErrors)

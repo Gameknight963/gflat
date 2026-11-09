@@ -158,6 +158,7 @@ public static class Workspace
                 foreach (var source in analysis.Nodes.Select(n => n.Span.Source).OfType<SourceFile>().DistinctBy(s => s.Id))
                     if (StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(source.Path, relative))) watched.Add(source.Path);
                 watched.UnionWith(analysis.PreprocessorDependencies.Where(path => !path.StartsWith('<')));
+                watched.UnionWith(analysis.ForeignDependencies.Values.Where(input => input.IsDirectory).Select(input => input.Path));
                 foreach (var source in snapshots.Concat(analysis.Sources))
                 {
                     if (source.Path.StartsWith('<')) continue;

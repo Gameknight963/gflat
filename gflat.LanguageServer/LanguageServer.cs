@@ -19,6 +19,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     private readonly ProjectWorkspace projects = new();
     private readonly List<FileSystemWatcher> watchers = new();
     private HashSet<string> watcherInputs = new(Workspace.Paths);
+    private HashSet<string> nativeDirectoryInputs = new(Workspace.Paths);
     private Dictionary<string, bool> watcherDirectoryInputs = new(Workspace.Paths);
     private volatile bool watchersNeedRefresh;
     private readonly SemaphoreSlim analysisGate = new(1, 1);
@@ -459,12 +460,13 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
     };
 
     private bool IgnoreGeneratedChange(string path) => !watchedPaths.Contains(path) &&
+        !nativeDirectoryInputs.Contains(Path.GetDirectoryName(path) ?? "") &&
         path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory);
 
     private bool RelevantFileChange(string path)
     {
         if (IgnoreGeneratedChange(path)) return false;
-        if (latest == null || watchedPaths.Contains(path) ||
+        if (latest == null || watchedPaths.Contains(path) || nativeDirectoryInputs.Contains(Path.GetDirectoryName(path) ?? "") ||
             ProjectWorkspace.IsProjectDiscoveryChange(path, projectDiscoveryDirectories) ||
             root != null && Workspace.Paths.Equals(path, Path.Combine(root, Workspace.ConfigurationName))) return true;
         // Use the completed graph's immutable glob rules, rather than querying
@@ -557,7 +559,8 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
 
     private void UpdateWatchers()
     {
-        var directories = watchedPaths.Select(Path.GetDirectoryName).OfType<string>()
+        var nativeDirectories = watchedPaths.Where(Directory.Exists).ToHashSet(Workspace.Paths);
+        var directories = watchedPaths.Select(path => nativeDirectories.Contains(path) ? path : Path.GetDirectoryName(path)).OfType<string>()
             .Concat(projectDirectories).Concat(projectDiscoveryDirectories).Distinct(Workspace.Paths)
             .Where(Directory.Exists).ToDictionary(directory => directory, projectDirectories.Contains, Workspace.Paths);
         if (!watchersNeedRefresh && watcherInputs.SetEquals(watchedPaths) && directories.Count == watcherDirectoryInputs.Count &&
@@ -567,6 +570,7 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
         watchers.Clear();
         var explicitPaths = new HashSet<string>(watchedPaths, Workspace.Paths);
         watcherInputs = explicitPaths;
+        nativeDirectoryInputs = nativeDirectories;
         watcherDirectoryInputs = directories;
         // Watch only source/config directories, never recursively scan or watch build output trees.
         foreach (var entry in directories)
@@ -578,10 +582,13 @@ public sealed partial class LanguageServer(Stream input, Stream output, TextWrit
                 watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = entry.Value, NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
                 void ChangedPath(string path)
                 {
-                    if (explicitPaths.Contains(path) || !Path.GetRelativePath(directory, path).Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
+                    if (explicitPaths.Contains(path) || nativeDirectoryInputs.Contains(Path.GetDirectoryName(path) ?? "") ||
+                        !Path.GetRelativePath(directory, path).Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
                         events.Writer.TryWrite(new Changed(path));
                 }
-                watcher.Changed += (_, e) => ChangedPath(e.FullPath);
+                // Child creation changes ancestor directory timestamps too. Treating those
+                // metadata notifications as input edits can make compiler temp files restart analysis.
+                watcher.Changed += (_, e) => { if (!Directory.Exists(e.FullPath)) ChangedPath(e.FullPath); };
                 watcher.Created += (_, e) => ChangedPath(e.FullPath);
                 watcher.Deleted += (_, e) => ChangedPath(e.FullPath);
                 watcher.Renamed += (_, e) => { ChangedPath(e.OldFullPath); ChangedPath(e.FullPath); };

@@ -21,7 +21,7 @@ internal static partial class ForeignImporter
 
     internal static void Import(CompilationUnit unit, IReadOnlyList<ForeignSource> segments,
         CompilationOptions options, DiagnosticBag diagnostics, Action<string> dependency,
-        CancellationToken cancellation, ForeignImportState? state = null)
+        CancellationToken cancellation, ForeignImportState? state = null, Action<string>? searchDependency = null)
     {
         if (segments.Count == 0) return;
         state ??= new();
@@ -60,6 +60,7 @@ internal static partial class ForeignImporter
                 if (cached != null && cached.Inputs.All(input => input.Value.Length >= -1 && Stamp(input.Key, input.Value.Hash != null) == input.Value))
                 {
                     foreach (string file in cached.Dependencies) dependency(file);
+                    foreach (var input in cached.Inputs.Where(input => input.Value.Length == -1)) searchDependency?.Invoke(input.Key);
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
                     foreach (var declaration in cached.Declarations)
                     { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text,
@@ -72,7 +73,9 @@ internal static partial class ForeignImporter
                 var declarations = new List<CachedDeclaration>();
                 var inputs = new Dictionary<string, InputStamp>();
                 var headerDependencies = new List<string>();
-                foreach (string argument in arguments.Where(Directory.Exists)) inputs[argument] = Stamp(argument);
+                var searchDirectories = arguments.Where(Directory.Exists).Select(Path.GetFullPath)
+                    .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray();
+                foreach (string searchDirectory in searchDirectories) inputs[searchDirectory] = Stamp(searchDirectory);
                 if (File.Exists(compiler)) inputs[compiler] = Stamp(compiler, contents: false);
                 string path = Path.Combine(directory, "source." + (group.Key == "cpp" ? "cpp" : "c"));
                 string depfile = Path.Combine(directory, "source.d");
@@ -90,6 +93,8 @@ internal static partial class ForeignImporter
                             if (!string.Equals(file, path, StringComparison.OrdinalIgnoreCase))
                             { dependency(file); headerDependencies.Add(file); inputs[file] = Stamp(file); }
                 }
+                TrackIncludeSearchDirectories(inputs, headerDependencies, searchDirectories);
+                foreach (var input in inputs.Where(input => input.Value.Length == -1)) searchDependency?.Invoke(input.Key);
                 var layouts = ReadRecordLayouts(ast, out string jsonText);
                 using var json = JsonDocument.Parse(jsonText);
                 var aliases = new Dictionary<string, string>();

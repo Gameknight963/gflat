@@ -178,11 +178,12 @@ internal static partial class ForeignImporter
                                 method.NativeParameters, recordTypes, arguments =>
                                     (method.IsStatic ? "::" + qualified + "::" : "__self->") + method.Name + "(" + string.Join(", ", arguments) + ")",
                                 method.IsStatic ? null : objectType,
-                                method.IsStatic ? null : (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified, method.ParameterNames);
+                                method.IsStatic ? null : (method.ReadOnly ? "const " : "") + Text(node, "tagUsed") + " ::" + qualified,
+                                method.ParameterNames, isNoThrow: method.IsNoThrow);
                             bridges.Add(entry, bridge.Native);
                             string declaration = bridge.Extern + "\n" +
                                 "public " + (method.IsStatic ? "static " : method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
-                                "(" + parameters + ") { " + bridge.Body + " }";
+                                "(" + parameters + ")" + (method.IsNoThrow ? " nothrow" : "") + " { " + bridge.Body + " }";
                             AddDeclaration(key, declaration, owner: qualified);
                             declarations.Add(new(key, declaration, Owner: qualified));
                         }
@@ -365,8 +366,9 @@ internal static partial class ForeignImporter
                     if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") ||
                         function.TryGetProperty("isImplicit", out _) || function.TryGetProperty("explicitlyDeleted", out _)) return;
                     string signature = Text(function.GetProperty("type"), "qualType");
-                    string? nativeResult = FunctionResult(signature);
-                    if (nativeResult == null) return;
+                    if (FunctionShape(signature) is not { } shape) return;
+                    string nativeResult = shape.Result;
+                    var contract = FunctionContract(function, shape.Qualifiers);
                     string? result = Type(nativeResult, scope: scope, allowRecord: true);
                     if (result == null) return;
                     var parameters = function.TryGetProperty("inner", out var body)
@@ -395,7 +397,7 @@ internal static partial class ForeignImporter
                         // A variadic bridge cannot forward its unnamed arguments.
                         if (group.Key == "cpp" && Text(function, "mangledName") != name) return;
                         declaration = "extern \"C\" " + result + " @" + name + "(" + string.Join(", ", types.Select((type, n) => type + " " + parameterNames[n])) +
-                            (types.Length == 0 ? "" : ", ") + "...);";
+                            (types.Length == 0 ? "" : ", ") + "...)" + (contract.IsNoThrow ? " nothrow" : "") + ";";
                     }
                     else
                     {
@@ -404,9 +406,10 @@ internal static partial class ForeignImporter
                         var bridge = CreateCallBridge(entry, group.Key, scope, result, nativeResult,
                             types.Select(type => type!).ToArray(), parameterTypes, recordTypes,
                             arguments => "(" + (group.Key == "cpp" ? "::" : "") + qualified + ")(" + string.Join(", ", arguments) + ")",
-                            parameterNames: parameterNames);
+                            parameterNames: parameterNames, isNoThrow: contract.IsNoThrow);
                         bridges.Add(entry, bridge.Native);
-                        declaration = bridge.Extern + "\npublic " + result + " @" + name + "(" + parametersText + ") { " + bridge.Body + " }";
+                        declaration = bridge.Extern + "\npublic " + result + " @" + name + "(" + parametersText + ")" +
+                            (contract.IsNoThrow ? " nothrow" : "") + " { " + bridge.Body + " }";
                     }
                     if (scope.Length != 0) declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) + " { " + declaration + " }";
                     AddDeclaration(qualified, declaration);
@@ -461,9 +464,6 @@ internal static partial class ForeignImporter
             }
         }
     }
-
-    private static string? FunctionResult(string signature)
-        => FunctionShape(signature)?.Result;
 
     private static (string Result, string Qualifiers)? FunctionShape(string signature)
     {

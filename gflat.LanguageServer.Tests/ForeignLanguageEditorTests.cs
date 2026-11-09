@@ -5,6 +5,33 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void NativeNonthrowingContractsAppearInSignatures()
+    {
+        const string text = """
+            #lang cpp
+            int ReadGlobal() noexcept(1) { return 21; }
+            int Conditional() noexcept(false) { return 21; }
+            struct Factory {
+                int value;
+                int Read() const noexcept { return value; }
+            };
+            #lang gflat
+            int Use(readonly(Factory)* value) => ReadGlobal() + value.Read() + Conditional();
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-nothrow-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        foreach (var (name, noThrow) in new[] { ("ReadGlobal(", true), ("Read(", true), ("Conditional(", false) })
+        {
+            int call = text.LastIndexOf(name, StringComparison.Ordinal);
+            var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + name.Length));
+            string label = signature.GetProperty("signatures")[0].GetProperty("label").GetString()!;
+            Assert.Equal(noThrow, label.Contains("nothrow", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
     public void NativeTrailingReturnsExposeTheDeclaredResultAndReceiver()
     {
         const string text = """

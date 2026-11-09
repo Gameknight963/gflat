@@ -179,6 +179,11 @@ participate in host constant evaluation.
 
 ## Exceptions across native calls
 
+`noexcept` declarations, literal `noexcept(true)` and `noexcept(1)`, and native
+`nothrow` attributes import as host `nothrow` contracts. The importer treats other
+conditional specifications as potentially throwing. Native allocation can still
+throw when its constructor is `noexcept`.
+
 C++ exceptions unwind through G♭ calls and cleanup. A catch-all can retain and
 rethrow the original native exception. A typed G♭ catch matches G♭ payloads,
 not arbitrary C++ exception classes.

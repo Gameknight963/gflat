@@ -33,7 +33,8 @@ internal static partial class ForeignImporter
     private static CallBridge CreateCallBridge(string entry, string language, string scope, string result,
         string nativeResult, IReadOnlyList<string> parameters, IReadOnlyList<string> nativeParameters,
         IReadOnlySet<string> records, Func<IReadOnlyList<string>, string> call,
-        string? receiver = null, string? nativeReceiver = null, IReadOnlyList<string>? parameterNames = null)
+        string? receiver = null, string? nativeReceiver = null, IReadOnlyList<string>? parameterNames = null,
+        bool isNoThrow = false)
     {
         string? recordResult = RecordValueType(result, records);
         var externParameters = new List<string>();
@@ -77,9 +78,11 @@ internal static partial class ForeignImporter
             foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
                 definition.Append("namespace ").Append(part).Append(" { ");
         if (language == "cpp") definition.Append("extern \"C\" ");
+        else if (isNoThrow) definition.Append("__attribute__((nothrow)) ");
         definition.Append(recordResult != null ? "void" : language == "cpp" ? "auto" :
                 Regex.IsMatch(nativeResult, @"\(\s*\*") ? "__typeof__(" + nativeResult + ")" : nativeResult)
             .Append(' ').Append(entry).Append('(').Append(string.Join(", ", nativeDeclarations)).Append(')');
+        if (language == "cpp" && isNoThrow) definition.Append(" noexcept");
         if (language == "cpp" && recordResult == null) definition.Append(" -> decltype(").Append(expression).Append(')');
         definition.Append(" { ");
         if (recordResult != null)
@@ -94,6 +97,6 @@ internal static partial class ForeignImporter
             ? recordResult + " __gflat_result = default(" + recordResult + "); " + invocation + " return __gflat_result;"
             : (result == "void" ? "" : "return ") + invocation;
         return new(definition.ToString(), "private extern \"C\" " + (recordResult != null ? "void" : result) + " " + entry +
-            "(" + string.Join(", ", externParameters) + ");", body);
+            "(" + string.Join(", ", externParameters) + ")" + (isNoThrow ? " nothrow" : "") + ";", body);
     }
 }

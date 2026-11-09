@@ -6,7 +6,7 @@ namespace gflat;
 internal static partial class ForeignImporter
 {
     private sealed record RecordMethod(string Name, string Symbol, string Result, string[] Parameters,
-        string[] NativeParameters, string[] ParameterNames, bool ReadOnly, bool IsStatic);
+        string[] NativeParameters, string[] ParameterNames, bool ReadOnly, bool IsStatic, bool IsNoThrow);
 
     private static IEnumerable<RecordMethod> RecordMethods(JsonElement record, Func<string, string?> type, Func<string, string?> parameterType)
     {
@@ -22,7 +22,8 @@ internal static partial class ForeignImporter
             string name = Text(child, "name"), signature = Text(child.GetProperty("type"), "qualType");
             if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || name == "reinterpret") continue;
             if (FunctionShape(signature) is not { } shape) continue;
-            string suffix = shape.Qualifiers;
+            var contract = FunctionContract(child, shape.Qualifiers);
+            string suffix = contract.Qualifiers;
             if (!Regex.IsMatch(suffix, @"^(?:const\s*)?(?:noexcept(?:\([^()]*\))?)?$")) continue;
             string? result = type(shape.Result);
             if (result == null) continue;
@@ -33,7 +34,8 @@ internal static partial class ForeignImporter
             var mapped = nativeParameters.Select(parameterType).ToArray();
             if (mapped.Any(parameter => parameter == null)) continue;
             methods.Add(new(name, Text(child, "mangledName"), result, mapped.Select(parameter => parameter!).ToArray(),
-                nativeParameters, ParameterNames(parameters), suffix.StartsWith("const", StringComparison.Ordinal), Text(child, "storageClass") == "static"));
+                nativeParameters, ParameterNames(parameters), suffix.StartsWith("const", StringComparison.Ordinal),
+                Text(child, "storageClass") == "static", contract.IsNoThrow));
         }
         // Native overloads erased to one host signature need a richer selection rule.
         return methods.GroupBy(method => method.Name).Where(group => group.Select(method => method.IsStatic).Distinct().Count() == 1)

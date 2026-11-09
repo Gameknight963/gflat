@@ -123,6 +123,12 @@ Hidden names and names reached through multiple direct bases are not imported.
 Using-declarations do not reintroduce hidden overloads yet. `sizeof` and `alignof`
 report Clang's native layout.
 
+Forward-declared named records, such as `struct Handle;`, can be passed through
+pointers and borrowed references. Their layout is unknown, so `sizeof`, `alignof`,
+indexing, and pointer arithmetic are unavailable. Use the native library's creation
+and destruction functions. A complete definition in the native translation unit supplies
+the layout and the supported members instead.
+
 Unions are always opaque. Pass their pointers or borrowed references to native
 functions to read or change the active member. Host field access and copying
 unions by value are not supported.

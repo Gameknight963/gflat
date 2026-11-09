@@ -1661,7 +1661,7 @@ public partial class LlvmEmitter : IVisitor
     {
         if (node.IsGeneric) return;
         if (node.NativeOpaqueLayout is { } native)
-            EmitGlobal($"%{node.Name} = type {{ [{native.Size} x i8] }}");
+            EmitGlobal(native.Size is { } size ? $"%{node.Name} = type {{ [{size} x i8] }}" : $"%{node.Name} = type opaque");
         else
         {
             string fields = string.Join(", ", node.Members

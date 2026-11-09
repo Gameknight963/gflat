@@ -1483,7 +1483,8 @@ namespace gflat
 
         public int GetStructAlignment(StructInfo structInfo)
         {
-            if (structInfo.Declaration?.NativeOpaqueLayout is { } native) return native.Alignment;
+            if (structInfo.Declaration?.NativeOpaqueLayout is { } native) return native.Alignment ??
+                throw new TypeCheckException($"Native type '{DisplayName(structInfo.Name)}' is incomplete; its alignment is unavailable", SourceContext.Current?.Line ?? 0);
             using var layout = EnterLayoutQuery(structInfo.Name, SourceContext.Current?.Line ?? 0);
             int maxAlign = 1;
             foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
@@ -1500,7 +1501,8 @@ namespace gflat
 
         public int GetStructSize(StructInfo structInfo)
         {
-            if (structInfo.Declaration?.NativeOpaqueLayout is { } native) return native.Size;
+            if (structInfo.Declaration?.NativeOpaqueLayout is { } native) return native.Size ??
+                throw new TypeCheckException($"Native type '{DisplayName(structInfo.Name)}' is incomplete; its size is unavailable", SourceContext.Current?.Line ?? 0);
             using var layout = EnterLayoutQuery(structInfo.Name, SourceContext.Current?.Line ?? 0);
             long offset = 0;
             int maxAlign = 1;
@@ -1707,6 +1709,11 @@ namespace gflat
             }
             if (type is PointerTypeExpression ptr)
             {
+                if (NativeOpaqueLayout(ptr.Inner) is { Size: null })
+                {
+                    error = "Pointer arithmetic requires a complete native element type";
+                    return false;
+                }
                 if (ResolveAlias(ptr.Inner) is NamedTypeExpression iface && IsInterface(iface))
                 {
                     error = "Pointer arithmetic is not allowed on interface pointers; use a pointer to interface-pointer storage for array traversal";
@@ -5713,6 +5720,8 @@ namespace gflat
             }
             else if (targetType is PointerTypeExpression ptr)
             {
+                if (NativeOpaqueLayout(ptr.Inner) is { Size: null })
+                    throw new TypeCheckException("Indexing requires a complete native element type", node.Line);
                 if (ResolveAlias(ptr.Inner) is NamedTypeExpression iface && IsInterface(iface))
                     throw new TypeCheckException($"Interface '{DisplayName(iface.Name)}' has no indexer", node.Line);
                 if (ptr.IsNullable)

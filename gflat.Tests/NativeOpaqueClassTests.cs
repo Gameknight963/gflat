@@ -9,6 +9,103 @@ public sealed class NativeOpaqueClassTests
     [InlineData("c", 2)]
     [InlineData("cpp", 0)]
     [InlineData("cpp", 2)]
+    public void ForwardDeclaredHandlesCanBePassedWithoutKnowingTheirLayout(string language, int optimization)
+    {
+        Run("#lang " + language + "\n" + """
+            struct Handle;
+            typedef struct Handle HandleAlias;
+            static int storage = 42;
+            HandleAlias* Open() { return (HandleAlias*)&storage; }
+            int Read(const struct Handle* handle) { return *(const int*)handle; }
+            #lang gflat
+            int main()
+            {
+                Handle* handle = Open()!;
+                return Read(&*handle);
+            }
+            """, optimization, debug: true);
+    }
+
+    [Theory]
+    [InlineData("sizeof(Handle)")]
+    [InlineData("alignof(Handle)")]
+    [InlineData("handle + 1")]
+    [InlineData("handle - handle")]
+    [InlineData("&handle[0]")]
+    [InlineData("++handle")]
+    public void ForwardDeclaredHandlesRejectOperationsRequiringTheirLayout(string expression)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+            #lang c
+            struct Handle;
+            #lang gflat
+            """ + "\nvoid Invalid(Handle* handle) { " + expression + "; }", options: Options()));
+        Assert.True(error.Description.Contains("incomplete") || error.Description.Contains("complete native"), error.Description);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CompleteNativeDefinitionReplacesItsForwardDeclaration(int optimization)
+    {
+        Run("""
+            #lang cpp
+            struct Handle;
+            struct Handle { int value; };
+            Handle Make() { return Handle{42}; }
+            #lang gflat
+            int main()
+            {
+                Handle value = Make();
+                if (sizeof(Handle) != sizeof(int)) return 1;
+                return value.value;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ForwardDeclaredCppHandlesSupportBorrowedReferenceArguments(int optimization)
+    {
+        Run("""
+            #lang cpp
+            namespace Native {
+                class Handle;
+                static int storage = 41;
+                Handle* Open() { return reinterpret_cast<Handle*>(&storage); }
+                void Increment(Handle& handle) { ++reinterpret_cast<int&>(handle); }
+                int Read(const Handle& handle) { return reinterpret_cast<const int&>(handle); }
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Handle* handle = Native::Open()!;
+                Native::Increment(ref *handle);
+                return Native::Read(ref *handle);
+            }
+            """, optimization, debug: true);
+    }
+
+    [Theory]
+    [InlineData("Handle value;")]
+    [InlineData("Handle copy = *handle;")]
+    [InlineData("*handle = *handle;")]
+    public void ForwardDeclaredHandlesCannotBeCopiedAsHostValues(string statement)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+            #lang c
+            struct Handle;
+            #lang gflat
+            """ + "\nvoid Invalid(Handle* handle) { " + statement + " }", options: Options()));
+        Assert.Contains("pointer-only", error.Description);
+    }
+
+    [Theory]
+    [InlineData("c", 0)]
+    [InlineData("c", 2)]
+    [InlineData("cpp", 0)]
+    [InlineData("cpp", 2)]
     public void NativeUnionsRemainOpaqueAndPreservePointerStride(string language, int optimization)
     {
         Run("#lang " + language + "\n" + """
@@ -230,13 +327,13 @@ public sealed class NativeOpaqueClassTests
         ForeignCompilerArguments = NativeRuntime.HostCompilerArguments(true)
     };
 
-    private static void Run(string code, int optimization)
+    private static void Run(string code, int optimization, bool debug = false)
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat-native-opaque-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {
-            var program = Compiler.EmitProgram([new SourceFile("opaque.gf", code)], options: Options());
+            var program = Compiler.EmitProgram([new SourceFile("opaque.gf", code)], options: Options() with { DebugSymbols = debug });
             string ir = Path.Combine(directory, "program.ll"), executable = Path.Combine(directory, "program.exe");
             File.WriteAllText(ir, program.Ir);
             var compiled = NativeToolchain.Compile(ir, executable, optimizationLevel: optimization, foreignUnits: program.ForeignUnits);

@@ -63,6 +63,8 @@ public partial class LlvmEmitter
             string signature = $"!DISubroutineType(types: !{{{string.Join(", ", new[] { DebugType(function.ReturnType) }.Concat(function.ParameterTypes.Select(DebugType)))}}})";
             value = function.IsSignature ? signature : $"!DIDerivedType(tag: DW_TAG_pointer_type, baseType: {DebugNode(signature)}, size: {TargetInfo.Default.PointerBits})";
         }
+        else if (type is NamedTypeExpression incomplete && _typeChecker.GetStructByIdentity(incomplete.Name)?.Declaration?.NativeOpaqueLayout is { Size: null })
+            value = $"!DICompositeType(tag: DW_TAG_structure_type, name: {DebugString(key)}, flags: DIFlagFwdDecl, identifier: {DebugString(key)})";
         else if (type is NamedTypeExpression named && (_typeChecker.GetStructByIdentity(named.Name) != null || _typeChecker.GetClassByIdentity(named.Name) != null))
         {
             var cls = _typeChecker.GetClassByIdentity(named.Name);

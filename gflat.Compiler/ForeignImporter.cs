@@ -136,7 +136,9 @@ internal static partial class ForeignImporter
                     AddDeclaration(enumeration.Qualified, enumeration.Declaration, isRecord: true);
                     declarations.Add(new(enumeration.Qualified, enumeration.Declaration, IsRecord: true));
                 }
-                var importedRecords = recordNodes.Select(item => ImportRecord(item.Node, item.Scope, layouts,
+                var importedRecords = recordNodes.GroupBy(item => (item.Scope, Name: Text(item.Node, "name")))
+                    .Select(group => group.FirstOrDefault(item => item.Node.TryGetProperty("completeDefinition", out _), group.First()))
+                    .Select(item => ImportRecord(item.Node, item.Scope, layouts,
                     spelling => Type(spelling, scope: item.Scope)) ?? ImportOpaqueRecord(item.Node, item.Scope, layouts))
                     .OfType<ImportedRecord>().ToArray();
                 foreach (var record in importedRecords)

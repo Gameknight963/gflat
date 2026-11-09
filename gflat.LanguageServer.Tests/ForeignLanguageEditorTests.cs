@@ -5,6 +5,26 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void ForwardDeclaredNativeHandlesAppearInCallSignatures()
+    {
+        const string text = """
+            #lang c
+            struct Handle;
+            int Read(const struct Handle* value) { return 42; }
+            #lang gflat
+            int Use(Handle* value) => Read(value);
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-forward-handle.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        string label = signature.GetProperty("signatures")[0].GetProperty("label").GetString()!;
+        Assert.Equal("public int Read(readonly(Handle)*? value)", label);
+    }
+
+    [Fact]
     public void NativeNonthrowingContractsAppearInSignatures()
     {
         const string text = """

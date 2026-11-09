@@ -118,14 +118,15 @@ public sealed class AnalysisSnapshot
                 .Where(p => p.GetIndexParameters().Length == 0 &&
                     (typeof(AstNode).IsAssignableFrom(p.PropertyType) || typeof(IEnumerable<AstNode>).IsAssignableFrom(p.PropertyType))).ToArray()))
             {
-                if (property.GetValue(node) is AstNode child)
+                var value = property.GetValue(node);
+                if (value is AstNode child)
                 {
                     if (bodySources != null && property.Name == "Body" &&
                         node is MethodDeclaration or ConstructorDeclaration or DestructorDeclaration or OperatorDeclaration &&
                         (node.Span.SourceId is not { } sourceId || !bodySources.Contains(sourceId))) continue;
                     Capture(child, entry);
                 }
-                else if (property.GetValue(node) is IEnumerable<AstNode> children)
+                else if (value is IEnumerable<AstNode> children)
                     foreach (var item in children) Capture(item, entry);
             }
         }

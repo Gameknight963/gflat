@@ -54,6 +54,7 @@ The importer exposes free functions using primitive scalars and pointers
 to supported scalars, imported records, or `void`. Scalar typedefs, C++ namespaces, and overloads with distinct imported
 parameter types are supported. Pointers are nullable and retain pointee `const`
 as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
+Trailing return declarations such as `auto Read() -> int` use their declared result type.
 
 C++ Unicode character types keep their code-unit storage: `char8_t` maps to
 `byte`, `char16_t` to `ushort`, and `char32_t` to `uint`. `wchar_t` follows Clang's

@@ -5,6 +5,30 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Fact]
+    public void NativeTrailingReturnsExposeTheDeclaredResultAndReceiver()
+    {
+        const string text = """
+            #lang cpp
+            struct Factory {
+                int value;
+                auto Read(int input) const noexcept -> int { return value + input; }
+            };
+            #lang gflat
+            int Use(readonly(Factory)* value) => value.Read(1);
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-trailing-return-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        string label = signature.GetProperty("signatures")[0].GetProperty("label").GetString()!;
+        Assert.Contains("readonly int", label);
+        Assert.Contains("Read(int input)", label);
+        Assert.DoesNotContain("auto", label);
+    }
+
+    [Fact]
     public void NativeMethodCallbackResultsKeepReceiverQualifiersSeparate()
     {
         const string text = """

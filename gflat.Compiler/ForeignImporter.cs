@@ -473,7 +473,23 @@ internal static partial class ForeignImporter
         if (declarator.IsEmpty || declarator[0] is not ('*' or '&'))
         {
             int closing = Closing(opening);
-            return closing < 0 ? null : (signature[..opening].Trim(), signature[(closing + 1)..].Trim());
+            if (closing < 0) return null;
+            string result = signature[..opening].Trim();
+            if (result != "auto") return (result, signature[(closing + 1)..].Trim());
+
+            // Trailing results follow receiver/noexcept qualifiers. Skip their
+            // parenthesized expressions so an inner member access is not the arrow.
+            for (int index = closing + 1; index + 1 < signature.Length; index++)
+            {
+                if (signature[index] == '(')
+                {
+                    index = Closing(index);
+                    if (index < 0) return null;
+                }
+                else if (signature[index] == '-' && signature[index + 1] == '>')
+                    return (signature[(index + 2)..].Trim(), signature[(closing + 1)..index].Trim());
+            }
+            return null;
         }
 
         // Clang spells a callback result as R (*(function parameters))(callback parameters).

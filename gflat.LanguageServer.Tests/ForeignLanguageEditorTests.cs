@@ -4,6 +4,26 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ForeignLanguageEditorTests
 {
+    [Fact]
+    public void NativeMethodCallbackResultsKeepReceiverQualifiersSeparate()
+    {
+        const string text = """
+            #lang cpp
+            struct Factory { int (*Read() const noexcept)(int) { return nullptr; } };
+            #lang gflat
+            void Use(readonly(Factory)* value) { int(int)*? callback = value.Read(); }
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-method-callback-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        string label = signature.GetProperty("signatures")[0].GetProperty("label").GetString()!;
+        Assert.Contains("readonly int(int)*?", label);
+        Assert.Contains("Read()", label);
+    }
+
     [Theory]
     [InlineData("c")]
     [InlineData("cpp")]

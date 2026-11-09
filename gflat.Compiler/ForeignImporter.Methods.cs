@@ -21,16 +21,10 @@ internal static partial class ForeignImporter
                 child.TryGetProperty("variadic", out _)) continue;
             string name = Text(child, "name"), signature = Text(child.GetProperty("type"), "qualType");
             if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || name == "reinterpret") continue;
-            int opening = signature.IndexOf('('), closing = -1, depth = 0;
-            for (int index = opening; index >= 0 && index < signature.Length; index++)
-            {
-                if (signature[index] == '(') depth++;
-                else if (signature[index] == ')' && --depth == 0) { closing = index; break; }
-            }
-            if (opening < 0 || closing < opening) continue;
-            string suffix = signature[(closing + 1)..].Trim();
+            if (FunctionShape(signature) is not { } shape) continue;
+            string suffix = shape.Qualifiers;
             if (!Regex.IsMatch(suffix, @"^(?:const\s*)?(?:noexcept(?:\([^()]*\))?)?$")) continue;
-            string? result = type(signature[..opening]);
+            string? result = type(shape.Result);
             if (result == null) continue;
             var parameters = child.TryGetProperty("inner", out var body)
                 ? body.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl").ToArray() : [];

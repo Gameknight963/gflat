@@ -3,6 +3,53 @@ namespace gflat.Tests;
 public sealed class NativeCallbackTests
 {
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NativeMethodsCanReturnCallbacksWithoutTypedefs(int optimization)
+    {
+        string code = """
+            #lang cpp
+            int Twice(int value) { return value * 2; }
+            int (*GlobalSafe() noexcept)(int) { return Twice; }
+            class OpaqueFactory {
+            public:
+                int (*Get() const)(int) { return Twice; }
+            };
+            struct Factory {
+                int mode;
+                int (*Choose(int (*fallback)(int)) const)(int) { return mode == 1 ? Twice : fallback; }
+                int (*Mutable())(int) { ++mode; return Twice; }
+                int (*Safe() const noexcept)(int) { return Twice; }
+                static int (*Missing())(int) { return nullptr; }
+            };
+            #lang gflat
+            int Triple(int value) => value * 3;
+            int main()
+            {
+                Factory factory = default;
+                int(int)*? callback = factory.Choose(Triple);
+                if (callback!(14) != 42) return 1;
+                callback = factory.Mutable();
+                if (factory.mode != 1 || callback!(21) != 42) return 2;
+                readonly(Factory)* view = &factory;
+                callback = view.Choose(Triple);
+                if (callback!(21) != 42) return 3;
+                callback = view.Safe();
+                if (callback!(21) != 42) return 4;
+                if (Factory::Missing() != null) return 5;
+                callback = GlobalSafe();
+                if (callback!(21) != 42) return 6;
+                OpaqueFactory* opaque = new* OpaqueFactory();
+                callback = opaque.Get();
+                delete opaque;
+                if (callback!(21) != 42) return 7;
+                return 42;
+            }
+            """;
+        Run(code, optimization);
+    }
+
+    [Theory]
     [InlineData("c", 0)]
     [InlineData("c", 2)]
     [InlineData("cpp", 0)]
@@ -40,6 +87,11 @@ public sealed class NativeCallbackTests
                 return Optional(null);
             }
             """;
+        Run(code, optimization);
+    }
+
+    private static void Run(string code, int optimization)
+    {
         string root = Path.Combine(Path.GetTempPath(), "gflat-native-callback-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try

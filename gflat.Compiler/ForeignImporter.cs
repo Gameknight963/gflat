@@ -463,24 +463,39 @@ internal static partial class ForeignImporter
     }
 
     private static string? FunctionResult(string signature)
+        => FunctionShape(signature)?.Result;
+
+    private static (string Result, string Qualifiers)? FunctionShape(string signature)
     {
         int opening = signature.IndexOf('(');
         if (opening < 0) return null;
         var declarator = signature.AsSpan(opening + 1).TrimStart();
-        if (declarator.IsEmpty || declarator[0] is not ('*' or '&')) return signature[..opening].Trim();
+        if (declarator.IsEmpty || declarator[0] is not ('*' or '&'))
+        {
+            int closing = Closing(opening);
+            return closing < 0 ? null : (signature[..opening].Trim(), signature[(closing + 1)..].Trim());
+        }
 
         // Clang spells a callback result as R (*(function parameters))(callback parameters).
-        // Remove the function's parameter list, retaining the returned pointer's signature.
+        // Receiver qualifiers occur inside the pointer declarator, after the
+        // function parameters. Keep them separate from the returned pointer type.
         int parameters = signature.IndexOf('(', opening + 1);
         if (parameters < 0 || signature[(opening + 1)..parameters].Trim() != "*") return null;
-        int depth = 0;
-        for (int index = parameters; index < signature.Length; index++)
+        int endParameters = Closing(parameters), endDeclarator = Closing(opening);
+        if (endParameters < 0 || endDeclarator <= endParameters) return null;
+        return (signature.Remove(parameters, endDeclarator - parameters).Trim(),
+            signature[(endParameters + 1)..endDeclarator].Trim());
+
+        int Closing(int start)
         {
-            if (signature[index] == '(') depth++;
-            else if (signature[index] == ')' && --depth == 0)
-                return signature.Remove(parameters, index - parameters + 1).Trim();
+            int depth = 0;
+            for (int index = start; index < signature.Length; index++)
+            {
+                if (signature[index] == '(') depth++;
+                else if (signature[index] == ')' && --depth == 0) return index;
+            }
+            return -1;
         }
-        return null;
     }
 
     private static string[]? SplitParameters(string text)

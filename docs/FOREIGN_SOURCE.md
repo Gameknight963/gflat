@@ -66,7 +66,8 @@ addressable storage. Reference results, rvalue-reference parameters, and
 references in callback signatures are not imported yet.
 
 Function-pointer parameters and results support callbacks with scalar and raw-pointer
-signatures, including nested callback parameters and callback typedefs. Pass an
+signatures, including nested callback parameters and callback typedefs. Native
+methods can return callbacks directly or through a typedef. Pass an
 ordinary G♭ function pointer. Native callback pointers are nullable. Keep the
 callback and any context storage alive while native code can invoke them.
 Captured managed callbacks, variadic callbacks, and non-default native calling
@@ -168,7 +169,6 @@ calling through a base interface. This does not change host-defined class ABIs.
 The following are also not imported yet:
 
 - Native reference results and copy/move constructors
-- Methods returning function pointers without a named callback typedef
 - Templates, default arguments, globals, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

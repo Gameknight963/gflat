@@ -81,9 +81,14 @@ internal static partial class ForeignImporter
                 if (File.Exists(compiler)) inputs[compiler] = Stamp(compiler, contents: false);
                 string path = Path.Combine(directory, "source." + (group.Key == "cpp" ? "cpp" : "c"));
                 string depfile = Path.Combine(directory, "source.d");
-                // Capture Clang's Unicode storage types, including flags such as -fshort-wchar.
+                // Capture Clang's builtin storage types, including flags such as -fshort-wchar.
                 // These analysis-only aliases are not added to the emitted native translation unit.
-                string builtinTypes = group.Key == "cpp" ? """
+                string builtinTypes = """
+                    #ifdef __SIZE_TYPE__
+                    typedef __SIZE_TYPE__ __gflat_native_size_type;
+                    #endif
+                    """ + "\n";
+                if (group.Key == "cpp") builtinTypes += """
                     #ifdef __WCHAR_TYPE__
                     typedef __WCHAR_TYPE__ __gflat_native_wchar_type;
                     #endif
@@ -96,7 +101,7 @@ internal static partial class ForeignImporter
                     #ifdef __cpp_char8_t
                     typedef unsigned char __gflat_native_char8_type;
                     #endif
-                    """ + "\n" : "";
+                    """ + "\n";
                 File.WriteAllText(path, builtinTypes + source);
                 var command = new List<string>(arguments);
                 command.AddRange(["-x", group.Key == "cpp" ? "c++" : "c", "-fsyntax-only",
@@ -275,7 +280,11 @@ internal static partial class ForeignImporter
                 void Walk(JsonElement node, string scope)
                 {
                     string kind = Text(node, "kind");
-                    if (kind == "FunctionDecl") { functions.Add((node, scope)); return; }
+                    if (kind == "FunctionDecl")
+                    {
+                        if (!node.TryGetProperty("isImplicit", out _)) functions.Add((node, scope));
+                        return;
+                    }
                     if (kind == "EnumDecl") { enumNodes.Add((node, scope)); return; }
                     if (kind is "RecordDecl" or "CXXRecordDecl") { recordNodes.Add((node, scope)); return; }
                     if (kind == "NamespaceDecl")
@@ -392,6 +401,13 @@ internal static partial class ForeignImporter
                     string signature = Text(function.GetProperty("type"), "qualType");
                     if (FunctionShape(signature) is not { } shape) return;
                     string nativeResult = shape.Result;
+                    // Clang can retain its internal size placeholder on a builtin's
+                    // explicit redeclaration. Emit the actual ABI storage spelling.
+                    if (nativeResult == "__size_t" && !aliases.ContainsKey("__size_t") &&
+                        aliases.TryGetValue("__gflat_native_size_type", out string? sizeType) &&
+                        function.TryGetProperty("inner", out var resultMetadata) &&
+                        resultMetadata.EnumerateArray().Any(child => Text(child, "kind") == "BuiltinAttr"))
+                        nativeResult = sizeType;
                     var contract = FunctionContract(function, shape.Qualifiers);
                     string? result = Type(nativeResult, scope: scope, allowRecord: true);
                     if (result == null) return;

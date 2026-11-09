@@ -4,6 +4,93 @@ namespace gflat.Tests;
 
 public sealed class NativeOpaqueClassTests
 {
+    [Theory]
+    [InlineData("c", 0)]
+    [InlineData("c", 2)]
+    [InlineData("cpp", 0)]
+    [InlineData("cpp", 2)]
+    public void NativeUnionsRemainOpaqueAndPreservePointerStride(string language, int optimization)
+    {
+        Run("#lang " + language + "\n" + """
+            union Payload { int number; double floating; };
+            typedef union Payload PayloadAlias;
+            static union Payload values[2];
+            union Payload* First() { values[0].number = 20; values[1].number = 42; return values; }
+            PayloadAlias* Second() { return &values[1]; }
+            int Read(const union Payload* value) { return value->number; }
+            int Size() { return sizeof(union Payload); }
+            #lang gflat
+            int main()
+            {
+                Payload* first = First()!;
+                if ((int)sizeof(Payload) != Size()) return 1;
+                if (first + 1 != Second()) return 2;
+                if (Read(first) != 20) return 3;
+                return Read(&first[1]);
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData("Payload value;")]
+    [InlineData("Payload copy = *value;")]
+    [InlineData("*value = *value;")]
+    public void NativeUnionStorageCannotBeCopiedAsAHostValue(string statement)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+            #lang c
+            union Payload { int number; double floating; };
+            #lang gflat
+            """ + "\nvoid Invalid(Payload* value) { " + statement + " }", options: Options()));
+        Assert.Contains("pointer-only", error.Description);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NativeUnionMethodsAndBorrowedReferencesUseNativeStorage(int optimization)
+    {
+        Run("""
+            #lang cpp
+            namespace Native {
+                union alignas(32) Payload {
+                    int number;
+                    double floating;
+                    explicit Payload(int value) : number(value) {}
+                    int Read() const { return number; }
+                };
+                int ReadBorrowed(const Payload& value) { return value.number; }
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Payload* value = new* Native::Payload(42);
+                if (sizeof(Native::Payload) != 32 || alignof(Native::Payload) != 32) return 1;
+                int result = Native::ReadBorrowed(ref *value);
+                if (value.Read() != result) return 2;
+                delete value;
+                return result;
+            }
+            """, optimization);
+    }
+
+    [Fact]
+    public void NativeUnionWithDeletedImplicitConstructionCanStillBeBorrowed()
+    {
+        Run("""
+            #lang cpp
+            struct Nontrivial { Nontrivial() {} };
+            union Payload { Nontrivial object; int number; };
+            Payload* Missing() { return nullptr; }
+            #lang gflat
+            int main()
+            {
+                if (Missing() == null) return 42;
+                return 1;
+            }
+            """, 0);
+    }
+
     private const string Native = """
         #lang cpp
         namespace Native {

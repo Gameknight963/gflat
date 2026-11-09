@@ -319,6 +319,7 @@ internal static partial class ForeignImporter
                     if (readOnly) spelling = spelling.StartsWith("const ", StringComparison.Ordinal) ? spelling[6..] : spelling[..^6];
                     if (spelling.StartsWith("struct ", StringComparison.Ordinal)) spelling = spelling[7..];
                     else if (spelling.StartsWith("class ", StringComparison.Ordinal)) spelling = spelling[6..];
+                    else if (spelling.StartsWith("union ", StringComparison.Ordinal)) spelling = spelling[6..];
                     else if (spelling.StartsWith("enum ", StringComparison.Ordinal)) spelling = spelling[5..];
                     string? primitive = spelling.Trim() switch
                     {

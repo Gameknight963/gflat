@@ -4,6 +4,23 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ForeignLanguageEditorTests
 {
+    [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
+    public void NativeUnionPointersAppearInSignatures(string language)
+    {
+        string text = "#lang " + language + "\nunion Payload { int number; double floating; };\n" +
+            "int Read(const union Payload* value) { return value->number; }\n" +
+            "#lang gflat\nint Use(Payload* value) => Read(value);";
+        var source = new SourceFile(Path.GetFullPath("native-union-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        Assert.Contains("readonly(@Payload)*?", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+    }
+
     [Fact]
     public void NativeUnicodePointersShowTheirCodeUnitTypes()
     {

@@ -12,7 +12,7 @@ internal static partial class ForeignImporter
     private static ImportedRecord? ImportOpaqueRecord(JsonElement node, string scope, IReadOnlyDictionary<string, RecordLayout> layouts)
     {
         string name = Text(node, "name");
-        if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || Text(node, "tagUsed") is not ("struct" or "class") ||
+        if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") || Text(node, "tagUsed") is not ("struct" or "class" or "union") ||
             !node.TryGetProperty("completeDefinition", out var complete) || !complete.GetBoolean()) return null;
         string qualified = scope.Length == 0 ? name : scope + "::" + name;
         if (!layouts.TryGetValue(qualified, out var layout) || layout.Size <= 0 || layout.Size % 8 != 0 ||
@@ -30,7 +30,7 @@ internal static partial class ForeignImporter
         json = output[start..];
         var layouts = new Dictionary<string, RecordLayout>(StringComparer.Ordinal);
         foreach (Match match in Regex.Matches(output[..start],
-            @"Type: (?:struct|class) (?<name>[^\r\n]+)\r?\n\s*Layout: <ASTRecordLayout\s+Size:(?<size>\d+)\s+Alignment:(?<alignment>\d+).*?FieldOffsets: \[(?<fields>[^\]]*)\]>",
+            @"Type: (?:struct|class|union) (?<name>[^\r\n]+)\r?\n\s*Layout: <ASTRecordLayout\s+Size:(?<size>\d+)\s+Alignment:(?<alignment>\d+).*?FieldOffsets: \[(?<fields>[^\]]*)\]>",
             RegexOptions.Singleline))
         {
             var numbers = new[] { match.Groups["size"].Value, match.Groups["alignment"].Value }

@@ -113,13 +113,17 @@ A binary library's generated interface does not export these types yet.
 
 ## Native-owned classes
 
-Other complete named native records and classes are available through raw
+Other complete named native records, classes, and unions are available through raw
 pointers and borrowed host references. Their fields remain opaque. Public
 methods work through native entry points, including virtual dispatch and methods
 inherited through public bases. Native calls perform base-pointer adjustment.
 Hidden names and names reached through multiple direct bases are not imported.
 Using-declarations do not reintroduce hidden overloads yet. `sizeof` and `alignof`
 report Clang's native layout.
+
+Unions are always opaque. Pass their pointers or borrowed references to native
+functions to read or change the active member. Host field access and copying
+unions by value are not supported.
 
 For a C++ class with a supported public constructor, `new* Type(arguments)` uses
 C++ allocation and construction. `delete pointer` invokes C++ deletion when the
@@ -157,14 +161,15 @@ int main()
 }
 ```
 
-Native base-pointer conversions and inherited member discovery are not inferred
-yet. Consume a native function returning the appropriate base pointer when
+Native base-pointer conversions are not inferred yet.
+Consume a native function returning the appropriate base pointer when
 calling through a base interface. This does not change host-defined class ABIs.
 
 The following are also not imported yet:
 
-- Native reference signatures, copy/move constructors, and function-pointer return types
-- Templates, default arguments, globals, enum declarations, macro values, and namespace aliases
+- Native reference results and copy/move constructors
+- Methods returning function pointers without a named callback typedef
+- Templates, default arguments, globals, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage
 

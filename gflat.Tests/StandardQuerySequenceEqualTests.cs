@@ -149,7 +149,14 @@ public sealed class StandardQuerySequenceEqualTests
 
     private static void Run(string source,int optimization,bool managed=false)
     {
-        var library = managed ? StandardTestSources.Queries : StandardTestSources.QueriesWithoutCollector;
+        var library = StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/Collections/span_algorithms.gf", "core/Collections/EqualityComparer.gf",
+                "core/Queries/SelectSource.gf", "core/Queries/WhereSource.gf",
+                "core/Queries/enumerable_select.gf", "core/Queries/enumerable_where.gf",
+                "core/Queries/enumerable_sequence_equal.gf"));
+        if (!managed)
+            library = library.Where(file => !StandardLibrary.IsSource(file.Path, "libc/GC.gf") &&
+                !StandardLibrary.IsSource(file.Path, "libc/TracingCollector.gf"));
         var sources = library.Append(new SourceFile("query-sequence-equal.gf",source));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"SequenceEqual exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

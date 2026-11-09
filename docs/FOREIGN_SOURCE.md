@@ -51,8 +51,10 @@ and foreign source-level macros do not enter the host macro environment.
 ## Calling imported functions
 
 The importer exposes free functions using primitive scalars and pointers
-to supported scalars, imported records, or `void`. Scalar typedefs, C++ namespaces, and overloads with distinct imported
-parameter types are supported. Pointers are nullable and retain pointee `const`
+to supported scalars, imported records, or `void`. Native typedefs are resolved
+in imported signatures. They do not yet introduce aliases in host code.
+C++ namespaces and overloads with distinct imported parameter types are supported.
+Pointers are nullable and retain pointee `const`
 as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
 Trailing return declarations such as `auto Read() -> int` use their declared result type.
 

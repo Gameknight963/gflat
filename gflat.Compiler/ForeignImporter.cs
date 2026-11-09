@@ -132,7 +132,7 @@ internal static partial class ForeignImporter
                 var seen = new HashSet<string>();
                 string identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source.ToString())))[..24];
                 int index = 0;
-                var functions = new List<(JsonElement Node, string Scope)>();
+                var functions = new List<(JsonElement Node, string Scope, bool InternalNamespace)>();
                 var recordNodes = new List<(JsonElement Node, string Scope)>();
                 var enumNodes = new List<(JsonElement Node, string Scope)>();
                 Walk(json.RootElement, "");
@@ -168,7 +168,7 @@ internal static partial class ForeignImporter
                 foreach (var signature in signatures)
                 {
                     var distinct = signature.DistinctBy(item => Text(item.Node.GetProperty("type"), "qualType")).ToArray();
-                    if (distinct.Length == 1) Function(distinct[0].Node, distinct[0].Scope);
+                    if (distinct.Length == 1) Function(distinct[0].Node, distinct[0].Scope, distinct[0].InternalNamespace);
                 }
                 if (group.Key == "cpp")
                     foreach (var (node, scope) in recordNodes)
@@ -281,12 +281,12 @@ internal static partial class ForeignImporter
                         foreach (var child in children.EnumerateArray()) CollectAliases(child, scope);
                 }
 
-                void Walk(JsonElement node, string scope)
+                void Walk(JsonElement node, string scope, bool anonymousNamespace = false, bool cLinkage = false)
                 {
                     string kind = Text(node, "kind");
                     if (kind == "FunctionDecl")
                     {
-                        if (!node.TryGetProperty("isImplicit", out _)) functions.Add((node, scope));
+                        if (!node.TryGetProperty("isImplicit", out _)) functions.Add((node, scope, anonymousNamespace && !cLinkage));
                         return;
                     }
                     if (kind == "EnumDecl") { enumNodes.Add((node, scope)); return; }
@@ -295,10 +295,12 @@ internal static partial class ForeignImporter
                     {
                         string name = Text(node, "name");
                         if (name.Length != 0) scope += (scope.Length == 0 ? "" : "::") + name;
+                        else anonymousNamespace = true;
                     }
                     else if (kind is not ("TranslationUnitDecl" or "LinkageSpecDecl")) return;
+                    if (kind == "LinkageSpecDecl") cLinkage = Text(node, "language") == "C";
                     if (node.TryGetProperty("inner", out var children))
-                        foreach (var child in children.EnumerateArray()) Walk(child, scope);
+                        foreach (var child in children.EnumerateArray()) Walk(child, scope, anonymousNamespace, cLinkage);
                 }
 
                 string? Type(string spelling, HashSet<string>? resolving = null, string scope = "", bool allowRecord = false,
@@ -396,7 +398,7 @@ internal static partial class ForeignImporter
                     return primitive == null ? null : readOnly ? "readonly(" + primitive + ")" : primitive;
                 }
 
-                void Function(JsonElement function, string scope)
+                void Function(JsonElement function, string scope, bool internalNamespace)
                 {
                     cancellation.ThrowIfCancellationRequested();
                     string name = Text(function, "name");
@@ -425,7 +427,7 @@ internal static partial class ForeignImporter
                     string qualified = scope.Length == 0 ? name : scope + "::" + name;
                     if (!seen.Add(qualified + signature)) return;
                     string importKey = qualified + "(" + string.Join(",", types.Select(type => Regex.Replace(type!, "readonly\\(|\\)", ""))) + ")";
-                    bool isLocal = Text(function, "storageClass") == "static";
+                    bool isLocal = internalNamespace || Text(function, "storageClass") == "static";
                     if (isLocal) importKey = localNamespace + "::" + importKey;
                     string symbol = Text(function, "mangledName", qualified);
                     if (importedSymbols.TryGetValue(importKey, out string? previous))

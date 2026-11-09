@@ -7,6 +7,41 @@ public sealed class NativeFileLocalFunctionTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public async Task AnonymousNamespaceFunctionsKeepTheirOwnCallsAndPointers(int optimization)
+    {
+        string Native(int value) => $"#lang cpp\nnamespace Native {{ namespace {{ int Value() {{ return {value}; }} }} }}\n#lang gflat\n";
+        await Run([
+            new("native-anonymous-first.gf", Native(17) +
+                "int First() { int()* callback = Native::Value; return callback(); }\n" +
+                "int main() { if (First() != 17 || Second() != 25) return 1; return 42; }"),
+            new("native-anonymous-second.gf", Native(25) + "int Second() => Native::Value();")
+        ], optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task CLinkageFunctionsInAnonymousNamespacesRemainProjectVisible(int optimization)
+    {
+        await Run([
+            new("native-anonymous-c-linkage.gf", "#lang cpp\nnamespace { extern \"C\" int SharedValue() { return 42; } }\n#lang gflat\n"),
+            new("native-anonymous-c-use.gf", "int main() => SharedValue();")
+        ], optimization);
+    }
+
+    [Fact]
+    public void AnonymousNamespaceFunctionsAreNotDiscoveredFromOtherFiles()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check([
+            new SourceFile("native-anonymous-definition.gf", "#lang cpp\nnamespace { int Hidden() { return 42; } }\n#lang gflat\n"),
+            new SourceFile("native-anonymous-use.gf", "int Read() => Hidden();")
+        ], options: new() { NoStdLib = true, ForeignCompilerResolver = () => NativeToolchain.FindClang() }));
+        Assert.Contains("Unknown function 'Hidden'", error.Description);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public async Task NativeOverloadFamiliesAndTargetTypedPointersRemainFileLocal(int optimization)
     {
         string Native(int value) => $"#lang cpp\nnamespace Native {{ static int Pick(int value) {{ return {value}; }} " +

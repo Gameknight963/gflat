@@ -55,6 +55,8 @@ to supported scalars, imported records, or `void`. Native typedefs are resolved
 in imported signatures. They do not yet introduce aliases in host code.
 C++ namespaces and overloads with distinct imported parameter types are supported.
 Native `static` free functions are visible only in their owning root file.
+Free functions in C++ anonymous namespaces follow the same rule unless they
+have C language linkage.
 Including a header in multiple root files creates a separate instance of its
 static functions and state in each native translation unit.
 Pointers are nullable and retain pointee `const`

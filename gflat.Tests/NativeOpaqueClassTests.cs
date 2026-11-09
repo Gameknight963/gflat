@@ -5,6 +5,108 @@ namespace gflat.Tests;
 public sealed class NativeOpaqueClassTests
 {
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void DeclaredNativeCopyConstructorsCreateIndependentOwnedObjects(int optimization)
+    {
+        Run("""
+            #lang cpp
+            namespace Native {
+                static int live = 0;
+                static int copies = 0;
+                static int destroyed = 0;
+                class Counter {
+                    int value;
+                public:
+                    Counter(int input) : value(input) { ++live; }
+                    Counter(const Counter& input) : value(input.value) { ++live; ++copies; }
+                    ~Counter() { --live; ++destroyed; }
+                    int Read() const { return value; }
+                    void Set(int input) { value = input; }
+                };
+                int Live() { return live; }
+                int Copies() { return copies; }
+                int Destroyed() { return destroyed; }
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Counter* source = new* Native::Counter(42);
+                Native::Counter* copy = new* Native::Counter(ref *source);
+                if (Native::Live() != 2 || Native::Copies() != 1) return 1;
+                source.Set(7);
+                if (copy.Read() != 42) return 2;
+                delete source;
+                if (Native::Live() != 1 || Native::Destroyed() != 1 || copy.Read() != 42) return 3;
+                delete copy;
+                if (Native::Live() != 0 || Native::Destroyed() != 2) return 4;
+                return 42;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ThrowingNativeCopyConstructionLeavesTheSourceAlive(int optimization)
+    {
+        Run("""
+            #lang cpp
+            namespace Native {
+                static int live = 0;
+                static int destroyed = 0;
+                class Counter {
+                    int value;
+                public:
+                    Counter(int input) : value(input) { ++live; }
+                    Counter(const Counter& input) : value(input.value) { throw 17; }
+                    ~Counter() { --live; ++destroyed; }
+                    int Read() const { return value; }
+                };
+                int Live() { return live; }
+                int Destroyed() { return destroyed; }
+            }
+            #lang gflat
+            int main()
+            {
+                Native::Counter* source = new* Native::Counter(42);
+                try
+                {
+                    Native::Counter* copy = new* Native::Counter(ref *source);
+                    delete copy;
+                    return 1;
+                }
+                catch { }
+                if (Native::Live() != 1 || Native::Destroyed() != 0 || source.Read() != 42) return 2;
+                delete source;
+                if (Native::Live() != 0 || Native::Destroyed() != 1) return 3;
+                return 42;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData("private: Counter(const Counter&) {}")]
+    [InlineData("public: Counter(const Counter&) = delete;")]
+    [InlineData("")]
+    public void PrivateDeletedAndImplicitCopyConstructorsAreNotImported(string copyDeclaration)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+            #lang cpp
+            class Counter {
+            public:
+                Counter(int value) {}
+            """ + "\n" + copyDeclaration + "\n};\n" + """
+            #lang gflat
+            void Invalid(Counter* source)
+            {
+                Counter* copy = new* Counter(ref *source);
+            }
+            """, options: Options()));
+        Assert.Contains("constructor", error.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData("c", 0)]
     [InlineData("c", 2)]
     [InlineData("cpp", 0)]

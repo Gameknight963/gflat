@@ -144,6 +144,10 @@ native destructor is public. Virtual destruction stays in C++. Constructor
 failures unwind through the host's cleanup and catch-all handlers. `Unique<T>`
 can own these objects, including early destruction through `Reset()`.
 
+Public copy constructors declared in the C++ source can also be called with
+`new* Type(ref *source)`. This creates a separate native allocation. The source
+and the new object have independent lifetimes and must be destroyed separately.
+
 Use the matching native destruction API for library-owned objects. A factory
 result is not automatically an owning allocation suitable for `delete`.
 Keep borrowed pointers within the native object's lifetime. Classes with private
@@ -180,7 +184,7 @@ calling through a base interface. This does not change host-defined class ABIs.
 
 The following are also not imported yet:
 
-- Native reference results and copy/move constructors
+- Native reference results, implicit copy constructors, and move constructors
 - Templates, default arguments, globals, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

@@ -30,6 +30,10 @@ For Visual Studio extension changes, also build and check the package:
     ./editors/VisualStudio/build.ps1
     ./editors/VisualStudio/test-package.ps1
 
+Runtime-specific Release publishes of the CLI and language server precompile
+their .NET code with ReadyToRun to reduce startup latency. Precompiled assemblies
+are larger. Pass `-p:PublishReadyToRun=false` to `dotnet publish` to disable this.
+
 Windows CI puts generated test programs under `$RUNNER_TEMP/gflat-tests` and
 excludes only that directory from Defender scanning on the disposable runner.
 Test failures still fail the job. This does not change local Defender settings.

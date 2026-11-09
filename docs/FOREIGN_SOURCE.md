@@ -61,7 +61,7 @@ references preserve readonly access. Mutable references require mutable,
 addressable storage. Reference results, rvalue-reference parameters, and
 references in callback signatures are not imported yet.
 
-Function-pointer parameters support callbacks with scalar and raw-pointer
+Function-pointer parameters and results support callbacks with scalar and raw-pointer
 signatures, including nested callback parameters and callback typedefs. Pass an
 ordinary G♭ function pointer. Native callback pointers are nullable. Keep the
 callback and any context storage alive while native code can invoke them.

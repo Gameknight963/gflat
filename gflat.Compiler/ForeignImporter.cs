@@ -339,9 +339,9 @@ internal static partial class ForeignImporter
                     if (!Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$") ||
                         function.TryGetProperty("isImplicit", out _) || function.TryGetProperty("explicitlyDeleted", out _)) return;
                     string signature = Text(function.GetProperty("type"), "qualType");
-                    int opening = signature.IndexOf('(');
-                    if (opening < 0) return;
-                    string? result = Type(signature[..opening], scope: scope, allowRecord: true);
+                    string? nativeResult = FunctionResult(signature);
+                    if (nativeResult == null) return;
+                    string? result = Type(nativeResult, scope: scope, allowRecord: true);
                     if (result == null) return;
                     var parameters = function.TryGetProperty("inner", out var body)
                         ? body.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl").ToArray() : [];
@@ -375,7 +375,7 @@ internal static partial class ForeignImporter
                     {
                         string entry = "__gflat_foreign_" + identity + "_" + index++;
                         string parametersText = string.Join(", ", types.Select((type, n) => type + " " + parameterNames[n]));
-                        var bridge = CreateCallBridge(entry, group.Key, scope, result, signature[..opening].Trim(),
+                        var bridge = CreateCallBridge(entry, group.Key, scope, result, nativeResult,
                             types.Select(type => type!).ToArray(), parameterTypes, recordTypes,
                             arguments => "(" + (group.Key == "cpp" ? "::" : "") + qualified + ")(" + string.Join(", ", arguments) + ")",
                             parameterNames: parameterNames);
@@ -434,6 +434,27 @@ internal static partial class ForeignImporter
                 }
             }
         }
+    }
+
+    private static string? FunctionResult(string signature)
+    {
+        int opening = signature.IndexOf('(');
+        if (opening < 0) return null;
+        var declarator = signature.AsSpan(opening + 1).TrimStart();
+        if (declarator.IsEmpty || declarator[0] is not ('*' or '&')) return signature[..opening].Trim();
+
+        // Clang spells a callback result as R (*(function parameters))(callback parameters).
+        // Remove the function's parameter list, retaining the returned pointer's signature.
+        int parameters = signature.IndexOf('(', opening + 1);
+        if (parameters < 0 || signature[(opening + 1)..parameters].Trim() != "*") return null;
+        int depth = 0;
+        for (int index = parameters; index < signature.Length; index++)
+        {
+            if (signature[index] == '(') depth++;
+            else if (signature[index] == ')' && --depth == 0)
+                return signature.Remove(parameters, index - parameters + 1).Trim();
+        }
+        return null;
     }
 
     private static string[]? SplitParameters(string text)

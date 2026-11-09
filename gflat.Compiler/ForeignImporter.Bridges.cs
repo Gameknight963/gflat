@@ -77,7 +77,8 @@ internal static partial class ForeignImporter
             foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))
                 definition.Append("namespace ").Append(part).Append(" { ");
         if (language == "cpp") definition.Append("extern \"C\" ");
-        definition.Append(recordResult != null ? "void" : language == "cpp" ? "auto" : nativeResult)
+        definition.Append(recordResult != null ? "void" : language == "cpp" ? "auto" :
+                Regex.IsMatch(nativeResult, @"\(\s*\*") ? "__typeof__(" + nativeResult + ")" : nativeResult)
             .Append(' ').Append(entry).Append('(').Append(string.Join(", ", nativeDeclarations)).Append(')');
         if (language == "cpp" && recordResult == null) definition.Append(" -> decltype(").Append(expression).Append(')');
         definition.Append(" { ");

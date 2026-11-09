@@ -7,6 +7,22 @@ public sealed class ForeignLanguageEditorTests
     [Theory]
     [InlineData("c")]
     [InlineData("cpp")]
+    public void NativeCallbackResultsHavePointerSignatures(string language)
+    {
+        string text = "#lang " + language + "\nint (*Echo(int (*callback)(int)))(int) { return callback; }\n" +
+            "#lang gflat\nint Double(int value) => value * 2;\nint Read() { int(int)*? callback = Echo(Double); return callback!(21); }";
+        var source = new SourceFile(Path.GetFullPath("native-callback-result-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Echo(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        Assert.Contains("int(int)*?", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+    }
+
+    [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
     public void ConstNativeCallbackFieldsShowReadonlyTypes(string language)
     {
         string text = "#lang " + language + "\nstruct Callbacks { int (*const Read)(int); };\n" +

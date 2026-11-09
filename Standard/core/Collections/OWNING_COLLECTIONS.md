@@ -421,6 +421,32 @@ order. Comparators must leave the queue and its values unchanged.
 ShrinkToFit reduces capacity while retaining the current heap. Successful
 relocation invalidates element views. Allocation failure preserves them.
 
+## Disjoint sets
+
+`DisjointSet` groups integer indices into connected components. Construct it with
+an initial element count, or start empty and call `Add()` to append singleton
+components. `Add()` returns the new index. Existing indices and representatives
+stay unchanged when storage grows. Allocation failure preserves the partition.
+
+```cpp
+using Standard::Collections;
+
+int main()
+{
+    DisjointSet groups = new(2);
+    groups.Union(0, 1);
+    nuint extra = groups.Add();
+    if (extra != 2 || groups.ElementCount != 3 || groups.SetCount != 2) return 1;
+    if (!groups.Connected(0, 1) || groups.Connected(0, extra)) return 2;
+    groups.Union(1, extra);
+    return (int)groups.SizeOf(extra) - 3;
+}
+```
+
+`Find`, `Connected`, and `SizeOf` work through immutable views. `Union` can change
+the representative returned by `Find`. `Reset()` restores singleton components
+for every current element while retaining storage.
+
 ## Source selection
 
 Ordinary Standard projects include these APIs. Selective builds add the relevant

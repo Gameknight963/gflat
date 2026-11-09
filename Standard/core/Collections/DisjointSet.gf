@@ -1,6 +1,6 @@
 ﻿namespace Standard::Collections;
 
-// Fixed index universe. Union by component size keeps immutable root lookup logarithmic.
+// Integer-indexed components. Union by size keeps immutable root lookup logarithmic.
 public struct DisjointSet
 {
     private Vector<nuint> parents;
@@ -28,7 +28,36 @@ public struct DisjointSet
     public nuint ElementCount { immutable get nothrow => parents.Count; }
     public nuint SetCount { immutable get nothrow => setCount; }
 
-    // Restore singleton components while retaining the fixed universe and storage.
+    // Appends a singleton and returns its stable index. Allocation failure
+    // preserves the partition, including all existing representatives.
+    public nuint Add()
+    {
+        nuint index = parents.Count;
+        nuint maximum = ((nuint)0 - (nuint)1) / (nuint)sizeof(nuint);
+        if (index == maximum) throw new Exception("DisjointSet capacity overflow");
+        nuint requested = index + 1;
+        if (parents.Capacity < requested || sizes.Capacity < requested)
+        {
+            nuint grown = 4;
+            if (index != 0)
+            {
+                grown = maximum;
+                if (index <= maximum / 2) grown = index * 2;
+            }
+            if (grown < requested) grown = requested;
+            if (grown > maximum) grown = maximum;
+            // Reserve both owners before either count changes. The remaining
+            // appends only relocate primitive values into available storage.
+            parents.Reserve(grown);
+            sizes.Reserve(grown);
+        }
+        parents.Add(index);
+        sizes.Add(1);
+        setCount++;
+        return index;
+    }
+
+    // Restore singleton components while retaining all current elements and storage.
     public void Reset() nothrow
     {
         for (nuint index = 0; index < parents.Count; index++)

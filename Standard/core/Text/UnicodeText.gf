@@ -67,6 +67,14 @@ public static class UnicodeText
         return String::From(input + start, end - start);
     }
 
+    // Reads through the first zero unit. The input must be null-terminated.
+    public static String FromUtf16(readonly(ushort)* input)
+    {
+        nuint units = 0;
+        while (input[units] != 0) units++;
+        return UnicodeText::FromUtf16(input, units);
+    }
+
     public static String FromUtf16(readonly(ushort)* input, nuint units)
     {
         nuint required = 0;

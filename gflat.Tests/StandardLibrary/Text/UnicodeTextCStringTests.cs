@@ -147,6 +147,32 @@ public sealed class UnicodeTextCStringTests
             }
             """, optimization, 42);
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NativeUtf16CStringResultsConvertWithoutAnExplicitLength(int optimization)
+        => Run("""
+            #lang cpp
+            const char16_t* NativeText() noexcept { return u"A\u00e9\U0001f642"; }
+            const char16_t* NativeEmpty() noexcept { return u""; }
+            #lang gflat
+            """ + "\n" + Prelude + """
+            int main()
+            {
+                {
+                    char[7] expected = ['A', (char)0xc3, (char)0xa9, (char)0xf0, (char)0x9f, (char)0x99, (char)0x82];
+                    String text = UnicodeText::FromUtf16(NativeText()!);
+                    if (text.Length != 7) return 1;
+                    for (nuint index = 0; index < 7; index++)
+                        if (text.Data[index] != expected[index]) return 2;
+                    String empty = UnicodeText::FromUtf16(NativeEmpty()!);
+                    if (!empty.IsEmpty) return 3;
+                }
+                if (allocations != releases) return 4;
+                return 42;
+            }
+            """, optimization, 42);
+
     private static IEnumerable<SourceFile> Sources(string code) => StandardTestSources.Text
         .Concat(StandardTestSources.Load("core/Binary/BinaryPrimitives.gf"))
         .Append(new SourceFile("utf16-cstring.gf", code));

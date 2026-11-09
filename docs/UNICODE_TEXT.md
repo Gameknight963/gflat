@@ -8,6 +8,7 @@ using Standard::Collections;
 using Standard::Text;
 
 String UnicodeText::FromUtf16(readonly(ushort)* input, nuint units);
+String UnicodeText::FromUtf16(readonly(ushort)* input);
 Vector<ushort> UnicodeText::ToUtf16(readonly(char)* input, nuint bytes);
 Vector<ushort> UnicodeText::ToUtf16CString(readonly(char)* input, nuint bytes);
 ```
@@ -15,12 +16,17 @@ Vector<ushort> UnicodeText::ToUtf16CString(readonly(char)* input, nuint bytes);
 | Operation | Result |
 | --- | --- |
 | `FromUtf16(input, units)` | UTF-8 String with its usual trailing NUL |
+| `FromUtf16(input)` | UTF-8 String read through the first zero UTF-16 unit |
 | `ToUtf16(input, bytes)` | `Vector<ushort>` of counted UTF-16 units |
 | `ToUtf16CString(input, bytes)` | `Vector<ushort>` including a final zero unit |
 
 `ToUtf16` omits a terminator. `ToUtf16CString` includes the final zero in `Count`
 and allocates once, including for empty input. Embedded NUL and U+FEFF remain
 part of the counted contents in all conversions.
+
+The one-argument `FromUtf16` overload requires a null-terminated input and excludes
+the terminator from the result. Units after the first zero are ignored. Use the
+counted overload to preserve embedded zeros.
 
 ```csharp
 using Standard::Text;
@@ -106,7 +112,7 @@ int main()
     char[7] input = ['A', (char)0xc3, (char)0xa9, (char)0xf0, (char)0x9f, (char)0x99, (char)0x82];
     Vector<ushort> text = UnicodeText::ToUtf16CString(input, 7);
     if (text.Count != 5 || text[4] != 0) return 1;
-    String roundTrip = UnicodeText::FromUtf16(text.AsSpan().Data!, text.Count - 1);
+    String roundTrip = UnicodeText::FromUtf16(text.AsSpan().Data!);
     if (roundTrip.Length != 7) return 2;
     for (nuint index = 0; index < 7; index++)
         if (roundTrip.Data[index] != input[index]) return 3;

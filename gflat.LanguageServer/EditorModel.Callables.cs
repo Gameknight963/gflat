@@ -50,7 +50,11 @@ public sealed partial class EditorModel
             {
                 if (snapshot.BodySources is { } focus && syntax.Span.SourceId is { } sourceId &&
                     !focus.Contains(sourceId) && checker.GetResolvedConstructor(creation) == null && checker.GetNativeCreation(creation) == null) continue;
-                var creationToken = tokens[creationPath].FirstOrDefault(t => t.Start == syntax.Span.Start && t.Kind == TokenKind.New);
+                var creationTokens = tokens[creationPath];
+                int creationIndex = TokenStartIndex(creationTokens, syntax.Span.Start);
+                var creationToken = creationIndex < creationTokens.Length &&
+                    creationTokens[creationIndex].Start == syntax.Span.Start && creationTokens[creationIndex].Kind == TokenKind.New
+                    ? creationTokens[creationIndex] : null;
                 Symbol[] creationFamily;
                 var nativeConstructors = checker.GetNativeConstructorCandidates(creation.Type);
                 Symbol? NativeConstructorSymbol(MethodDeclaration method)
@@ -88,10 +92,14 @@ public sealed partial class EditorModel
                 if (creationToken != null && creationFamily.Length > 0)
                 {
                     boundCallableFamilies[creationToken] = creationFamily;
-                    if (writtenCreationTypes.TryGetValue(creation, out var writtenType) &&
-                        tokens[creationPath].FirstOrDefault(t => t.Kind == TokenKind.OpenParen &&
-                            t.Start >= writtenType.Start + writtenType.Length && t.Start < syntax.Span.Start + syntax.Span.Length) is { } arguments)
-                        constructorArgumentLists[arguments] = creationToken;
+                    if (writtenCreationTypes.TryGetValue(creation, out var writtenType))
+                        for (int index = TokenStartIndex(creationTokens, writtenType.Start + writtenType.Length);
+                            index < creationTokens.Length && creationTokens[index].Start < syntax.Span.Start + syntax.Span.Length; index++)
+                            if (creationTokens[index].Kind == TokenKind.OpenParen)
+                            {
+                                constructorArgumentLists[creationTokens[index]] = creationToken;
+                                break;
+                            }
                     if (checker.GetResolvedConstructor(creation) is { } creationConstructor && SourceCallable(creationConstructor) is { } creationSource)
                         boundCallableReferences[creationToken] = creationSource with {
                             Owner = creation.Type is NamedTypeExpression named ? checker.DisplayName(named.Name) : creationSource.Owner,
@@ -120,7 +128,14 @@ public sealed partial class EditorModel
             string? name = expression switch { IdentifierExpression id => id.Name, NamespaceAccessExpression access => access.Member, MemberAccessExpression access => access.Member, _ => null };
             if (name == null) continue;
             int memberStart = expression switch { NamespaceAccessExpression access => access.Left.Span.Start + access.Left.Span.Length, MemberAccessExpression access => access.Object.Span.Start + access.Object.Span.Length, _ => expression.Span.Start };
-            var token = fileTokens.FirstOrDefault(token => token.Kind == TokenKind.Identifier && token.Text == name && token.Start >= memberStart && token.End < expression.Span.Start + expression.Span.Length);
+            Token? token = null;
+            for (int index = TokenStartIndex(fileTokens, memberStart);
+                index < fileTokens.Length && fileTokens[index].End < expression.Span.Start + expression.Span.Length; index++)
+                if (fileTokens[index].Kind == TokenKind.Identifier && fileTokens[index].Text == name)
+                {
+                    token = fileTokens[index];
+                    break;
+                }
             if (token == null) continue;
             var genericArguments = call != null ? checker.GetGenericCallTypeArguments(call) :
                 checker.GetGenericFunctionValueTypeArguments(syntax.Node);

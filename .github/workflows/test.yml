@@ -7,6 +7,8 @@ jobs:
     name: compiler (${{ matrix.os }}, shard ${{ matrix.shard }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      GFLAT_TEST_FAILURE_ARTIFACT_ROOT: ${{ github.workspace }}/artifacts/test-plan/native-failures
     strategy:
       fail-fast: false
       matrix:

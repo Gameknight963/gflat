@@ -90,6 +90,7 @@ namespace gflat.Tests
             catch (Exception error)
             {
                 error.Data["CompilerTestHelperDirectory"] = tempDir;
+                NativeFailureArtifacts.Preserve(tempDir, testId, error);
                 throw;
             }
             try

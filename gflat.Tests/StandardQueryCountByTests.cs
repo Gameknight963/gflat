@@ -5,7 +5,13 @@ namespace gflat.Tests;
 public sealed class StandardQueryCountByTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
+        using Standard;
+        using Standard::Text;
+        using Standard::Queries;
+        using Standard::Collections;
+
+        extern "C" void*? malloc(nuint count);
+        extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny){denied++;return null;}if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -152,7 +158,9 @@ public sealed class StandardQueryCountByTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>StandardTestSources.Queries.Append(new SourceFile("query-count-by.gf",program));
+        =>StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/Collections/HashMap.gf", "core/Queries/enumerable_count_by.gf"))
+            .Append(new SourceFile("query-count-by.gf",program));
     private static void Run(string program,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(program),optimization);Assert.True(result.ExitCode==0,$"CountBy exit {result.ExitCode}: {result.StandardError}");

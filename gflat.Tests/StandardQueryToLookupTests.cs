@@ -5,7 +5,14 @@ namespace gflat.Tests;
 public sealed class StandardQueryToLookupTests
 {
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint count);extern "C" void free(void* storage);
+        using Standard;
+        using Standard::Text;
+        using Standard::Memory;
+        using Standard::Queries;
+        using Standard::Collections;
+
+        extern "C" void*? malloc(nuint count);
+        extern "C" void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny){denied++;return null;}if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -169,7 +176,9 @@ public sealed class StandardQueryToLookupTests
             """,optimization);
 
     private static IEnumerable<SourceFile> Sources(string program)
-        =>StandardTestSources.Queries.Append(new SourceFile("query-to-lookup.gf",program));
+        =>StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/Collections/HashMap.gf", "core/Queries/enumerable_to_lookup.gf"))
+            .Append(new SourceFile("query-to-lookup.gf",program));
     private static void Run(string program,int optimization)
     {
         var result=CompilerTestHelper.Run(Sources(program),optimization);Assert.True(result.ExitCode==0,$"ToLookup exit {result.ExitCode}: {result.StandardError}");

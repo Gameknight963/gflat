@@ -12,6 +12,9 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
         (Func<object, object>)typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
             .CreateDelegate(typeof(Func<object, object>));
     private static readonly ConcurrentDictionary<Type, FieldInfo[]> Fields = new();
+    private static readonly ConcurrentDictionary<Type, Func<int, IList>> ListConstructors = new();
+    private static readonly MethodInfo CreateListMethod = typeof(SyntaxTreeCloner)
+        .GetMethod(nameof(CreateList), BindingFlags.NonPublic | BindingFlags.Static)!;
     private readonly Dictionary<object, object> copies = new(capacity, ReferenceEqualityComparer.Instance);
     private int copied;
     internal int ObjectCount => copies.Count;
@@ -43,8 +46,18 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
         }
         if (value is IList list)
         {
-            var constructor = type.GetConstructor(Type.EmptyTypes) ?? throw new NotSupportedException("Syntax list constructor");
-            var clone = (IList)constructor.Invoke(null);
+            var constructor = ListConstructors.GetOrAdd(type, static type =>
+            {
+                // List<T> can allocate its final storage once instead of growing while copied.
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+                    return CreateListMethod.MakeGenericMethod(type.GetGenericArguments())
+                        .CreateDelegate<Func<int, IList>>();
+                var info = type.GetConstructor(Type.EmptyTypes)
+                    ?? throw new NotSupportedException("Syntax list constructor");
+                var invoker = ConstructorInvoker.Create(info);
+                return _ => (IList)invoker.Invoke();
+            });
+            var clone = constructor(list.Count);
             copies[value] = clone;
             for (int index = 0; index < list.Count; index++)
             {
@@ -71,6 +84,8 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
             if (field.GetValue(value) is { } child) field.SetValue(result, Copy(child));
         return result;
     }
+
+    private static IList CreateList<T>(int capacity) => new List<T>(capacity);
 
     private static bool IsImmutable(Type type)
     {

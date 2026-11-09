@@ -225,7 +225,13 @@ public partial class TypeChecker
             getter = iface.MethodsByName.GetValueOrDefault("$get$" + name);
             setter = iface.MethodsByName.GetValueOrDefault("$set$" + name);
         }
-        if (getter == null && setter == null) return expression is IdentifierExpression ? FindNamespaceProperty(name, null, expression.Line) : null;
+        if (getter == null && setter == null)
+        {
+            if (expression is not IdentifierExpression ||
+                _currentClass?.FieldDeclarationsByName.ContainsKey(name) == true ||
+                _currentStruct?.FieldDeclarationsByName.ContainsKey(name) == true) return null;
+            return FindNamespaceProperty(name, null, expression.Line);
+        }
         var method = getter ?? setter!;
         if (staticOwner != null && !method.IsStatic)
             throw new TypeCheckException($"Instance property '{name}' must be accessed with '.'", expression.Line);

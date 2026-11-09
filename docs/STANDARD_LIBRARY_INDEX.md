@@ -116,6 +116,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Equality, hashing, and ordering](HASHING.md) |
 | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, max-heap operations, bounds/search helpers, `Comparer<T>` | [Value and span algorithms](../Standard/core/Collections/ALGORITHMS.md) |
 | `NthElement<T>(span, nth, compare)` | [Selecting an element by rank](NTH_ELEMENT.md) |
+| `MergeSorted<T>(first, second[, compare])` | [Merge sorted spans into an owning vector](MERGE_SORTED.md) |
 | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Enumeration and queries](../Standard/core/Queries/README.md) |
 | Indexed `TakeWhile`, `SkipWhile` | [Select a prefix with source indices](QUERY_INDEXED_WHILE.md) |
 | Owning query `Chunk` | [Enumerate owning chunks](QUERY_CHUNK.md) |

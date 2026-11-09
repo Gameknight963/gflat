@@ -143,7 +143,7 @@ public partial class TypeChecker
         string name;
         string? owner;
         AstNode? receiver = null, staticOwner = null;
-        List<AstNode> arguments = new();
+        List<AstNode>? arguments = null;
         switch (expression)
         {
             case IndexExpression index:
@@ -160,7 +160,8 @@ public partial class TypeChecker
                 arguments = index.Indices;
                 break;
             case IdentifierExpression id:
-                if (_scopes.Any(s => s.ContainsKey(id.Name))) return null;
+                foreach (var scope in _scopes)
+                    if (scope.ContainsKey(id.Name)) return null;
                 name = id.Name;
                 owner = _currentClass?.Name ?? _currentStruct?.Name;
                 break;
@@ -209,10 +210,17 @@ public partial class TypeChecker
             {
                 if (current.FieldDeclarationsByName.TryGetValue(name, out var field) &&
                     current.FieldDeclarations.Contains(field)) return null;
-                var declared = current.AllMethods.Where(m => m.PropertyName == name).ToArray();
-                if (declared.Length == 0) continue;
-                getter = declared.FirstOrDefault(m => m.Name == "$get$" + name);
-                setter = declared.FirstOrDefault(m => m.Name == "$set$" + name);
+                bool declared = false;
+                foreach (var candidate in current.AllMethods)
+                {
+                    if (candidate.PropertyName != name) continue;
+                    declared = true;
+                    if (candidate.Name.Length != name.Length + 5 ||
+                        !candidate.Name.AsSpan(5).SequenceEqual(name)) continue;
+                    if (getter == null && candidate.Name.AsSpan(0, 5).SequenceEqual("$get$")) getter = candidate;
+                    if (setter == null && candidate.Name.AsSpan(0, 5).SequenceEqual("$set$")) setter = candidate;
+                }
+                if (!declared) continue;
                 declaring = current.Name;
                 break;
             }
@@ -251,7 +259,7 @@ public partial class TypeChecker
                 _classes.TryGetValue(owner, out var rc) ? rc.Methods.GetValueOrDefault(readName).Method :
                 _interfaces.TryGetValue(owner, out var ri) ? ri.MethodsByName.GetValueOrDefault(readName) : getter;
         }
-        return new(name == "$index" ? "this[]" : name, declaring, getter, setter, receiver, staticOwner, arguments);
+        return new(name == "$index" ? "this[]" : name, declaring, getter, setter, receiver, staticOwner, arguments ?? []);
     }
 
     private void ValidatePropertyAccessor(MethodDeclaration method)

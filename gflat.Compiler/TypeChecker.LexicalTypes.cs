@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace gflat;
 
 public partial class TypeChecker
@@ -26,16 +28,36 @@ public partial class TypeChecker
     private string? ResolveEnclosingNestedTypeName(string name)
     {
         if (name.Contains('.') || name.Contains("::") || name.Contains('$')) return null;
-        string? owner = _currentClass?.Name ?? _currentStruct?.Name;
-        while (owner != null)
+        string? ownerName = _currentClass?.Name ?? _currentStruct?.Name;
+        if (ownerName == null) return null;
+        ReadOnlySpan<char> owner = ownerName;
+        int length = owner.Length + name.Length + 1;
+        char[]? rented = length > 256 ? ArrayPool<char>.Shared.Rent(length) : null;
+        Span<char> buffer = rented == null ? stackalloc char[length] : rented;
+        try
         {
-            string candidate = owner + "." + name;
-            if (_classes.ContainsKey(candidate) || _structs.ContainsKey(candidate) ||
-                _interfaces.ContainsKey(candidate) || _enums.ContainsKey(candidate) ||
-                _genericClasses.ContainsKey(candidate) || _genericStructs.ContainsKey(candidate) || _symbols.GenericInterfaces.ContainsKey(candidate)) return candidate;
-            int separator = owner.LastIndexOf('.');
-            owner = separator < 0 ? null : owner[..separator];
+            while (!owner.IsEmpty)
+            {
+                owner.CopyTo(buffer);
+                buffer[owner.Length] = '.';
+                name.AsSpan().CopyTo(buffer[(owner.Length + 1)..]);
+                ReadOnlySpan<char> candidate = buffer[..(owner.Length + name.Length + 1)];
+                if (_classes.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate) ||
+                    _structs.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate) ||
+                    _interfaces.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate) ||
+                    _enums.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate) ||
+                    _genericClasses.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate) ||
+                    _genericStructs.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate) ||
+                    _symbols.GenericInterfaces.GetAlternateLookup<ReadOnlySpan<char>>().ContainsKey(candidate))
+                    return candidate.ToString();
+                int separator = owner.LastIndexOf('.');
+                owner = separator < 0 ? default : owner[..separator];
+            }
+            return null;
         }
-        return null;
+        finally
+        {
+            if (rented != null) ArrayPool<char>.Shared.Return(rented);
+        }
     }
 }

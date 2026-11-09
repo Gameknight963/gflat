@@ -5,6 +5,26 @@ namespace gflat.Tests;
 public sealed class LexicalNestedTypeLookupTests
 {
     [Theory]
+    [InlineData(32)]
+    [InlineData(320)]
+    public void LongNestedOwnersRetainEnclosingTypePrecedence(int length)
+    {
+        string owner = new('A', length);
+        Assert.Equal(8, CompilerTestHelper.Run($$"""
+            alias Word = byte;
+            class {{owner}}
+            {
+                public struct Word { public long Value; }
+                public class Inner
+                {
+                    public static int Read() => sizeof(Word);
+                }
+            }
+            int main() => {{owner}}::Inner::Read();
+            """).ExitCode);
+    }
+
+    [Theory]
     [InlineData("class", "alias Word=int;", "")]
     [InlineData("struct", "alias Word=int;", "")]
     [InlineData("class", "struct Word{public byte value;}", "")]

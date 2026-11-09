@@ -126,6 +126,7 @@ public sealed class Compilation
             var imports = tree.Usings.Select(u => u.Name).ToArray();
             Unit.FileUsings[rootId] = imports;
             Unit.FileDeclarationScopes[rootId] = tree.DeclarationScope;
+            foreach (var local in tree.ForeignLocalNamespaces) Unit.ForeignLocalNamespaces[local.Key] = local.Value;
             foreach (var includedId in includedByRoot.GetValueOrDefault(rootId) ?? [])
                 Unit.FileUsings.TryAdd(includedId, imports);
         }

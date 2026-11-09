@@ -6,6 +6,7 @@ namespace gflat.ast
         public Dictionary<SourceId, string[]> FileUsings { get; } = new();
         public DeclarationScope DeclarationScope { get; set; }
         public Dictionary<SourceId, DeclarationScope> FileDeclarationScopes { get; } = new();
+        public Dictionary<SourceId, string> ForeignLocalNamespaces { get; } = new();
         public List<NamespaceDeclaration> Namespaces { get; }
         public List<AstNode> Members { get; }
         public List<ForeignTranslationUnit> ForeignUnits { get; } = [];

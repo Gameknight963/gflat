@@ -3,6 +3,7 @@
     public class NamespaceDeclaration : AstNode
     {
         public string Name { get; }
+        public bool IsForeignImplementation { get; internal set; }
         public List<AstNode> Members { get; } // classes, structs, interfaces type shit
 
         public NamespaceDeclaration(string name, List<AstNode> members, int line) : base(line)

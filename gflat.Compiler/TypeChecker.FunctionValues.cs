@@ -98,7 +98,10 @@ public partial class TypeChecker
         {
             target = ResolveStaticMethod(access, deferSelection: true);
             if (target == null && ResolveNamespace(access.Left) is { } scope)
+            {
+                scope = NamespaceCallableScope(scope, access.Member, expression.Span);
                 target = (AstNode?)scope.Functions.GetValueOrDefault(access.Member) ?? scope.GenericFunctions.GetValueOrDefault(access.Member) ?? (AstNode?)scope.Externs.GetValueOrDefault(access.Member);
+            }
         }
         if (target == null) return false;
         bool needsTarget = target is MethodDeclaration method && (method.IsGeneric || overloadFamilies.ContainsKey(method) || importedFunctionValueCandidates.ContainsKey(expression));

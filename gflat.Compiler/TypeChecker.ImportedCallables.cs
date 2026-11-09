@@ -14,6 +14,7 @@ public partial class TypeChecker
 
     private MethodDeclaration[] NamespaceMethods(NamespaceScope scope, string name)
     {
+        scope = NamespaceCallableScope(scope, name, SourceContext.Current ?? default);
         var generic = scope.GenericFunctions.GetValueOrDefault(name);
         var ordinary = scope.Functions.GetValueOrDefault(name);
         if (generic == null && ordinary == null) return [];
@@ -49,6 +50,17 @@ public partial class TypeChecker
             foreach (var method in methods) if (!importedMethods.Contains(method)) importedMethods.Add(method);
         }
         return new(importedMethods.ToArray(), contributors > 1);
+    }
+
+    private NamespaceScope NamespaceCallableScope(NamespaceScope scope, string name, SourceSpan use)
+    {
+        // Native internal linkage belongs to a root translation unit. Its local
+        // overload family takes precedence over project-visible declarations.
+        if (use.DeclarationSourceId is not { } source ||
+            _compilationUnit?.ForeignLocalNamespaces.TryGetValue(source, out var localNamespace) != true) return scope;
+        string path = localNamespace + (scope.Path.Length == 0 ? "" : "::" + scope.Path);
+        var local = ResolveNamespaceByName(path, _globalScope);
+        return local != null && (local.Functions.ContainsKey(name) || local.GenericFunctions.ContainsKey(name)) ? local : scope;
     }
 
     private bool SameDeclarationFamily(MethodDeclaration[] methods)

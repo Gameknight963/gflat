@@ -14,7 +14,8 @@ internal static partial class ForeignImporter
     private static readonly string[] RestrictionQualifiers = ["__restrict__", "__restrict", "restrict"];
 
     private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false,
-        NativeRecordLayout? OpaqueLayout = null, string? Owner = null, CallableRole Role = CallableRole.Member);
+        NativeRecordLayout? OpaqueLayout = null, string? Owner = null, CallableRole Role = CallableRole.Member,
+        string? LocalScope = null);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
     private sealed record CachedImport(ForeignTranslationUnit Unit, CachedDeclaration[] Declarations,
         Dictionary<string, string> Symbols, Dictionary<string, InputStamp> Inputs, string[] Dependencies);
@@ -29,6 +30,9 @@ internal static partial class ForeignImporter
         state ??= new();
         var importedSymbols = state.Symbols;
         var recordDeclarations = state.RecordSignatures;
+        var rootSource = unit.Span.DeclarationSourceId ?? segments[0].Span.DeclarationSourceId!.Value;
+        string localNamespace = "__gflat_foreign_local_" +
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rootSource.Path)))[..24];
         string directory = Path.Combine(Path.GetTempPath(), "gflat_foreign_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
@@ -66,7 +70,7 @@ internal static partial class ForeignImporter
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
                     foreach (var declaration in cached.Declarations)
                     { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text,
-                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner, declaration.Role); }
+                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner, declaration.Role, declaration.LocalScope); }
                     unit.ForeignSources.AddRange(group);
                     unit.ForeignUnits.Add(cached.Unit);
                     continue;
@@ -421,6 +425,8 @@ internal static partial class ForeignImporter
                     string qualified = scope.Length == 0 ? name : scope + "::" + name;
                     if (!seen.Add(qualified + signature)) return;
                     string importKey = qualified + "(" + string.Join(",", types.Select(type => Regex.Replace(type!, "readonly\\(|\\)", ""))) + ")";
+                    bool isLocal = Text(function, "storageClass") == "static";
+                    if (isLocal) importKey = localNamespace + "::" + importKey;
                     string symbol = Text(function, "mangledName", qualified);
                     if (importedSymbols.TryGetValue(importKey, out string? previous))
                     {
@@ -428,6 +434,7 @@ internal static partial class ForeignImporter
                         throw new TypeCheckException("Foreign functions have conflicting imported signatures: " + qualified, group.First().Span);
                     }
                     bool variadic = function.TryGetProperty("variadic", out var flag) && flag.GetBoolean();
+                    if (variadic && isLocal) return;
                     if (variadic && (RecordValueType(result, recordTypes) != null ||
                         types.Any(type => RecordValueType(type!, recordTypes) != null))) return;
                     importedSymbols.Add(importKey, symbol);
@@ -451,17 +458,24 @@ internal static partial class ForeignImporter
                         declaration = bridge.Extern + "\npublic " + result + " @" + name + "(" + parametersText + ")" +
                             (contract.IsNoThrow ? " nothrow" : "") + " { " + bridge.Body + " }";
                     }
-                    if (scope.Length != 0) declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) + " { " + declaration + " }";
-                    AddDeclaration(qualified, declaration);
-                    declarations.Add(new(qualified, declaration));
+                    string importScope = isLocal ? localNamespace + (scope.Length == 0 ? "" : "::" + scope) : scope;
+                    if (importScope.Length != 0) declaration = "namespace " + string.Join("::", importScope.Split("::").Select(part => "@" + part)) + " { " + declaration + " }";
+                    // Qualified lookup still needs the source namespace when all
+                    // its imported functions have translation-unit linkage.
+                    if (isLocal && scope.Length != 0)
+                        declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) + " {}\n" + declaration;
+                    AddDeclaration(qualified, declaration, localScope: isLocal ? scope : null);
+                    declarations.Add(new(qualified, declaration, LocalScope: isLocal ? scope : null));
                 }
             }
         }
         finally { Directory.Delete(directory, recursive: true); }
 
         void AddDeclaration(string qualified, string declaration, bool isRecord = false,
-            NativeRecordLayout? opaqueLayout = null, string? owner = null, CallableRole role = CallableRole.Member)
+            NativeRecordLayout? opaqueLayout = null, string? owner = null, CallableRole role = CallableRole.Member,
+            string? localScope = null)
         {
+            if (localScope != null) unit.ForeignLocalNamespaces[rootSource] = localNamespace;
             if (isRecord)
             {
                 string signature = declaration + "\n" + opaqueLayout;
@@ -475,7 +489,7 @@ internal static partial class ForeignImporter
             }
             var imported = Parser.Parse(Lexer.Tokenize(new SourceFile("<foreign:" + qualified + ">", declaration)), diagnostics);
             Mark(imported.Members);
-            foreach (var ns in imported.Namespaces) Mark(ns.Members);
+            Mark(imported.Namespaces);
             foreach (var member in imported.Members)
             {
                 if (owner != null && member is MethodDeclaration method)
@@ -487,12 +501,25 @@ internal static partial class ForeignImporter
                 unit.Members.Add(member);
             }
             unit.Namespaces.AddRange(imported.Namespaces);
-            void Mark(IEnumerable<AstNode> nodes)
+            void Mark(IEnumerable<AstNode> nodes, bool implementationNamespace = false)
             {
                 foreach (var node in nodes)
                 {
-                    if (node is MethodDeclaration method) method.IsForeignImport = true;
-                    else if (node is NamespaceDeclaration ns) Mark(ns.Members);
+                    if (node is MethodDeclaration method)
+                    {
+                        method.IsForeignImport = true;
+                        if (localScope != null)
+                        {
+                            method.ForeignLocalOwner = rootSource;
+                            method.ForeignSourceNamespace = localScope;
+                        }
+                    }
+                    else if (node is NamespaceDeclaration ns)
+                    {
+                        ns.IsForeignImplementation = implementationNamespace || localScope != null &&
+                            (ns.Name == localNamespace || ns.Name.StartsWith(localNamespace + "::", StringComparison.Ordinal));
+                        Mark(ns.Members, ns.IsForeignImplementation);
+                    }
                     else if (node is ExtensionDeclaration extension) Mark(extension.Members);
                     else if (node is StructDeclaration structure)
                     {

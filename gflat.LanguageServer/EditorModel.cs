@@ -144,6 +144,7 @@ public sealed partial class EditorModel
         foreach (var entry in activeNodes)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (entry.Node is NamespaceDeclaration { IsForeignImplementation: true }) continue;
             var (name, kind, classification, type) = Describe(entry.Node);
             if (name == null) continue;
             ScopeEnvironment? containerScope = entry.Parent is { Node: CompilationUnit or NamespaceDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration } container &&
@@ -166,7 +167,7 @@ public sealed partial class EditorModel
             }
             if (name.Contains('$')) continue;
             string ns = entry.Parent?.Node is ExtensionDeclaration ? Namespace(parents)
-                : snapshot.Checker?.DeclarationNamespace(entry.Node) ?? containerScope?.Namespace ?? Namespace(parents);
+                : (entry.Node as MethodDeclaration)?.ForeignSourceNamespace ?? snapshot.Checker?.DeclarationNamespace(entry.Node) ?? containerScope?.Namespace ?? Namespace(parents);
             string? owner = containerScope is { } scopeEnvironment ? scopeEnvironment.Owner : Owner(parents);
             if (owner == null && entry.Node is MethodDeclaration qualified && snapshot.Checker != null &&
                 methodOwners.TryGetValue(qualified, out var methodOwner))

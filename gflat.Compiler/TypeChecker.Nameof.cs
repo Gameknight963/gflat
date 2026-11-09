@@ -97,6 +97,7 @@ public partial class TypeChecker
 
     private NameBinding? NameofNamespaceMember(NamespaceScope scope, string name, AstNode node)
     {
+        scope = NamespaceCallableScope(scope, name, node.Span);
         var method = scope.Functions.GetValueOrDefault(name) ?? scope.GenericFunctions.GetValueOrDefault(name) ??
             scope.Functions.GetValueOrDefault("$get$" + name) ?? scope.Functions.GetValueOrDefault("$set$" + name);
         if (method != null) CheckNameofSourceAccess(method, method.Accessibility, node);

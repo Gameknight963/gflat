@@ -341,7 +341,7 @@ namespace gflat.semantics
             string nsPath = parentPath.Length > 0 ? $"{parentPath}${ns.Name}" : ns.Name;
             if (!parent.Children.TryGetValue(ns.Name, out TypeChecker.NamespaceScope? scope))
             {
-                scope = new TypeChecker.NamespaceScope { Parent = parent };
+                scope = new TypeChecker.NamespaceScope { Parent = parent, Path = nsPath.Replace("$", "::") };
                 parent.Children[ns.Name] = scope;
             }
             _symbols.NamespaceScopes[ns] = scope;

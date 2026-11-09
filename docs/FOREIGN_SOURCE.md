@@ -54,6 +54,9 @@ The importer exposes free functions using primitive scalars and pointers
 to supported scalars, imported records, or `void`. Native typedefs are resolved
 in imported signatures. They do not yet introduce aliases in host code.
 C++ namespaces and overloads with distinct imported parameter types are supported.
+Native `static` free functions are visible only in their owning root file.
+Including a header in multiple root files creates a separate instance of its
+static functions and state in each native translation unit.
 Pointers are nullable and retain pointee `const`
 as `readonly`, including `const void*`. Ownership and native lifetimes remain the
 caller's responsibility.
@@ -189,7 +192,8 @@ The following are also not imported yet:
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage
 
-C-linkage variadic functions are imported directly. Foreign functions cannot
+External C-linkage variadic functions are imported directly. Variadic functions
+with native internal linkage are not imported. Foreign functions cannot
 participate in host constant evaluation.
 
 ## Exceptions across native calls

@@ -81,6 +81,8 @@ public partial class TypeChecker
 
     public bool IsDeclarationDiscoverable(AstNode declaration, SourceSpan use)
     {
+        if (declaration is MethodDeclaration { ForeignLocalOwner: { } localOwner } && localOwner != use.DeclarationSourceId)
+            return false;
         bool Visible(AstNode node) => node.Span.DeclarationSourceId is not { } owner ||
             owner == use.DeclarationSourceId ||
             _compilationUnit?.FileDeclarationScopes.GetValueOrDefault(owner) != DeclarationScope.File;

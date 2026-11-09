@@ -232,15 +232,17 @@ public sealed class ForeignLanguageTests
                 ForeignCompilerResolver = () => NativeToolchain.FindClang() };
             var first = Compiler.Check(source, options: options).Ast;
             Assert.Contains(dependencies, path => string.Equals(Path.GetFullPath(path), header, StringComparison.OrdinalIgnoreCase));
-            Assert.Equal("int", TypeChecker.TypeName(first.Members.OfType<ast.MethodDeclaration>().Single(method => method.Name == "FromHeader").ReturnType));
+            Assert.Equal("int", TypeChecker.TypeName(first.Namespaces.SelectMany(ns => ns.Members).OfType<ast.MethodDeclaration>().Single(method => method.Name == "FromHeader").ReturnType));
             first.Members.Clear();
+            first.Namespaces.Clear();
             File.WriteAllText(header, "static double FromHeader(int x) { return x; }");
             File.SetLastWriteTimeUtc(header, headerTime);
             var second = Compiler.Check(source, options: options).Ast;
-            Assert.Equal("double", TypeChecker.TypeName(second.Members.OfType<ast.MethodDeclaration>().Single(method => method.Name == "FromHeader").ReturnType));
+            Assert.Equal("double", TypeChecker.TypeName(second.Namespaces.SelectMany(ns => ns.Members).OfType<ast.MethodDeclaration>().Single(method => method.Name == "FromHeader").ReturnType));
             second.Members.Clear();
+            second.Namespaces.Clear();
             var third = Compiler.Check(new SourceFile(source.Path, source.Text + "\n"), options: options).Ast;
-            Assert.Contains(third.Members.OfType<ast.MethodDeclaration>(), method => method.Name == "FromHeader");
+            Assert.Contains(third.Namespaces.SelectMany(ns => ns.Members).OfType<ast.MethodDeclaration>(), method => method.Name == "FromHeader");
         }
         finally { Directory.Delete(directory, recursive: true); }
     }

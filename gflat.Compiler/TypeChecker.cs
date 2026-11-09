@@ -494,6 +494,7 @@ namespace gflat
 
         public class NamespaceScope
         {
+            internal string Path = "";
             public Dictionary<string, MethodDeclaration> Functions = new();
             public Dictionary<string, MethodDeclaration> GenericFunctions = new();
             public Dictionary<string, string> TypeNames = new();
@@ -2500,7 +2501,7 @@ namespace gflat
             string nsPath = parentPath.Length > 0 ? $"{parentPath}${ns.Name}" : ns.Name;
             if (!parent.Children.TryGetValue(ns.Name, out NamespaceScope? scope))
             {
-                scope = new NamespaceScope { Parent = parent };
+                scope = new NamespaceScope { Parent = parent, Path = nsPath.Replace("$", "::") };
                 parent.Children[ns.Name] = scope;
             }
             _namespaceScopes[ns] = scope;
@@ -4901,6 +4902,7 @@ namespace gflat
                 {
                     NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
                     if (scope == null) throw new TypeCheckException($"Unknown namespace or type for '{nsAccess.Member}'", node.Line);
+                    scope = NamespaceCallableScope(scope, nsAccess.Member, node.Span);
                     scope.Functions.TryGetValue(nsAccess.Member, out method);
                     method ??= scope.GenericFunctions.GetValueOrDefault(nsAccess.Member);
                     if (method == null) scope.Externs.TryGetValue(nsAccess.Member, out ext);
@@ -5131,6 +5133,7 @@ namespace gflat
             if (scope == null)
                 throw new TypeCheckException($"Could not resolve namespace", node.Line);
 
+            scope = NamespaceCallableScope(scope, node.Member, node.Span);
             if (scope.Functions.TryGetValue(node.Member, out MethodDeclaration? method))
             {
                 RecordType(node, method.ReturnType);

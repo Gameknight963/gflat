@@ -7,6 +7,56 @@ public sealed class ForeignLanguageEditorTests
     [Theory]
     [InlineData("c")]
     [InlineData("cpp")]
+    public void SameNamedFileLocalFunctionsKeepTheirOwnEditorSignatures(string language)
+    {
+        var first = new SourceFile(Path.GetFullPath("native-local-signature-first.gf"),
+            $"#lang {language}\nstatic int Read(int value) {{ return value; }}\n#lang gflat\nint First() => Read(1);");
+        var second = new SourceFile(Path.GetFullPath("native-local-signature-second.gf"),
+            $"#lang {language}\nstatic double Read(double value) {{ return value; }}\n#lang gflat\ndouble Second() => Read(1.0);");
+        var snapshot = new AnalysisSnapshot([first, second], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [first, second]);
+        foreach (var (source, expected) in new[] { (first, "public int Read(int value)"), (second, "public double Read(double value)") })
+        {
+            int call = source.Text.LastIndexOf("Read(", StringComparison.Ordinal);
+            var help = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+            Assert.Equal(expected, Assert.Single(help.GetProperty("signatures").EnumerateArray()).GetProperty("label").GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
+    public void FileLocalNativeFunctionsHaveSourceNamesAndStayOutOfOtherFilesCompletion(string language)
+    {
+        string Native(string name) => language == "cpp"
+            ? $"namespace Native {{ static int {name}() {{ return 42; }} }}"
+            : $"static int {name}(void) {{ return 42; }}";
+        string imports = language == "cpp" ? "using Native;\n" : "";
+        var first = new SourceFile(Path.GetFullPath("native-local-first.gf"),
+            $"#lang {language}\n{Native("FirstOnly")}\n#lang gflat\n{imports}int First() => FirstOnly();");
+        var second = new SourceFile(Path.GetFullPath("native-local-second.gf"),
+            $"#lang {language}\n{Native("SecondOnly")}\n#lang gflat\n{imports}int Second() => SecondOnly();");
+        var snapshot = new AnalysisSnapshot([first, second], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [first, second]);
+        int call = first.Text.LastIndexOf("FirstOnly(", StringComparison.Ordinal);
+        var completion = JsonSerializer.SerializeToElement(model.Completion(first.Path, call));
+        var labels = completion.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("label").GetString()).ToArray();
+        Assert.Contains("FirstOnly", labels);
+        Assert.DoesNotContain("SecondOnly", labels);
+        Assert.DoesNotContain(labels, label => label?.StartsWith("__gflat_foreign_local_", StringComparison.Ordinal) == true);
+        string signature = JsonSerializer.Serialize(model.SignatureHelp(first.Path, call + "FirstOnly(".Length));
+        Assert.Contains("FirstOnly", signature);
+        Assert.DoesNotContain("__gflat_foreign_local_", signature);
+        string hover = JsonSerializer.Serialize(model.Hover(first.Path, call));
+        Assert.Contains("FirstOnly", hover);
+        Assert.DoesNotContain("__gflat_foreign_local_", hover);
+    }
+
+    [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
     public void NativeConstVoidResultsRetainReadonlyPointeesInSignatures(string language)
     {
         string text = "#lang " + language + "\nconst void* Read(void) { return 0; }\n" + """

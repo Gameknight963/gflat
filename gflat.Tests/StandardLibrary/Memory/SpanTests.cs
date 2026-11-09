@@ -9,6 +9,36 @@ public class SpanTests
         .Append(new SourceFile("main.gf", program)).ToArray();
     private static void Run(string program) => Assert.Equal(0, CompilerTestHelper.Run(Sources(program)).ExitCode);
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NullableBuffersAcceptEmptyResultsAndRejectMissingStorage(int optimization)
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using Standard::Memory;
+
+            int main()
+            {
+                Span<int> empty = new(null, 0);
+                if (!empty.IsEmpty || empty.Data != null) return 1;
+                int[2] values = [20, 22];
+                int*? buffer = &values[0];
+                Span<int> view = new(buffer, 2);
+                view[(nuint)0] += view[(nuint)1];
+                if (values[0] != 42) return 2;
+                readonly(int)*? borrowed = buffer;
+                Span<readonly(int)> readOnly = new(borrowed, 2);
+                if (readOnly[(nuint)0] != 42) return 3;
+                int caught = 0;
+                try { view = new(null, 1); } catch { caught++; }
+                try { view = new(null, (nuint)0 - (nuint)1); } catch { caught++; }
+                if (caught != 2 || view.Length != 2 || view[(nuint)0] != 42) return 4;
+                return 0;
+            }
+            """), optimization);
+        Assert.Equal(0, result.ExitCode);
+    }
+
     [Fact]
     public void ViewsSlicesAndCopiesShareStorage()
         => Run("""

@@ -124,7 +124,12 @@ for insertion, removal, capacity management, and failures.
 
 ## Spans and readonly views
 
-`Span<T>` stores a pointer and element count. Slicing borrows a subrange:
+`Span<T>` stores a pointer and element count.
+
+The pointer/count constructor also accepts nullable buffers. Null with a zero
+count creates an empty span. Null with a nonzero count throws an `Exception`.
+
+Slicing borrows a subrange:
 
 ```csharp
 using Standard;

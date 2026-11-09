@@ -9,8 +9,25 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
     private T*? data;
     private nuint length;
 
-    public Span() { data = null; length = 0; }
-    public Span(T* buffer, nuint count) { data = buffer; length = count; }
+    public Span()
+    {
+        data = null;
+        length = 0;
+    }
+
+    public Span(T* buffer, nuint count)
+    {
+        data = buffer;
+        length = count;
+    }
+
+    // Null represents an empty buffer. A nonzero count requires storage.
+    public Span(T*? buffer, nuint count)
+    {
+        if (buffer == null && count != 0) throw new Exception("Span buffer is null", 3);
+        data = buffer;
+        length = count;
+    }
 
     public nuint Length { immutable get nothrow => length; }
     public bool IsEmpty { immutable get nothrow => length == 0; }

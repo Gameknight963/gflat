@@ -41,6 +41,8 @@ public sealed partial class EditorModel
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
     private readonly List<Symbol> symbols = [];
     private readonly Dictionary<string, Symbol[]> symbolsByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Symbol[]> symbolsByOwner = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Symbol> classesByQualifiedName = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Path, int Start, int Length), Symbol> declarationsBySpan = [];
     private readonly ConcurrentDictionary<string, Symbol[]> typeMemberFamilies = new(StringComparer.Ordinal);
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceTypeDeclarations = [];
@@ -191,8 +193,11 @@ public sealed partial class EditorModel
         }
         using (PipelineTimings.Measure("editor.index.generic-parameters")) RegisterTypeParameters();
         foreach (var group in symbols.GroupBy(symbol => symbol.Name)) symbolsByName.Add(group.Key, group.ToArray());
+        foreach (var group in symbols.Where(symbol => symbol.Owner != null && symbol.Scope == null).GroupBy(symbol => symbol.Owner!))
+            symbolsByOwner.Add(group.Key, group.ToArray());
         foreach (var symbol in symbols)
         {
+            if (symbol.Syntax.Node is ClassDeclaration) classesByQualifiedName.TryAdd(symbol.Qualified, symbol);
             if (symbol.NameSpan.Source?.Path is { } path)
                 declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
             if ((symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration or NamespaceDeclaration) && HasSourceIdentifierEscape(symbol))
@@ -757,10 +762,10 @@ public sealed partial class EditorModel
         var visited = new HashSet<string>();
         while (visited.Add(owner))
         {
-            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null &&
-                !Parents(s.Syntax).Any(p => p.Node is PrimitiveImplementationDeclaration) &&
-                s.Syntax.Node is not ConstructorDeclaration and not MethodDeclaration { StaticConstructorName: not null })) yield return symbol;
-            var type = symbols.FirstOrDefault(s => s.Syntax.Node is ClassDeclaration && s.Qualified == owner);
+            foreach (var symbol in symbolsByOwner.GetValueOrDefault(owner) ?? [])
+                if (!Parents(symbol.Syntax).Any(p => p.Node is PrimitiveImplementationDeclaration) &&
+                    symbol.Syntax.Node is not ConstructorDeclaration and not MethodDeclaration { StaticConstructorName: not null }) yield return symbol;
+            var type = classesByQualifiedName.GetValueOrDefault(owner);
             if (type?.Syntax.Node is not ClassDeclaration c) yield break;
             // The parser records the colon list in Interfaces; checking separates
             // its base class into ClassInfo without rewriting the declaration.

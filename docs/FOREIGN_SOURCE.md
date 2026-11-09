@@ -55,6 +55,10 @@ to supported scalars, imported records, or `void`. Scalar typedefs, C++ namespac
 parameter types are supported. Pointers are nullable and retain pointee `const`
 as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
 
+C++ Unicode character types keep their code-unit storage: `char8_t` maps to
+`byte`, `char16_t` to `ushort`, and `char32_t` to `uint`. `wchar_t` follows Clang's
+chosen integer width and signedness, including `-fshort-wchar`.
+
 C++ lvalue-reference parameters use host `ref` parameters. Pass `ref value` for
 `T&` or `const T&`, including references to opaque native objects. `const`
 references preserve readonly access. Mutable references require mutable,

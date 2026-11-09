@@ -79,7 +79,23 @@ internal static partial class ForeignImporter
                 if (File.Exists(compiler)) inputs[compiler] = Stamp(compiler, contents: false);
                 string path = Path.Combine(directory, "source." + (group.Key == "cpp" ? "cpp" : "c"));
                 string depfile = Path.Combine(directory, "source.d");
-                File.WriteAllText(path, source.ToString());
+                // Capture Clang's Unicode storage types, including flags such as -fshort-wchar.
+                // These analysis-only aliases are not added to the emitted native translation unit.
+                string builtinTypes = group.Key == "cpp" ? """
+                    #ifdef __WCHAR_TYPE__
+                    typedef __WCHAR_TYPE__ __gflat_native_wchar_type;
+                    #endif
+                    #if __cplusplus >= 201103L && defined(__CHAR16_TYPE__)
+                    typedef __CHAR16_TYPE__ __gflat_native_char16_type;
+                    #endif
+                    #if __cplusplus >= 201103L && defined(__CHAR32_TYPE__)
+                    typedef __CHAR32_TYPE__ __gflat_native_char32_type;
+                    #endif
+                    #ifdef __cpp_char8_t
+                    typedef unsigned char __gflat_native_char8_type;
+                    #endif
+                    """ + "\n" : "";
+                File.WriteAllText(path, builtinTypes + source);
                 var command = new List<string>(arguments);
                 command.AddRange(["-x", group.Key == "cpp" ? "c++" : "c", "-fsyntax-only",
                     "-Xclang", "-fdump-record-layouts-complete", "-Xclang", "-fdump-record-layouts-simple", "-Xclang", "-ast-dump=json",
@@ -307,6 +323,10 @@ internal static partial class ForeignImporter
                     string? primitive = spelling.Trim() switch
                     {
                         "void" => "void", "bool" or "_Bool" => "bool", "char" => "char",
+                        "wchar_t" when group.Key == "cpp" && !aliases.ContainsKey("wchar_t") => Type("::__gflat_native_wchar_type", resolving),
+                        "char8_t" when aliases.ContainsKey("__gflat_native_char8_type") => Type("::__gflat_native_char8_type", resolving),
+                        "char16_t" when aliases.ContainsKey("__gflat_native_char16_type") => Type("::__gflat_native_char16_type", resolving),
+                        "char32_t" when aliases.ContainsKey("__gflat_native_char32_type") => Type("::__gflat_native_char32_type", resolving),
                         "signed char" => "sbyte", "unsigned char" => "byte",
                         "short" or "short int" or "signed short" => "short", "unsigned short" or "unsigned short int" => "ushort",
                         "int" or "signed int" or "signed" => "int", "unsigned" or "unsigned int" => "uint",

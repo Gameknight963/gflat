@@ -4,6 +4,29 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ForeignLanguageEditorTests
 {
+    [Fact]
+    public void NativeUnicodePointersShowTheirCodeUnitTypes()
+    {
+        const string text = """
+            #lang cpp
+            const char16_t* Utf16Text() { return u"\u03a9"; }
+            const char32_t* Utf32Text() { return U"\U0001f642"; }
+            #lang gflat
+            ushort Read16() => (Utf16Text()!)[0];
+            uint Read32() => (Utf32Text()!)[0];
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-unicode-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        foreach (var (name, type) in new[] { ("Utf16Text(", "readonly(ushort)*?"), ("Utf32Text(", "readonly(uint)*?") })
+        {
+            int call = text.LastIndexOf(name, StringComparison.Ordinal);
+            var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + name.Length));
+            Assert.Contains(type, signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+        }
+    }
+
     [Theory]
     [InlineData("c")]
     [InlineData("cpp")]

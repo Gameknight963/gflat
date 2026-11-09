@@ -916,7 +916,10 @@ public sealed partial class EditorModel
     private static bool HasSourceIdentifierEscape(Symbol symbol)
     {
         var span = symbol.NameSpan;
-        return span.Length > 0 && span.Source is { } source && span.Start > 0 &&
+        // Native imports escape every generated identifier for parsing. Those
+        // escapes are not source spelling chosen by the user.
+        return span.Length > 0 && span.Source is { } source &&
+            !source.Path.StartsWith("<foreign:", StringComparison.Ordinal) && span.Start > 0 &&
             span.Start <= source.Text.Length && source.Text[span.Start - 1] == '@';
     }
     private static string CompletionSpelling(Symbol symbol, bool escapedPrefix = false)

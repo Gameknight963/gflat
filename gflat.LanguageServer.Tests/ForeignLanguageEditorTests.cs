@@ -7,6 +7,33 @@ public sealed class ForeignLanguageEditorTests
     [Theory]
     [InlineData("c")]
     [InlineData("cpp")]
+    public void NativeSignaturesEscapeOnlyNamesThatRequireIt(string language)
+    {
+        string text = "#lang " + language + "\n" + """
+            struct Payload { int number; };
+            struct readonly { int number; };
+            int Read(const struct Payload* value) { return value->number; }
+            int ReadKeyword(const struct readonly* immutable) { return immutable->number; }
+            #lang gflat
+            int Use(Payload* value, @readonly* keyword) => Read(value) + ReadKeyword(keyword);
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-signature-spelling.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        foreach (var (name, expected) in new[] {
+            ("Read(", "public int Read(readonly(Payload)*? value)"),
+            ("ReadKeyword(", "public int ReadKeyword(readonly(@readonly)*? @immutable)") })
+        {
+            int call = text.LastIndexOf(name, StringComparison.Ordinal);
+            var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + name.Length));
+            Assert.Equal(expected, signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
     public void NativeUnionPointersAppearInSignatures(string language)
     {
         string text = "#lang " + language + "\nunion Payload { int number; double floating; };\n" +
@@ -18,7 +45,7 @@ public sealed class ForeignLanguageEditorTests
         var model = new EditorModel(snapshot, [source]);
         int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
         var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
-        Assert.Contains("readonly(@Payload)*?", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+        Assert.Contains("readonly(Payload)*?", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
     }
 
     [Fact]

@@ -23,6 +23,20 @@ public sealed class NativeToolchainRunTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void CapturesUtf8FromBothStreams()
+    {
+        var command = OperatingSystem.IsWindows()
+            ? PowerShell("[byte[]]$bytes = 195,169,32,240,159,153,130; " +
+                "$stdout = [Console]::OpenStandardOutput(); $stdout.Write($bytes, 0, $bytes.Length); $stdout.Flush(); " +
+                "$stderr = [Console]::OpenStandardError(); $stderr.Write($bytes, 0, $bytes.Length); $stderr.Flush()")
+            : Shell("printf '\\303\\251 \\360\\237\\231\\202'", "printf '\\303\\251 \\360\\237\\231\\202' 1>&2");
+        ProcessResult result = NativeToolchain.Run(command.Executable, command.Arguments);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("\u00e9 \U0001f642", result.StandardOutput);
+        Assert.Equal("\u00e9 \U0001f642", result.StandardError);
+    }
+
+    [Fact]
     public void RejectsInvalidTimeout()
     {
         var command = Shell("exit 0");

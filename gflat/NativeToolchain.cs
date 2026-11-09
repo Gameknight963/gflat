@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace gflat;
 
@@ -83,7 +84,7 @@ public static partial class NativeToolchain
         throw new FileNotFoundException("Clang was not found. Install LLVM or set GFLAT_CLANG to its executable path.");
     }
 
-    /// <summary>Capture a process's output within one timeout covering exit and both output streams; -1 waits indefinitely.</summary>
+    /// <summary>Capture UTF-8 process output within one timeout covering exit and both streams; -1 waits indefinitely.</summary>
     public static ProcessResult Run(string executable, IEnumerable<string> arguments, int timeoutMilliseconds = 30000)
     {
         using var timing = PipelineTimings.Measure(Path.GetFileName(executable).StartsWith("clang", StringComparison.OrdinalIgnoreCase)
@@ -93,7 +94,8 @@ public static partial class NativeToolchain
         process.StartInfo = new ProcessStartInfo(executable)
         {
             UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true
+            RedirectStandardOutput = true, RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
         };
         gflat.Projects.MsBuildHost.RestoreUserProcessEnvironment(process.StartInfo.Environment);
         foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);

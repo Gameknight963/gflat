@@ -13,6 +13,7 @@ $testRoot = if ($env:GFLAT_TEST_OUTPUT_ROOT) { $env:GFLAT_TEST_OUTPUT_ROOT } els
 $extracted = Join-Path $testRoot ('package-test-' + [Guid]::NewGuid().ToString('N'))
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($Package), $extracted)
 $oldExecutable = $env:GFLAT_LSP_EXECUTABLE
+$oldClang = $env:GFLAT_CLANG
 $oldEditorAssets = $env:GFLAT_EDITOR_ASSETS
 $oldHoverCatalog = $env:GFLAT_HOVER_CATALOG
 $oldHoverCapture = $env:GFLAT_HOVER_CAPTURE
@@ -96,6 +97,14 @@ try {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
     $visualStudio = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.CoreEditor -property installationPath
     if (-not $visualStudio) { throw 'Visual Studio is required to validate the Natvis schema' }
+    # The server fixture clears PATH to exercise bundled MSBuild. Native tests still need Clang.
+    $clangName = if ($oldClang) { $oldClang } else { 'clang.exe' }
+    $clangCommand = Get-Command -Name $clangName -CommandType Application -ErrorAction SilentlyContinue
+    if ($clangCommand) { $env:GFLAT_CLANG = $clangCommand.Source }
+    elseif (-not $oldClang -and (Test-Path -LiteralPath (Join-Path $visualStudio 'VC/Tools/Llvm/x64/bin/clang.exe'))) {
+        $env:GFLAT_CLANG = Join-Path $visualStudio 'VC/Tools/Llvm/x64/bin/clang.exe'
+    }
+    else { throw "Clang was not found for packaged native tests: $clangName" }
     $natvisSchema = Join-Path $visualStudio 'Xml/Schemas/1033/natvis.xsd'
     if (-not (Test-Path -LiteralPath $natvisSchema)) { throw "Natvis schema was not found: $natvisSchema" }
     $natvisSettings = New-Object System.Xml.XmlReaderSettings
@@ -1751,6 +1760,7 @@ int main()
 }
 finally {
     $env:GFLAT_LSP_EXECUTABLE = $oldExecutable
+    $env:GFLAT_CLANG = $oldClang
     $env:GFLAT_EDITOR_ASSETS = $oldEditorAssets
     $env:GFLAT_HOVER_CATALOG = $oldHoverCatalog
     $env:GFLAT_HOVER_CAPTURE = $oldHoverCapture

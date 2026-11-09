@@ -4,6 +4,8 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private readonly HashSet<MethodDeclaration> boundMethodSignatures = new(ReferenceEqualityComparer.Instance);
+
     private void BindConstructorSignature(ConstructorDeclaration constructor, string owner, bool isClass)
     {
         using var context = EnterSignatureContext(constructor, owner, isClass);
@@ -23,7 +25,7 @@ public partial class TypeChecker
 
     private void BindMethodSignature(MethodDeclaration method)
     {
-        if (method.IsGeneric) return;
+        if (method.IsGeneric || boundMethodSignatures.Contains(method)) return;
         // Reserved primitive names already carry their complete qualifiers and
         // cannot depend on declaration scope or specialize another type.
         if (method.ReturnType is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } result && IsPrimitive(result.Name) &&
@@ -34,6 +36,7 @@ public partial class TypeChecker
         {
             method.ReturnType = ResolveAlias(method.ReturnType);
             foreach (var parameter in method.Parameters) parameter.Type = ResolveAlias(parameter.Type);
+            boundMethodSignatures.Add(method);
             return;
         }
         using var timing = PipelineTimings.Detailed ? PipelineTimings.Measure("check.bind-method-signature",
@@ -43,6 +46,9 @@ public partial class TypeChecker
         method.ReturnType = ResolveAlias(method.ReturnType);
         foreach (var parameter in method.Parameters)
             parameter.Type = ResolveAlias(parameter.Type);
+        // Specializations have their own declarations. Only a completely resolved
+        // concrete signature can be reused within this checker.
+        boundMethodSignatures.Add(method);
     }
 
     private static bool PrimitiveSignatureType(TypeExpression type) => type switch {

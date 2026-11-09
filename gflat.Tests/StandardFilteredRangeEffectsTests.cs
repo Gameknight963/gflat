@@ -8,7 +8,9 @@ public sealed class StandardFilteredRangeEffectsTests
     public void FusedTakeSkipPreservePredicateEffectsAndZeroTakeShortCircuiting(int optimization)
     {
         const string program = """
-using Standard; using Standard::Queries;
+using Standard;
+using Standard::Queries;
+
 int calls=0; int mode=0; int failAt=0;
 bool Predicate(int value) {
     calls++;
@@ -95,7 +97,11 @@ int main() {
 
 
 """;
-        var sources=StandardTestSources.Queries
+        var sources=StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/Queries/IntRange.gf", "core/Queries/FilteredIntRange.gf",
+                "core/Queries/WhereSource.gf", "core/Queries/SliceSource.gf",
+                "core/Queries/enumerable_where.gf", "core/Queries/enumerable_slice.gf",
+                "core/Queries/enumerable_count.gf", "core/Queries/enumerable_predicates.gf"))
             .Append(new SourceFile("filtered-range-effects.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Filtered range exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");

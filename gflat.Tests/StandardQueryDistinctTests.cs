@@ -6,7 +6,7 @@ public sealed class StandardQueryDistinctTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
         => StandardTestSources.Combine(
-            StandardTestSources.Queries, StandardTestSources.FileStreams,
+            StandardTestSources.DistinctQueries, StandardTestSources.FileStreams,
             StandardTestSources.Load("libc/IO/FileLines.gf", "libc/IO/FileLineSequence.gf"))
             .Append(new SourceFile("query-distinct.gf",program));
 
@@ -17,7 +17,15 @@ public sealed class StandardQueryDistinctTests
     }
 
     private const string Allocator="""
-        using Standard; using Standard::Text; using Standard::IO; using Standard::Memory; using Standard::Queries; using Standard::Collections;extern "C" void*? malloc(nuint bytes);extern "C" void free(void* storage);
+        using Standard;
+        using Standard::Text;
+        using Standard::IO;
+        using Standard::Memory;
+        using Standard::Queries;
+        using Standard::Collections;
+
+        extern "C" void*? malloc(nuint bytes);
+        extern "C" void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failAt=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){

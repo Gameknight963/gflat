@@ -318,6 +318,26 @@ internal static class StandardTestSources
         "core/Text/string_span.gf",
     ]);
 
+    public static IEnumerable<SourceFile> DistinctQueries => Load([.. foundation,
+        "core/Collections/HashMap.gf",
+        "core/Collections/HashSet.gf",
+        "core/Queries/DistinctSource.gf",
+        "core/Queries/DistinctBySource.gf",
+        "core/Queries/FilteredIntRange.gf",
+        "core/Queries/IntRange.gf",
+        "core/Queries/SelectSource.gf",
+        "core/Queries/SliceSource.gf",
+        "core/Queries/WhereSource.gf",
+        "core/Queries/enumerable_count.gf",
+        "core/Queries/enumerable_distinct.gf",
+        "core/Queries/enumerable_distinct_by.gf",
+        "core/Queries/enumerable_predicates.gf",
+        "core/Queries/enumerable_select.gf",
+        "core/Queries/enumerable_slice.gf",
+        "core/Queries/enumerable_to_vector.gf",
+        "core/Queries/enumerable_where.gf",
+    ]);
+
     public static IEnumerable<SourceFile> QueriesWithoutCollector => Queries.Where(source =>
         !StandardLibrary.IsSource(source.Path, "libc/GC.gf") &&
         !StandardLibrary.IsSource(source.Path, "libc/TracingCollector.gf"));

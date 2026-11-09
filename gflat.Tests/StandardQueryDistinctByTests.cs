@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryDistinctByTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => StandardTestSources.Queries
+        => StandardTestSources.DistinctQueries
             .Append(new SourceFile("query-distinct-by.gf", program));
 
     private static void Run(string program, int optimization)
@@ -13,7 +13,12 @@ public sealed class StandardQueryDistinctByTests
     }
 
     private const string Memory = """
-        using Standard; using Standard::Text; using Standard::Memory; using Standard::Queries; using Standard::Collections;
+        using Standard;
+        using Standard::Text;
+        using Standard::Memory;
+        using Standard::Queries;
+        using Standard::Collections;
+
         extern "C" void*? malloc(nuint bytes); extern "C" void free(void* storage);
         int attempts = 0; int allocated = 0; int freed = 0; int denyAt = 0;
         namespace Memory {

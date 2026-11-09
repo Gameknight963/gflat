@@ -80,6 +80,20 @@ public struct DisjointSet
         }
     }
 
+    // Shortens parent chains for later lookups without changing representatives.
+    public nuint FindAndCompress(nuint index)
+    {
+        if (index >= parents.Count) throw new Exception("DisjointSet index out of range");
+        while (true)
+        {
+            nuint parent = parents[index];
+            if (parent == index) return index;
+            nuint grandparent = parents[parent];
+            parents[index] = grandparent;
+            index = grandparent;
+        }
+    }
+
     public immutable bool Connected(nuint first, nuint second)
         => this.Find(first) == this.Find(second);
 
@@ -88,8 +102,10 @@ public struct DisjointSet
     public bool Union(nuint first, nuint second)
     {
         // Validate both indices before changing either tree or component count.
-        nuint left = this.Find(first);
-        nuint right = this.Find(second);
+        if (first >= parents.Count || second >= parents.Count)
+            throw new Exception("DisjointSet index out of range");
+        nuint left = this.FindAndCompress(first);
+        nuint right = this.FindAndCompress(second);
         if (left == right) return false;
         if (sizes[left] < sizes[right])
         {

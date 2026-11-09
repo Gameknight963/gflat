@@ -439,13 +439,16 @@ int main()
     if (extra != 2 || groups.ElementCount != 3 || groups.SetCount != 2) return 1;
     if (!groups.Connected(0, 1) || groups.Connected(0, extra)) return 2;
     groups.Union(1, extra);
+    if (groups.FindAndCompress(extra) != groups.Find(0)) return 3;
     return (int)groups.SizeOf(extra) - 3;
 }
 ```
 
-`Find`, `Connected`, and `SizeOf` work through immutable views. `Union` can change
-the representative returned by `Find`. `Reset()` restores singleton components
-for every current element while retaining storage.
+`Find`, `Connected`, and `SizeOf` work through immutable views. Use
+`FindAndCompress` on a mutable value to shorten lookup paths without changing
+representatives. `Union` uses this lookup after validating both indices. Merging
+components can change their representative. `Reset()` restores singleton
+components for every current element while retaining storage.
 
 ## Source selection
 

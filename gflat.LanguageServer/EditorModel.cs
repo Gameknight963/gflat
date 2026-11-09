@@ -336,9 +336,14 @@ public sealed partial class EditorModel
     private static bool IsStatic(AstNode n) => n switch { MethodDeclaration m => m.IsStatic, FieldDeclaration f => f.IsStatic || f.IsConst, PropertyDeclaration p => p.Getter?.IsStatic ?? p.Setter?.IsStatic ?? false, EnumMemberDeclaration => true, _ => false };
     private static TokenKind Access(AstNode n) => n switch { MethodDeclaration m => m.Accessibility, ExternDeclaration e => e.Accessibility, FieldDeclaration f => f.Accessibility, PropertyDeclaration p => PropertyAccess(p), ClassDeclaration c => c.Accessibility, StructDeclaration s => s.Accessibility, InterfaceDeclaration i => i.Accessibility, EnumDeclaration e => e.Accessibility, ConstructorDeclaration c => c.Accessibility, _ => TokenKind.Public };
     private static TokenKind PropertyAccess(PropertyDeclaration property)
-        => new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>()
-            .Select(m => m.Accessibility).OrderByDescending(a => a == TokenKind.Public ? 2 : a == TokenKind.Private ? 0 : 1)
-            .FirstOrDefault(TokenKind.Private);
+    {
+        if (property.Getter == null) return property.Setter?.Accessibility ?? TokenKind.Private;
+        if (property.Setter == null) return property.Getter.Accessibility;
+        var getter = property.Getter.Accessibility;
+        var setter = property.Setter.Accessibility;
+        if (getter == TokenKind.Public || setter == TokenKind.Public) return TokenKind.Public;
+        return getter == TokenKind.Private ? setter : getter;
+    }
     private static (string? Name, int Kind, string Classification, TypeExpression? Type) Describe(AstNode node) => node switch
     {
         ClassDeclaration c => (c.SourceName, 7, "class", null),

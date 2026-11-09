@@ -5,6 +5,43 @@ namespace gflat.Tests;
 public sealed class NativeRecordImportTests
 {
     [Theory]
+    [InlineData("c", "int (*const Read)(int)")]
+    [InlineData("cpp", "int (*const Read)(int)")]
+    [InlineData("c", "const Callback Read")]
+    [InlineData("cpp", "const Callback Read")]
+    public void ConstCallbackFieldsCannotBeReplaced(string language, string field)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check([new SourceFile("const-callback.gf",
+            "#lang " + language + "\ntypedef int (*Callback)(int);\nstruct Callbacks { " + field + "; };\n" +
+            "int Twice(int value) { return value * 2; }\n#lang gflat\n" +
+            "void Change(Callbacks* callbacks) { callbacks.Read = &Twice; }")], options: Options()));
+        Assert.True(error.Description.Contains("readonly", StringComparison.OrdinalIgnoreCase), error.Description);
+    }
+
+    [Theory]
+    [InlineData("c", 0)]
+    [InlineData("c", 2)]
+    [InlineData("cpp", 0)]
+    [InlineData("cpp", 2)]
+    public void ConstCallbackFieldsAndParametersRemainCallable(string language, int optimization)
+    {
+        Run("#lang " + language + "\n" + """
+            int Twice(int value) { return value * 2; }
+            struct Callbacks { int (*const Read)(int); };
+            static struct Callbacks callbacks = { Twice };
+            struct Callbacks* GetCallbacks(void) { return &callbacks; }
+            int Invoke(int (*const callback)(int)) { return callback(21); }
+            #lang gflat
+            int main()
+            {
+                Callbacks* value = GetCallbacks()!;
+                if (Invoke(value.Read) != 42) return 1;
+                return (value.Read!)(21);
+            }
+            """, optimization);
+    }
+
+    [Theory]
     [InlineData("c", 0)]
     [InlineData("c", 2)]
     [InlineData("cpp", 0)]

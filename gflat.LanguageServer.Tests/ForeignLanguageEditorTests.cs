@@ -4,6 +4,23 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ForeignLanguageEditorTests
 {
+    [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
+    public void ConstNativeCallbackFieldsShowReadonlyTypes(string language)
+    {
+        string text = "#lang " + language + "\nstruct Callbacks { int (*const Read)(int); };\n" +
+            "#lang gflat\nint Call(Callbacks* value) => (value.Read!)(21);";
+        var source = new SourceFile(Path.GetFullPath("native-const-callback-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int field = text.LastIndexOf("Read", StringComparison.Ordinal);
+        string hover = JsonSerializer.Serialize(model.Hover(source.Path, field));
+        Assert.Contains("readonly", hover);
+        Assert.Contains("Read", hover);
+    }
+
     [Fact]
     public void InheritedNativeMethodsAppearInCompletionAndHovers()
     {

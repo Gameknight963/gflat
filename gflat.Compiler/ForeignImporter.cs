@@ -272,14 +272,16 @@ internal static partial class ForeignImporter
                         string? referred = Type(spelling[..^1], resolving, scope, allowRecord: true, allowOpaqueRecord: true);
                         return referred == null || referred == "void" ? null : "ref " + referred;
                     }
-                    var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?:const\s*)?\)\s*\((?<parameters>.*)\)$");
+                    var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?<constant>const\s*)?\)\s*\((?<parameters>.*)\)$");
                     if (callback.Success)
                     {
                         string? result = Type(callback.Groups["result"].Value, resolving, scope);
                         var parameters = SplitParameters(callback.Groups["parameters"].Value);
                         if (result == null || parameters == null) return null;
                         var types = parameters.Select(parameter => Type(parameter, resolving, scope)).ToArray();
-                        return types.Any(type => type == null) ? null : result + "(" + string.Join(", ", types) + ")*?";
+                        if (types.Any(type => type == null)) return null;
+                        string mapped = result + "(" + string.Join(", ", types) + ")*?";
+                        return callback.Groups["constant"].Success ? "readonly(" + mapped + ")" : mapped;
                     }
                     if (spelling.EndsWith("const", StringComparison.Ordinal) && spelling.Length > 5 &&
                         (char.IsWhiteSpace(spelling[^6]) || spelling[^6] == '*'))

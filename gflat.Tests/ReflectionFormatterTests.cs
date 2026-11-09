@@ -124,8 +124,7 @@ public sealed class ReflectionFormatterTests
     }
 
     private static IEnumerable<SourceFile> StandardSources()
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Standard"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)));
+        => StandardTestSources.Console;
 
     private static ExecutionResult Run(IEnumerable<SourceFile> sources, int optimization)
     {

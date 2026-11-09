@@ -13,8 +13,8 @@ public sealed class WindowsTcpClientTests
     internal static string ProjectPath => Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot,"libraries","platform","windows-network","WindowsNetwork.gfproj");
 
     internal static IEnumerable<SourceFile> SourceFiles(string client,string program)
-        => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Standard"),"*.gf",SearchOption.AllDirectories)
-            .Select(path=>new SourceFile(path,File.ReadAllText(path)))
+        => StandardTestSources.Combine(StandardTestSources.Net, StandardTestSources.Load(
+                "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "core/IO/byte_reader.gf"))
             .Append(new SourceFile(CopiedException,File.ReadAllText(CopiedException)))
             .Append(new SourceFile(CopiedClient,client))
             .Append(new SourceFile("windows-tcp-test.gf",program));

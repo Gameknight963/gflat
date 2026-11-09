@@ -5,12 +5,11 @@ namespace gflat.LanguageServer;
 public sealed partial class EditorModel
 {
     private readonly Dictionary<Token, Symbol> boundCallableReferences = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<Token, Symbol[]> boundCallableFamilies = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Lazy<Symbol[]>> deferredCallableFamilies = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Token> constructorArgumentLists = new(ReferenceEqualityComparer.Instance);
 
     private Symbol[]? CallableFamily(Token token)
-        => boundCallableFamilies.GetValueOrDefault(token) ?? deferredCallableFamilies.GetValueOrDefault(token)?.Value;
+        => deferredCallableFamilies.GetValueOrDefault(token)?.Value;
 
     private static int CallableNameBeforeParenthesis(Token[] tokens, int parenthesis)
     {
@@ -55,8 +54,6 @@ public sealed partial class EditorModel
                 var creationToken = creationIndex < creationTokens.Length &&
                     creationTokens[creationIndex].Start == syntax.Span.Start && creationTokens[creationIndex].Kind == TokenKind.New
                     ? creationTokens[creationIndex] : null;
-                Symbol[] creationFamily;
-                var nativeConstructors = checker.GetNativeConstructorCandidates(creation.Type);
                 Symbol? NativeConstructorSymbol(MethodDeclaration method)
                 {
                     if (SourceCallable(method) is not { } source) return null;
@@ -74,24 +71,23 @@ public sealed partial class EditorModel
                         BoundParameters = method.Parameters
                     };
                 }
-                if (nativeConstructors.Count > 0)
-                    creationFamily = nativeConstructors.Select(NativeConstructorSymbol).OfType<Symbol>().ToArray();
-                else if (creation.Type is NamedTypeExpression creationType &&
-                    (checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors) is { } constructors)
+                Symbol[] ConstructorFamily()
                 {
-                    creationFamily = constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
-                        ? sourceCtor with { Owner = checker.DisplayName(creationType.Name), BoundParameters = ctor.Parameters } : null)
-                        .OfType<Symbol>().Where(s => Accessible(s, creationPath, syntax.Span.Start)).ToArray();
-                }
-                else
-                {
+                    var nativeConstructors = checker.GetNativeConstructorCandidates(creation.Type);
+                    if (nativeConstructors.Count > 0)
+                        return nativeConstructors.Select(NativeConstructorSymbol).OfType<Symbol>().ToArray();
+                    if (creation.Type is NamedTypeExpression creationType &&
+                        (checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors) is { } constructors)
+                        return constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
+                            ? sourceCtor with { Owner = checker.DisplayName(creationType.Name), BoundParameters = ctor.Parameters } : null)
+                            .OfType<Symbol>().Where(s => Accessible(s, creationPath, syntax.Span.Start)).ToArray();
                     // Recover source names only when checked constructors are unavailable.
                     string? creationOwner = TypeOwner(creation.Type, creationPath, syntax.Span.Start);
-                    creationFamily = symbols.Where(s => s.Syntax.Node is ConstructorDeclaration { IsMove: false } && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
+                    return symbols.Where(s => s.Syntax.Node is ConstructorDeclaration { IsMove: false } && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
                 }
-                if (creationToken != null && creationFamily.Length > 0)
+                if (creationToken != null)
                 {
-                    boundCallableFamilies[creationToken] = creationFamily;
+                    deferredCallableFamilies[creationToken] = new(ConstructorFamily);
                     if (writtenCreationTypes.TryGetValue(creation, out var writtenType))
                         for (int index = TokenStartIndex(creationTokens, writtenType.Start + writtenType.Length);
                             index < creationTokens.Length && creationTokens[index].Start < syntax.Span.Start + syntax.Span.Length; index++)

@@ -6,6 +6,31 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ConstructorSignatureHelpTests
 {
     [Fact]
+    public void UninstantiatedGenericCreationRecoversSignaturesWhenQueried()
+    {
+        const string text = """
+            struct Box<T>
+            {
+                public Box(T value) {}
+                public Box(T value, int count) {}
+            }
+            Box<T> Make<T>(T initial) => new Box<T>(initial);
+            """;
+        var source = new SourceFile(Path.GetFullPath("generic-constructor-recovery.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        int argument = text.LastIndexOf("initial", StringComparison.Ordinal);
+        for (int query = 0; query < 2; query++)
+        {
+            var help = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, argument), Protocol.JsonOptions);
+            var signatures = help.GetProperty("signatures");
+            Assert.Equal(2, signatures.GetArrayLength());
+            Assert.All(signatures.EnumerateArray(), signature => Assert.Contains("T value", signature.GetProperty("label").GetString()));
+        }
+    }
+
+    [Fact]
     public void ActualNestedEnumeratorCreationFormsShareConcreteSignaturesAndKeepTypeTokens()
     {
         var sources = StandardTestSources.Values.ToList();

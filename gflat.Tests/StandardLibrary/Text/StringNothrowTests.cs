@@ -33,7 +33,9 @@ public class StringNothrowTests
             """));
         string failureChecks = string.Join("\n", types.Select((type, index) => $"if (text.TryParse{type.Item1}(&value{index}) || value{index} != ({type.Item2})0) return 12;"));
         string code = $$"""
-            using Standard; using Standard::Text;
+            using Standard;
+            using Standard::Text;
+
             int Probe(ref String text, immutable(String)* other) {
                 if (text.Length != 2 || text.Capacity < 2 || text.IsEmpty || text.Data[0] != '4') return 1;
                 if (text.ToCString() != text.Data || !text.Equals(other) || text.CompareTo(other) != 0) return 2;
@@ -57,8 +59,9 @@ public class StringNothrowTests
                 return 0;
             }
             """;
-        var sources = Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Standard/core"), "*.gf", SearchOption.AllDirectories)
-            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+        var sources = StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/Text/parsing.gf", "core/Text/integer_parsing.gf",
+                "core/Text/string_parsing.gf", "core/Text/string_integer_parsing.gf"))
             .Append(new SourceFile("main.gf", code));
         string ir = Compiler.Emit(sources);
         string body = Regex.Match(ir, @"(?ms)^define [^\r\n]*@gflat\$Probe\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;

@@ -98,7 +98,10 @@ public sealed class GenericExtensionOverloadTests
     {
         string first=predicateFirst?"if(!source.AsEnumerable().Any(&IsTwo)||calls!=2)return 1;calls=0;":"if(!source.AsEnumerable().Any()||calls!=0)return 1;";
         Run($$"""
-            using Standard; using Standard::Memory; using Standard::Queries;
+            using Standard;
+            using Standard::Memory;
+            using Standard::Queries;
+
             int calls=0;
             bool IsTwo(int value){calls++;return value==2;}
             bool Missing(int value){calls++;return false;}
@@ -140,7 +143,9 @@ public sealed class GenericExtensionOverloadTests
     private static void Run(string source,int optimization,bool standardLibrary=false)
     {
         if(!standardLibrary){AssertSuccess(CompilerTestHelper.Run(source,optimization));return;}
-        var files=StandardTestSources.Queries.Append(new SourceFile("generic-extension.gf",source));
+        var files=StandardTestSources.Combine(StandardTestSources.Values,
+            StandardTestSources.Load("core/Queries/enumerable_predicates.gf"))
+            .Append(new SourceFile("generic-extension.gf",source));
         AssertSuccess(CompilerTestHelper.Run(files,optimization));
     }
     private static void AssertSuccess(ExecutionResult result)

@@ -13,6 +13,9 @@ public sealed class UnicodeTranscodingTests
     public void BothDirectionsMatchStrictDotNetEncodingAndPreserveCapacityGuards(int optimization)
     {
         var texts = new List<string> { "", "\0", "a\0b", "hello", "\u007f\u0080\u07ff\u0800\uffff", "\ufeffabc", "\ud800\udc00\udbff\udfff" };
+        string ascii = new(Enumerable.Range(0, 128).Select(value => (char)value).ToArray());
+        texts.Add(ascii);
+        texts.Add(ascii + "\u0080\u0800\ud83d\ude00" + ascii);
         var random = new Random(7891);
         for (int sample = 0; sample < 24; sample++)
         {

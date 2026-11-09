@@ -10,6 +10,12 @@ public static class UnicodeTranscoding
         nuint required = 0;
         while (position < bytes)
         {
+            if ((byte)input[position] < (byte)128)
+            {
+                required++;
+                position++;
+                continue;
+            }
             uint scalar = 0u;
             nuint consumed = 0;
             if (!Standard::Text::Utf8::TryDecode(input + position, bytes - position, &scalar, &consumed))
@@ -29,6 +35,17 @@ public static class UnicodeTranscoding
         nuint maximum = (nuint)0 - (nuint)1;
         while (position < units)
         {
+            if (input[position] < (ushort)128)
+            {
+                if (required == maximum)
+                {
+                    bytes = 0;
+                    return false;
+                }
+                required++;
+                position++;
+                continue;
+            }
             uint scalar = 0u;
             nuint consumed = 0;
             if (!Standard::Text::Utf16::TryDecode(input + position, units - position, &scalar, &consumed))
@@ -53,6 +70,13 @@ public static class UnicodeTranscoding
         nuint produced = 0;
         while (position < bytes)
         {
+            byte first = (byte)input[position];
+            if (first < (byte)128)
+            {
+                output[produced++] = (ushort)first;
+                position++;
+                continue;
+            }
             uint scalar = 0u;
             nuint consumed = 0;
             nuint encoded = 0;
@@ -75,6 +99,13 @@ public static class UnicodeTranscoding
         nuint produced = 0;
         while (position < units)
         {
+            ushort first = input[position];
+            if (first < (ushort)128)
+            {
+                output[produced++] = (char)first;
+                position++;
+                continue;
+            }
             uint scalar = 0u;
             nuint consumed = 0;
             nuint encoded = 0;

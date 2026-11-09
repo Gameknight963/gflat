@@ -157,6 +157,25 @@ int main()
 Indexing returns a reference and checks bounds. `Data` exposes the underlying
 nullable pointer for direct access.
 
+Text spans provide `ToString()` to copy their counted bytes into an owning
+`String`, including embedded zeros. Empty spans return an empty string without
+allocating.
+
+```csharp
+using Standard::Memory;
+using Standard::Text;
+
+int main()
+{
+    char[3] buffer = ['a', '\0', 'b'];
+    Span<readonly(char)> view = new(buffer, 3);
+    String copy = view.ToString();
+    buffer[0] = 'z';
+    if (copy.Length != 3 || copy[0] != 'a' || copy[1] != '\0' || copy[2] != 'b') return 1;
+    return 0;
+}
+```
+
 Keep the storage owner alive while using a span. Mutations through another alias
 remain visible, and operations that relocate the owner invalidate its views.
 A string's byte view is `new Span<readonly(char)>(text.Data, text.Length)`.

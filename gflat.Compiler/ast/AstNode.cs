@@ -9,6 +9,7 @@ namespace gflat.ast
         public int Line { get; }
         public SourceSpan Span { get; set; }
         private List<AttributeNode>? attributes;
+        internal IReadOnlyList<AttributeNode>? AttributeStorage => attributes;
         public List<AttributeNode> Attributes
         {
             get => attributes ??= new();

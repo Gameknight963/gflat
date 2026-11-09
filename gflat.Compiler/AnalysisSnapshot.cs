@@ -118,7 +118,8 @@ public sealed class AnalysisSnapshot
                 .Where(p => p.GetIndexParameters().Length == 0 &&
                     (typeof(AstNode).IsAssignableFrom(p.PropertyType) || typeof(IEnumerable<AstNode>).IsAssignableFrom(p.PropertyType))).ToArray()))
             {
-                var value = property.GetValue(node);
+                // Traversal must not create empty attribute lists on otherwise untouched nodes.
+                var value = property.Name == nameof(AstNode.Attributes) ? node.AttributeStorage : property.GetValue(node);
                 if (value is AstNode child)
                 {
                     if (bodySources != null && property.Name == "Body" &&

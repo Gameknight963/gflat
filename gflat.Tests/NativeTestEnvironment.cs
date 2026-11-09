@@ -1,16 +1,9 @@
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace gflat.Tests;
 
 internal static class NativeTestEnvironment
 {
-    [DllImport("kernel32.dll")]
-    private static extern uint GetErrorMode();
-
-    [DllImport("kernel32.dll")]
-    private static extern uint SetErrorMode(uint mode);
-
     [ModuleInitializer]
     internal static void Initialize()
     {
@@ -26,17 +19,50 @@ internal static class NativeTestEnvironment
             Environment.SetEnvironmentVariable("TMPDIR", path);
         }
 
-        // Expected traps must terminate without waiting for Windows error UI.
-        // Child processes inherit this test host's mode. Set it once before
-        // parallel tests start, preserving existing flags.
-        if (OperatingSystem.IsWindows()) SetErrorMode(GetErrorMode() | 0x0001u | 0x0002u);
+        NativeTestFaultHandling.InitializeHost();
     }
 }
 
 public sealed class NativeTestEnvironmentTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void UnhandledWindowsFaultPreservesItsStatusWithoutErrorReporting(int optimization)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var result = CompilerTestHelper.Run("""
+            extern "C" bool __gflat_test_fault_handling_ready();
+            extern "C" void RaiseException(uint code, uint flags, uint count, void*? arguments) nothrow;
+            int main()
+            {
+                if (!__gflat_test_fault_handling_ready()) return 1;
+                RaiseException(0xE0000042u, 1u, 0u, null);
+                return 2;
+            }
+            """, optimization);
+        Assert.Equal(unchecked((int)0xE0000042), result.ExitCode);
+    }
+
     [Fact]
-    public void CompiledChildInheritsNoninteractiveWindowsFaultHandling()
+    public void GeneratedProgramInstallsFaultHandlingBeforeItsGlobalInitializers()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var result = CompilerTestHelper.Run("""
+            extern "C" bool __gflat_test_fault_handling_ready();
+            bool readyAtStartup = __gflat_test_fault_handling_ready();
+            int main()
+            {
+                if (!readyAtStartup) return 1;
+                if (!__gflat_test_fault_handling_ready()) return 2;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public void CompiledChildUsesNoninteractiveWindowsFaultHandling()
     {
         if (!OperatingSystem.IsWindows()) return;
         var result = CompilerTestHelper.Run("extern \"C\" uint GetErrorMode(); int main() { return (int)(GetErrorMode() & 3u); }");

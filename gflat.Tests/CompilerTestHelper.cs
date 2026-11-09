@@ -75,7 +75,8 @@ namespace gflat.Tests
             {
                 File.WriteAllText(llPath, ir);
 
-                ProcessResult compilation = NativeToolchain.Compile(llPath, exePath, optimizationLevel: optimizationLevel);
+                ProcessResult compilation = NativeToolchain.Compile(llPath, exePath, optimizationLevel: optimizationLevel,
+                    nativeLibraries: NativeTestFaultHandling.LinkInputs);
                 if (compilation.ExitCode != 0)
                     throw new Exception($"clang compilation failed: {compilation.StandardError}\nArtifacts: {tempDir}\nIR:\n{ir}");
                 ProcessResult execution = NativeToolchain.Run(exePath, []);

@@ -78,7 +78,7 @@ public sealed class SearchExampleTests
             Assert.Equal("Unable to read file.", missing.Error.TrimEnd('\r','\n'));
         }
         catch (Exception error) { error.Data["SearchExampleDirectory"] = directory; throw; }
-        Directory.Delete(directory, true);
+        await TestDirectoryCleanup.DeleteAsync(directory);
     }
 
     [Theory]

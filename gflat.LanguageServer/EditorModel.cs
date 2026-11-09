@@ -139,6 +139,8 @@ public sealed partial class EditorModel
         }
         sourceIndexTiming?.Dispose();
         var declarationIndexTiming = PipelineTimings.Measure("editor.index.declarations");
+        Syntax? previousParent = null;
+        Syntax[] previousParents = [];
         foreach (var entry in activeNodes)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -146,8 +148,16 @@ public sealed partial class EditorModel
             if (name == null) continue;
             ScopeEnvironment? containerScope = entry.Parent is { Node: CompilationUnit or NamespaceDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration } container &&
                 scopeEnvironments.TryGetValue(container, out var environment) ? environment : null;
-            var parents = containerScope != null && entry.Node is FieldDeclaration or PropertyDeclaration or ExternDeclaration or MethodDeclaration { StaticConstructorName: null }
-                ? [] : Parents(entry).ToArray();
+            Syntax[] parents = [];
+            if (!(containerScope != null && entry.Node is FieldDeclaration or PropertyDeclaration or ExternDeclaration or MethodDeclaration { StaticConstructorName: null }))
+            {
+                if (!ReferenceEquals(entry.Parent, previousParent))
+                {
+                    previousParent = entry.Parent;
+                    previousParents = Parents(entry).ToArray();
+                }
+                parents = previousParents;
+            }
             if (entry.Node is ConstructorDeclaration or MethodDeclaration { StaticConstructorName: not null })
             {
                 var containingType = parents.FirstOrDefault(parent => IsType(parent.Node));

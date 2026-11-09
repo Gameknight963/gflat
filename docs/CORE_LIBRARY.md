@@ -133,6 +133,7 @@ Slicing borrows a subrange:
 
 ```csharp
 using Standard;
+using Standard::Collections;
 using Standard::Memory;
 
 int main()
@@ -143,6 +144,9 @@ int main()
     tail[0] = 42;
     Span<readonly(int)> view = items.AsReadOnly();
     if (view[1] != 42) return 1;
+    Vector<int> copy = items.AsImmutable().ToVector();
+    copy[0] = 99;
+    if (copy.Count != 3 || items[0] != 10) return 2;
     return 0;
 }
 ```
@@ -156,6 +160,10 @@ int main()
 `AsSpan`, `AsReadOnly`, and `AsImmutable` create these views from a vector.
 Indexing returns a reference and checks bounds. `Data` exposes the underlying
 nullable pointer for direct access.
+
+`span.AsImmutable().ToVector()` copies elements into a new owning `Vector<T>`.
+Empty input does not allocate. Elements use their normal copy behavior. If a
+copy throws, the elements already constructed are destroyed.
 
 Text spans provide `ToString()` to copy their counted bytes into an owning
 `String`, including embedded zeros. Empty spans return an empty string without

@@ -2,6 +2,34 @@ namespace gflat.Tests;
 
 public sealed class PropertyFieldPrecedenceTests
 {
+    [Fact]
+    public void DerivedFieldHidesBaseProperty()
+    {
+        var result = CompilerTestHelper.Run("""
+            class Base
+            {
+                public int Value => 100;
+            }
+            class Reader : Base
+            {
+                private int Value;
+                public Reader(int initial) { Value = initial; }
+                public int Read() => (*this).Value;
+                public int* Address() => &Value;
+            }
+            int main()
+            {
+                Reader reader = new(42);
+                if (reader.Read() != 42) return 1;
+                if (*reader.Address() != 42) return 2;
+                Base* parent = &reader;
+                if (parent.Value != 100) return 3;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
     [Theory]
     [InlineData("class")]
     [InlineData("struct")]

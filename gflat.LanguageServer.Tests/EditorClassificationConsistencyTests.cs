@@ -75,6 +75,30 @@ public sealed class EditorClassificationConsistencyTests
         }
     }
 
+    [Fact]
+    public void DerivedFieldHidingBasePropertyKeepsFieldNavigation()
+    {
+        const string text = """
+            class Base { public int Value => 100; }
+            class Reader : Base
+            {
+                private int Value;
+                public Reader(int initial) { Value = initial; }
+                public int Read() => (*this).Value;
+            }
+            """;
+        var (model, source) = Analyze(text);
+        var declaration = model.Definition(source.Path, text.IndexOf("Value;", StringComparison.Ordinal));
+        Assert.NotNull(declaration);
+        foreach (int offset in new[] { text.IndexOf("Value = initial", StringComparison.Ordinal), text.LastIndexOf("Value", StringComparison.Ordinal) })
+        {
+            Assert.Equal("field", Classification(model, source, offset));
+            Assert.Equal(declaration, model.Definition(source.Path, offset));
+            var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, offset), Protocol.JsonOptions);
+            Assert.Contains("Reader.Value", hover.GetProperty("contents").GetProperty("value").GetString());
+        }
+    }
+
     private static string? Classification(EditorModel model, SourceFile source, int offset)
     {
         var data = JsonSerializer.SerializeToElement(model.SemanticTokens(source.Path), Protocol.JsonOptions)

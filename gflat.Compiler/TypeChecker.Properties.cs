@@ -207,6 +207,8 @@ public partial class TypeChecker
             for (ClassInfo? current = cls; current != null;
                 current = current.BaseClass != null ? _classes.GetValueOrDefault(current.BaseClass) : null)
             {
+                if (current.FieldDeclarationsByName.TryGetValue(name, out var field) &&
+                    current.FieldDeclarations.Contains(field)) return null;
                 var declared = current.AllMethods.Where(m => m.PropertyName == name).ToArray();
                 if (declared.Length == 0) continue;
                 getter = declared.FirstOrDefault(m => m.Name == "$get$" + name);

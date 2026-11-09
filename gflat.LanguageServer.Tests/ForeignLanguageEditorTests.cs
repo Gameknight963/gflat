@@ -5,6 +5,24 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ForeignLanguageEditorTests
 {
     [Theory]
+    [InlineData("c")]
+    [InlineData("cpp")]
+    public void NativeConstVoidResultsRetainReadonlyPointeesInSignatures(string language)
+    {
+        string text = "#lang " + language + "\nconst void* Read(void) { return 0; }\n" + """
+            #lang gflat
+            readonly(void)*? Use() => Read();
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-const-void-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Read(", StringComparison.Ordinal);
+        var signature = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + 5));
+        Assert.Equal("public readonly(void)*? Read()", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+    }
+
+    [Theory]
     [InlineData("c", "restrict")]
     [InlineData("cpp", "__restrict")]
     public void NativeRestrictedPointersExposeTheirPointeeQualifiers(string language, string qualifier)

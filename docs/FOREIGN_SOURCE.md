@@ -55,7 +55,8 @@ to supported scalars, imported records, or `void`. Native typedefs are resolved
 in imported signatures. They do not yet introduce aliases in host code.
 C++ namespaces and overloads with distinct imported parameter types are supported.
 Pointers are nullable and retain pointee `const`
-as `readonly`. Ownership and native lifetimes remain the caller's responsibility.
+as `readonly`, including `const void*`. Ownership and native lifetimes remain the
+caller's responsibility.
 Native `restrict`, `__restrict`, and `__restrict__` qualifiers do not add host
 pointer modifiers. Native aliasing requirements still apply.
 Trailing return declarations such as `auto Read() -> int` use their declared result type.

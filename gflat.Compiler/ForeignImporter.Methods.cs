@@ -25,7 +25,7 @@ internal static partial class ForeignImporter
             var contract = FunctionContract(child, shape.Qualifiers);
             string suffix = contract.Qualifiers;
             if (!Regex.IsMatch(suffix, @"^(?:const\s*)?(?:noexcept(?:\([^()]*\))?)?$")) continue;
-            string? result = type(shape.Result);
+            string? result = NormalizeVoidResult(type(shape.Result));
             if (result == null) continue;
             var parameters = child.TryGetProperty("inner", out var body)
                 ? body.EnumerateArray().Where(node => Text(node, "kind") == "ParmVarDecl").ToArray() : [];

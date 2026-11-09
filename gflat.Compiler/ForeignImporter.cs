@@ -330,7 +330,7 @@ internal static partial class ForeignImporter
                     var callback = Regex.Match(spelling, @"^(?<result>.+?)\s*\(\s*\*\s*(?<constant>const\s*)?\)\s*\((?<parameters>.*)\)$");
                     if (callback.Success)
                     {
-                        string? result = Type(callback.Groups["result"].Value, resolving, scope);
+                        string? result = NormalizeVoidResult(Type(callback.Groups["result"].Value, resolving, scope));
                         var parameters = SplitParameters(callback.Groups["parameters"].Value);
                         if (result == null || parameters == null) return null;
                         var types = parameters.Select(parameter => Type(parameter, resolving, scope)).ToArray();
@@ -389,7 +389,7 @@ internal static partial class ForeignImporter
                     if (primitive == null && allowRecord && records.TryGetValue(alias, out var record) &&
                         (allowOpaqueRecord || !opaqueRecords.Contains(record))) primitive = record;
                     if (primitive == null && enums.TryGetValue(alias, out var enumeration)) primitive = enumeration;
-                    return primitive == null ? null : readOnly && primitive != "void" ? "readonly(" + primitive + ")" : primitive;
+                    return primitive == null ? null : readOnly ? "readonly(" + primitive + ")" : primitive;
                 }
 
                 void Function(JsonElement function, string scope)
@@ -409,7 +409,7 @@ internal static partial class ForeignImporter
                         resultMetadata.EnumerateArray().Any(child => Text(child, "kind") == "BuiltinAttr"))
                         nativeResult = sizeType;
                     var contract = FunctionContract(function, shape.Qualifiers);
-                    string? result = Type(nativeResult, scope: scope, allowRecord: true);
+                    string? result = NormalizeVoidResult(Type(nativeResult, scope: scope, allowRecord: true));
                     if (result == null) return;
                     var parameters = function.TryGetProperty("inner", out var body)
                         ? body.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl").ToArray() : [];
@@ -503,6 +503,16 @@ internal static partial class ForeignImporter
                 }
             }
         }
+    }
+
+    private static string? NormalizeVoidResult(string? type)
+    {
+        // Pointee qualifiers must survive, but a qualified void result still
+        // returns no value in free functions, methods, and callbacks.
+        string? unqualified = type;
+        while (unqualified != null && unqualified.StartsWith("readonly(", StringComparison.Ordinal) && unqualified.EndsWith(')'))
+            unqualified = unqualified[9..^1];
+        return unqualified == "void" ? "void" : type;
     }
 
     private static (string Result, string Qualifiers)? FunctionShape(string signature)

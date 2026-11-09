@@ -30,7 +30,7 @@ public partial class LlvmEmitter
         TypeExpression type = _typeChecker.ResolveAlias(source);
         string key = _typeChecker.DisplayTypeName(type);
         if (_debugTypes.TryGetValue(key, out string? existing)) return existing;
-        if (type is NamedTypeExpression { Name: "void" }) return "null";
+        if (type is NamedTypeExpression { Name: "void" } && !type.IsReadOnlyValue) return "null";
         string id = DebugNode("!{}");
         _debugTypes[key] = id; // Publish before visiting fields of recursive types.
         string value;

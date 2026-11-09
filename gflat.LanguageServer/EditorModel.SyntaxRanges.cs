@@ -26,9 +26,17 @@ public sealed partial class EditorModel
 
         public SyntaxRangeIndex(Syntax[] syntax, IReadOnlyDictionary<Syntax, int> scopeEnds)
         {
-            entries = syntax.Select((node, order) => new Entry(node,
-                    scopeEnds.GetValueOrDefault(node, node.Span.Start + node.Span.Length), order))
-                .OrderBy(entry => entry.Syntax.Span.Start).ThenBy(entry => entry.Order).ToArray();
+            entries = new Entry[syntax.Length];
+            for (int index = 0; index < syntax.Length; index++)
+            {
+                var node = syntax[index];
+                entries[index] = new(node, scopeEnds.GetValueOrDefault(node, node.Span.Start + node.Span.Length), index);
+            }
+            Array.Sort(entries, static (left, right) =>
+            {
+                int start = left.Syntax.Span.Start.CompareTo(right.Syntax.Span.Start);
+                return start != 0 ? start : left.Order.CompareTo(right.Order);
+            });
             maximumEnds = new int[entries.Length];
             Build(0, entries.Length);
         }

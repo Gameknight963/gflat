@@ -88,12 +88,25 @@ public static class UnicodeText
     }
 
     public static Vector<ushort> ToUtf16(readonly(char)* input, nuint bytes)
+        => UnicodeText::ToUtf16Core(input, bytes, false);
+
+    // The owning buffer includes a final zero in Count, even for empty input.
+    public static Vector<ushort> ToUtf16CString(readonly(char)* input, nuint bytes)
+        => UnicodeText::ToUtf16Core(input, bytes, true);
+
+    private static Vector<ushort> ToUtf16Core(readonly(char)* input, nuint bytes, bool nullTerminate)
     {
         nuint required = 0;
         if (!UnicodeTranscoding::TryGetUtf16Length(input, bytes, ref required))
             throw new Exception("Invalid UTF-8 text");
+        nuint capacity = required;
+        if (nullTerminate)
+        {
+            if (capacity == (nuint)0 - (nuint)1) throw new Exception("UTF-16 C string length overflow");
+            capacity++;
+        }
         Vector<ushort> result = new();
-        result.Reserve(required);
+        result.Reserve(capacity);
         nuint position = 0;
         ushort[2] chunk;
         while (position < bytes)
@@ -104,6 +117,7 @@ public static class UnicodeText
             for (nuint i = 0; i < written; i++) result.Add(chunk[i]);
             position += consumed;
         }
+        if (nullTerminate) result.Add((ushort)0);
         return move result;
     }
 }

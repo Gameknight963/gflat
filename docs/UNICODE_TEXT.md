@@ -4,20 +4,23 @@
 Unicode whitespace predicates, and trimming.
 
 ```csharp
+using Standard::Collections;
 using Standard::Text;
 
 String UnicodeText::FromUtf16(readonly(ushort)* input, nuint units);
 Vector<ushort> UnicodeText::ToUtf16(readonly(char)* input, nuint bytes);
+Vector<ushort> UnicodeText::ToUtf16CString(readonly(char)* input, nuint bytes);
 ```
 
 | Operation | Result |
 | --- | --- |
 | `FromUtf16(input, units)` | UTF-8 String with its usual trailing NUL |
 | `ToUtf16(input, bytes)` | `Vector<ushort>` of counted UTF-16 units |
+| `ToUtf16CString(input, bytes)` | `Vector<ushort>` including a final zero unit |
 
-The UTF-16 vector omits a terminator. For a native API requiring one, append
-`(ushort)0` before borrowing its data. Embedded NUL and U+FEFF remain part of
-the counted contents in either direction.
+`ToUtf16` omits a terminator. `ToUtf16CString` includes the final zero in `Count`
+and allocates once, including for empty input. Embedded NUL and U+FEFF remain
+part of the counted contents in all conversions.
 
 ```csharp
 using Standard::Text;
@@ -86,5 +89,29 @@ The complete UTF-8 input is validated before allocating a result, including its
 untrimmed middle. Invalid encoding throws `Exception`. Classification uses
 [`Rune::IsWhiteSpace`](RUNE.md). The in-place `String.Trim` methods keep their
 byte-oriented behavior.
+
+## Native UTF-16 strings
+
+Keep the vector alive and its storage stable while native code retains `AsSpan().Data`.
+Embedded zeros remain in the buffer, so use a counted native API when the whole
+input must be preserved. Pass `Count - 1` when that API excludes the terminator.
+
+```csharp
+using Standard::Collections;
+using Standard::Text;
+
+int main()
+{
+    // UTF-8 for A, U+00E9, U+1F642.
+    char[7] input = ['A', (char)0xc3, (char)0xa9, (char)0xf0, (char)0x9f, (char)0x99, (char)0x82];
+    Vector<ushort> text = UnicodeText::ToUtf16CString(input, 7);
+    if (text.Count != 5 || text[4] != 0) return 1;
+    String roundTrip = UnicodeText::FromUtf16(text.AsSpan().Data!, text.Count - 1);
+    if (roundTrip.Length != 7) return 2;
+    for (nuint index = 0; index < 7; index++)
+        if (roundTrip.Data[index] != input[index]) return 3;
+    return 0;
+}
+```
 
 Source: `core/Text/UnicodeText.gf`

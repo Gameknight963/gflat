@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 
 namespace gflat.ast;
 
@@ -11,7 +13,7 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
     private static readonly Func<object, object> ShallowCopy =
         (Func<object, object>)typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!
             .CreateDelegate(typeof(Func<object, object>));
-    private static readonly ConcurrentDictionary<Type, FieldInfo[]> Fields = new();
+    private static readonly ConcurrentDictionary<Type, Action<object, object, SyntaxTreeCloner>> Copiers = new();
     private static readonly ConcurrentDictionary<Type, Func<int, IList>> ListConstructors = new();
     private static readonly MethodInfo CreateListMethod = typeof(SyntaxTreeCloner)
         .GetMethod(nameof(CreateList), BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -80,8 +82,7 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
             throw new NotSupportedException("Unsupported mutable syntax storage: " + type);
         object result = ShallowCopy(value);
         copies[value] = result;
-        foreach (var field in Fields.GetOrAdd(type, MutableFields))
-            if (field.GetValue(value) is { } child) field.SetValue(result, Copy(child));
+        Copiers.GetOrAdd(type, CreateCopier)(value, result, this);
         return result;
     }
 
@@ -92,6 +93,45 @@ internal sealed class SyntaxTreeCloner(CancellationToken cancellationToken, int 
         if (Nullable.GetUnderlyingType(type) is { } inner) return IsImmutable(inner);
         return type.IsPrimitive || type.IsEnum || type == typeof(decimal) || type == typeof(string) ||
             type == typeof(SourceSpan) || type == typeof(SourceId) || type == typeof(SourceFile) || type == typeof(Token);
+    }
+
+    private static Action<object, object, SyntaxTreeCloner> CreateCopier(Type type)
+    {
+        var fields = MutableFields(type);
+        if (!RuntimeFeature.IsDynamicCodeSupported)
+            return (source, target, cloner) =>
+            {
+                foreach (var field in fields)
+                    if (field.GetValue(source) is { } child) field.SetValue(target, cloner.Copy(child));
+            };
+
+        // Compile the field traversal once per syntax shape. Copy still owns graph
+        // identity, cancellation and collection handling on every recursive edge.
+        var method = new DynamicMethod("Copy_" + type.Name, typeof(void),
+            [typeof(object), typeof(object), typeof(SyntaxTreeCloner)], typeof(SyntaxTreeCloner), true);
+        var il = method.GetILGenerator();
+        var child = il.DeclareLocal(typeof(object));
+        var copy = typeof(SyntaxTreeCloner).GetMethod(nameof(Copy), BindingFlags.Instance | BindingFlags.NonPublic)!;
+        foreach (var field in fields)
+        {
+            var next = il.DefineLabel();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, field.DeclaringType!);
+            il.Emit(OpCodes.Ldfld, field);
+            il.Emit(OpCodes.Stloc, child);
+            il.Emit(OpCodes.Ldloc, child);
+            il.Emit(OpCodes.Brfalse, next);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Castclass, field.DeclaringType!);
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Ldloc, child);
+            il.Emit(OpCodes.Call, copy);
+            il.Emit(OpCodes.Castclass, field.FieldType);
+            il.Emit(OpCodes.Stfld, field);
+            il.MarkLabel(next);
+        }
+        il.Emit(OpCodes.Ret);
+        return method.CreateDelegate<Action<object, object, SyntaxTreeCloner>>();
     }
 
     private static FieldInfo[] MutableFields(Type type)

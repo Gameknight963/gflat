@@ -617,6 +617,7 @@ its contracts, then the relevant algorithm files:
 | `Collections/default_ordering.gf` | IComparable overloads, with Comparer and IComparable |
 | `Collections/default_equality.gf` | IEquatable overloads, with EqualityComparer and IEquatable |
 | `Collections/stable_sort.gf` | StableSort, with Vector dependencies |
+| `Collections/in_place_merge.gf` | InPlaceMerge, with span_algorithms |
 | `Collections/nth_element.gf` | NthElement |
 | `Collections/span_permutations.gf` | NextPermutation and PreviousPermutation |
 | `Collections/span_shuffle.gf` | Shuffle, with PseudoRandom |

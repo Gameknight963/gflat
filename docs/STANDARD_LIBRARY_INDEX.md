@@ -118,6 +118,7 @@ Core types and algorithms are grouped below. For ownership examples, see
 | `NthElement<T>(span, nth, compare)` | [Selecting an element by rank](NTH_ELEMENT.md) |
 | `PartialSort<T>(span, count[, compare])` | [Sort the smallest prefix](PARTIAL_SORT.md) |
 | `MergeSorted<T>(first, second[, compare])` | [Merge sorted spans into an owning vector](MERGE_SORTED.md) |
+| `InPlaceMerge<T>(span, middle[, compare])` | [Merge adjacent sorted ranges without allocation](IN_PLACE_MERGE.md) |
 | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Enumeration and queries](../Standard/core/Queries/README.md) |
 | Indexed `TakeWhile`, `SkipWhile` | [Select a prefix with source indices](QUERY_INDEXED_WHILE.md) |
 | Owning query `Chunk` | [Enumerate owning chunks](QUERY_CHUNK.md) |

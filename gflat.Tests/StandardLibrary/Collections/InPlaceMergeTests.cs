@@ -100,6 +100,14 @@ public sealed class InPlaceMergeTests
             int live = 0;
             int comparisons = 0;
             int budget = -1;
+            int allocations = 0;
+            extern "C" void*? malloc(nuint bytes);
+            extern "C" void free(void* storage);
+            namespace Memory
+            {
+                public replace void*? Allocate(nuint bytes) { allocations++; return malloc(bytes); }
+                public replace void Free(void* storage) nothrow => free(storage);
+            }
             struct Owner
             {
                 public int Key;
@@ -124,11 +132,13 @@ public sealed class InPlaceMergeTests
                     new Owner(1), new Owner(3), new Owner(5), new Owner(7)];
                 budget = limit;
                 comparisons = 0;
+                int beforeAllocations = allocations;
                 bool caught = false;
                 try { InPlaceMerge<Owner>(new Span<Owner>(data, 8), 4, Compare); }
                 catch (Exception* error) { caught = true; if (error.GetCode() != 77) return 1; }
                 budget = -1;
                 if (caught != (limit >= 0) || live != 8) return 2;
+                if (!caught && allocations != beforeAllocations) return 6;
                 int[8] seen = [0, 0, 0, 0, 0, 0, 0, 0];
                 for (nuint index = 0; index < 8; index++)
                 {

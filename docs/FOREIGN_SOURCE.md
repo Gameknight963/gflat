@@ -117,7 +117,8 @@ not imported yet.
 This representation requires trivial construction, copying, and destruction.
 Records with private fields, bases, virtual members, explicit constructors or
 destructors, bitfields, arrays, nested record fields, or layout attributes are
-exposed through opaque native pointers instead. Anonymous typedef records are not imported yet. Record arguments
+exposed as opaque native types instead. Their value support is described below.
+Anonymous typedef records are not imported yet. Record arguments
 and results passed by value use compiler-generated native bridges. Native calls
 receive independent copies, and a throwing call does not publish a partial
 record result. By-value records in callback signatures are not supported.
@@ -140,8 +141,7 @@ and destruction functions. A complete definition in the native translation unit 
 the layout and the supported members instead.
 
 Unions are always opaque. Pass their pointers or borrowed references to native
-functions to read or change the active member. Host field access and copying
-unions by value are not supported.
+functions to read or change the active member. Host field access is not supported.
 
 For a C++ class with a supported public constructor, `new* Type(arguments)` uses
 C++ allocation and construction. `delete pointer` invokes C++ deletion when the
@@ -152,16 +152,31 @@ can own these objects, including early destruction through `Reset()`.
 Public copy constructors declared in the C++ source can also be called with
 `new* Type(ref *source)`. This creates a separate native allocation. The source
 and the new object have independent lifetimes and must be destroyed separately.
+Implicit copy constructors and rvalue-reference constructors are not exposed as
+`new*` overloads. Host value copying uses the native copy constructor independently
+of that allocation API.
 
 Use the matching native destruction API for library-owned objects. A factory
 result is not automatically an owning allocation suitable for `delete`.
 Keep borrowed pointers within the native object's lifetime. Classes with private
 constructors or destructors still require their native factory/release API.
 
-Opaque objects cannot be constructed as host values, copied, assigned as whole
-objects, relocated with `move`, or allocated through a host garbage collector.
-These restrictions also apply through aliases, fields, parameters, and arrays.
-Placement construction and explicit native destructor calls are not imported yet.
+Complete opaque types can be used as host values when Clang confirms nonthrowing
+native move construction (or a nonthrowing copy fallback) and nonthrowing
+destruction. Their storage uses the native size and alignment, including inside
+host structs and arrays. Native fields remain opaque.
+
+Initialize a value with `new Type(arguments)`. Ordinary copies use the native copy
+constructor when accessible. Deleted or inaccessible copies are rejected.
+`move` constructs the destination through the native operation and destroys the
+consumed source. Scope exit destroys the resulting owner. Constructor and copy
+failures leave completed owners subject to normal cleanup. `default(Type)` does
+not construct a native object and is rejected.
+
+Supported values also permit raw placement construction and explicit destruction
+through pointers. The caller supplies aligned storage and manages its lifetime.
+Types without the required lifetime operations remain usable through native
+pointers and borrowed references. Native objects cannot use managed allocation.
 
 ```gflat
 #lang cpp
@@ -176,9 +191,8 @@ namespace Native {
 #lang gflat
 int main()
 {
-    Native::Counter* counter = new* Native::Counter(42);
+    Native::Counter counter = new Native::Counter(42);
     int value = counter.Read();
-    delete counter;
     return value - 42;
 }
 ```
@@ -189,7 +203,7 @@ calling through a base interface. This does not change host-defined class ABIs.
 
 The following are also not imported yet:
 
-- Native reference results, implicit copy constructors, and move constructors
+- Native reference results and rvalue-reference parameters
 - Templates, default arguments, globals, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

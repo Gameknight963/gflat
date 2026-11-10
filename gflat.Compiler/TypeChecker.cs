@@ -1388,6 +1388,8 @@ namespace gflat
             }
             if (resolved is ManagedTypeExpression managed)
             {
+                if (NativeOpaqueLayout(managed.Inner) != null)
+                    throw new TypeCheckException("Native objects require native construction and destruction and cannot use managed allocation", line);
                 RejectNativeOpaqueValue(managed.Inner, line);
                 if (ContainsReflectionValue(ResolveAlias(managed.Inner)))
                     throw new TypeCheckException("reflection values have no runtime address", line);

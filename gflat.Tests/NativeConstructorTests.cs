@@ -94,7 +94,7 @@ public sealed class NativeConstructorTests
         string document = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Guides", "FOREIGN_SOURCE.md"));
         string code = System.Text.RegularExpressions.Regex.Matches(document, @"```gflat\r?\n(.*?)```",
             System.Text.RegularExpressions.RegexOptions.Singleline).Cast<System.Text.RegularExpressions.Match>()
-            .Select(match => match.Groups[1].Value).Single(example => example.Contains("new* Native::Counter", StringComparison.Ordinal));
+            .Select(match => match.Groups[1].Value).Single(example => example.Contains("new Native::Counter", StringComparison.Ordinal));
         Run(code, 2, expectedExitCode: 0);
     }
 

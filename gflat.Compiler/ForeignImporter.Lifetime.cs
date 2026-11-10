@@ -5,8 +5,9 @@ namespace gflat;
 
 internal static partial class ForeignImporter
 {
-    private enum CallableRole { Member, Construction, Destruction }
-    private sealed record NativeConstructor(string Symbol, string[] Parameters, string[] NativeParameters, string[] ParameterNames);
+    private enum CallableRole { Member, Construction, Destruction, ValueMember }
+    private sealed record NativeConstructor(string Symbol, string[] Parameters, string[] NativeParameters, string[] ParameterNames,
+        bool IsNoThrow = false);
 
     private static IEnumerable<NativeConstructor> RecordConstructors(JsonElement record, Func<string, string?> type)
     {
@@ -32,7 +33,9 @@ internal static partial class ForeignImporter
                 .Select(parameter => Text(parameter, "desugaredQualType", Text(parameter, "qualType"))).ToArray();
             var mapped = native.Select(type).ToArray();
             if (mapped.Any(parameter => parameter == null)) continue;
-            constructors.Add(new(Text(child, "mangledName"), mapped.Select(parameter => parameter!).ToArray(), native, ParameterNames(parameters)));
+            string signature = Text(child.GetProperty("type"), "qualType");
+            bool noThrow = FunctionContract(child, FunctionShape(signature)?.Qualifiers ?? "").IsNoThrow;
+            constructors.Add(new(Text(child, "mangledName"), mapped.Select(parameter => parameter!).ToArray(), native, ParameterNames(parameters), noThrow));
         }
         if (!explicitConstructor && constructors.All(constructor => constructor.Parameters.Length != 0) &&
             !record.GetProperty("inner").EnumerateArray().Any(child => Text(child, "kind") == "CXXDestructorDecl" && IsDeletedNativeMember(child)) &&

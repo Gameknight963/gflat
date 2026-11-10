@@ -152,6 +152,17 @@ internal static partial class ForeignImporter
                     .Select(item => ImportRecord(item.Node, item.Scope, layouts,
                     spelling => Type(spelling, scope: item.Scope)) ?? ImportOpaqueRecord(item.Node, item.Scope, layouts))
                     .OfType<ImportedRecord>().ToArray();
+                if (group.Key == "cpp")
+                {
+                    var traits = ReadNativeValueTraits(importedRecords, source.ToString(), directory, compiler, arguments,
+                        group.First().Span, cancellation);
+                    for (int recordIndex = 0; recordIndex < importedRecords.Length; recordIndex++)
+                    {
+                        var record = importedRecords[recordIndex];
+                        if (record.OpaqueLayout is { } layout && traits.TryGetValue(record.Qualified, out var valueTraits))
+                            importedRecords[recordIndex] = record with { OpaqueLayout = layout with { Values = valueTraits } };
+                    }
+                }
                 foreach (var record in importedRecords)
                 {
                     records[record.Qualified] = record.Type;
@@ -201,9 +212,25 @@ internal static partial class ForeignImporter
                             declarations.Add(new(key, declaration, Owner: qualified));
                         }
                         if (!opaqueRecords.Contains(receiver)) continue;
+                        var nativeTraits = state.Records[qualified].NativeOpaqueLayout?.Values;
+                        var constructors = RecordConstructors(node, spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true))
+                            .Where(constructor => constructor.Parameters.Length != 0 || nativeTraits?.CanDefault != false)
+                            .Select(constructor => constructor.Parameters.Length == 0 && nativeTraits != null
+                                ? constructor with { IsNoThrow = nativeTraits.DefaultNoThrow } : constructor).ToArray();
+                        if (nativeTraits is { SupportsValues: true } traits)
+                            foreach (var valueMember in NativeValueMembers(qualified, receiver, Text(node, "tagUsed"), traits,
+                                constructors,
+                                recordTypes, () => "__gflat_foreign_" + identity + "_" + index++))
+                            {
+                                string key = qualified + "::" + valueMember.Key;
+                                if (!importedSymbols.TryAdd(key, key)) continue;
+                                bridges.Add(valueMember.Entry, valueMember.Native);
+                                AddDeclaration(key, valueMember.Declaration, owner: qualified, role: CallableRole.ValueMember);
+                                declarations.Add(new(key, valueMember.Declaration, Owner: qualified, Role: CallableRole.ValueMember));
+                            }
                         string ownerIdentity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(qualified)))[..24];
                         string constructorFactory = "__gflat_native_construct_" + ownerIdentity;
-                        foreach (var constructor in RecordConstructors(node, spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true)))
+                        foreach (var constructor in constructors)
                         {
                             string key = qualified + "::.constructor(" + string.Join(",", constructor.Parameters) + ")";
                             if (importedSymbols.ContainsKey(key)) continue;
@@ -480,11 +507,18 @@ internal static partial class ForeignImporter
             if (localScope != null) unit.ForeignLocalNamespaces[rootSource] = localNamespace;
             if (isRecord)
             {
-                string signature = declaration + "\n" + opaqueLayout;
+                string signature = declaration + "\n" + (opaqueLayout is null ? null : opaqueLayout with { Values = null });
                 if (recordDeclarations.TryGetValue(qualified, out string? previous))
                 {
                     if (previous != signature)
                         throw new TypeCheckException("Foreign records have conflicting imported definitions: " + qualified, segments[0].Span);
+                    if (opaqueLayout?.Values is { } values)
+                    {
+                        var existing = state.Records[qualified];
+                        if (existing.NativeOpaqueLayout?.Values is { } previousValues && previousValues != values)
+                            throw new TypeCheckException("Foreign records have conflicting native lifetimes: " + qualified, segments[0].Span);
+                        existing.NativeOpaqueLayout = opaqueLayout;
+                    }
                     return;
                 }
                 recordDeclarations.Add(qualified, signature);
@@ -494,6 +528,11 @@ internal static partial class ForeignImporter
             Mark(imported.Namespaces);
             foreach (var member in imported.Members)
             {
+                if (owner != null && role == CallableRole.ValueMember && member is StructDeclaration wrapper)
+                {
+                    state.Records[owner].Members.AddRange(wrapper.Members);
+                    continue;
+                }
                 if (owner != null && member is MethodDeclaration method)
                 {
                     if (role == CallableRole.Member) { state.Records[owner].Members.Add(member); continue; }

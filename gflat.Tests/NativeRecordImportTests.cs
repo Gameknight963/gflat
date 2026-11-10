@@ -155,13 +155,13 @@ public sealed class NativeRecordImportTests
     [InlineData("struct Data { Data() {} int value; };")]
     [InlineData("class Data { int value; };")]
     [InlineData("struct Data { virtual int Read() { return 42; } int value; };")]
-    public void UnsupportedLayoutsAndLifetimesCannotBeMaterializedAsHostValues(string declaration)
+    public void OpaqueNativeRecordsRequireConstructionInsteadOfZeroDefaults(string declaration)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(
             "#lang cpp\n" + declaration + "\n#lang gflat\nint main() { Data value = default(Data); return 0; }",
             options: Options()));
         Assert.Contains("Data", error.Description);
-        Assert.Contains("pointer-only", error.Description);
+        Assert.Contains("default", error.Description);
     }
 
     private static CompilationOptions Options() => new()

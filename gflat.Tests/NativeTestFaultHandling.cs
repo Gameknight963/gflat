@@ -72,7 +72,7 @@ internal static class NativeTestFaultHandling
             unreachable
         }
 
-        define internal void @gflat_test_fault_initialize() {
+        define void @gflat_test_fault_initialize() {
             %mode = call i32 @GetErrorMode()
             %quiet = or i32 %mode, 3
             %old_mode = call i32 @SetErrorMode(i32 %quiet)

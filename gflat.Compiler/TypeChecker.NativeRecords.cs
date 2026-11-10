@@ -74,7 +74,7 @@ public partial class TypeChecker
         if (!hasNativeOpaqueRecords) return;
         type = ResolveAlias(type);
         while (type is ArrayTypeExpression array) type = ResolveAlias(array.ElementType);
-        if (NativeOpaqueLayout(type) != null)
+        if (NativeOpaqueLayout(type) is { } native && native.Values?.SupportsValues != true)
             throw new TypeCheckException($"Native type '{DisplayTypeName(type)}' is pointer-only. Construct, copy, and destroy it in native code", line);
     }
 }

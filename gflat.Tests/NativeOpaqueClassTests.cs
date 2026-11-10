@@ -367,30 +367,42 @@ public sealed class NativeOpaqueClassTests
     }
 
     [Theory]
-    [InlineData("Native::Widget value;")]
-    [InlineData("Native::Widget copy = *value;")]
-    [InlineData("Native::Widget copy = default(Native::Widget);")]
-    [InlineData("Native::Widget created = new Native::Widget(42);")]
-    [InlineData("Native::Widget[2] values;")]
-    [InlineData("*value = *value;")]
-    [InlineData("move *value;")]
-    [InlineData("value.~Native::Widget();")]
-    [InlineData("Native::Widget^? tracked = null;")]
-    public void NativeLifetimesCannotBeBypassedByHostValueOperations(string statement)
+    [InlineData("Native::Widget copy = default(Native::Widget);", "default")]
+    [InlineData("Native::Widget[2] values;", "destructor-bearing")]
+    [InlineData("Native::Widget^? tracked = null;", "cannot use managed allocation")]
+    public void NativeLifetimesCannotBeBypassedByUninitializedStorageOrManagedAllocation(string statement, string diagnostic)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Native +
             "void Invalid(Native::Widget* value) { " + statement + " }", options: Options()));
-        Assert.Contains("pointer-only", error.Description);
+        Assert.Contains(diagnostic, error.Description);
     }
 
     [Theory]
     [InlineData("void Invalid(Native::Widget value) {}")]
-    [InlineData("Native::Widget Invalid() { return default; }")]
     [InlineData("struct Container { public Native::Widget value; }")]
-    public void NativeTypesRequireIndirectionInHostDeclarations(string declaration)
+    public void NativeTypesCanAppearInHostValueDeclarations(string declaration)
     {
-        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Native + declaration, options: Options()));
-        Assert.Contains("pointer-only", error.Description);
+        _ = Compiler.Check(Native + declaration, options: Options());
+    }
+
+    [Fact]
+    public void NativeValueResultsCannotBeCreatedByImplicitZeroInitialization()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Native +
+            "Native::Widget Invalid() { return default; }", options: Options()));
+        Assert.Contains("default", error.Description);
+    }
+
+    [Theory]
+    [InlineData("Native::Widget value;")]
+    [InlineData("Native::Widget copy = *value;")]
+    [InlineData("Native::Widget created = new Native::Widget(42);")]
+    [InlineData("*value = *value;")]
+    [InlineData("move *value;")]
+    [InlineData("value.~Native::Widget();")]
+    public void NativeValueOperationsResolveNativeLifetimeMembers(string statement)
+    {
+        _ = Compiler.Check(Native + "void Use(Native::Widget* value) { " + statement + " }", options: Options());
     }
 
     [Theory]

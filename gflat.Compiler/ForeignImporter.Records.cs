@@ -7,7 +7,8 @@ namespace gflat;
 internal static partial class ForeignImporter
 {
     private sealed record RecordLayout(int Size, int Alignment, int[] Offsets);
-    private sealed record ImportedRecord(string Qualified, string Type, string Declaration, NativeRecordLayout? OpaqueLayout = null);
+    private sealed record ImportedRecord(string Qualified, string Type, string Declaration, NativeRecordLayout? OpaqueLayout = null,
+        string Tag = "struct");
 
     private static ImportedRecord? ImportOpaqueRecord(JsonElement node, string scope, IReadOnlyDictionary<string, RecordLayout> layouts)
     {
@@ -27,7 +28,7 @@ internal static partial class ForeignImporter
         string declaration = "public struct @" + name + " { }";
         if (scope.Length != 0) declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) +
             " { " + declaration + " }";
-        return new(qualified, type, declaration, native);
+        return new(qualified, type, declaration, native, Text(node, "tagUsed"));
     }
 
     private static Dictionary<string, RecordLayout> ReadRecordLayouts(string output, out string json)

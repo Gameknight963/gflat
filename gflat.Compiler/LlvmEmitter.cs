@@ -1670,7 +1670,8 @@ public partial class LlvmEmitter : IVisitor
     {
         if (node.IsGeneric) return;
         if (node.NativeOpaqueLayout is { } native)
-            EmitGlobal(native.Size is { } size ? $"%{node.Name} = type {{ [{size} x i8] }}" : $"%{node.Name} = type opaque");
+            EmitGlobal(native.Size is { } size ?
+                $"%{node.Name} = type {{ [0 x <{native.Alignment} x i8>], [{size} x i8] }}" : $"%{node.Name} = type opaque");
         else
         {
             string fields = string.Join(", ", node.Members
@@ -4179,7 +4180,8 @@ public partial class LlvmEmitter : IVisitor
         if (type is NamedTypeExpression named)
         {
             if (_typeChecker.GetStructByIdentity(named.Name) is TypeChecker.StructInfo str)
-                return "{ " + string.Join(", ", str.Fields.Select(f => $"{EmitType(f.Type)} {GetDefaultValue(f.Type)}")) + " }";
+                return str.Declaration?.NativeOpaqueLayout != null ? "zeroinitializer" :
+                    "{ " + string.Join(", ", str.Fields.Select(f => $"{EmitType(f.Type)} {GetDefaultValue(f.Type)}")) + " }";
             if (_typeChecker.GetClassByIdentity(named.Name) is TypeChecker.ClassInfo cls)
             {
                 var fields = new List<string> { $"i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**)" };

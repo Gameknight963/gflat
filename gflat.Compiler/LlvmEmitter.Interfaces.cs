@@ -19,11 +19,46 @@ public partial class LlvmEmitter
                 entries.Add($"i8* bitcast ({EmitFunctionReturnType(method.ReturnType)} ({string.Join(", ", parameters)})* @{name} to i8*)");
             }
             entries.Add(EmitInterfaceDestructorEntry(implementation.Primitive));
+            AppendRequiredInterfaceTables(implementation.Primitive, implementation.Interface, entries);
             EmitGlobal($"@{implementation.Primitive}${implementation.Interface.Name}$vtable = internal constant [{entries.Count} x i8*] [ {string.Join(", ", entries)} ]");
         }
     }
 
     private readonly HashSet<string> _interfaceDestructors = new();
+
+    private static int InterfaceTableSize(TypeChecker.InterfaceInfo contract)
+        => contract.Methods.Count + 1 + contract.RequiredInterfaces.Count;
+
+    private void AppendRequiredInterfaceTables(string owner, TypeChecker.InterfaceInfo contract, List<string> entries)
+    {
+        foreach (string required in contract.RequiredInterfaces)
+            entries.Add($"i8* bitcast ([{InterfaceTableSize(_typeChecker.GetInterface(required)!)} x i8*]* @{owner}${required}$vtable to i8*)");
+    }
+
+    private string EmitRequiredInterfaceConversion(string value, string source, string target)
+    {
+        var contract = _typeChecker.GetInterface(source)!;
+        int index = contract.RequiredInterfaces.IndexOf(target);
+        if (index < 0) throw new InvalidOperationException("Missing required interface conversion");
+        string table = NewTemp(), present = NewTemp();
+        string convert = NewLabel("interface_convert"), empty = NewLabel("interface_empty"), ready = NewLabel("interface_ready");
+        Emit($"    {table} = extractvalue {{ i8*, i8** }} {value}, 1");
+        Emit($"    {present} = icmp ne i8** {table}, null");
+        Emit($"    br i1 {present}, label %{convert}, label %{empty}");
+        Emit(convert + ":");
+        string slot = NewTemp(), raw = NewTemp(), required = NewTemp(), converted = NewTemp();
+        Emit($"    {slot} = getelementptr i8*, i8** {table}, i32 {contract.Methods.Count + 1 + index}");
+        Emit($"    {raw} = load i8*, i8** {slot}");
+        Emit($"    {required} = bitcast i8* {raw} to i8**");
+        Emit($"    {converted} = insertvalue {{ i8*, i8** }} {value}, i8** {required}, 1");
+        Emit($"    br label %{ready}");
+        Emit(empty + ":");
+        Emit($"    br label %{ready}");
+        Emit(ready + ":");
+        string result = NewTemp();
+        Emit($"    {result} = phi {{ i8*, i8** }} [ {converted}, %{convert} ], [ zeroinitializer, %{empty} ]");
+        return result;
+    }
 
     private string EmitInterfaceDestructorEntry(string owner)
     {

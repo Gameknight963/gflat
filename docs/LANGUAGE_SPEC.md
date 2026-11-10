@@ -1022,6 +1022,38 @@ Fixed-size arrays with destructor-bearing elements clean up from the last elemen
 
 Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are G♭ layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests. Use pointers and primitive C interfaces for interoperation.
 
+## Interface requirements
+
+An interface lists required interfaces after `:`. It must explicitly declare
+every required method and property accessor with a compatible signature,
+receiver qualifier, and `nothrow` contract. Requirements do not insert members.
+Missing or incompatible declarations are errors even when no type implements
+the interface.
+
+```csharp
+interface IReader
+{
+    int Read();
+}
+
+interface ISeekableReader : IReader
+{
+    int Read();
+    void Seek(nuint offset);
+}
+```
+
+A struct or class implementing `ISeekableReader` also implements `IReader`.
+An `ISeekableReader*` converts to `IReader*` while retaining the same object.
+Method declaration order may differ. Nullable and readonly restrictions remain
+in effect. Requirements can be generic and transitive, and diamonds share the
+same required contract. Cycles and duplicate direct requirements are errors.
+
+Static interfaces can require other static contracts and must redeclare their
+members as well. Primitive implementations supply required interfaces through
+the same methods. A second implementation of the same primitive contract,
+including one supplied through a requirement, is an error.
+
 ## Static classes and provider contracts
 
 Static classes are closed declaration scopes: their methods and properties must be static, and they cannot be constructed, inherited from, or used as instance types (including pointers). Nested types remain ordinary types. Static classes may be generic, and a closed specialization can be named with an alias. They emit no instance layout, vtable, instance constructor, or destructor. Static fields and a parameterless static constructor are supported.

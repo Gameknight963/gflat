@@ -964,6 +964,12 @@ public partial class LlvmEmitter : IVisitor
 
         if (srcLlvm == dstLlvm)
         {
+            var sourceInner = srcType switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => null };
+            var targetInner = dstType switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => null };
+            if (srcLlvm == "{ i8*, i8** }" && sourceInner is NamedTypeExpression sourceContract &&
+                targetInner is NamedTypeExpression targetContract && sourceContract.Name != targetContract.Name &&
+                _typeChecker.IsInterface(sourceContract.Name) && _typeChecker.IsInterface(targetContract.Name))
+                return val == "zeroinitializer" ? val : EmitRequiredInterfaceConversion(val, sourceContract.Name, targetContract.Name);
             return val;
         }
 
@@ -985,6 +991,8 @@ public partial class LlvmEmitter : IVisitor
                     {
                         return val;
                     }
+                    if (_typeChecker.IsInterface(srcNamedStruct.Name))
+                        return EmitRequiredInterfaceConversion(val, srcNamedStruct.Name, dstNamedIface.Name);
 
                     string dataPtr = NewTemp();
                     Emit($"    {dataPtr} = bitcast {srcLlvm} {val} to i8*");
@@ -994,7 +1002,7 @@ public partial class LlvmEmitter : IVisitor
 
                     string vtableGlobal = $"@{srcNamedStruct.Name}${dstNamedIface.Name}$vtable";
                     TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(dstNamedIface.Name);
-                    int methodCount = (ifaceInfo?.Methods.Count ?? 0) + 1;
+                    int methodCount = InterfaceTableSize(ifaceInfo!);
                     string vtablePtr = NewTemp();
                     if (methodCount > 0)
                     {
@@ -1255,6 +1263,7 @@ public partial class LlvmEmitter : IVisitor
                         entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
                     }
                     entries.Add(EmitInterfaceDestructorEntry(node.Name));
+                    AppendRequiredInterfaceTables(node.Name, ifaceInfo, entries);
                     EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{entries.Count} x i8*] [ {string.Join(", ", entries)} ]");
                 }
             }
@@ -1708,6 +1717,7 @@ public partial class LlvmEmitter : IVisitor
                         entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
                     }
                     entries.Add(EmitInterfaceDestructorEntry(node.Name));
+                    AppendRequiredInterfaceTables(node.Name, ifaceInfo, entries);
                     string vtableContent = string.Join(", ", entries);
                     EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{entries.Count} x i8*] [ {vtableContent} ]");
                 }

@@ -113,7 +113,8 @@ namespace gflat.ast
             return new InterfaceDeclaration(name, declaration.Members.Select(scope.CloneNode).ToList(),
                 declaration.Accessibility, declaration.Line, declaration.IsStatic,
                 scope.CloneGenericParameters(declaration.Name, declaration.GenericParameters, isTypeDeclaration: true))
-            { Span = declaration.Span, Attributes = scope.CloneAttributes(declaration) };
+            { Span = declaration.Span, Attributes = scope.CloneAttributes(declaration),
+                RequiredInterfaces = declaration.RequiredInterfaces.Select(scope.CloneType).ToList() };
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)

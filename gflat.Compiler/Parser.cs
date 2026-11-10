@@ -694,6 +694,11 @@ namespace gflat
             Expect(TokenKind.Interface);
             string name = Expect(TokenKind.Identifier).Text;
             var genericParams = ParseGenericParameters();
+            var requiredInterfaces = new List<TypeExpression>();
+            if (Match(TokenKind.Colon))
+            {
+                do { requiredInterfaces.Add(ParseTypeExpression()); } while (Match(TokenKind.Comma));
+            }
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
             _interfaceDepth++;
@@ -719,6 +724,7 @@ namespace gflat
             }
             finally { _interfaceDepth--; _inStaticInterface = previousStaticInterface; }
             var declaration = new InterfaceDeclaration(name, members, accessibility, line, isStatic, genericParams);
+            declaration.RequiredInterfaces = requiredInterfaces;
             declaration.PrimitiveImplementations.AddRange(implementations);
             return declaration;
         }

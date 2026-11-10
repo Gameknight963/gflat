@@ -21,6 +21,7 @@ public sealed partial class EditorModel
         {
             ClassDeclaration c => c.BaseTypes,
             StructDeclaration s => s.BaseTypes,
+            InterfaceDeclaration i => i.RequiredInterfaces,
             _ => []
         };
         foreach (var baseType in bases)

@@ -122,7 +122,18 @@ public partial class TypeChecker
             }
             if (source.Helpers.Keys.Any(name => !iface.MethodsByName.ContainsKey(name)))
                 throw new TypeCheckException("A primitive implementation can define only members of its interface", source.Declaration.Span);
+            ResolveInterfaceRequirements(iface);
+            foreach (string required in iface.RequiredInterfaces)
+                if (primitiveImplementations.ContainsKey((primitive.Name, required)))
+                    throw new TypeCheckException($"Duplicate implementation of '{DisplayName(required)}' for '{primitive.Name}' through an interface requirement", source.Declaration.Span);
             primitiveImplementations.Add(key, new(primitive.Name, iface, source.Declaration, source.Helpers));
+            foreach (string required in iface.RequiredInterfaces)
+            {
+                var contractInfo = _interfaces[required];
+                var members = contractInfo.Methods.ToDictionary(method => method.Name, method => source.Helpers[method.Name]);
+                primitiveImplementations.Add((primitive.Name, required),
+                    new(primitive.Name, contractInfo, source.Declaration, members));
+            }
             boundPrimitiveImplementations.Add(source);
         }
         finally { bindingPrimitiveImplementations.Remove(source); }

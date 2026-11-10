@@ -256,6 +256,8 @@ namespace gflat
             public List<MethodDeclaration> Methods = new();
             public Dictionary<string, MethodDeclaration> MethodsByName = new();
             public Dictionary<string, int> MethodIndices = new();
+            public List<string> RequiredInterfaces = new();
+            internal bool RequirementsResolved;
             public TokenKind Accessibility = TokenKind.Public;
         }
 
@@ -853,7 +855,7 @@ namespace gflat
             if (type is NamedTypeExpression named)
             {
                 if (_interfaces.TryGetValue(named.Name, out InterfaceInfo? sourceInterface))
-                    return !sourceInterface.IsStaticContract && named.Name == ifaceName;
+                    return !sourceInterface.IsStaticContract && InterfaceImplements(named.Name, ifaceName);
                 if (IsPrimitive(named.Name)) return PrimitiveImplementation(named.Name, ifaceName) != null;
                 if (_structs.TryGetValue(named.Name, out StructInfo? strInfo))
                 {
@@ -1923,6 +1925,9 @@ namespace gflat
                 TypeExpression sourceInner = ResolveAlias(psStruct.Inner);
                 if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
                 {
+                    if (sourceInner is NamedTypeExpression sourceContract && IsInterface(sourceContract.Name) &&
+                        InterfaceImplements(sourceContract.Name, targetIface.Name))
+                        return !psStruct.IsNullable || ptIface.IsNullable;
                     if (sourceInner is NamedTypeExpression p && IsPrimitive(p.Name) && PrimitiveImplementation(p.Name, targetIface.Name) != null)
                         return !psStruct.IsNullable || ptIface.IsNullable;
                     if (sourceInner is NamedTypeExpression sourceNamed && _structs.TryGetValue(sourceNamed.Name, out StructInfo? sInfo))
@@ -1955,6 +1960,9 @@ namespace gflat
                 TypeExpression sourceInner = ResolveAlias(msStruct.Inner);
                 if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
                 {
+                    if (sourceInner is NamedTypeExpression sourceContract && IsInterface(sourceContract.Name) &&
+                        InterfaceImplements(sourceContract.Name, targetIface.Name))
+                        return !msStruct.IsNullable || mtIface.IsNullable;
                     if (sourceInner is NamedTypeExpression p && IsPrimitive(p.Name) && PrimitiveImplementation(p.Name, targetIface.Name) != null)
                         return !msStruct.IsNullable || mtIface.IsNullable;
                     if (sourceInner is NamedTypeExpression sourceNamed && _structs.TryGetValue(sourceNamed.Name, out StructInfo? sInfo))
@@ -2141,6 +2149,8 @@ namespace gflat
 
             using (PipelineTimings.Measure("check.signatures"))
             {
+                foreach (var contract in _interfaces.Values.ToArray())
+                    AnalyzeSafely(() => ResolveInterfaceRequirements(contract));
                 ResolveDeclaredBaseTypes(node);
                 // Signature resolution can specialize generic bodies. Their exception
                 // and constraint checks need the class inheritance edges already bound.
@@ -3020,6 +3030,7 @@ namespace gflat
         public void Visit(InterfaceDeclaration node)
         {
             if (node.IsGeneric) return;
+            ResolveInterfaceRequirements(_interfaces[node.Name]);
             using var signatureContext = EnterSignatureContext(node, node.Name, false);
             using var sourceContext = SourceContext.Enter(node.Span);
             var methods = node.Members.OfType<MethodDeclaration>().ToArray();
@@ -6170,7 +6181,7 @@ namespace gflat
                 if (src is PointerTypeExpression pSrc && ResolveAlias(pSrc.Inner) is NamedTypeExpression srcNamed)
                 {
                     if (IsPrimitive(srcNamed.Name) && PrimitiveImplementation(srcNamed.Name, dstIface.Name) != null) return true;
-                    if (srcNamed.Name == dstIface.Name)
+                    if (InterfaceImplements(srcNamed.Name, dstIface.Name))
                     {
                         return true;
                     }
@@ -6196,7 +6207,7 @@ namespace gflat
                 if (src is ManagedTypeExpression mSrc && ResolveAlias(mSrc.Inner) is NamedTypeExpression srcMngNamed)
                 {
                     if (IsPrimitive(srcMngNamed.Name) && PrimitiveImplementation(srcMngNamed.Name, dstMngIface.Name) != null) return true;
-                    if (srcMngNamed.Name == dstMngIface.Name)
+                    if (InterfaceImplements(srcMngNamed.Name, dstMngIface.Name))
                     {
                         return true;
                     }

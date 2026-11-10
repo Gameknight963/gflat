@@ -82,7 +82,7 @@ public sealed partial class EditorModel
                 actions.Add(Action("Add using " + ns, "quickfix", path, new SourceEdit(new(new(0, 0), new(0, 0)), "using " + ns + ";" + newline + (imports.Count == 0 ? newline : ""))));
             }
         }
-        var owner = symbols.Where(s => s.NameSpan.Source?.Path == path && s.Syntax.Node is ClassDeclaration or StructDeclaration &&
+        var owner = symbols.Where(s => s.NameSpan.Source?.Path == path && s.Syntax.Node is ClassDeclaration or StructDeclaration or InterfaceDeclaration &&
             offset >= s.Syntax.Span.Start && offset < s.Syntax.Span.Start + s.Syntax.Span.Length)
             .MinBy(s => s.Syntax.Span.Length);
         if (owner != null)
@@ -99,10 +99,11 @@ public sealed partial class EditorModel
                     var method = (MethodDeclaration)member.Syntax.Node;
                     string generics = method.GenericParameters.Count == 0 ? "" : "<" + string.Join(", ", method.GenericParameters.Select(p => p.Name +
                         (p.Constraint == null ? "" : " : " + SourceTypeSpelling(p.Constraint, member)))) + ">";
-                    string signature = "public " + (method.IsStatic ? "static " : "") + (method.IsImmutable ? "immutable " : method.IsReadOnly ? "readonly " : "") +
+                    string signature = (owner.Syntax.Node is InterfaceDeclaration ? "" : "public ") + (method.IsStatic ? "static " : "") + (method.IsImmutable ? "immutable " : method.IsReadOnly ? "readonly " : "") +
                         (method.IsRefReturn ? "ref " : "") + SourceTypeSpelling(member.BoundType ?? method.ReturnType, member) + " " + CompletionSpelling(member) + generics + "(" +
                         string.Join(", ", (member.Parameters ?? []).Select(parameter => ParameterText(parameter, member))) + ")" + (method.IsNoThrow ? " nothrow" : "");
-                    return indent + signature + newline + indent + "{" + newline + indent + "    " + stub + newline + indent + "}";
+                    return owner.Syntax.Node is InterfaceDeclaration ? indent + signature + ";" :
+                        indent + signature + newline + indent + "{" + newline + indent + "    " + stub + newline + indent + "}";
                 }
                 foreach (var contract in AncestorTypes(owner).Where(s => s.Syntax.Node is InterfaceDeclaration))
                 {
@@ -113,6 +114,16 @@ public sealed partial class EditorModel
                     string MemberStub(Symbol member)
                     {
                         if (member.Syntax.Node is not PropertyDeclaration property) return MethodStub(member);
+                        if (owner.Syntax.Node is InterfaceDeclaration)
+                        {
+                            var signatures = new StringBuilder(indent + (property.IsRef ? "ref " : "") +
+                                SourceTypeSpelling(member.BoundType ?? property.Type, member) + " " + CompletionSpelling(member) + " { ");
+                            foreach (var accessor in new[] { ("get", property.Getter), ("set", property.Setter) })
+                                if (accessor.Item2 is { } method)
+                                    signatures.Append(method.IsImmutable ? "immutable " : method.IsReadOnly ? "readonly " : "")
+                                        .Append(accessor.Item1).Append(method.IsNoThrow ? " nothrow; " : "; ");
+                            return signatures.Append('}').ToString();
+                        }
                         var result = new StringBuilder(indent + "public " + (property.IsRef ? "ref " : "") + SourceTypeSpelling(member.BoundType ?? property.Type, member) + " " + CompletionSpelling(member) + newline + indent + "{" + newline);
                         foreach (var accessor in new[] { ("get", property.Getter), ("set", property.Setter) })
                             if (accessor.Item2 is { } method)
@@ -175,7 +186,8 @@ public sealed partial class EditorModel
 
     private IEnumerable<Symbol> ContractMembers(Symbol owner, Symbol contract)
     {
-        var bases = owner.Syntax.Node switch { ClassDeclaration c => c.BaseTypes, StructDeclaration s => s.BaseTypes, _ => [] };
+        var bases = owner.Syntax.Node switch { ClassDeclaration c => c.BaseTypes, StructDeclaration s => s.BaseTypes,
+            InterfaceDeclaration i => i.RequiredInterfaces, _ => [] };
         var actual = bases.FirstOrDefault(b => TypeOwner(b, owner.NameSpan.Source!.Path, owner.NameSpan.Start) == contract.Qualified);
         if (actual != null && snapshot.Checker?.GetSourceTypeBinding(actual) is NamedTypeExpression bound && snapshot.Checker.GetInterface(bound.Name) is { } info)
         {

@@ -37,7 +37,7 @@ public sealed partial class EditorModel
 
         int declaration = start;
         while (declaration < index && ts[declaration].Kind is TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal or TokenKind.Abstract) declaration++;
-        if (declaration + 1 >= index || ts[declaration].Kind is not (TokenKind.Class or TokenKind.Struct) || ts[declaration + 1].Kind != TokenKind.Identifier)
+        if (declaration + 1 >= index || ts[declaration].Kind is not (TokenKind.Class or TokenKind.Struct or TokenKind.Interface) || ts[declaration + 1].Kind != TokenKind.Identifier)
             return new(false, _ => true);
 
         int colon = declaration + 2, depth = 0;

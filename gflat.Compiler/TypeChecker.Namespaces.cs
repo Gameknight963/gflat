@@ -135,7 +135,7 @@ public partial class TypeChecker
                     : ResolveBases(cls.Interfaces, ResolveDeclaredBaseName);
                 ValidateDistinctBaseTypes(parent == null ? interfaces : interfaces.Prepend(parent), declaration);
                 cls.BaseClass = parent;
-                cls.Interfaces = interfaces;
+                cls.Interfaces = ExpandInterfaceRequirements(interfaces);
             }
             if (_currentStruct is { } str)
             {
@@ -143,7 +143,7 @@ public partial class TypeChecker
                     ? ResolveBases(syntax.BaseTypes, ResolveBaseType)
                     : ResolveBases(str.Interfaces, ResolveDeclaredBaseName);
                 ValidateDistinctBaseTypes(interfaces, declaration);
-                str.Interfaces = interfaces;
+                str.Interfaces = ExpandInterfaceRequirements(interfaces);
             }
         }
         finally
@@ -210,6 +210,8 @@ public partial class TypeChecker
 
     private void ResolveSpecializedBaseTypes(AstNode definition, AstNode specialized)
     {
+        if (specialized is InterfaceDeclaration iface)
+            ResolveInterfaceRequirements(_interfaces[iface.Name]);
         string ns = declarationNamespaces.GetValueOrDefault(definition) ?? "";
         var classes = new List<ClassInfo>();
         Walk(specialized);

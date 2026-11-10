@@ -9,6 +9,7 @@ namespace gflat.ast
         public string Name { get; internal set; }
         public string SourceName { get; }
         public List<AstNode> Members { get; }
+        public List<TypeExpression> RequiredInterfaces { get; internal set; } = new();
         public List<PrimitiveImplementationDeclaration> PrimitiveImplementations { get; } = new();
         public TokenKind Accessibility { get; }
         public bool IsStatic { get; }

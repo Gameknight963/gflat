@@ -15,7 +15,7 @@ internal static partial class ForeignImporter
 
     private sealed record CachedDeclaration(string Qualified, string Text, bool IsRecord = false,
         NativeRecordLayout? OpaqueLayout = null, string? Owner = null, CallableRole Role = CallableRole.Member,
-        string? LocalScope = null);
+        string? LocalScope = null, bool ReferenceResult = false);
     private sealed record InputStamp(long Length, long Ticks, string? Hash);
     private sealed record CachedImport(ForeignTranslationUnit Unit, CachedDeclaration[] Declarations,
         Dictionary<string, string> Symbols, Dictionary<string, InputStamp> Inputs, string[] Dependencies);
@@ -70,7 +70,8 @@ internal static partial class ForeignImporter
                     foreach (var symbol in cached.Symbols) importedSymbols.Add(symbol.Key, symbol.Value);
                     foreach (var declaration in cached.Declarations)
                     { cancellation.ThrowIfCancellationRequested(); AddDeclaration(declaration.Qualified, declaration.Text,
-                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner, declaration.Role, declaration.LocalScope); }
+                        declaration.IsRecord, declaration.OpaqueLayout, declaration.Owner, declaration.Role, declaration.LocalScope,
+                        declaration.ReferenceResult); }
                     unit.ForeignSources.AddRange(group);
                     unit.ForeignUnits.Add(cached.Unit);
                     continue;
@@ -206,20 +207,20 @@ internal static partial class ForeignImporter
                                 method.ParameterNames, isNoThrow: method.IsNoThrow);
                             bridges.Add(entry, bridge.Native);
                             string declaration = bridge.Extern + "\n" +
-                                "public " + (method.IsStatic ? "static " : method.ReadOnly ? "readonly " : "") + method.Result + " @" + method.Name +
+                                "public " + (method.IsStatic ? "static " : method.ReadOnly ? "readonly " : "") + NativeHostReturnType(method.Result) + " @" + method.Name +
                                 "(" + parameters + ")" + (method.IsNoThrow ? " nothrow" : "") + " { " + bridge.Body + " }";
-                            AddDeclaration(key, declaration, owner: qualified);
-                            declarations.Add(new(key, declaration, Owner: qualified));
+                            bool referenceResult = method.Result.StartsWith("ref ", StringComparison.Ordinal);
+                            AddDeclaration(key, declaration, owner: qualified, referenceResult: referenceResult);
+                            declarations.Add(new(key, declaration, Owner: qualified, ReferenceResult: referenceResult));
                         }
                         if (!opaqueRecords.Contains(receiver)) continue;
                         var nativeTraits = state.Records[qualified].NativeOpaqueLayout?.Values;
                         var constructors = RecordConstructors(node, spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true))
-                            .Where(constructor => constructor.Parameters.Length != 0 || nativeTraits?.CanDefault != false)
                             .Select(constructor => constructor.Parameters.Length == 0 && nativeTraits != null
                                 ? constructor with { IsNoThrow = nativeTraits.DefaultNoThrow } : constructor).ToArray();
                         if (nativeTraits is { SupportsValues: true } traits)
                             foreach (var valueMember in NativeValueMembers(qualified, receiver, Text(node, "tagUsed"), traits,
-                                constructors,
+                                constructors.Where(constructor => constructor.Parameters.Length != 0 || traits.CanDefault),
                                 recordTypes, () => "__gflat_foreign_" + identity + "_" + index++))
                             {
                                 string key = qualified + "::" + valueMember.Key;
@@ -230,7 +231,8 @@ internal static partial class ForeignImporter
                             }
                         string ownerIdentity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(qualified)))[..24];
                         string constructorFactory = "__gflat_native_construct_" + ownerIdentity;
-                        foreach (var constructor in constructors)
+                        foreach (var constructor in constructors.Where(constructor =>
+                            constructor.Parameters.Length != 0 || nativeTraits?.CanAllocateDefault != false))
                         {
                             string key = qualified + "::.constructor(" + string.Join(",", constructor.Parameters) + ")";
                             if (importedSymbols.ContainsKey(key)) continue;
@@ -274,7 +276,7 @@ internal static partial class ForeignImporter
                 {
                     string identity = scope.Length == 0 ? Text(node, "name") : scope + "::" + Text(node, "name");
                     if (recordMethods.TryGetValue(identity, out var cached)) return cached;
-                    var declared = RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true),
+                    var declared = RecordMethods(node, spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true),
                         spelling => Type(spelling, scope: scope, allowRecord: true, allowReference: true)).ToArray();
                     if (!node.TryGetProperty("bases", out var bases)) return recordMethods[identity] = declared;
                     var hidden = node.GetProperty("inner").EnumerateArray().Select(child => Text(child, "name").Split("::").Last()).ToHashSet(StringComparer.Ordinal);
@@ -442,7 +444,7 @@ internal static partial class ForeignImporter
                         resultMetadata.EnumerateArray().Any(child => Text(child, "kind") == "BuiltinAttr"))
                         nativeResult = sizeType;
                     var contract = FunctionContract(function, shape.Qualifiers);
-                    string? result = NormalizeVoidResult(Type(nativeResult, scope: scope, allowRecord: true));
+                    string? result = NormalizeVoidResult(Type(nativeResult, scope: scope, allowRecord: true, allowReference: true));
                     if (result == null) return;
                     var parameters = function.TryGetProperty("inner", out var body)
                         ? body.EnumerateArray().Where(child => Text(child, "kind") == "ParmVarDecl").ToArray() : [];
@@ -463,6 +465,8 @@ internal static partial class ForeignImporter
                         throw new TypeCheckException("Foreign functions have conflicting imported signatures: " + qualified, group.First().Span);
                     }
                     bool variadic = function.TryGetProperty("variadic", out var flag) && flag.GetBoolean();
+                    bool referenceResult = result.StartsWith("ref ", StringComparison.Ordinal);
+                    if (variadic && referenceResult) return;
                     if (variadic && isLocal) return;
                     if (variadic && (RecordValueType(result, recordTypes) != null ||
                         types.Any(type => RecordValueType(type!, recordTypes) != null))) return;
@@ -484,7 +488,7 @@ internal static partial class ForeignImporter
                             arguments => "(" + (group.Key == "cpp" ? "::" : "") + qualified + ")(" + string.Join(", ", arguments) + ")",
                             parameterNames: parameterNames, isNoThrow: contract.IsNoThrow);
                         bridges.Add(entry, bridge.Native);
-                        declaration = bridge.Extern + "\npublic " + result + " @" + name + "(" + parametersText + ")" +
+                        declaration = bridge.Extern + "\npublic " + NativeHostReturnType(result) + " @" + name + "(" + parametersText + ")" +
                             (contract.IsNoThrow ? " nothrow" : "") + " { " + bridge.Body + " }";
                     }
                     string importScope = isLocal ? localNamespace + (scope.Length == 0 ? "" : "::" + scope) : scope;
@@ -493,8 +497,8 @@ internal static partial class ForeignImporter
                     // its imported functions have translation-unit linkage.
                     if (isLocal && scope.Length != 0)
                         declaration = "namespace " + string.Join("::", scope.Split("::").Select(part => "@" + part)) + " {}\n" + declaration;
-                    AddDeclaration(qualified, declaration, localScope: isLocal ? scope : null);
-                    declarations.Add(new(qualified, declaration, LocalScope: isLocal ? scope : null));
+                    AddDeclaration(qualified, declaration, localScope: isLocal ? scope : null, referenceResult: referenceResult);
+                    declarations.Add(new(qualified, declaration, LocalScope: isLocal ? scope : null, ReferenceResult: referenceResult));
                 }
             }
         }
@@ -502,7 +506,7 @@ internal static partial class ForeignImporter
 
         void AddDeclaration(string qualified, string declaration, bool isRecord = false,
             NativeRecordLayout? opaqueLayout = null, string? owner = null, CallableRole role = CallableRole.Member,
-            string? localScope = null)
+            string? localScope = null, bool referenceResult = false)
         {
             if (localScope != null) unit.ForeignLocalNamespaces[rootSource] = localNamespace;
             if (isRecord)
@@ -549,6 +553,7 @@ internal static partial class ForeignImporter
                     if (node is MethodDeclaration method)
                     {
                         method.IsForeignImport = true;
+                        method.NativeReferenceReturn = referenceResult;
                         if (localScope != null)
                         {
                             method.ForeignLocalOwner = rootSource;

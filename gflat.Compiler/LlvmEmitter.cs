@@ -635,6 +635,11 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
+        if (node is CallExpression call && _typeChecker.IsNativeReferenceCall(call))
+        {
+            EmitExpressionWithCleanup(() => EmitCall(call));
+            return;
+        }
         if (node is SpliceExpression { Resolved: { } spliced }) { EmitAddress(spliced); return; }
         if (TryEmitConstantAddress(node)) return;
         if (TryEmitStaticAddress(node)) return;
@@ -3296,7 +3301,16 @@ public partial class LlvmEmitter : IVisitor
         });
 
     public void Visit(CallExpression node)
-        => EmitExpressionWithCleanup(() => EmitCall(node));
+        => EmitExpressionWithCleanup(() =>
+        {
+            EmitCall(node);
+            if (_typeChecker.IsNativeReferenceCall(node))
+            {
+                string address = Pop(), type = EmitType(_typeChecker.GetType(node)), value = NewTemp();
+                Emit($"    {value} = load {type}, {type}* {address}");
+                PushManaged(node, value);
+            }
+        });
 
     private void EmitCall(CallExpression node) => WithArgumentOwnership(() => EmitCallCore(node));
 
@@ -3714,7 +3728,8 @@ public partial class LlvmEmitter : IVisitor
             }
         }
 
-        TypeExpression callType = _typeChecker.GetType(node);
+        TypeExpression callType = target is MethodDeclaration { NativeReferenceReturn: true } nativeReference
+            ? nativeReference.ReturnType : _typeChecker.GetType(node);
         string retType = EmitType(callType);
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
         bool handleUnwind = target is not (MethodDeclaration { IsNoThrow: true } or ExternDeclaration { IsNoThrow: true });

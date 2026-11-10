@@ -7,6 +7,9 @@ internal static partial class ForeignImporter
 {
     private sealed record CallBridge(string Native, string Extern, string Body);
 
+    private static string NativeHostReturnType(string result)
+        => result.StartsWith("ref ", StringComparison.Ordinal) ? result[4..] + "*" : result;
+
     private static string[] ParameterNames(IEnumerable<System.Text.Json.JsonElement> parameters)
     {
         var names = new List<string>();
@@ -36,6 +39,8 @@ internal static partial class ForeignImporter
         string? receiver = null, string? nativeReceiver = null, IReadOnlyList<string>? parameterNames = null,
         bool isNoThrow = false)
     {
+        bool referenceResult = result.StartsWith("ref ", StringComparison.Ordinal);
+        result = NativeHostReturnType(result);
         string? recordResult = RecordValueType(result, records);
         var externParameters = new List<string>();
         var nativeDeclarations = new List<string>();
@@ -73,6 +78,7 @@ internal static partial class ForeignImporter
             nativeValues.Add((record == null ? "" : "*") + name);
         }
         string expression = call(nativeValues);
+        if (referenceResult) expression = "__builtin_addressof(" + expression + ")";
         var definition = new StringBuilder();
         if (language == "cpp")
             foreach (string part in scope.Split("::", StringSplitOptions.RemoveEmptyEntries))

@@ -9,6 +9,8 @@ public partial class TypeChecker
     public AstNode? GetReferenceReturn(ReturnStatement node) => _referenceReturns.GetValueOrDefault(node);
     private readonly HashSet<AstNode> _referenceReads = new();
     public bool IsReferenceRead(AstNode node) => _referenceReads.Contains(node);
+    public bool IsNativeReferenceCall(CallExpression node)
+        => GetResolvedCall(node) is MethodDeclaration { NativeReferenceReturn: true };
 
     private void ExpandReferenceProperty(List<AstNode> members, AstNode owner, PropertyDeclaration property)
     {

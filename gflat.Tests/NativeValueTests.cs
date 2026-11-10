@@ -33,6 +33,51 @@ public sealed class NativeValueTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void PrivateDestructionDoesNotBlockNativeAllocationThroughAPublicConstructor(int optimization)
+    {
+        Run("""
+            #lang cpp
+            int live = 0;
+            class Cell {
+                ~Cell() noexcept { --live; }
+            public:
+                Cell() noexcept { ++live; }
+                void Release() noexcept { delete this; }
+            };
+            int Live() noexcept { return live; }
+            #lang gflat
+            int main() {
+                Cell* cell = new* Cell();
+                if (Live() != 1) return 1;
+                cell.Release();
+                if (Live() != 0) return 2;
+                return 42;
+            }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void DeletedNativeAllocationDoesNotBlockConstructionOfAHostLocal(int optimization)
+    {
+        Run("""
+            #lang cpp
+            class Cell {
+                static void* operator new(__SIZE_TYPE__) = delete;
+                int value;
+            public:
+                Cell() noexcept : value(42) {}
+                int Read() const noexcept { return value; }
+            };
+            #lang gflat
+            int main() { Cell cell = new Cell(); return cell.Read(); }
+            """, optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void NativeTagsAndNamespaceLocalConstructorParametersKeepTheirLookupContext(int optimization)
     {
         Run("""

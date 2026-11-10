@@ -4,6 +4,30 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ForeignLanguageEditorTests
 {
+    [Fact]
+    public void NativeReferenceResultsHaveBorrowedTypesAndReferenceSignatures()
+    {
+        const string text = """
+            #lang cpp
+            int storage = 42;
+            int& Borrow() noexcept { return storage; }
+            #lang gflat
+            int main() { Borrow() = 41; int* address = &Borrow(); return *address; }
+            """;
+        var source = new SourceFile(Path.GetFullPath("native-reference-editor.gf"), text);
+        var snapshot = new AnalysisSnapshot([source], new() { NoStdLib = true });
+        Assert.Empty(snapshot.Diagnostics);
+        var model = new EditorModel(snapshot, [source]);
+        int call = text.LastIndexOf("Borrow()", StringComparison.Ordinal);
+        var signatures = JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path, call + "Borrow(".Length));
+        string label = Assert.Single(signatures.GetProperty("signatures").EnumerateArray()).GetProperty("label").GetString()!;
+        Assert.Contains("ref int Borrow()", label);
+        Assert.DoesNotContain("int*", label);
+        string hover = JsonSerializer.Serialize(model.Hover(source.Path, call));
+        Assert.Contains("Borrow", hover);
+        Assert.DoesNotContain("__gflat_foreign_", hover);
+    }
+
     [Theory]
     [InlineData("c")]
     [InlineData("cpp")]

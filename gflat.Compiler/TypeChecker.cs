@@ -4530,10 +4530,12 @@ namespace gflat
                 }
             }
 
-            if (node.Target is not (IdentifierExpression or NamespaceAccessExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
+            if (node.Target is not (IdentifierExpression or NamespaceAccessExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression or CallExpression))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
             CheckNullableStorage(node.Target);
+            if (node.Target is CallExpression && !IsReferenceRead(node.Target))
+                throw new TypeCheckException("A value returned by a function is not assignable storage", node.Line);
             TypeExpression targetType = GetType(node.Target);
             CheckAssignmentTarget(node.Target, node.Line);
 
@@ -4609,6 +4611,16 @@ namespace gflat
         }
 
         public void Visit(CallExpression node)
+        {
+            CheckCall(node);
+            if (GetResolvedCall(node) is MethodDeclaration { NativeReferenceReturn: true } method)
+            {
+                _referenceReads.Add(node);
+                RecordType(node, ((PointerTypeExpression)ResolveAlias(method.ReturnType)).Inner);
+            }
+        }
+
+        private void CheckCall(CallExpression node)
         {
             if (precheckedForeachCalls.Remove(node)) return;
             using var sourceContext = SourceContext.Enter(node.Span);

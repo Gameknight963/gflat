@@ -73,8 +73,13 @@ chosen integer width and signedness, including `-fshort-wchar`.
 C++ lvalue-reference parameters use host `ref` parameters. Pass `ref value` for
 `T&` or `const T&`, including references to opaque native objects. `const`
 references preserve readonly access. Mutable references require mutable,
-addressable storage. Reference results, rvalue-reference parameters, and
-references in callback signatures are not imported yet.
+addressable storage. Lvalue-reference results also borrow native storage. Read
+them as values, assign through a mutable result, pass `ref Function()`, or take
+`&Function()` to retain its address. Copying a borrowed object uses its native
+copy constructor. Const results retain readonly access. Keep the referenced
+object alive for every use of the result or its address.
+Rvalue-reference parameters and references in callback signatures are not
+imported yet.
 
 Function-pointer parameters and results support callbacks with scalar and raw-pointer
 signatures, including nested callback parameters and callback typedefs. Native
@@ -203,7 +208,8 @@ calling through a base interface. This does not change host-defined class ABIs.
 
 The following are also not imported yet:
 
-- Native reference results and rvalue-reference parameters
+- Nontrivial native function parameters and results passed by value
+- Rvalue-reference results and parameters
 - Templates, default arguments, globals, macro values, and namespace aliases
 - Overload families that differ only in qualifiers erased by the host type system
 - Variadic C++ functions without C linkage

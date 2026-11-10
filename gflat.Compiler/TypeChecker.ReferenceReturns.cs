@@ -6,7 +6,7 @@ public partial class TypeChecker
 {
     private bool IsLocalOrTemporaryReferenceStorage(AstNode expression)
     {
-        if (FindProperty(expression)?.Getter?.IsRefReturn == true) return false;
+        if (IsReferenceRead(expression)) return false;
         return expression switch {
             IdentifierExpression identifier => _scopes.Any(scope => scope.ContainsKey(identifier.Name)),
             NamespaceAccessExpression => false,

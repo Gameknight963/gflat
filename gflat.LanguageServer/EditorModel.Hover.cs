@@ -257,6 +257,11 @@ public sealed partial class EditorModel
             else if (symbol.Type != null)
             {
                 var display = symbol.BoundType ?? (symbol.BoundParameters != null ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type);
+                if ((symbol.BoundMethod ?? symbol.Syntax.Node as MethodDeclaration) is { NativeReferenceReturn: true, ReturnType: PointerTypeExpression nativeReference })
+                {
+                    Keyword("ref");
+                    display = nativeReference.Inner;
+                }
                 if (symbol.Syntax.Node is VariableDeclaration && snapshot.Checker is { } checker)
                     display = ArrayDisplayShape(display, checker.GetType(symbol.Syntax.Node));
                 Type(display); Add(" ");

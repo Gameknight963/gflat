@@ -5,7 +5,7 @@ namespace gflat;
 internal sealed record NativeRecordLayout(int? Size, int? Alignment, NativeValueTraits? Values = null);
 
 internal sealed record NativeValueTraits(bool CanCopy, bool CopyNoThrow, bool MoveNoThrow, bool DestroyNoThrow,
-    bool CanDefault, bool DefaultNoThrow)
+    bool CanDefault, bool DefaultNoThrow, bool CanAllocateDefault)
 {
     public bool SupportsValues => MoveNoThrow && DestroyNoThrow;
 }

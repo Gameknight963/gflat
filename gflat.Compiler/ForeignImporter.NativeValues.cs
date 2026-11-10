@@ -65,7 +65,12 @@ internal static partial class ForeignImporter
     {
         var candidates = records.Where(record => record.OpaqueLayout is { Size: not null }).ToArray();
         if (candidates.Length == 0) return new Dictionary<string, NativeValueTraits>();
-        var query = new StringBuilder(source).AppendLine().AppendLine("enum __gflat_native_value_traits {");
+        // Constructibility includes destructor access. A native new-expression does not,
+        // and may separately be blocked by a class-specific allocation operator.
+        var query = new StringBuilder(source).AppendLine()
+            .AppendLine("template<class T> auto __gflat_native_default_allocation(int) -> decltype(new T(), char());")
+            .AppendLine("template<class> long __gflat_native_default_allocation(...);")
+            .AppendLine("enum __gflat_native_value_traits {");
         for (int index = 0; index < candidates.Length; index++)
         {
             string type = candidates[index].Tag + " ::" + candidates[index].Qualified;
@@ -75,6 +80,8 @@ internal static partial class ForeignImporter
             query.Append("destroy_").Append(index).Append(" = __is_nothrow_destructible(").Append(type).AppendLine("),");
             query.Append("default_").Append(index).Append(" = __is_constructible(").Append(type).AppendLine("),");
             query.Append("default_nothrow_").Append(index).Append(" = __is_nothrow_constructible(").Append(type).AppendLine("),");
+            query.Append("allocate_default_").Append(index).Append(" = sizeof(__gflat_native_default_allocation<")
+                .Append(type).AppendLine(">(0)) == sizeof(char),");
         }
         query.AppendLine("};");
         string path = Path.Combine(directory, "value-traits.cpp");
@@ -88,7 +95,7 @@ internal static partial class ForeignImporter
                 values.Add(Text(member, "name"), Constant(member));
         return candidates.Select((record, index) => (record.Qualified, Traits: new NativeValueTraits(
             values["copy_" + index], values["copy_nothrow_" + index], values["move_" + index], values["destroy_" + index],
-            values["default_" + index], values["default_nothrow_" + index])))
+            values["default_" + index], values["default_nothrow_" + index], values["allocate_default_" + index])))
             .ToDictionary(item => item.Qualified, item => item.Traits);
 
         static bool Constant(JsonElement node)

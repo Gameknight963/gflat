@@ -11,6 +11,8 @@ namespace gflat.ast
     {
         public string Name { get; internal set; }
         public bool IsForeignImport { get; internal set; }
+        // Native lvalue references use a pointer ABI and expose borrowed storage at call sites.
+        public bool NativeReferenceReturn { get; internal set; }
         public SourceId? ForeignLocalOwner { get; internal set; }
         public string? ForeignSourceNamespace { get; internal set; }
         public bool IsPrototype { get; internal set; }

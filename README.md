@@ -8,13 +8,15 @@ This project has significant portions written by AI, including READMEs and other
 # G♭ 
 (gflat)
 
-A compiled language with C#-inspired syntax, control over storage and layout,
-scope-based destruction, and native code generation through LLVM.
+A compiled language with C#-inspired syntax, through LLVM.
 
-G♭ is experimental. The language, compiler, library, and project format change
-frequently. Nightly builds are demos of the current work.
+It provides control over storage and layout, scope-based destruction, 
+and lets you shoot yourself in the foot with memory if that's your style.
 
-```csharp
+The language is changing frequenty. Expect breaking changes. 
+Nightly builds are "demos" of the current work.
+
+```cpp
 using Standard::Text;
 using Standard;
 
@@ -28,24 +30,34 @@ int main()
 }
 ```
 
-Try the [interpolation project](examples/interpolation/interpolation.gfproj) or
-browse the [examples](examples/README.md).
+Try this [interpolation project](examples/interpolation/interpolation.gfproj) or
+browse the other [examples](examples/README.md).
 
 ## Language and library
 
-- Structs and classes with constructors, deterministic cleanup, properties, and indexers
-- Interfaces, generics, and borrowed extension methods
-- Raw pointers, nullable references, shallow `readonly` and deep `immutable` views
-- Replaceable allocation and managed references (`T^`)
-- Native stack-unwinding exceptions
-- Custom string prefixes and interpolation
-- [Macros and textual includes](docs/PREPROCESSOR.md) with conditional compilation
-- Compile-time name, layout, and type queries
-- [Standard](Standard/README.md): strings, collections, queries, text and binary formats, console and file IO
+- Structs and classes with constructors, destructors, auto-properties, indexers and other operators
 
-The [Visual Studio extension](docs/EDITOR_SUPPORT.md) provides highlighting,
-completion, navigation, hovers, and native debugging. A language server supports
+- Interfaces and generics with constraints
+- Raw pointers, nullable pointers, replacable allocator
+- shallow `readonly` and deep `immutable` views
+- Managed references with a replacable GC (`T^`)
+- Stack-unwinding exceptions
+- Custom string prefixes
+- Interpolation with custom string prefixes. See [String's implementation](Standard/core/Text/String.gf) of the 's' prefix.
+  > Interpolation with c-strings is not a feature for now because I'm
+  > not sure how to do it safely. Either you allocate a new string on the heap
+  > (easy to leak), or on the stack (could cause memory bugs).
+  > There's probably a good solution to this, so it may be a feature in the future.
+- [Preprocessor macros and textual includes](docs/PREPROCESSOR.md), including conditional compilation
+- Compile-time name, layout, and type queries
+
+[Standard](Standard/README.md) includes strings, collections, queries, text and 
+binary formats, console and file IO.
+
+Visual Studio is the only well-supported editor at the moment. A language server supports
 other LSP clients.
+
+[Visual Studio extension](docs/EDITOR_SUPPORT.md)
 
 ## Download
 
@@ -60,8 +72,8 @@ the latest successful `master` build.
 
 ### Requirements
 
-Bundles include the .NET runtime and MSBuild. Native builds also need Clang and
-the platform linker and C/C++ development libraries:
+Bundles include the .NET runtime and MSBuild. You'll also need Clang,
+the platform linker, and C/C++ development libraries:
 
 - **Windows:** Visual Studio's **Desktop development with C++** workload and **C++ Clang Compiler for Windows**, or an equivalent LLVM/MSVC toolchain
 - **Linux:** CI tests Ubuntu 24.04 with Clang 18. Install the toolchain with `sudo apt install clang-18 build-essential`
@@ -84,8 +96,8 @@ tar -xzf gflat-linux-x64.tar.gz
 GFLAT_CLANG=clang-18 ./compiler/gflat build examples/interpolation/interpolation.gfproj --run
 ```
 
-Add the bundle's `compiler` directory to PATH to use `gflat` anywhere. Keep the
-bundle's directory layout intact.
+Add the bundle's `compiler` directory to PATH to use `gflat` anywhere. You must keep the
+bundle's directory layout intact though.
 
 ### Create a project
 
@@ -95,7 +107,9 @@ gflat build MyApp/MyApp.gfproj --run
 ```
 
 You can also compile individual files with `gflat main.gf helper.gf --run`.
-Projects include Standard by default. Direct source commands include the minimal
+Projects include Standard by default. 
+
+Direct source commands include the minimal
 runtime sources and accept additional library files explicitly. See
 [project setup and library selection](docs/PROJECTS.md).
 
@@ -103,8 +117,8 @@ Run `gflat doctor --native` to check the toolchain if setup fails.
 
 ### Visual Studio
 
-Install the VSIX and restart Visual Studio. Use **File > New > Project**, search
-for **G♭**, and choose a Console Application or Source Library. You can also
+Install the VSIX and restart Visual Studio. Use **File > New > Project**, filter language by 'G♭', 
+and choose a Console Application or Source Library. You can also
 add an existing `.gfproj` to a solution.
 
 See [editor setup](docs/EDITOR_SUPPORT.md) for SDK-style projects and other editors.
@@ -129,7 +143,6 @@ dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
 | [Visual Studio extension](editors/VisualStudio/gflat.VisualStudio.slnx) | VSIX |
 
 For extension builds and validation, see [editor development](docs/EDITOR_SUPPORT.md).
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and test instructions.
 
 ## Documentation and feedback
 
@@ -141,6 +154,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and test instructions.
 For bug reports, include a small reproducing program, your OS, and the commit
 from the bundle's `BUILD-INFO.json`. For source builds, use `git rev-parse HEAD`.
 
-## License
+## Licensing
 
-[MIT](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for bundled dependencies.
+The G♭ compiler, standard library, examples, and 
+everything else in this repo is licensed to you under the [MIT](LICENSE). 
+
+See [third-party notices](THIRD_PARTY_NOTICES.md) for bundled dependencies.

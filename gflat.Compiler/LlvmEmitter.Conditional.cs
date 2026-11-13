@@ -21,6 +21,7 @@ public partial class LlvmEmitter
         {
             string result = NewTemp();
             Emit($"    {result} = load {llvmType}, {llvmType}* {slot}");
+            RememberOwnedLocation(type, result, slot);
             PushManaged(node, result);
         }
 
@@ -31,7 +32,8 @@ public partial class LlvmEmitter
             if (slot != null)
             {
                 string value = EmitImplicitCast(Pop(), _typeChecker.GetType(branch), type, branch);
-                Emit($"    store {llvmType} {value}, {llvmType}* {slot}");
+                if (_typeChecker.RequiresRelocation(type)) EmitManagedStore(type, value, slot, initialize: true);
+                else Emit($"    store {llvmType} {value}, {llvmType}* {slot}");
             }
             Emit($"    br label %{done}");
         }

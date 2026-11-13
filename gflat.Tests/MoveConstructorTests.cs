@@ -16,6 +16,32 @@ public sealed class MoveConstructorTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
+    public void ConditionalResultsRelocateSelectedFreshAndMovedObjects(int optimization)
+    {
+        var result = CompilerTestHelper.Run(Sample + """
+            Sample Pick(bool flag) => flag ? new Sample(42) : new Sample(7);
+            int main()
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    bool flag = i == 0;
+                    Sample value = Pick(flag);
+                    if (!value.Valid() || value.Value != (flag ? 42 : 7)) return 1;
+                    Sample first = new(42);
+                    Sample second = new(7);
+                    Sample selected = flag ? move first : move second;
+                    if (!selected.Valid() || selected.Value != (flag ? 42 : 7)) return 2;
+                    if (!(flag ? new Sample(42) : new Sample(7)).Valid()) return 3;
+                }
+                return 0;
+            }
+            """, optimization);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
     public void CallsAndReturnsRelocateValuesIntoTheirFinalStorage(int optimization)
     {
         var result = CompilerTestHelper.Run(Sample + """

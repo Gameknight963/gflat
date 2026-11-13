@@ -69,7 +69,7 @@ public sealed class IntegerLogarithmTests
             """, $$"""
             int expected = 0;
             if (fread(&expected, 1, 4, file!) != 4) return 2;
-            if (Exponent({{bitsExpression}}.reinterpret<ref immutable({{scalar}})>()) != expected) return 3;
+            if (Exponent(Standard::Binary::BitConverter::{{(wide ? "UInt64BitsToDouble" : "UInt32BitsToFloat")}}({{bitsExpression}})) != expected) return 3;
             """, ["core/Binary/BitConverter.gf","core/Numerics/Math.gf"], optimization);
     }
 

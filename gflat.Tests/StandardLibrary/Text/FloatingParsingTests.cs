@@ -162,8 +162,10 @@ public sealed class FloatingParsingTests
                     try { ParseFloat("12x"); } catch (ref Exception error) { caught++; }
                     try { ParseDouble(" 12"); } catch (ref Exception error) { caught++; }
                     if (caught != 2) return 50;
-                    if (ParseFloat("1e9999").reinterpret<ref immutable(uint)>() != 0x7f800000u) return 51;
-                    if (ParseDouble("-1e-9999").reinterpret<ref immutable(ulong)>() != 0x8000000000000000ul) return 52;
+                    float overflow = ParseFloat("1e9999");
+                    if (overflow.reinterpret<ref immutable(uint)>() != 0x7f800000u) return 51;
+                    double underflow = ParseDouble("-1e-9999");
+                    if (underflow.reinterpret<ref immutable(ulong)>() != 0x8000000000000000ul) return 52;
                     if (ParseFloat("1.25") != 1.25f || ParseDouble("2.5") != 2.5) return 53;
                     return 0;
                 }

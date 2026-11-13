@@ -124,7 +124,7 @@ public sealed class BigIntegerUnsignedTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = StandardTestSources.Numerics.Concat(StandardTestSources.Load("core/Binary/BinaryPrimitives.gf"))
+        var sources = StandardTestSources.Combine(StandardTestSources.Numerics, StandardTestSources.Load("core/Binary/BinaryPrimitives.gf"))
             .Append(new SourceFile("bigint-unsigned.gf", program));
         string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
         _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);

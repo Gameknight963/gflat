@@ -3,7 +3,7 @@ namespace gflat.Tests.Std.Queries;
 public sealed class AverageTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => StandardTestSources.Combine(StandardTestSources.Values, StandardTestSources.Load("core/Queries/enumerable_average.gf"))
+        => StandardTestSources.Combine(StandardTestSources.Values, StandardTestSources.Load("core/Binary/BitConverter.gf", "core/Queries/enumerable_average.gf"))
             .Append(new SourceFile("average-tests.gf", program));
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class AverageTests
             string conversion = scalar switch
             {
                 "int" => "(int)bits", "long" => "(long)bits",
-                "float" => "((uint)bits).reinterpret<ref immutable(float)>()", _ => "bits.reinterpret<ref immutable(double)>()"
+                "float" => "Standard::Binary::BitConverter::UInt32BitsToFloat((uint)bits)", _ => "bits.reinterpret<ref immutable(double)>()"
             };
             string literal = "\"" + path.Replace("\\", "\\\\") + "\"";
             var result = CompilerTestHelper.Run(Sources($$"""

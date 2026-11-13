@@ -5,6 +5,7 @@ public sealed class MathTests
     private static void Run(string program)
     {
         var result = CompilerTestHelper.Run([
+            new SourceFile("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))),
             new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", "core", "Numerics", "Math.gf"))),
             new SourceFile("main.gf", program)
         ]);

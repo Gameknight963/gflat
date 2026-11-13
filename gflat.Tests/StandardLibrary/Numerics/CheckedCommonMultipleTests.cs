@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Numerics;
 public sealed class CheckedCommonMultipleTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => new[] { "Numerics/Math.gf", "Text/ByteSearch.gf", "Text/CString.gf" }
+        => new[] { "Binary/BitConverter.gf", "Numerics/Math.gf", "Text/ByteSearch.gf", "Text/CString.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard/core",name))))
             .Append(new SourceFile("checked-lcm.gf",code));
 

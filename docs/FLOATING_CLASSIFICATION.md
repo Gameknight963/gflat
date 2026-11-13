@@ -19,22 +19,23 @@ for an ordered numeric comparison instead. `Math::Sign` returns zero for either
 zero and throws for NaN.
 
 ```csharp
+using Standard::Binary;
 using Standard::Numerics;
 
 int main()
 {
     uint zeroBits = 0x80000000u;
-    float negativeZero = zeroBits.reinterpret<float>();
+    float negativeZero = BitConverter::UInt32BitsToFloat(zeroBits);
     if (!Math::IsNegative(negativeZero) || Math::IsPositive(negativeZero)) return 1;
     if (!Math::IsFinite(negativeZero) || Math::IsNormal(negativeZero)) return 2;
     if (Math::Sign(negativeZero) != 0) return 3;
 
     uint tinyBits = 1u;
-    float tiny = tinyBits.reinterpret<float>();
+    float tiny = BitConverter::UInt32BitsToFloat(tinyBits);
     if (!Math::IsSubnormal(tiny) || Math::IsNormal(tiny)) return 4;
 
     ulong infinityBits = 0x7ff0000000000000ul;
-    double infinity = infinityBits.reinterpret<double>();
+    double infinity = BitConverter::UInt64BitsToDouble(infinityBits);
     if (!Math::IsInfinity(infinity) || !Math::IsPositiveInfinity(infinity)) return 5;
     if (Math::IsFinite(infinity) || Math::IsNaN(infinity)) return 6;
     return 0;

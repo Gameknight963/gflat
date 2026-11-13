@@ -226,30 +226,29 @@ Raw `void*` recovery, matching pointer qualification changes, and exact-element
 array decay remain ordinary casts. Unrelated pointer views, pointer/integer address
 conversions, and function-pointer signature changes require explicit reinterpretation.
 
-`value.reinterpret<Target>()` preserves the representation. Numeric and enum operands
-must have equal storage size. Raw pointers and function pointers may be reinterpreted
-as one another or as pointer-sized integers. Arrays and object values are not bitcast,
-and managed references and fat interface pointers cannot be stripped into raw bits.
-The programmer remains responsible for alignment, valid storage, lifetime, and the
-actual function ABI. A raw address may point to an object containing managed fields.
-Reinterpreting the address does not convert or untrack those fields.
+`value.reinterpret<Target>()` follows the C++ `reinterpret_cast` conversion categories supported by G♭'s types:
+
+- Raw object and function pointers can be converted to other raw pointer types
+- A pointer can be converted to an integer at least as wide as a pointer. An integer or enum can be converted to a raw pointer
+- An integral, enum, or pointer value can be converted to its own type. Different numeric value types are not bitcast
+- Arrays decay to pointers to their elements for pointer results
+- `storage.reinterpret<ref Target>()` borrows the same storage through another type. It creates no temporary or object and runs no constructor
+
+A reinterpretation cannot remove readonly or immutable protection. Nullable pointer views remain nullable. Managed references and fat interface pointers cannot be stripped into raw bits. The programmer remains responsible for alignment, valid storage, lifetime, permitted type access, and the actual function ABI. A raw address may point to an object containing managed fields. Reinterpreting the address does not convert or untrack those fields.
 
 ```csharp
-int main() {
-    uint bits = 1065353216u;
-    float number = bits.reinterpret<float>();
+int main()
+{
     int value = 42;
+    char firstByte = value.reinterpret<ref readonly(char)>();
     nuint address = (&value).reinterpret<nuint>();
     int* restored = address.reinterpret<int*>();
-    if (number != 1.0f || *restored != 42) return 1;
+    if (*restored != 42) return 1;
     return 0;
 }
 ```
 
-Non-null pointer results retain the ordinary checked-cast behavior: known zero is
-rejected and a runtime null traps. Required constant evaluation supports numeric
-representations, except single-precision NaN payloads, which currently require
-runtime evaluation. Symbolic constant addresses cannot become host-process integers.
+An integer converted to a non-null pointer is checked: known zero is rejected and runtime zero traps. Reinterpreting references requires runtime storage. Symbolic constant addresses cannot become host-process integers. Use `Standard::Binary::BitConverter` for floating-point representation conversions.
 
 A class or struct can declare an explicit conversion operator. Exactly one ordinary
 value parameter supplies the source. The return type supplies the target. One endpoint
@@ -641,7 +640,7 @@ Fixed-size array parameters receive independent copies, including nested arrays.
 
 ### Nullable pointer operations
 
-Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including immutable qualifications. Implicit numeric return conversions do not change a function's calling convention.
+Nullable raw pointers and function pointers require a proven non-null local read or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. Ordinary pointer casts preserve nullability. Postfix `!` is an unchecked assertion and does not insert a runtime null test. Function pointer conversions preserve the exact return and parameter types, including immutable qualifications. Implicit numeric return conversions do not change a function's calling convention.
 
 ```csharp
 struct Point { public int x; public int y; }
@@ -885,6 +884,10 @@ Literals can be indexed, returned, used in `foreach`, and passed to pointer para
 Destructor-bearing elements must be fresh values, explicit moves, or values supporting copying. If evaluating an element throws, previously initialized elements are destroyed in reverse order. Once initialization succeeds, the array owns all elements and uses normal array cleanup. Constant arrays cannot contain destructor-bearing elements.
 
 ### Scope cleanup
+
+The conditional expression `condition ? whenTrue : whenFalse` evaluates the condition once, then only the selected branch. The condition must be `bool`. The branches must have a compatible common type, including supported numeric widening or a nullable pointer view. A borrowed owning branch is copied into the result using its accessible copy operation. A fresh or moved branch transfers ownership. Nested conditionals associate to the right.
+
+`do { ... } while (condition);` tests after executing the body. Its condition must be `bool`. `continue` evaluates that condition and `break` skips it. Assignments made on every path reaching the condition are available there. An assignment made on every exit path is available after the loop.
 
 Local scalar reads require definite assignment. Struct fields can be initialized individually. An assignment on only a skipped logical operand or only inside a potentially empty loop does not initialize a value after that operation. Return values are evaluated before deferred actions.
 
@@ -1141,6 +1144,14 @@ Namespace properties have no receiver and do not use `static`, receiver
 initializers. A get-only namespace auto-property cannot subsequently be assigned.
 Namespace indexers and `ref` returns are not supported.
 
+### Function-local static storage
+
+A declaration such as `static int counter = 4;` has block scope and persistent storage. Each declaration has its own storage. Generic functions have separate storage for each closed specialization. An initializer can use the arguments and locals available when execution first reaches that declaration.
+
+Dynamic initialization runs once on first use. Concurrent callers wait until the completed value is published. If initialization throws, the guard is reset and a later call can retry. Recursive initialization of the same declaration on the same thread traps. A successfully initialized owning value is registered for destruction at normal shutdown, in reverse completion order. Unused declarations do not construct or destroy an object.
+
+Constant and default-initialized scalar storage needs no first-use guard or hosted shutdown registration. A non-defaultable type requires an initializer. A static local cannot be consumed with `move`. A const function cannot use runtime static local storage.
+
 ### Global and static storage
 
 Global/namespace fields and static fields in classes or structs have persistent,
@@ -1240,6 +1251,8 @@ int Example() {
     return Read(ref n);
 }
 ```
+
+At a call site, `ref value` preserves the storage's existing qualifiers. `readonly ref value` and `immutable ref value` explicitly restrict the borrowed view. These forms cannot bind to a parameter requiring mutable storage.
 
 The parameter is an alias: assignment writes to the caller's value. No object is copied on entry or destroyed on exit. The caller must supply initialized, addressable storage of the exact type. Numeric conversions, temporaries, ordinary value properties, and raw references into managed storage are rejected. A mutable argument can bind to `ref immutable(T)`. Borrowed parameters cannot be consumed with `move`. Use explicit raw-pointer operations for manual lifetime management. References do not extend an object's lifetime or provide exhaustive alias tracking.
 

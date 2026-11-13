@@ -5,6 +5,7 @@
 `Standard/core/Numerics/Math.gf`.
 
 ```csharp
+using Standard::Binary;
 using Standard::Numerics;
 
 int main()
@@ -12,7 +13,7 @@ int main()
     if (Math::ScaleB(1.5, 3) != 12.0) return 1;
     if (Math::ScaleB(12.0f, -3) != 1.5f) return 2;
     double smallest = Math::ScaleB(1.0, -1074);
-    if (smallest.reinterpret<ulong>() != 1ul) return 3;
+    if (BitConverter::DoubleToUInt64Bits(smallest) != 1ul) return 3;
     return 0;
 }
 ```

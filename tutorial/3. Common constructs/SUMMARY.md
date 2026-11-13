@@ -10,5 +10,5 @@ This was a sizable chapter, but you made it! You learned about:
 
  If you want practice, here are some cool practice problems:
 
-  - Convert from Celcius to Rankine! (which is what Kelvin is to Celsius)
+  - Convert from Celsius to Rankine! (Rankine relates to Fahrenheit as Kelvin relates to Celsius)
   - Calculate the *n*th fibonacci number!

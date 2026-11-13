@@ -25,6 +25,7 @@ exponents, including subnormal values.
 | Smallest positive double subnormal | -1074 |
 
 ```csharp
+using Standard::Binary;
 using Standard::Numerics;
 
 int main()
@@ -33,7 +34,7 @@ int main()
     if (BitOperations::Log2((nuint)0) != 0) return 2;
     if (Math::ILogB(0.125) != -3 || Math::ILogB(-12.0f) != 3) return 3;
     uint bits = 1u;
-    if (Math::ILogB(bits.reinterpret<float>()) != -149) return 4;
+    if (Math::ILogB(BitConverter::UInt32BitsToFloat(bits)) != -149) return 4;
     return 0;
 }
 ```

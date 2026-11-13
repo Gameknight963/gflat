@@ -11,6 +11,7 @@ Success writes the converted value. Failure returns false and writes positive
 zero. Surrounding whitespace or an unconsumed suffix fails.
 
 ```csharp
+using Standard::Binary;
 using Standard::Text;
 
 int main()
@@ -18,9 +19,9 @@ int main()
     float single = 0.0f;
     double wide = 0.0;
     if (!TryParseFloat("1.25", &single) || single != 1.25f) return 1;
-    if (!TryParseDouble("-0", &wide) || wide.reinterpret<ulong>() != 0x8000000000000000ul) return 2;
-    if (TryParseDouble("1.25 trailing", &wide) || wide.reinterpret<ulong>() != 0ul) return 3;
-    if (!TryParseDouble("1e9999", &wide) || wide.reinterpret<ulong>() != 0x7ff0000000000000ul) return 4;
+    if (!TryParseDouble("-0", &wide) || BitConverter::DoubleToUInt64Bits(wide) != 0x8000000000000000ul) return 2;
+    if (TryParseDouble("1.25 trailing", &wide) || BitConverter::DoubleToUInt64Bits(wide) != 0ul) return 3;
+    if (!TryParseDouble("1e9999", &wide) || BitConverter::DoubleToUInt64Bits(wide) != 0x7ff0000000000000ul) return 4;
     return 0;
 }
 ```

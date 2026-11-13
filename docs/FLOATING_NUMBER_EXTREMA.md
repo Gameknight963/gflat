@@ -11,12 +11,13 @@ magnitudes select the negative operand for minimum and the positive operand
 for maximum. This also applies to negative and positive zero.
 
 ```csharp
+using Standard::Binary;
 using Standard::Numerics;
 
 int main()
 {
     uint nanBits = 0x7fc00001u;
-    float nan = nanBits.reinterpret<float>();
+    float nan = BitConverter::UInt32BitsToFloat(nanBits);
     if (Math::MinNumber(nan, 4.0f) != 4.0f) return 1;
     if (Math::MaxNumber(-3.0f, nan) != -3.0f) return 2;
     if (Math::MinMagnitudeNumber(-4.0, 4.0) != -4.0) return 3;

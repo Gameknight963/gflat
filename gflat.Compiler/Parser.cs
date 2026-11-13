@@ -2059,10 +2059,11 @@ namespace gflat
 
         private AstNode ParsePrefixCoreLocated()
         {
-            if (CheckContextual("ref"))
+            if (CheckContextual("ref") || Current.Kind is TokenKind.Readonly or TokenKind.Immutable && Peek().Text == "ref")
             {
+                TokenKind? qualifier = Current.Kind is TokenKind.Readonly or TokenKind.Immutable ? Consume().Kind : null;
                 int refLine = Consume().Line;
-                return new UnaryExpression(ParseExpression(23), TokenKind.Ref, true, refLine);
+                return new UnaryExpression(ParseExpression(23), TokenKind.Ref, true, refLine) { ReferenceQualifier = qualifier };
             }
 
             if (CheckContextual("move") && Peek().Kind != TokenKind.OpenParen)

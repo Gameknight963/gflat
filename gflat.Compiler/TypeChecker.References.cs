@@ -21,6 +21,8 @@ public partial class TypeChecker
         var type = GetType(node.Operand);
         if (IsExpressionImmutable(node.Operand)) type = TypeQualifiers.Immutable(type);
         else if (IsExpressionReadOnly(node.Operand)) type = TypeQualifiers.ReadOnly(type);
+        if (node.ReferenceQualifier == TokenKind.Immutable) type = TypeQualifiers.Immutable(type);
+        else if (node.ReferenceQualifier == TokenKind.Readonly && !type.IsImmutableValue) type = TypeQualifiers.ReadOnly(type);
         RecordType(node, new ReferenceTypeExpression(type, node.Line));
     }
 

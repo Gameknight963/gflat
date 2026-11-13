@@ -390,7 +390,7 @@ namespace gflat.ast
             }
             if (node is UnaryExpression un)
             {
-                return new UnaryExpression(CloneNode(un.Operand), un.Operator, un.IsPrefix, un.Line);
+                return new UnaryExpression(CloneNode(un.Operand), un.Operator, un.IsPrefix, un.Line) { ReferenceQualifier = un.ReferenceQualifier };
             }
             if (node is LiteralExpression lit)
             {

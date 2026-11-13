@@ -9,6 +9,7 @@ namespace gflat.ast
         public AstNode Operand { get; }
         public TokenKind Operator { get; }
         public bool IsPrefix { get; }
+        public TokenKind? ReferenceQualifier { get; init; }
 
         public UnaryExpression(AstNode operand, TokenKind op, bool isPrefix, int line) : base(line)
         {

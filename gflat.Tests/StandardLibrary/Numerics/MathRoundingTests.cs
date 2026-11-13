@@ -46,16 +46,17 @@ public sealed class MathRoundingTests
                     {{integer}}[5] row;{{scalar}}[4] actual;
                     while(true){
                         nuint read=fread((void*)&row[0],1,{{recordSize}},file!);if(read==0)break;if(read!={{recordSize}})return 2;
-                        {{scalar}} value=(row[0]).reinterpret<{{scalar}}>();
+                        {{scalar}} value=(row[0]).reinterpret<ref immutable({{scalar}})>();
                         actual[0]=Math::Truncate(value);actual[1]=Math::Floor(value);
                         actual[2]=Math::Ceiling(value);actual[3]=Math::Round(value);
-                        for(nuint i=0;i<4;i++)if((actual[i]).reinterpret<{{integer}}>()!=row[i+1])return (int)i+3;
+                        for(nuint i=0;i<4;i++)if((actual[i]).reinterpret<ref immutable({{integer}})>()!=row[i+1])return (int)i+3;
                     }
                     if(ferror(file!)!=0)return 7;return fclose(file!);
                 }
                 """;
             var sources = new[]
             {
+                new SourceFile("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))),
                 new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
                 new SourceFile("main.gf", program)
             };

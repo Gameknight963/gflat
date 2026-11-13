@@ -18,7 +18,7 @@ public sealed class MathSignTests
                 bool caught = false;
                 try
                 {
-                    int result = Math::Sign(bits.reinterpret<float>());
+                    int result = Math::Sign(bits.reinterpret<ref immutable(float)>());
                     if (expected == 2 || result != expected) return 1;
                 }
                 catch (Exception* error) { caught = true; }
@@ -30,7 +30,7 @@ public sealed class MathSignTests
                 bool caught = false;
                 try
                 {
-                    int result = Math::Sign(bits.reinterpret<double>());
+                    int result = Math::Sign(bits.reinterpret<ref immutable(double)>());
                     if (expected == 2 || result != expected) return 3;
                 }
                 catch (Exception* error) { caught = true; }

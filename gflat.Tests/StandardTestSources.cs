@@ -14,7 +14,8 @@ internal static class StandardTestSources
         => sets.SelectMany(set => set).DistinctBy(source => source.Id);
 
     public static IEnumerable<SourceFile> Load(params string[] files)
-        => files.Distinct(StringComparer.Ordinal).Select(relative => snapshots.GetOrAdd(relative, static name =>
+        => files.Concat(files.Any(file => file is "core/Numerics/Math.gf" or "core/Binary/BinaryPrimitives.gf")
+            ? new[] { "core/Binary/BitConverter.gf" } : []).Distinct(StringComparer.Ordinal).Select(relative => snapshots.GetOrAdd(relative, static name =>
         {
             string path = Path.GetFullPath(Path.Combine(sourceRoot, name));
             return new SourceFile(path, File.ReadAllText(path));

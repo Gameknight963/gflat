@@ -76,6 +76,7 @@ public sealed class ZlibTests
         """;
 
     private static SourceFile[] Sources(string program) => [
+        new("BitConverter.gf", Read("Binary/BitConverter.gf")),
         new("BinaryPrimitives.gf", Read("Binary/BinaryPrimitives.gf")),
         new("Adler32.gf", Read("Hashing/Adler32.gf")),
         new("Deflate.gf", Read("Compression/Deflate.gf")),

@@ -48,8 +48,8 @@ public sealed class StreamBinaryTests
             ulong low = (ulong)(scalar.Bits & ulong.MaxValue);
             ulong high = (ulong)(scalar.Bits >> 64);
             string assertion = scalar.Suffix switch {
-                "Float" => $"if((value).reinterpret<uint>()!={low}u)return 11;",
-                "Double" => $"if((value).reinterpret<ulong>()!={low}ul)return 12;",
+                "Float" => $"if((value).reinterpret<ref immutable(uint)>()!={low}u)return 11;",
+                "Double" => $"if((value).reinterpret<ref immutable(ulong)>()!={low}ul)return 12;",
                 "ExtraLong" => $"if((ulong)value!={low}ul||(ulong)(value>>64)!={high}ul)return 13;",
                 _ => $"if(value!=({scalar.Type}){low}ul)return 14;"
             };
@@ -174,7 +174,7 @@ public sealed class StreamBinaryTests
     private static void Run(string program, int optimization)
     {
         string[] names = [ "core/Exception.gf", "core/ITextWriter.gf", "core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf",
-            "core/IO/byte_reader.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader_binary.gf",
+            "core/IO/byte_reader.gf", "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader_binary.gf",
             "core/IO/text_writer_binary.gf", "libc/Memory/allocation.gf" ];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("stream-binary-tests.gf", program));

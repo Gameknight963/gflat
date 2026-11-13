@@ -30,7 +30,7 @@ public sealed class TimeSpanScalingTests
                 if (Ratio(value, TimeSpan::FromTicks(2l)) != -2.5) return 3;
                 double infinity = Ratio(TimeSpan::FromTicks(1l), new TimeSpan());
                 double nan = Ratio(new TimeSpan(), new TimeSpan());
-                if (infinity.reinterpret<ulong>() != 0x7ff0000000000000ul || nan == nan) return 4;
+                if (infinity.reinterpret<ref immutable(ulong)>() != 0x7ff0000000000000ul || nan == nan) return 4;
                 if (attempts != 0) return 5;
                 return 0;
             }
@@ -87,19 +87,19 @@ public sealed class TimeSpanScalingTests
                         if (fread(&ticks, 1, 8, file!) != 8 || fread(&operand, 1, 8, file!) != 8
                             || fread(&expected, 1, 8, file!) != 8 || fread(&valid, 1, 4, file!) != 4) return 2;
                         immutable(TimeSpan) value = TimeSpan::FromTicks(ticks);
-                        double scalar = operand.reinterpret<double>();
+                        double scalar = operand.reinterpret<ref immutable(double)>();
                         if (operation == (byte)2)
                         {
                             TimeSpan divisor = TimeSpan::FromTicks((long)operand);
                             double actual = Ratio(&value, divisor);
-                            double predicted = expected.reinterpret<double>();
+                            double predicted = expected.reinterpret<ref immutable(double)>();
                             if (predicted != predicted)
                             {
                                 if (actual == actual) return 3;
                             }
-                            else if (actual.reinterpret<ulong>() != expected) return 4;
+                            else if (actual.reinterpret<ref immutable(ulong)>() != expected) return 4;
                             double freeRatio = Divide(value, divisor);
-                            if (actual == actual && freeRatio.reinterpret<ulong>() != expected) return 5;
+                            if (actual == actual && freeRatio.reinterpret<ref immutable(ulong)>() != expected) return 5;
                             continue;
                         }
                         for (int form = 0; form < 2; form++)

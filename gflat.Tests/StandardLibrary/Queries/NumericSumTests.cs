@@ -53,7 +53,7 @@ public sealed class NumericSumTests
             string conversion = scalar switch
             {
                 "int" => "(int)bits", "long" => "(long)bits",
-                "float" => "((uint)bits).reinterpret<float>()", _ => "bits.reinterpret<double>()"
+                "float" => "((uint)bits).reinterpret<ref immutable(float)>()", _ => "bits.reinterpret<ref immutable(double)>()"
             };
             string literal = "\"" + path.Replace("\\", "\\\\") + "\"";
             var result = CompilerTestHelper.Run(Sources($$"""
@@ -69,9 +69,9 @@ public sealed class NumericSumTests
                 {{scalar}} IdentityImmutable(immutable({{scalar}}) value) => ({{scalar}})value;
                 bool Same(double value, ulong bits) nothrow
                 {
-                    double expected = bits.reinterpret<double>();
+                    double expected = bits.reinterpret<ref immutable(double)>();
                     if (expected != expected) return value != value;
-                    return value.reinterpret<ulong>() == bits;
+                    return value.reinterpret<ref immutable(ulong)>() == bits;
                 }
                 int main()
                 {

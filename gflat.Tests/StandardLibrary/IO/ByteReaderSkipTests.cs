@@ -234,7 +234,7 @@ public sealed class ByteReaderSkipTests
                 "core/IO/byte_reader.gf", "core/IO/byte_reader_skip.gf",
                 "libc/Memory/allocation.gf", "libc/Exceptions/unhandled.gf"
             };
-            if (binary) names.AddRange(["core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf"]);
+            if (binary) names.AddRange(["core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf"]);
             library = names.Select(name => new SourceFile(name,
                 File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))));
         }

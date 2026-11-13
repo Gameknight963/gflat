@@ -61,7 +61,7 @@ public sealed class CastRedesignEditorTests
     [Fact]
     public void InferredLocalTypeComesFromReinterpretResult()
     {
-        const string text="int main(){uint bits=1065353216u;var decoded=bits.reinterpret<float>();return (int)decoded;}";
+        const string text="int main(){uint bits=1065353216u;var decoded=bits.reinterpret<ref immutable(float)>();return (int)decoded;}";
         var source=new SourceFile(Path.GetFullPath("reinterpret-editor.gf"),text);
         var snapshot=new AnalysisSnapshot([source],new(){NoStdLib=true,NoBuiltins=true});
         Assert.DoesNotContain(snapshot.Diagnostics,item=>item.Severity==DiagnosticSeverity.Error);

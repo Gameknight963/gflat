@@ -69,8 +69,8 @@ public sealed class IntegerLogarithmTests
             """, $$"""
             int expected = 0;
             if (fread(&expected, 1, 4, file!) != 4) return 2;
-            if (Exponent({{bitsExpression}}.reinterpret<{{scalar}}>()) != expected) return 3;
-            """, ["core/Numerics/Math.gf"], optimization);
+            if (Exponent({{bitsExpression}}.reinterpret<ref immutable({{scalar}})>()) != expected) return 3;
+            """, ["core/Binary/BitConverter.gf","core/Numerics/Math.gf"], optimization);
     }
 
     private static IEnumerable<ulong> FloatingInputs(bool wide)

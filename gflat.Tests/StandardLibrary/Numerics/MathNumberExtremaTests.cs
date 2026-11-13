@@ -78,20 +78,20 @@ public sealed class MathNumberExtremaTests
                         nuint read = fread(&row[0], 1, (nuint)sizeof({{integer}}) * 6, file!);
                         if (read == 0) break;
                         if (read != (nuint)sizeof({{integer}}) * 6) return 2;
-                        {{scalar}} a = (row[0]).reinterpret<{{scalar}}>();
-                        {{scalar}} b = (row[1]).reinterpret<{{scalar}}>();
+                        {{scalar}} a = (row[0]).reinterpret<ref immutable({{scalar}})>();
+                        {{scalar}} b = (row[1]).reinterpret<ref immutable({{scalar}})>();
                         actual[0] = Math::MinNumber(a, b);
                         actual[1] = Math::MaxNumber(a, b);
                         actual[2] = Math::MinMagnitudeNumber(a, b);
                         actual[3] = Math::MaxMagnitudeNumber(a, b);
                         for (nuint i = 0; i < 4; i++)
                         {
-                            {{scalar}} expected = (row[i + 2]).reinterpret<{{scalar}}>();
+                            {{scalar}} expected = (row[i + 2]).reinterpret<ref immutable({{scalar}})>();
                             if (Math::IsNaN(expected))
                             {
                                 if (!Math::IsNaN(actual[i])) return 3;
                             }
-                            else if ((actual[i]).reinterpret<{{integer}}>() != row[i + 2]) return (int)i + 4;
+                            else if ((actual[i]).reinterpret<ref immutable({{integer}})>() != row[i + 2]) return (int)i + 4;
                         }
                     }
                     return ferror(file!);

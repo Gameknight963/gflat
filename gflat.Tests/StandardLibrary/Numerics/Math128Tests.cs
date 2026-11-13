@@ -33,6 +33,7 @@ public sealed class Math128Tests
             }
             var sources = new[]
             {
+                new SourceFile("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))),
                 new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
                 new SourceFile("main.gf", $$"""
                     using Standard; using Standard::Numerics;

@@ -56,11 +56,11 @@ public sealed class StandardDefaultSearchTests
                 }
                 {
                     nuint count=(nuint)ReadByte(packet,ref at);double[9] data;
-                    for(nuint i=0;i<count;i++){ulong bits=ReadULong(packet,ref at);data[i]=(bits).reinterpret<double>();}
+                    for(nuint i=0;i<count;i++){ulong bits=ReadULong(packet,ref at);data[i]=(bits).reinterpret<ref immutable(double)>();}
                     Span<double> values=new(data,count);if(!IsSorted(values.AsImmutable()))return 2;
                     int countKeys=ReadByte(packet,ref at);
                     for(int row=0;row<countKeys;row++){
-                        ulong bits=ReadULong(packet,ref at);double key=(bits).reinterpret<double>();
+                        ulong bits=ReadULong(packet,ref at);double key=(bits).reinterpret<ref immutable(double)>();
                         nuint lower=(nuint)ReadByte(packet,ref at);nuint upper=(nuint)ReadByte(packet,ref at);nuint match=(nuint)ReadByte(packet,ref at);
                         if(LowerBound(values.AsImmutable(),&key)!=lower||UpperBound(values.AsImmutable(),&key)!=upper||BinarySearch(values.AsImmutable(),&key)!=match)return 3;
                     }

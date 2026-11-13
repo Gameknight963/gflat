@@ -1,3 +1,5 @@
+using Standard::Binary;
+
 namespace Standard::Numerics;
 
 public enum MidpointRounding
@@ -675,7 +677,7 @@ public static class Math
 
     public static int ILogB(float value) nothrow
     {
-        uint magnitude = value.reinterpret<uint>() & 0x7fffffffu;
+        uint magnitude = BitConverter::FloatToUInt32Bits(value) & 0x7fffffffu;
         int exponent = (int)(magnitude >> 23);
         if (exponent == 255) return 2147483647;
         if (exponent != 0) return exponent - 127;
@@ -688,67 +690,67 @@ public static class Math
     public static bool IsNaN(float value) nothrow => value != value;
     public static bool IsFinite(float value) nothrow
     {
-        uint bits = value.reinterpret<uint>();
+        uint bits = BitConverter::FloatToUInt32Bits(value);
         return (bits & (uint)2139095040) != (uint)2139095040;
     }
     public static bool IsInfinity(float value) nothrow
-        => (value.reinterpret<uint>() & 0x7fffffffu) == 0x7f800000u;
+        => (BitConverter::FloatToUInt32Bits(value) & 0x7fffffffu) == 0x7f800000u;
     public static bool IsPositiveInfinity(float value) nothrow
-        => value.reinterpret<uint>() == 0x7f800000u;
+        => BitConverter::FloatToUInt32Bits(value) == 0x7f800000u;
     public static bool IsNegativeInfinity(float value) nothrow
-        => value.reinterpret<uint>() == 0xff800000u;
+        => BitConverter::FloatToUInt32Bits(value) == 0xff800000u;
     public static bool IsNegative(float value) nothrow
-        => (value.reinterpret<uint>() & 0x80000000u) != 0u;
+        => (BitConverter::FloatToUInt32Bits(value) & 0x80000000u) != 0u;
     public static bool IsPositive(float value) nothrow
-        => (value.reinterpret<uint>() & 0x80000000u) == 0u;
+        => (BitConverter::FloatToUInt32Bits(value) & 0x80000000u) == 0u;
     public static bool IsNormal(float value) nothrow
     {
-        uint exponent = value.reinterpret<uint>() & 0x7f800000u;
+        uint exponent = BitConverter::FloatToUInt32Bits(value) & 0x7f800000u;
         return exponent != 0u && exponent != 0x7f800000u;
     }
     public static bool IsSubnormal(float value) nothrow
     {
-        uint magnitude = value.reinterpret<uint>() & 0x7fffffffu;
+        uint magnitude = BitConverter::FloatToUInt32Bits(value) & 0x7fffffffu;
         return magnitude != 0u && magnitude < 0x00800000u;
     }
 
     public static float Abs(float value) nothrow
     {
-        uint bits = value.reinterpret<uint>() & (uint)2147483647;
-        return bits.reinterpret<float>();
+        uint bits = BitConverter::FloatToUInt32Bits(value) & (uint)2147483647;
+        return BitConverter::UInt32BitsToFloat(bits);
     }
 
     public static float CopySign(float magnitude, float sign) nothrow
     {
-        uint bits = (magnitude.reinterpret<uint>() & 2147483647u) | (sign.reinterpret<uint>() & 2147483648u);
-        return bits.reinterpret<float>();
+        uint bits = (BitConverter::FloatToUInt32Bits(magnitude) & 2147483647u) | (BitConverter::FloatToUInt32Bits(sign) & 2147483648u);
+        return BitConverter::UInt32BitsToFloat(bits);
     }
 
     public static float BitIncrement(float value) nothrow
     {
-        uint bits = value.reinterpret<uint>();
+        uint bits = BitConverter::FloatToUInt32Bits(value);
         uint magnitude = bits & 0x7fffffffu;
         if (magnitude > 0x7f800000u || bits == 0x7f800000u) return value;
         if (magnitude == 0u) bits = 1u;
         else if ((bits & 0x80000000u) != 0u) bits--;
         else bits++;
-        return bits.reinterpret<float>();
+        return BitConverter::UInt32BitsToFloat(bits);
     }
 
     public static float BitDecrement(float value) nothrow
     {
-        uint bits = value.reinterpret<uint>();
+        uint bits = BitConverter::FloatToUInt32Bits(value);
         uint magnitude = bits & 0x7fffffffu;
         if (magnitude > 0x7f800000u || bits == 0xff800000u) return value;
         if (magnitude == 0u) bits = 0x80000001u;
         else if ((bits & 0x80000000u) != 0u) bits++;
         else bits--;
-        return bits.reinterpret<float>();
+        return BitConverter::UInt32BitsToFloat(bits);
     }
 
     public static float Truncate(float value) nothrow
     {
-        uint bits = value.reinterpret<uint>();
+        uint bits = BitConverter::FloatToUInt32Bits(value);
         int exponent = (int)((bits >> 23) & 255u) - 127;
         if (exponent >= 23) return value;
         if (exponent < 0) bits = bits & 2147483648u;
@@ -757,7 +759,7 @@ public static class Math
             uint fraction = (1u << (23 - exponent)) - 1u;
             bits = bits & (fraction ^ 4294967295u);
         }
-        return bits.reinterpret<float>();
+        return BitConverter::UInt32BitsToFloat(bits);
     }
 
     public static float Floor(float value) nothrow
@@ -776,16 +778,16 @@ public static class Math
 
     public static float Round(float value) nothrow
     {
-        uint bits = value.reinterpret<uint>();
+        uint bits = BitConverter::FloatToUInt32Bits(value);
         int exponent = (int)((bits >> 23) & 255u) - 127;
         if (exponent >= 23) return value;
         uint sign = bits & 2147483648u;
-        if (exponent < -1) return sign.reinterpret<float>();
+        if (exponent < -1) return BitConverter::UInt32BitsToFloat(sign);
         if (exponent == -1)
         {
             // Exactly +/-0.5 ties with the even integer zero.
             if ((bits & 8388607u) != 0u) sign = sign | 1065353216u;
-            return sign.reinterpret<float>();
+            return BitConverter::UInt32BitsToFloat(sign);
         }
         int shift = 23 - exponent;
         uint unit = 1u << shift;
@@ -796,7 +798,7 @@ public static class Math
         uint half = unit >> 1;
         if (discarded > half || (discarded == half && ((significand >> shift) & 1u) != 0u))
             truncated += unit;
-        return truncated.reinterpret<float>();
+        return BitConverter::UInt32BitsToFloat(truncated);
     }
 
     public static float Min(float a, float b) nothrow
@@ -806,8 +808,8 @@ public static class Math
         if (a < b) return a;
         if (a == b)
         {
-            uint bits = a.reinterpret<uint>() | b.reinterpret<uint>();
-            return bits.reinterpret<float>();
+            uint bits = BitConverter::FloatToUInt32Bits(a) | BitConverter::FloatToUInt32Bits(b);
+            return BitConverter::UInt32BitsToFloat(bits);
         }
         return b;
     }
@@ -819,8 +821,8 @@ public static class Math
         if (a > b) return a;
         if (a == b)
         {
-            uint bits = a.reinterpret<uint>() & b.reinterpret<uint>();
-            return bits.reinterpret<float>();
+            uint bits = BitConverter::FloatToUInt32Bits(a) & BitConverter::FloatToUInt32Bits(b);
+            return BitConverter::UInt32BitsToFloat(bits);
         }
         return b;
     }
@@ -830,7 +832,7 @@ public static class Math
 
     public static int ILogB(double value) nothrow
     {
-        ulong magnitude = value.reinterpret<ulong>() & 0x7ffffffffffffffful;
+        ulong magnitude = BitConverter::DoubleToUInt64Bits(value) & 0x7ffffffffffffffful;
         int exponent = (int)(magnitude >> 52);
         if (exponent == 2047) return 2147483647;
         if (exponent != 0) return exponent - 1023;
@@ -843,67 +845,67 @@ public static class Math
     public static bool IsNaN(double value) nothrow => value != value;
     public static bool IsFinite(double value) nothrow
     {
-        ulong bits = value.reinterpret<ulong>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value);
         return (bits & 9218868437227405312ul) != 9218868437227405312ul;
     }
     public static bool IsInfinity(double value) nothrow
-        => (value.reinterpret<ulong>() & 0x7ffffffffffffffful) == 0x7ff0000000000000ul;
+        => (BitConverter::DoubleToUInt64Bits(value) & 0x7ffffffffffffffful) == 0x7ff0000000000000ul;
     public static bool IsPositiveInfinity(double value) nothrow
-        => value.reinterpret<ulong>() == 0x7ff0000000000000ul;
+        => BitConverter::DoubleToUInt64Bits(value) == 0x7ff0000000000000ul;
     public static bool IsNegativeInfinity(double value) nothrow
-        => value.reinterpret<ulong>() == 0xfff0000000000000ul;
+        => BitConverter::DoubleToUInt64Bits(value) == 0xfff0000000000000ul;
     public static bool IsNegative(double value) nothrow
-        => (value.reinterpret<ulong>() & 0x8000000000000000ul) != 0ul;
+        => (BitConverter::DoubleToUInt64Bits(value) & 0x8000000000000000ul) != 0ul;
     public static bool IsPositive(double value) nothrow
-        => (value.reinterpret<ulong>() & 0x8000000000000000ul) == 0ul;
+        => (BitConverter::DoubleToUInt64Bits(value) & 0x8000000000000000ul) == 0ul;
     public static bool IsNormal(double value) nothrow
     {
-        ulong exponent = value.reinterpret<ulong>() & 0x7ff0000000000000ul;
+        ulong exponent = BitConverter::DoubleToUInt64Bits(value) & 0x7ff0000000000000ul;
         return exponent != 0ul && exponent != 0x7ff0000000000000ul;
     }
     public static bool IsSubnormal(double value) nothrow
     {
-        ulong magnitude = value.reinterpret<ulong>() & 0x7ffffffffffffffful;
+        ulong magnitude = BitConverter::DoubleToUInt64Bits(value) & 0x7ffffffffffffffful;
         return magnitude != 0ul && magnitude < 0x0010000000000000ul;
     }
 
     public static double Abs(double value) nothrow
     {
-        ulong bits = value.reinterpret<ulong>() & 9223372036854775807ul;
-        return bits.reinterpret<double>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value) & 9223372036854775807ul;
+        return BitConverter::UInt64BitsToDouble(bits);
     }
 
     public static double CopySign(double magnitude, double sign) nothrow
     {
-        ulong bits = (magnitude.reinterpret<ulong>() & 9223372036854775807ul) | (sign.reinterpret<ulong>() & 9223372036854775808ul);
-        return bits.reinterpret<double>();
+        ulong bits = (BitConverter::DoubleToUInt64Bits(magnitude) & 9223372036854775807ul) | (BitConverter::DoubleToUInt64Bits(sign) & 9223372036854775808ul);
+        return BitConverter::UInt64BitsToDouble(bits);
     }
 
     public static double BitIncrement(double value) nothrow
     {
-        ulong bits = value.reinterpret<ulong>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value);
         ulong magnitude = bits & 0x7ffffffffffffffful;
         if (magnitude > 0x7ff0000000000000ul || bits == 0x7ff0000000000000ul) return value;
         if (magnitude == 0ul) bits = 1ul;
         else if ((bits & 0x8000000000000000ul) != 0ul) bits--;
         else bits++;
-        return bits.reinterpret<double>();
+        return BitConverter::UInt64BitsToDouble(bits);
     }
 
     public static double BitDecrement(double value) nothrow
     {
-        ulong bits = value.reinterpret<ulong>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value);
         ulong magnitude = bits & 0x7ffffffffffffffful;
         if (magnitude > 0x7ff0000000000000ul || bits == 0xfff0000000000000ul) return value;
         if (magnitude == 0ul) bits = 0x8000000000000001ul;
         else if ((bits & 0x8000000000000000ul) != 0ul) bits++;
         else bits--;
-        return bits.reinterpret<double>();
+        return BitConverter::UInt64BitsToDouble(bits);
     }
 
     public static double Truncate(double value) nothrow
     {
-        ulong bits = value.reinterpret<ulong>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value);
         int exponent = (int)((bits >> 52) & 2047ul) - 1023;
         if (exponent >= 52) return value;
         if (exponent < 0) bits = bits & 9223372036854775808ul;
@@ -912,7 +914,7 @@ public static class Math
             ulong fraction = (1ul << (52 - exponent)) - 1ul;
             bits = bits & (fraction ^ 18446744073709551615ul);
         }
-        return bits.reinterpret<double>();
+        return BitConverter::UInt64BitsToDouble(bits);
     }
 
     public static double Floor(double value) nothrow
@@ -931,15 +933,15 @@ public static class Math
 
     public static double Round(double value) nothrow
     {
-        ulong bits = value.reinterpret<ulong>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value);
         int exponent = (int)((bits >> 52) & 2047ul) - 1023;
         if (exponent >= 52) return value;
         ulong sign = bits & 9223372036854775808ul;
-        if (exponent < -1) return sign.reinterpret<double>();
+        if (exponent < -1) return BitConverter::UInt64BitsToDouble(sign);
         if (exponent == -1)
         {
             if ((bits & 4503599627370495ul) != 0ul) sign = sign | 4607182418800017408ul;
-            return sign.reinterpret<double>();
+            return BitConverter::UInt64BitsToDouble(sign);
         }
         int shift = 52 - exponent;
         ulong unit = 1ul << shift;
@@ -950,7 +952,7 @@ public static class Math
         ulong half = unit >> 1;
         if (discarded > half || (discarded == half && ((significand >> shift) & 1ul) != 0ul))
             truncated += unit;
-        return truncated.reinterpret<double>();
+        return BitConverter::UInt64BitsToDouble(truncated);
     }
 
     public static double Min(double a, double b) nothrow
@@ -960,8 +962,8 @@ public static class Math
         if (a < b) return a;
         if (a == b)
         {
-            ulong bits = a.reinterpret<ulong>() | b.reinterpret<ulong>();
-            return bits.reinterpret<double>();
+            ulong bits = BitConverter::DoubleToUInt64Bits(a) | BitConverter::DoubleToUInt64Bits(b);
+            return BitConverter::UInt64BitsToDouble(bits);
         }
         return b;
     }
@@ -973,8 +975,8 @@ public static class Math
         if (a > b) return a;
         if (a == b)
         {
-            ulong bits = a.reinterpret<ulong>() & b.reinterpret<ulong>();
-            return bits.reinterpret<double>();
+            ulong bits = BitConverter::DoubleToUInt64Bits(a) & BitConverter::DoubleToUInt64Bits(b);
+            return BitConverter::UInt64BitsToDouble(bits);
         }
         return b;
     }
@@ -1156,7 +1158,7 @@ public static class Math
 
     public static float ScaleB(float value, int exponent) nothrow
     {
-        uint bits = value.reinterpret<uint>();
+        uint bits = BitConverter::FloatToUInt32Bits(value);
         uint sign = bits & 0x80000000u;
         uint significand = bits & 0x7fffffu;
         long encoded = (long)((bits >> 23) & (uint)255);
@@ -1171,27 +1173,27 @@ public static class Math
         if (scaled >= 255l)
         {
             uint infinity = sign | 0x7f800000u;
-            return infinity.reinterpret<float>();
+            return BitConverter::UInt32BitsToFloat(infinity);
         }
         if (scaled > 0l)
         {
             uint normal = sign | ((uint)scaled << 23) | (significand & 0x7fffffu);
-            return normal.reinterpret<float>();
+            return BitConverter::UInt32BitsToFloat(normal);
         }
         long distance = 1l - scaled;
-        if (distance > 24l) return sign.reinterpret<float>();
+        if (distance > 24l) return BitConverter::UInt32BitsToFloat(sign);
         int shift = (int)distance;
         uint rounded = significand >> shift;
         uint tail = significand & ((1u << shift) - 1u);
         uint halfway = 1u << (shift - 1);
         if (tail > halfway || (tail == halfway && (rounded & 1u) != 0u)) rounded++;
         uint result = sign | rounded;
-        return result.reinterpret<float>();
+        return BitConverter::UInt32BitsToFloat(result);
     }
 
     public static double ScaleB(double value, int exponent) nothrow
     {
-        ulong bits = value.reinterpret<ulong>();
+        ulong bits = BitConverter::DoubleToUInt64Bits(value);
         ulong sign = bits & 0x8000000000000000ul;
         ulong significand = bits & 0xffffffffffffful;
         long encoded = (long)((bits >> 52) & (ulong)2047);
@@ -1206,22 +1208,22 @@ public static class Math
         if (scaled >= 2047l)
         {
             ulong infinity = sign | 0x7ff0000000000000ul;
-            return infinity.reinterpret<double>();
+            return BitConverter::UInt64BitsToDouble(infinity);
         }
         if (scaled > 0l)
         {
             ulong normal = sign | ((ulong)scaled << 52) | (significand & 0xffffffffffffful);
-            return normal.reinterpret<double>();
+            return BitConverter::UInt64BitsToDouble(normal);
         }
         long distance = 1l - scaled;
-        if (distance > 53l) return sign.reinterpret<double>();
+        if (distance > 53l) return BitConverter::UInt64BitsToDouble(sign);
         int shift = (int)distance;
         ulong rounded = significand >> shift;
         ulong tail = significand & ((1ul << shift) - 1ul);
         ulong halfway = 1ul << (shift - 1);
         if (tail > halfway || (tail == halfway && (rounded & 1ul) != 0ul)) rounded++;
         ulong result = sign | rounded;
-        return result.reinterpret<double>();
+        return BitConverter::UInt64BitsToDouble(result);
     }
     public static long BigMul(int left, int right) nothrow => (long)left * (long)right;
     public static ulong BigMul(uint left, uint right) nothrow => (ulong)left * (ulong)right;

@@ -113,7 +113,7 @@ public sealed class BinaryBufferReadToTests
         """;
     private static string Emit(string code)
     {
-        string[] names = ["core/IO/IByteReader.gf", "core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf"];
+        string[] names = ["core/IO/IByteReader.gf", "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("binary-read-to-tests.gf", code));
         return Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

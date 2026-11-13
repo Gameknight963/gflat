@@ -16,12 +16,26 @@ public partial class TypeChecker
         if (node.Callee is not MemberAccessExpression { Member: "reinterpret" } member) return false;
         if (node.TypeArguments.Count != 1 || node.Arguments.Count != 0)
             throw new TypeCheckException("reinterpret requires '.reinterpret<T>()' with one target type and no arguments", node.Span);
-        member.Object.Accept(this);
-        TypeExpression source = ResolveAlias(GetType(member.Object));
         TypeExpression result = ResolveAlias(node.TypeArguments[0]);
         ValidateTypeUsage(result, node.Line);
+        if (result is ReferenceTypeExpression) CheckNullableStorage(member.Object, escape: true);
+        else member.Object.Accept(this);
+        TypeExpression source = ResolveAlias(GetType(member.Object));
+        if (result is ReferenceTypeExpression reference)
+        {
+            if (IsExpressionImmutable(member.Object)) source = TypeQualifiers.Immutable(source);
+            else if (IsExpressionReadOnly(member.Object)) source = TypeQualifiers.ReadOnly(source);
+            if (!IsReferenceStorage(member.Object) && GetStaticStorage(member.Object) == null || IsManagedStorage(member.Object) ||
+                IsPropertyValueStorage(member.Object) || UnsupportedReinterpretStorage(source) || UnsupportedReinterpretStorage(reference.Inner) ||
+                !ReinterpretProtectionPreserved(source, reference.Inner))
+                throw new TypeCheckException("A reinterpret reference requires existing raw storage and cannot remove readonly or immutable protection", node.Span);
+            reinterpretCalls[node] = new(member.Object, source, result);
+            _referenceReads.Add(node);
+            RecordType(node, reference.Inner);
+            return true;
+        }
         if (!IsValidReinterpret(source, result))
-            throw new TypeCheckException($"Cannot reinterpret '{DisplayTypeName(source)}' as '{DisplayTypeName(result)}'; use equal-sized numeric scalars or raw addresses and pointer-sized integers", node.Span);
+            throw new TypeCheckException($"Cannot reinterpret '{DisplayTypeName(source)}' as '{DisplayTypeName(result)}'; reinterpret supports raw pointers, integers converted to pointers, sufficiently wide pointer-to-integer conversions, and storage references", node.Span);
         if (result is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false })
         {
             if (_constEvaluator.TryEvaluate(member.Object, out ConstValue? value, out _) && value != null &&
@@ -41,15 +55,42 @@ public partial class TypeChecker
         // A managed reference value cannot lose its tracking contract. A raw
         // address remains an address even when its pointee contains references.
         if (source is ManagedTypeExpression || result is ManagedTypeExpression ||
-            source is ReferenceTypeExpression or ArrayTypeExpression || result is ReferenceTypeExpression or ArrayTypeExpression)
+            source is ReferenceTypeExpression || result is ReferenceTypeExpression or ArrayTypeExpression)
             return false;
+        if (source is ArrayTypeExpression array)
+            source = new PointerTypeExpression(array.IsImmutableValue ? TypeQualifiers.Immutable(array.ElementType) :
+                array.IsReadOnlyValue ? TypeQualifiers.ReadOnly(array.ElementType) : array.ElementType, false, array.Line);
         bool sourceAddress = IsReinterpretAddress(source), resultAddress = IsReinterpretAddress(result);
         if (sourceAddress || resultAddress)
-            return sourceAddress && resultAddress || sourceAddress && IsInteger(result) &&
-                GetTypeSize(result) * 8 == TargetInfo.Default.PointerBits ||
-                resultAddress && IsInteger(source) && GetTypeSize(source) * 8 == TargetInfo.Default.PointerBits;
-        TypeExpression sourceScalar = ReinterpretScalarType(source), resultScalar = ReinterpretScalarType(result);
-        return IsNumeric(sourceScalar) && IsNumeric(resultScalar) && GetTypeSize(sourceScalar) == GetTypeSize(resultScalar);
+            return sourceAddress && resultAddress &&
+                    (source is not PointerTypeExpression sp || result is not PointerTypeExpression rp || ReinterpretProtectionPreserved(sp.Inner, rp.Inner)) &&
+                    (!IsNullable(source) || IsNullable(result)) ||
+                sourceAddress && IsReinterpretInteger(result) && GetTypeSize(result) * 8 >= TargetInfo.Default.PointerBits ||
+                resultAddress && IsReinterpretInteger(source);
+        return IsReinterpretInteger(source) && TypesMatch(source, result) ||
+            source is NamedTypeExpression { Name: "null" } && IsReinterpretInteger(result) && GetTypeSize(result) * 8 >= TargetInfo.Default.PointerBits;
+    }
+
+    private bool IsReinterpretInteger(TypeExpression type) => IsInteger(ReinterpretScalarType(type)) ||
+        ResolveAlias(type) is NamedTypeExpression { Name: "bool" };
+
+    private bool UnsupportedReinterpretStorage(TypeExpression type) => ResolveAlias(type) switch
+    {
+        ManagedTypeExpression => true,
+        FunctionPointerTypeExpression function => function.IsManaged || function.IsSignature,
+        PointerTypeExpression pointer => !IsReinterpretAddress(pointer),
+        _ => false
+    };
+
+    private bool ReinterpretProtectionPreserved(TypeExpression source, TypeExpression result)
+    {
+        source = ResolveAlias(source);
+        result = ResolveAlias(result);
+        bool primitiveReadOnly = result is NamedTypeExpression named && IsPrimitive(named.Name) && result.IsReadOnlyValue;
+        if (source.IsImmutableValue && !result.IsImmutableValue && !primitiveReadOnly || source.IsReadOnlyValue && !result.IsReadOnlyValue) return false;
+        if (IsNullable(source) && result is PointerTypeExpression or FunctionPointerTypeExpression && !IsNullable(result)) return false;
+        return source is not PointerTypeExpression sourcePointer || result is not PointerTypeExpression resultPointer ||
+            ReinterpretProtectionPreserved(sourcePointer.Inner, resultPointer.Inner);
     }
 
     private bool IsReinterpretAddress(TypeExpression type)

@@ -426,45 +426,45 @@ public static class BinaryPrimitives
     {
         uint bits = (uint)0;
         bool success = TryReadUInt32LittleEndian(data, count, ref bits);
-        value = bits.reinterpret<float>();
+        value = BitConverter::UInt32BitsToFloat(bits);
         return success;
     }
 
     public static bool TryWriteFloatLittleEndian(byte* data, nuint count, float value) nothrow
-        => TryWriteUInt32LittleEndian(data, count, value.reinterpret<uint>());
+        => TryWriteUInt32LittleEndian(data, count, BitConverter::FloatToUInt32Bits(value));
 
     public static bool TryReadFloatBigEndian(readonly(byte)* data, nuint count, ref float value) nothrow
     {
         uint bits = (uint)0;
         bool success = TryReadUInt32BigEndian(data, count, ref bits);
-        value = bits.reinterpret<float>();
+        value = BitConverter::UInt32BitsToFloat(bits);
         return success;
     }
 
     public static bool TryWriteFloatBigEndian(byte* data, nuint count, float value) nothrow
-        => TryWriteUInt32BigEndian(data, count, value.reinterpret<uint>());
+        => TryWriteUInt32BigEndian(data, count, BitConverter::FloatToUInt32Bits(value));
 
     public static bool TryReadDoubleLittleEndian(readonly(byte)* data, nuint count, ref double value) nothrow
     {
         ulong bits = (ulong)0;
         bool success = TryReadUInt64LittleEndian(data, count, ref bits);
-        value = bits.reinterpret<double>();
+        value = BitConverter::UInt64BitsToDouble(bits);
         return success;
     }
 
     public static bool TryWriteDoubleLittleEndian(byte* data, nuint count, double value) nothrow
-        => TryWriteUInt64LittleEndian(data, count, value.reinterpret<ulong>());
+        => TryWriteUInt64LittleEndian(data, count, BitConverter::DoubleToUInt64Bits(value));
 
     public static bool TryReadDoubleBigEndian(readonly(byte)* data, nuint count, ref double value) nothrow
     {
         ulong bits = (ulong)0;
         bool success = TryReadUInt64BigEndian(data, count, ref bits);
-        value = bits.reinterpret<double>();
+        value = BitConverter::UInt64BitsToDouble(bits);
         return success;
     }
 
     public static bool TryWriteDoubleBigEndian(byte* data, nuint count, double value) nothrow
-        => TryWriteUInt64BigEndian(data, count, value.reinterpret<ulong>());
+        => TryWriteUInt64BigEndian(data, count, BitConverter::DoubleToUInt64Bits(value));
 
     private static ulong Read(readonly(byte)* data, nuint width, bool littleEndian) nothrow
     {

@@ -280,7 +280,7 @@ public class FreestandingCoreUtilitiesTests
             if(Standard::Binary::VarInt::ReadUInt32(&variable[1],variableLength,ref narrowDecoded,ref variableConsumed)!=Standard::Binary::VarInt::Status::Done||narrowDecoded!=narrowVariable||variableConsumed!=variableLength) return 110;
             uint floatBits=(uint)(runtimeInput>>32)|0x7f800001u;
             ulong doubleBits=runtimeInput|0x7ff0000000000001ul;
-            float floatingValue=(floatBits).reinterpret<float>(); double doubleValue=(doubleBits).reinterpret<double>();
+            float floatingValue=(floatBits).reinterpret<ref immutable(float)>(); double doubleValue=(doubleBits).reinterpret<ref immutable(double)>();
             byte[14] ieee; ieee[0]=(byte)90; ieee[13]=(byte)165;
             Standard::Binary::BinaryBufferWriter ieeeWriter=new(&ieee[1],12);
             if(!ieeeWriter.TryWriteFloatLittleEndian(floatingValue)||!ieeeWriter.TryWriteDoubleBigEndian(doubleValue)||ieeeWriter.Position!=12) return 111;
@@ -288,7 +288,7 @@ public class FreestandingCoreUtilitiesTests
             Standard::Binary::BinaryBufferReader ieeeReader=new(&ieee[1],12);
             float decodedFloat=(float)0; double decodedDouble=(double)0;
             if(!ieeeReader.TryReadFloatLittleEndian(ref decodedFloat)||!ieeeReader.TryReadDoubleBigEndian(ref decodedDouble)||ieeeReader.Position!=12) return 113;
-            if((decodedFloat).reinterpret<uint>()!=floatBits||(decodedDouble).reinterpret<ulong>()!=doubleBits) return 114;
+            if((decodedFloat).reinterpret<ref immutable(uint)>()!=floatBits||(decodedDouble).reinterpret<ref immutable(ulong)>()!=doubleBits) return 114;
             for(nuint i=0;i<22;i++)decimalText[i]='Z';
             if(!Standard::Text::IntegerFormatting::TryFormatHex(unsignedMaximum,&decimalText[1],20,ref length,20,false)||length!=20) return 115;
             for(nuint i=1;i<5;i++)if(decimalText[i]!='0') return 116;
@@ -404,7 +404,7 @@ public class FreestandingCoreUtilitiesTests
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
         var sources = new[] { "Text/ascii.gf", "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf", "Encoding/Hex.gf", "Encoding/Base64.gf", "Encoding/Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf", "Hashing/SHA512.gf", "Hashing/HMACSHA512.gf",
-            "Encoding/PercentEncoding.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Text/Utf8Decoder.gf",
+            "Encoding/PercentEncoding.gf", "Binary/BitConverter.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Text/Utf8Decoder.gf",
             "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Text/IntegerFormatting.gf", "Text/hex_integer_parsing.gf", "Text/boolean_parsing.gf", "Text/ByteSearch.gf", "Text/CString.gf", "Memory/bytes.gf", "Json/JsonString.gf", "Binary/VarInt.gf", "Compression/Deflate.gf", "Compression/Gzip.gf", "Compression/Zlib.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));

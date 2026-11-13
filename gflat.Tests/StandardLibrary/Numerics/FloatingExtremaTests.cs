@@ -54,9 +54,9 @@ public sealed class FloatingExtremaTests
                 bool Same({{scalar}} value, ulong expected) nothrow
                 {
                     {{integer}} bits = ({{integer}})expected;
-                    {{scalar}} target = bits.reinterpret<{{scalar}}>();
+                    {{scalar}} target = bits.reinterpret<ref immutable({{scalar}})>();
                     if (Math::IsNaN(target)) return Math::IsNaN(value);
-                    return value.reinterpret<{{integer}}>() == bits;
+                    return value.reinterpret<ref immutable({{integer}})>() == bits;
                 }
                 {{scalar}} Minimum({{scalar}} a, {{scalar}} b) nothrow => Math::MinMagnitude(a, b);
                 {{scalar}} Maximum({{scalar}} a, {{scalar}} b) nothrow => Math::MaxMagnitude(a, b);
@@ -74,9 +74,9 @@ public sealed class FloatingExtremaTests
                         {{integer}} aBits = ({{integer}})row[0];
                         {{integer}} bBits = ({{integer}})row[1];
                         {{integer}} cBits = ({{integer}})row[2];
-                        {{scalar}} a = aBits.reinterpret<{{scalar}}>();
-                        {{scalar}} b = bBits.reinterpret<{{scalar}}>();
-                        {{scalar}} c = cBits.reinterpret<{{scalar}}>();
+                        {{scalar}} a = aBits.reinterpret<ref immutable({{scalar}})>();
+                        {{scalar}} b = bBits.reinterpret<ref immutable({{scalar}})>();
+                        {{scalar}} c = cBits.reinterpret<ref immutable({{scalar}})>();
                         if (!Same(Minimum(a, b), row[3]) || !Same(Maximum(a, b), row[4])) return 3;
                         {{scalar}} result = a;
                         bool caught = false;

@@ -72,11 +72,11 @@ public sealed class FloatingPointOperatorTests
             int main() {
                 float single = 0.1f;
                 double wide = 0.1d;
-                if ((single).reinterpret<uint>() != 0x3dcccccdu) return 1;
-                if ((wide).reinterpret<ulong>() != 0x3fb999999999999aul) return 2;
+                if ((single).reinterpret<ref immutable(uint)>() != 0x3dcccccdu) return 1;
+                if ((wide).reinterpret<ref immutable(ulong)>() != 0x3fb999999999999aul) return 2;
                 double zero = 0.0d;
                 double negativeZero = -zero;
-                if ((negativeZero).reinterpret<ulong>() != 0x8000000000000000ul) return 3;
+                if ((negativeZero).reinterpret<ref immutable(ulong)>() != 0x8000000000000000ul) return 3;
                 return 0;
             }
             """);

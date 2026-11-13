@@ -73,7 +73,7 @@ public sealed class TemporalUnitAdditionTests
                 DateTimeOffset Apply(DateTimeOffset value, long unit, long exact, long bits)
                 {
                     if (unit == 6) return value.AddTicks(bits);
-                    double fraction = bits.reinterpret<double>();
+                    double fraction = bits.reinterpret<ref immutable(double)>();
                     if (unit == 0) { if (exact == 1) return value.AddDays(bits); return AddDays(value, fraction); }
                     if (unit == 1) { if (exact == 1) return value.AddHours(bits); return AddHours(value, fraction); }
                     if (unit == 2) { if (exact == 1) return value.AddMinutes(bits); return AddMinutes(value, fraction); }

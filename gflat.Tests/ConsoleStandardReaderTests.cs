@@ -134,7 +134,7 @@ public sealed class ConsoleStandardReaderTests
     {
         string[] names = ["core/Exception.gf", "core/ITextWriter.gf", "core/IO/IByteReader.gf", "core/IO/IOException.gf",
             "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/IO/byte_reader.gf",
-            "core/Binary/BinaryPrimitives.gf", "core/Binary/VarInt.gf", "core/IO/byte_reader_binary.gf",
+            "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/Binary/VarInt.gf", "core/IO/byte_reader_binary.gf",
             "core/IO/byte_reader_var_int.gf", "libc/Console/Console.gf", "libc/Console/standard_readers.gf", "libc/Memory/allocation.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("console-standard-reader-tests.gf", program)).ToList();

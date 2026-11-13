@@ -142,6 +142,7 @@ public sealed class Binary128Tests
     {
         var sources = new[]
         {
+            new SourceFile("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))),
             new SourceFile("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BinaryPrimitives.gf"))),
             new SourceFile("main.gf", program)
         };

@@ -65,7 +65,7 @@ public sealed class TimeOfDayUnitTests
                         if (reportDays) return clock.AddMinutes(input, ref days);
                         return clock.AddMinutes(input);
                     }
-                    double amount = input.reinterpret<double>();
+                    double amount = input.reinterpret<ref immutable(double)>();
                     if (unit == 0) { if (reportDays) return clock.AddHours(amount, ref days); return clock.AddHours(amount); }
                     if (reportDays) return clock.AddMinutes(amount, ref days);
                     return clock.AddMinutes(amount);
@@ -109,7 +109,7 @@ public sealed class TimeOfDayUnitTests
                             bool caught = false;
                             try
                             {
-                                double amount = invalid[i].reinterpret<double>();
+                                double amount = invalid[i].reinterpret<ref immutable(double)>();
                                 if (unit == 0) clock = clock.AddHours(amount, ref days);
                                 else clock = clock.AddMinutes(amount, ref days);
                             }

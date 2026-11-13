@@ -114,7 +114,7 @@ interface IHashable
         public immutable nuint GetHashCode()
         {
             if (*this == 0.0f || *this != *this) return (nuint)0;
-            return Hashing::Integer((ulong)(*this).reinterpret<uint>());
+            return Hashing::Integer((ulong)__llvm_module<uint>("define i32 @convert(float %value) alwaysinline nounwind {\n%bits = bitcast float %value to i32\nret i32 %bits\n}", "convert", *this));
         }
     }
 
@@ -123,7 +123,7 @@ interface IHashable
         public immutable nuint GetHashCode()
         {
             if (*this == 0.0d || *this != *this) return (nuint)0;
-            return Hashing::Integer((ulong)(*this).reinterpret<ulong>());
+            return Hashing::Integer((ulong)__llvm_module<ulong>("define i64 @convert(double %value) alwaysinline nounwind {\n%bits = bitcast double %value to i64\nret i64 %bits\n}", "convert", *this));
         }
     }
 

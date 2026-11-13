@@ -45,9 +45,9 @@ public sealed class StandardSquareRootTests
                     {{integer}}[{{expected.Length}}] expected = [{{string.Join(",", expected.Select(value => value + suffix))}}];
                     for (nuint i = 0; i < {{input.Length}}; i++) {
                         {{integer}} bits = input[i];
-                        {{type}} original = (bits).reinterpret<{{type}}>();
+                        {{type}} original = (bits).reinterpret<ref immutable({{type}})>();
                         {{type}} value = Math::Sqrt(original);
-                        {{integer}} actual = (value).reinterpret<{{integer}}>();
+                        {{integer}} actual = (value).reinterpret<ref immutable({{integer}})>();
                         bool nan = (expected[i] & {{nanMask}}) == {{nanMask}} && (expected[i] & {{fractionMask}}) != ({{integer}})0;
                         if (nan) {
                             if ((actual & {{nanMask}}) != {{nanMask}} || (actual & {{fractionMask}}) == ({{integer}})0) return 1;
@@ -59,6 +59,7 @@ public sealed class StandardSquareRootTests
         }
         code.AppendLine("return 0; }");
         var sources = new[] {
+            new SourceFile("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))),
             new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Numerics/Math.gf"))),
             new SourceFile("main.gf", code.ToString())
         };

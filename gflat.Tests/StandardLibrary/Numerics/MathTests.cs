@@ -72,8 +72,8 @@ public sealed class MathTests
     {
         Run($$"""
             using Standard; using Standard::Numerics;
-            {{type}} FromBits({{bitsType}} bits) => (bits).reinterpret<{{type}}>();
-            {{bitsType}} Bits({{type}} value) => (value).reinterpret<{{bitsType}}>();
+            {{type}} FromBits({{bitsType}} bits) => (bits).reinterpret<ref immutable({{type}})>();
+            {{bitsType}} Bits({{type}} value) => (value).reinterpret<ref immutable({{bitsType}})>();
             int main() {
                 {{type}} negativeZero = FromBits({{negativeZeroBits}});
                 {{type}} positiveZero = ({{type}})0;

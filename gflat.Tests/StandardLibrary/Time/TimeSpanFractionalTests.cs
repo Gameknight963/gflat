@@ -62,7 +62,7 @@ public sealed class TimeSpanFractionalTests
                         if (value.Microseconds != microseconds || value.Nanoseconds != nanoseconds) return 3;
                         double totalMicro = value.TotalMicroseconds;
                         double totalNano = value.TotalNanoseconds;
-                        if (totalMicro.reinterpret<ulong>() != expectedMicro || totalNano.reinterpret<ulong>() != expectedNano) return 4;
+                        if (totalMicro.reinterpret<ref immutable(ulong)>() != expectedMicro || totalNano.reinterpret<ref immutable(ulong)>() != expectedNano) return 4;
                         if (TimeSpan::FromMicroseconds(ticks / 10l).Ticks != ticks / 10l * 10l) return 5;
                     }
                     if (ferror(file!) != 0) return 6;
@@ -141,7 +141,7 @@ public sealed class TimeSpanFractionalTests
                         if (fread(&bits, 1, 8, file!) != 8 || fread(&expected, 1, 8, file!) != 8 || fread(&valid, 1, 4, file!) != 4) return 2;
                         TimeSpan result = TimeSpan::FromTicks(123l);
                         bool caught = false;
-                        try { result = Create(unit, bits.reinterpret<double>()); }
+                        try { result = Create(unit, bits.reinterpret<ref immutable(double)>()); }
                         catch (Exception* error) { caught = true; }
                         if (caught != (valid == 0)) return 3;
                         if (!caught && result.Ticks != expected) return 4;

@@ -50,17 +50,17 @@ public sealed class MidpointRoundingTests
                         if (received == 0) break;
                         if (received != 48) return 2;
                         {{integer}} bits = ({{integer}})row[0];
-                        {{type}} value = bits.reinterpret<{{type}}>();
+                        {{type}} value = bits.reinterpret<ref immutable({{type}})>();
                         for (int mode = 0; mode < 5; mode++)
                         {
                             {{type}} actual = Math::Round(value, (MidpointRounding)mode);
                             {{integer}} expectedBits = ({{integer}})row[(nuint)mode + 1];
-                            {{type}} expected = expectedBits.reinterpret<{{type}}>();
+                            {{type}} expected = expectedBits.reinterpret<ref immutable({{type}})>();
                             if (expected != expected)
                             {
                                 if (actual == actual) return 3;
                             }
-                            else if (actual.reinterpret<{{integer}}>() != expectedBits) return 4;
+                            else if (actual.reinterpret<ref immutable({{integer}})>() != expectedBits) return 4;
                         }
                     }
                     if (ferror(file!) != 0) return 5;
@@ -72,7 +72,7 @@ public sealed class MidpointRoundingTests
                         {
                             {{type}} output = ({{type}})123;
                             bool caught = false;
-                            try { output = Math::Round(unusual[j].reinterpret<{{type}}>(), (MidpointRounding)invalid[i]); }
+                            try { output = Math::Round(unusual[j].reinterpret<ref immutable({{type}})>(), (MidpointRounding)invalid[i]); }
                             catch (Exception* error) { caught = true; }
                             if (!caught || output != ({{type}})123) return 6;
                         }

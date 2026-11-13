@@ -238,7 +238,7 @@ public sealed class ZipArchiveWriterTests
 
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "core/Compression/ZipArchiveWriter.gf", "core/Compression/ZipArchive.gf", "core/Compression/ZipArchiveEntry.gf", "core/Compression/Deflate.gf",
-            "core/Hashing/CRC32.gf", "core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf",
+            "core/Hashing/CRC32.gf", "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf",
             "core/Memory/bytes.gf", "core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/Memory/Span.gf",
             "core/Collections/Vector.gf", "core/Collections/vector_resize.gf", "core/Collections/IEnumerable.gf",
             "core/Queries/Enumerable.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Text/CString.gf", "core/Text/utf8.gf",

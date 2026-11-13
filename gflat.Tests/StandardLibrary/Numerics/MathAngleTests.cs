@@ -62,9 +62,9 @@ public sealed class MathAngleTests
                 extern "C" int fclose(void* stream) nothrow;
                 int main()
                 {
-                    if ((Math::PI).reinterpret<ulong>() != {{BitConverter.DoubleToUInt64Bits(Math.PI)}}ul) return 1;
-                    if ((Math::E).reinterpret<ulong>() != {{BitConverter.DoubleToUInt64Bits(Math.E)}}ul) return 2;
-                    if ((Math::Tau).reinterpret<ulong>() != {{BitConverter.DoubleToUInt64Bits(Math.Tau)}}ul) return 3;
+                    if ((Math::PI).reinterpret<ref immutable(ulong)>() != {{BitConverter.DoubleToUInt64Bits(Math.PI)}}ul) return 1;
+                    if ((Math::E).reinterpret<ref immutable(ulong)>() != {{BitConverter.DoubleToUInt64Bits(Math.E)}}ul) return 2;
+                    if ((Math::Tau).reinterpret<ref immutable(ulong)>() != {{BitConverter.DoubleToUInt64Bits(Math.Tau)}}ul) return 3;
                     void*? file = fopen({{literal}}, "rb");
                     if (file == null) return 4;
                     defer { fclose(file!); }
@@ -75,17 +75,17 @@ public sealed class MathAngleTests
                         nuint read = fread(&row[0], 1, (nuint)sizeof({{integer}}) * 3, file!);
                         if (read == 0) break;
                         if (read != (nuint)sizeof({{integer}}) * 3) return 5;
-                        {{scalar}} value = (row[0]).reinterpret<{{scalar}}>();
+                        {{scalar}} value = (row[0]).reinterpret<ref immutable({{scalar}})>();
                         actual[0] = Math::DegreesToRadians(value);
                         actual[1] = Math::RadiansToDegrees(value);
                         for (nuint i = 0; i < 2; i++)
                         {
-                            {{scalar}} expected = (row[i + 1]).reinterpret<{{scalar}}>();
+                            {{scalar}} expected = (row[i + 1]).reinterpret<ref immutable({{scalar}})>();
                             if (Math::IsNaN(expected))
                             {
                                 if (!Math::IsNaN(actual[i])) return 6;
                             }
-                            else if ((actual[i]).reinterpret<{{integer}}>() != row[i + 1]) return (int)i + 7;
+                            else if ((actual[i]).reinterpret<ref immutable({{integer}})>() != row[i + 1]) return (int)i + 7;
                         }
                     }
                     return ferror(file!);

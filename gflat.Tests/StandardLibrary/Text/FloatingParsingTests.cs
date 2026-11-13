@@ -35,14 +35,14 @@ public sealed class FloatingParsingTests
                 for (nuint index = 0; index < {{singles.Length}}; index++)
                 {
                     float value = 7.0f;
-                    if (!TryParseFloat(singles[index], &value) || value.reinterpret<uint>() != singleBits[index]) return 1;
+                    if (!TryParseFloat(singles[index], &value) || value.reinterpret<ref immutable(uint)>() != singleBits[index]) return 1;
                 }
                 readonly(char)*[{{doubles.Length}}] doubles = [{{string.Join(",", doubleTexts.Select(Literal))}}];
                 ulong[{{doubles.Length}}] doubleBits = [{{string.Join(",", doubles.Select(bits => bits + "ul"))}}];
                 for (nuint index = 0; index < {{doubles.Length}}; index++)
                 {
                     double value = 7.0;
-                    if (!TryParseDouble(doubles[index], &value) || value.reinterpret<ulong>() != doubleBits[index]) return 2;
+                    if (!TryParseDouble(doubles[index], &value) || value.reinterpret<ref immutable(ulong)>() != doubleBits[index]) return 2;
                 }
                 return 0;
             }
@@ -67,24 +67,24 @@ public sealed class FloatingParsingTests
                 {
                     float single = -7.0f;
                     double wide = -7.0;
-                    if (TryParseFloat(cases[index], &single) || single.reinterpret<uint>() != 0u) return 10;
-                    if (TryParseDouble(cases[index], &wide) || wide.reinterpret<ulong>() != 0ul) return 11;
+                    if (TryParseFloat(cases[index], &single) || single.reinterpret<ref immutable(uint)>() != 0u) return 10;
+                    if (TryParseDouble(cases[index], &wide) || wide.reinterpret<ref immutable(ulong)>() != 0ul) return 11;
                 }
                 char[3] high = [(char)(byte)255, '1', '\0'];
                 float single = -1.0f;
                 double wide = -1.0;
-                if (TryParseFloat(high, &single) || single.reinterpret<uint>() != 0u) return 12;
-                if (TryParseDouble(high, &wide) || wide.reinterpret<ulong>() != 0ul) return 13;
+                if (TryParseFloat(high, &single) || single.reinterpret<ref immutable(uint)>() != 0u) return 12;
+                if (TryParseDouble(high, &wide) || wide.reinterpret<ref immutable(ulong)>() != 0ul) return 13;
                 if (!TryParseFloat("1.5\0ignored", &single) || single != 1.5f) return 14;
                 if (!TryParseDouble("1.5\0ignored", &wide) || wide != 1.5) return 15;
                 for (int whitespace = 9; whitespace <= 13; whitespace++)
                 {
                     char[3] leading = [(char)whitespace, '1', '\0'];
                     char[3] trailing = ['1', (char)whitespace, '\0'];
-                    if (TryParseFloat(leading, &single) || single.reinterpret<uint>() != 0u) return 16;
-                    if (TryParseDouble(leading, &wide) || wide.reinterpret<ulong>() != 0ul) return 17;
-                    if (TryParseFloat(trailing, &single) || single.reinterpret<uint>() != 0u) return 18;
-                    if (TryParseDouble(trailing, &wide) || wide.reinterpret<ulong>() != 0ul) return 19;
+                    if (TryParseFloat(leading, &single) || single.reinterpret<ref immutable(uint)>() != 0u) return 16;
+                    if (TryParseDouble(leading, &wide) || wide.reinterpret<ref immutable(ulong)>() != 0ul) return 17;
+                    if (TryParseFloat(trailing, &single) || single.reinterpret<ref immutable(uint)>() != 0u) return 18;
+                    if (TryParseDouble(trailing, &wide) || wide.reinterpret<ref immutable(ulong)>() != 0ul) return 19;
                 }
                 return 0;
             }
@@ -102,17 +102,17 @@ public sealed class FloatingParsingTests
                 float single = 0.0f;
                 double wide = 0.0;
                 if (!TryParseFloat("1.00000005960464477539062500000000000000000000000001", &single)
-                    || single.reinterpret<uint>() != 0x3f800001u) return 20;
-                if (!TryParseFloat("0x1.000002p0", &single) || single.reinterpret<uint>() != 0x3f800001u) return 21;
+                    || single.reinterpret<ref immutable(uint)>() != 0x3f800001u) return 20;
+                if (!TryParseFloat("0x1.000002p0", &single) || single.reinterpret<ref immutable(uint)>() != 0x3f800001u) return 21;
                 if (!TryParseDouble("-0X1.8P+2", &wide) || wide != -6.0) return 22;
-                if (!TryParseFloat("-0", &single) || single.reinterpret<uint>() != 0x80000000u) return 23;
-                if (!TryParseDouble("-0.0e+3", &wide) || wide.reinterpret<ulong>() != 0x8000000000000000ul) return 24;
-                if (!TryParseFloat("1e9999", &single) || single.reinterpret<uint>() != 0x7f800000u) return 25;
-                if (!TryParseDouble("-1e9999", &wide) || wide.reinterpret<ulong>() != 0xfff0000000000000ul) return 26;
-                if (!TryParseFloat("-1e-9999", &single) || single.reinterpret<uint>() != 0x80000000u) return 27;
-                if (!TryParseDouble("-1e-9999", &wide) || wide.reinterpret<ulong>() != 0x8000000000000000ul) return 28;
-                if (!TryParseFloat("INF", &single) || single.reinterpret<uint>() != 0x7f800000u) return 29;
-                if (!TryParseDouble("-infinity", &wide) || wide.reinterpret<ulong>() != 0xfff0000000000000ul) return 30;
+                if (!TryParseFloat("-0", &single) || single.reinterpret<ref immutable(uint)>() != 0x80000000u) return 23;
+                if (!TryParseDouble("-0.0e+3", &wide) || wide.reinterpret<ref immutable(ulong)>() != 0x8000000000000000ul) return 24;
+                if (!TryParseFloat("1e9999", &single) || single.reinterpret<ref immutable(uint)>() != 0x7f800000u) return 25;
+                if (!TryParseDouble("-1e9999", &wide) || wide.reinterpret<ref immutable(ulong)>() != 0xfff0000000000000ul) return 26;
+                if (!TryParseFloat("-1e-9999", &single) || single.reinterpret<ref immutable(uint)>() != 0x80000000u) return 27;
+                if (!TryParseDouble("-1e-9999", &wide) || wide.reinterpret<ref immutable(ulong)>() != 0x8000000000000000ul) return 28;
+                if (!TryParseFloat("INF", &single) || single.reinterpret<ref immutable(uint)>() != 0x7f800000u) return 29;
+                if (!TryParseDouble("-infinity", &wide) || wide.reinterpret<ref immutable(ulong)>() != 0xfff0000000000000ul) return 30;
                 if (!TryParseFloat("nAn", &single) || single == single) return 31;
                 if (!TryParseDouble("NAN(42)", &wide) || wide == wide) return 32;
                 return 0;
@@ -132,16 +132,16 @@ public sealed class FloatingParsingTests
                 storage[7] = 0x123456789abcdef0ul;
                 for (nuint index = 0; index < 5; index++) text[index] = "1.25"[index];
                 float* single = (&storage[0]).reinterpret<float*>();
-                if (!TryParseFloat(text, single) || (*single).reinterpret<uint>() != 0x3fa00000u) return 40;
+                if (!TryParseFloat(text, single) || (*single).reinterpret<ref immutable(uint)>() != 0x3fa00000u) return 40;
                 for (nuint index = 0; index < 6; index++) text[index] = "1.25x"[index];
                 single = (&storage[0]).reinterpret<float*>() + 1;
-                if (TryParseFloat(text, single) || (*single).reinterpret<uint>() != 0u) return 41;
+                if (TryParseFloat(text, single) || (*single).reinterpret<ref immutable(uint)>() != 0u) return 41;
                 for (nuint index = 0; index < 5; index++) text[index] = "-2.5"[index];
                 double* wide = (&storage[0]).reinterpret<double*>();
-                if (!TryParseDouble(text, wide) || (*wide).reinterpret<ulong>() != 0xc004000000000000ul) return 42;
+                if (!TryParseDouble(text, wide) || (*wide).reinterpret<ref immutable(ulong)>() != 0xc004000000000000ul) return 42;
                 for (nuint index = 0; index < 10; index++) text[index] = "12345678x"[index];
                 wide = (&storage[1]).reinterpret<double*>();
-                if (TryParseDouble(text, wide) || (*wide).reinterpret<ulong>() != 0ul) return 43;
+                if (TryParseDouble(text, wide) || (*wide).reinterpret<ref immutable(ulong)>() != 0ul) return 43;
                 if (storage[7] != 0x123456789abcdef0ul) return 44;
                 return 0;
             }
@@ -162,8 +162,8 @@ public sealed class FloatingParsingTests
                     try { ParseFloat("12x"); } catch (ref Exception error) { caught++; }
                     try { ParseDouble(" 12"); } catch (ref Exception error) { caught++; }
                     if (caught != 2) return 50;
-                    if (ParseFloat("1e9999").reinterpret<uint>() != 0x7f800000u) return 51;
-                    if (ParseDouble("-1e-9999").reinterpret<ulong>() != 0x8000000000000000ul) return 52;
+                    if (ParseFloat("1e9999").reinterpret<ref immutable(uint)>() != 0x7f800000u) return 51;
+                    if (ParseDouble("-1e-9999").reinterpret<ref immutable(ulong)>() != 0x8000000000000000ul) return 52;
                     if (ParseFloat("1.25") != 1.25f || ParseDouble("2.5") != 2.5) return 53;
                     return 0;
                 }

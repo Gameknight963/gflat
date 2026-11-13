@@ -184,7 +184,7 @@ public sealed class Base32EncoderTests
     {
         string[] names = ["core/Exception.gf", "core/ITextWriter.gf", "core/Encoding/Base32.gf", "core/Encoding/Base32Encoder.gf",
             "core/IO/IByteReader.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/byte_reader.gf",
-            "core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf", "libc/Memory/allocation.gf"];
+            "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf", "libc/Memory/allocation.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("base32-encoder-tests.gf", program)).ToList();
         if (denyAllocation) sources.Add(new SourceFile("deny-allocation.gf", """

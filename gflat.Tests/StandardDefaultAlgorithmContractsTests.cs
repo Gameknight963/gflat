@@ -29,10 +29,10 @@ public sealed class StandardDefaultAlgorithmContractsTests
         }
         body.Append("""
             {ulong[5] bits=[9221120237041090561ul,0ul,9223372036854775808ul,18442240474082181120ul,9218868437227405312ul];
-             double[5] data;for(nuint i=0;i<5;i++)data[i]=(bits[i]).reinterpret<double>();Span<double> values=new(data,5);
+             double[5] data;for(nuint i=0;i<5;i++)data[i]=(bits[i]).reinterpret<ref immutable(double)>();Span<double> values=new(data,5);
              if(MinIndex(values.AsImmutable())!=0||MaxIndex(values.AsImmutable())!=4)return 2;
              Span<double> zero=values.Slice(1,2);if(MinIndex(zero.AsImmutable())!=0||MaxIndex(zero.AsImmutable())!=0)return 3;
-             ulong otherBits=18444492273895866370ul;double otherNaN=(otherBits).reinterpret<double>();double[2] other=[otherNaN,-0.0];double[2] first=[data[0],0.0];
+             ulong otherBits=18444492273895866370ul;double otherNaN=(otherBits).reinterpret<ref immutable(double)>();double[2] other=[otherNaN,-0.0];double[2] first=[data[0],0.0];
              Span<double> left=new(first,2);Span<double> right=new(other,2);if(SequenceCompare(left.AsImmutable(),right.AsImmutable())!=0)return 4;}
             """);
         Run(Allocator+"int main(){int before=attempts;deny=true;"+body+"deny=false;if(attempts!=before||allocated!=released)return 5;return 0;}",optimization);
@@ -51,7 +51,7 @@ public sealed class StandardDefaultAlgorithmContractsTests
             body.Append(Block(a,b,checks));
         }
         body.Append("""
-            {ulong aBits=9221120237041090561ul;ulong bBits=18444492273895866370ul;double aNaN=(aBits).reinterpret<double>();double bNaN=(bBits).reinterpret<double>();
+            {ulong aBits=9221120237041090561ul;ulong bBits=18444492273895866370ul;double aNaN=(aBits).reinterpret<ref immutable(double)>();double bNaN=(bBits).reinterpret<ref immutable(double)>();
              double[4] a=[aNaN,-0.0,3.0,bNaN];double[4] b=[bNaN,0.0,3.0,aNaN];Span<double> first=new(a,4);Span<double> second=new(b,4);
              if(!SequenceEqual(first.AsImmutable(),second.AsImmutable())||IndexOf(first.AsImmutable(),&bNaN)!=0||LastIndexOf(first.AsImmutable(),&bNaN)!=3||!Contains(first.AsImmutable(),&bNaN))return 2;
              double zero=0.0;double missing=-2.0;if(IndexOf(first.AsImmutable(),&zero)!=1||LastIndexOf(first.AsImmutable(),&zero)!=1||Contains(first.AsImmutable(),&missing)||IndexOf(first.AsImmutable(),&missing)!=4)return 3;}

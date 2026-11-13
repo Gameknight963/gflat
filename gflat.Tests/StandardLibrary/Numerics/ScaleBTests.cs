@@ -48,10 +48,10 @@ public sealed class ScaleBTests
                         if (received != 24) return 2;
                         {{integer}} bits = ({{integer}})row[0];
                         {{integer}} expectedBits = ({{integer}})row[2];
-                        {{scalar}} expected = expectedBits.reinterpret<{{scalar}}>();
-                        {{scalar}} actual = Scale(bits.reinterpret<{{scalar}}>(), (int)row[1]);
-                        if (expected != expected) { if (actual.reinterpret<{{integer}}>() != bits) return 3; }
-                        else if (actual.reinterpret<{{integer}}>() != expectedBits) return 4;
+                        {{scalar}} expected = expectedBits.reinterpret<ref immutable({{scalar}})>();
+                        {{scalar}} actual = Scale(bits.reinterpret<ref immutable({{scalar}})>(), (int)row[1]);
+                        if (expected != expected) { if (actual.reinterpret<ref immutable({{integer}})>() != bits) return 3; }
+                        else if (actual.reinterpret<ref immutable({{integer}})>() != expectedBits) return 4;
                     }
                     if (ferror(file!) != 0) return 5;
                     return 0;

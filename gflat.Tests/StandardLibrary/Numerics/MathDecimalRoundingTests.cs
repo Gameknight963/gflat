@@ -52,22 +52,22 @@ public sealed class MathDecimalRoundingTests
                         nuint received = fread(&row[0], 1, 56, file!);
                         if (received == 0) break;
                         if (received != 56) return 2;
-                        {{type}} value = (({{integer}})row[0]).reinterpret<{{type}}>();
+                        {{type}} value = (({{integer}})row[0]).reinterpret<ref immutable({{type}})>();
                         int digits = (int)row[1];
                         for (int mode = 0; mode < 5; mode++)
                         {
                             {{type}} actual = Math::Round(value, digits, (MidpointRounding)mode);
                             {{integer}} expectedBits = ({{integer}})row[(nuint)mode + 2];
-                            {{type}} expected = expectedBits.reinterpret<{{type}}>();
+                            {{type}} expected = expectedBits.reinterpret<ref immutable({{type}})>();
                             if (expected != expected)
                             {
                                 if (actual == actual) return 3;
                             }
-                            else if (actual.reinterpret<{{integer}}>() != expectedBits) return 4;
+                            else if (actual.reinterpret<ref immutable({{integer}})>() != expectedBits) return 4;
                         }
                         {{type}} defaultResult = Math::Round(value, digits);
-                        {{type}} expectedDefault = (({{integer}})row[2]).reinterpret<{{type}}>();
-                        if (expectedDefault == expectedDefault && defaultResult.reinterpret<{{integer}}>() != ({{integer}})row[2]) return 5;
+                        {{type}} expectedDefault = (({{integer}})row[2]).reinterpret<ref immutable({{type}})>();
+                        if (expectedDefault == expectedDefault && defaultResult.reinterpret<ref immutable({{integer}})>() != ({{integer}})row[2]) return 5;
                     }
                     if (ferror(file!) != 0) return 6;
                     int[4] invalidDigits = [-1, {{maximumDigits + 1}}, -2147483647 - 1, 2147483647];
@@ -77,7 +77,7 @@ public sealed class MathDecimalRoundingTests
                     {
                         {{type}} output = ({{type}})123;
                         bool caught = false;
-                        try { output = Math::Round(unusual[j].reinterpret<{{type}}>(), invalidDigits[i]); }
+                        try { output = Math::Round(unusual[j].reinterpret<ref immutable({{type}})>(), invalidDigits[i]); }
                         catch (Exception* error) { caught = true; }
                         if (!caught || output != ({{type}})123) return 7;
                     }
@@ -87,7 +87,7 @@ public sealed class MathDecimalRoundingTests
                     {
                         {{type}} output = ({{type}})123;
                         bool caught = false;
-                        try { output = Math::Round(unusual[j].reinterpret<{{type}}>(), {{maximumDigits}}, (MidpointRounding)invalidModes[i]); }
+                        try { output = Math::Round(unusual[j].reinterpret<ref immutable({{type}})>(), {{maximumDigits}}, (MidpointRounding)invalidModes[i]); }
                         catch (Exception* error) { caught = true; }
                         if (!caught || output != ({{type}})123) return 8;
                     }

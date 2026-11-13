@@ -72,7 +72,7 @@ public class SignedBinaryTests
 
     private static void RunCore(string program, int optimization)
     {
-        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BinaryPrimitives.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BitConverter.gf"))), new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core/Binary/BinaryPrimitives.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "@malloc", "gflat$Memory$" }) Assert.DoesNotContain(forbidden, ir);
         RunNative(ir, optimization);
@@ -115,7 +115,7 @@ public class SignedBinaryTests
             }
             program.Append("return 0;}");
             File.WriteAllBytes(source, expected.ToArray()); File.WriteAllBytes(partial, [255]);
-            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
+            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf", "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
                 .Append(new SourceFile("main.gf", program.ToString()));
             RunNative(Compiler.Emit(sources), optimization);

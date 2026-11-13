@@ -156,7 +156,7 @@ public sealed class BinaryCursorSeekTests
 
     private static void Run(string program, int optimization)
     {
-        string[] names = ["Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf"];
+        string[] names = ["Binary/BitConverter.gf", "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf"];
         var sources = names.Select(name =>
         {
             string path = Path.Combine(AppContext.BaseDirectory, "Standard", "core", name);

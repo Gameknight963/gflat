@@ -98,7 +98,7 @@ public sealed class BinaryCursorPeekSliceTests
 
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = new[] { "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Memory/bytes.gf" }
+        SourceFile[] sources = new[] { "Binary/BitConverter.gf", "Binary/BinaryPrimitives.gf", "IO/IByteReader.gf", "Binary/BinaryBufferReader.gf", "Memory/bytes.gf" }
             .Select(name => Path.Combine(AppContext.BaseDirectory, "Standard", "core", name))
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("binary-peek-slice.gf", program)).ToArray();

@@ -550,7 +550,7 @@ namespace gflat
                 do
                 {
                     if (!IsTypeStart()) return false;
-                    ParseTypeExpression();
+                    ParseParameterType();
                     if (_diagnostics.Count != mark) return false;
                 } while (Match(TokenKind.Comma));
                 if (!Check(TokenKind.Greater)) return false;
@@ -1957,7 +1957,7 @@ namespace gflat
                     List<TypeExpression> typeArgs = new();
                     while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
                     {
-                        typeArgs.Add(ParseTypeExpression());
+                        typeArgs.Add(ParseParameterType());
                         if (!Check(TokenKind.Greater))
                             Expect(TokenKind.Comma);
                     }

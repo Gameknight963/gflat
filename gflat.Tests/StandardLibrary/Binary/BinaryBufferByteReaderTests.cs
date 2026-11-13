@@ -91,7 +91,7 @@ public sealed class BinaryBufferByteReaderTests
 
     private static IEnumerable<SourceFile> Sources(string code, bool sharedHelpers)
     {
-        var names = new List<string> { "core/IO/IByteReader.gf", "core/Binary/BinaryPrimitives.gf",
+        var names = new List<string> { "core/IO/IByteReader.gf", "core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf",
             "core/Binary/BinaryBufferReader.gf", "core/Memory/bytes.gf" };
         if (sharedHelpers) names.AddRange(["core/Exception.gf", "core/ITextWriter.gf", "core/IO/IOException.gf",
             "core/IO/EndOfStreamException.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf",

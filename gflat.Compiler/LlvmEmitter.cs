@@ -635,6 +635,11 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
+        if (node is CallExpression reinterpret && _typeChecker.GetReinterpretCall(reinterpret) is { Result: ReferenceTypeExpression } info)
+        {
+            EmitReinterpretReferenceAddress(info);
+            return;
+        }
         if (node is CallExpression call && _typeChecker.IsNativeReferenceCall(call))
         {
             EmitExpressionWithCleanup(() => EmitCall(call));

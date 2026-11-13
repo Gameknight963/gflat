@@ -46,7 +46,7 @@ public sealed class BinaryCursorQualifierTests
     }
 
     private static SourceFile[] Sources(string program)
-        => new[] { "Binary/BinaryPrimitives.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf" }
+        => new[] { "Binary/BitConverter.gf", "Binary/BinaryPrimitives.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
 }

@@ -104,16 +104,16 @@ public sealed class StandardDefaultOrderingTests
             {
                 {{word}}[{{input.Length}}] raw=[{{Values(input)}}];{{word}}[{{input.Length}}] expected=[{{Values(expected)}}];
                 {{scalar}}[{{input.Length}}] values;{{scalar}}[{{input.Length}}] stable;
-                for(nuint i=0;i<{{input.Length}};i++){values[i]=(raw[i]).reinterpret<{{scalar}}>();stable[i]=values[i];}
+                for(nuint i=0;i<{{input.Length}};i++){values[i]=(raw[i]).reinterpret<ref immutable({{scalar}})>();stable[i]=values[i];}
                 Span<{{scalar}}> first=new(values,{{input.Length}});Span<{{scalar}}> second=new(stable,{{input.Length}});
                 int before=attempts;deny=true;Sort(first);deny=false;if(attempts!=before)return {{code}};
                 before=attempts;StableSort(second);if(attempts-before!=2)return {{code+1}};
                 bool[{{input.Length}}] seen;for(nuint i=0;i<{{input.Length}};i++)seen[i]=false;
                 for(nuint i=0;i<{{input.Length}};i++){
-                    {{scalar}} wanted=(expected[i]).reinterpret<{{scalar}}>();
+                    {{scalar}} wanted=(expected[i]).reinterpret<ref immutable({{scalar}})>();
                     if(wanted!=wanted){if(values[i]==values[i])return {{code+2}};}else if(values[i]!=wanted)return {{code+3}};
-                    if((stable[i]).reinterpret<{{word}}>()!=expected[i])return {{code+4}};
-                    {{word}} actual=(values[i]).reinterpret<{{word}}>();bool found=false;
+                    if((stable[i]).reinterpret<ref immutable({{word}})>()!=expected[i])return {{code+4}};
+                    {{word}} actual=(values[i]).reinterpret<ref immutable({{word}})>();bool found=false;
                     for(nuint j=0;j<{{input.Length}};j++)if(!seen[j]&&raw[j]==actual){seen[j]=true;found=true;break;}
                     if(!found)return {{code+5}};
                 }

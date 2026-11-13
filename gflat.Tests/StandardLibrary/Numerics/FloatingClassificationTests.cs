@@ -61,7 +61,7 @@ public sealed class FloatingClassificationTests
                         nuint read = fread(&bits, 1, 8, file!);
                         if (read == 0) break;
                         if (read != 8 || fread(&expected, 1, 4, file!) != 4) return 2;
-                        {{scalar}} value = {{bitsExpression}}.reinterpret<{{scalar}}>();
+                        {{scalar}} value = Standard::Binary::BitConverter::{{(wide ? "UInt64BitsToDouble" : "UInt32BitsToFloat")}}({{bitsExpression}});
                         if (Classify(value) != expected) return 3;
                     }
                     if (ferror(file!) != 0) return 4;

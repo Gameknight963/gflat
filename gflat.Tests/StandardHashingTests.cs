@@ -71,7 +71,7 @@ public class StandardHashingTests
             using Standard; using Standard::Text; using Standard::Collections;
             int main() {
                 {{bits}} aBits = {{firstNaN}}; {{bits}} bBits = {{secondNaN}};
-                {{type}} a = (aBits).reinterpret<{{type}}>(); {{type}} b = (bBits).reinterpret<{{type}}>();
+                {{type}} a = (aBits).reinterpret<ref immutable({{type}})>(); {{type}} b = (bBits).reinterpret<ref immutable({{type}})>();
                 {{type}} zero = ({{type}})0; {{type}} negativeZero = -zero; {{type}} number = ({{type}})1;
                 IEquatable<{{type}}>* equal = &a; IComparable<{{type}}>* compare = &a;
                 IHashable* ah = &a; IHashable* bh = &b;
@@ -135,8 +135,8 @@ public class StandardHashingTests
             using Standard; using Standard::Text; using Standard::Collections;
             int main() {
                 {{bits}} firstBits = {{firstNaN}}; {{bits}} secondBits = {{secondNaN}}; {{bits}} infiniteBits = {{infinity}};
-                {{type}} nan = (firstBits).reinterpret<{{type}}>(); {{type}} otherNaN = (secondBits).reinterpret<{{type}}>();
-                {{type}} positiveInfinity = (infiniteBits).reinterpret<{{type}}>(); {{type}} negativeInfinity = -positiveInfinity;
+                {{type}} nan = (firstBits).reinterpret<ref immutable({{type}})>(); {{type}} otherNaN = (secondBits).reinterpret<ref immutable({{type}})>();
+                {{type}} positiveInfinity = (infiniteBits).reinterpret<ref immutable({{type}})>(); {{type}} negativeInfinity = -positiveInfinity;
                 {{type}} zero = ({{type}})0; {{type}} negativeZero = -zero;
                 HashMap<{{type}}, int> map = new();
                 if (!map.TryAdd(nan, 1)) return 1;

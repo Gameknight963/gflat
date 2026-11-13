@@ -34,7 +34,7 @@ public sealed class FileFloatingBinaryTests
                         if(input.ReadByte()!=165)return 2;output.WriteByte((char)165);
                         float first=FileBinary::ReadFloat{{order}}(&input);
                         double second=FileBinary::ReadDouble{{order}}(&input);
-                        if((first).reinterpret<uint>()!=floatBits[i]||(second).reinterpret<ulong>()!=doubleBits[i])return 3;
+                        if((first).reinterpret<ref immutable(uint)>()!=floatBits[i]||(second).reinterpret<ref immutable(ulong)>()!=doubleBits[i])return 3;
                         FileBinary::WriteFloat{{order}}(&output,first);FileBinary::WriteDouble{{order}}(&output,second);
                         if(input.ReadByte()!=90)return 4;output.WriteByte('Z');
                     }
@@ -90,7 +90,7 @@ public sealed class FileFloatingBinaryTests
     private static void Run(string program,int optimization)
     {
         // Select the facade and its core binary helpers explicitly; do not rely on implicit std loading.
-        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf"}
+        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "core/IO/SeekOrigin.gf", "libc/IO/FileStream.gf","core/Binary/BitConverter.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Standard",name))))
             .Append(new SourceFile("main.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

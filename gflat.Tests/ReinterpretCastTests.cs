@@ -7,27 +7,29 @@ public sealed class ReinterpretCastTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void NumericBitPatternsAddressesAndFunctionPointersUseExplicitIntrinsic(int optimization)
+    public void AddressesIntegerWidthsArrayDecayAndFunctionPointersMatchNativeCastCategories(int optimization)
         => Run("""
-            int Increment(int value) nothrow => value+1;
-            int main() nothrow {
-                uint[10] singles=[0u,2147483648u,1u,1065353216u,3212836864u,2139095040u,4286578688u,2143294004u,2139099700u,4290844280u];
-                for(nuint index=0;index<10;index++){
-                    uint bits=singles[index];float value=bits.reinterpret<float>();
-                    if(value.reinterpret<uint>()!=bits)return 1;
-                }
-                ulong[8] doubles=[0ul,9223372036854775808ul,1ul,4607182418800017408ul,9218868437227405312ul,18442240474082181120ul,9221120237041095220ul,9218868437227414068ul];
-                for(nuint index=0;index<8;index++){
-                    ulong bits=doubles[index];double value=bits.reinterpret<double>();
-                    if(value.reinterpret<ulong>()!=bits)return 2;
-                }
-                int number=42;int* pointer=&number;
-                nuint address=pointer.reinterpret<nuint>();byte* bytes=pointer.reinterpret<byte*>();
-                if(address.reinterpret<int*>()!=pointer||bytes.reinterpret<int*>()!=pointer)return 3;
-                void* opaque=(void*)pointer;if((int*)opaque!=pointer)return 4;
-                int(int)* callback=&Increment;void* entry=callback.reinterpret<void*>();
-                int(int)* restored=entry.reinterpret<int(int)*>();if(restored(41)!=42)return 5;
-                int negative=-1;if(negative.reinterpret<uint>()!=4294967295u)return 6;
+            int Increment(int value) nothrow => value + 1;
+            enum Mode { First = 7 }
+            int main() nothrow
+            {
+                int number = 42;
+                int* pointer = &number;
+                nuint address = pointer.reinterpret<nuint>();
+                extralong wide = pointer.reinterpret<extralong>();
+                byte* bytes = pointer.reinterpret<byte*>();
+                if (address.reinterpret<int*>() != pointer || wide.reinterpret<int*>() != pointer || bytes.reinterpret<int*>() != pointer) return 1;
+                int[2] values = [3, 9];
+                int* first = values.reinterpret<int*>();
+                if (first[1] != 9) return 2;
+                int(int)* callback = &Increment;
+                void* entry = callback.reinterpret<void*>();
+                int(int)* restored = entry.reinterpret<int(int)*>();
+                if (restored(41) != 42) return 3;
+                int*? zero = 0.reinterpret<int*?>();
+                void*? small = ((byte)1).reinterpret<void*?>();
+                if (zero != null || small.reinterpret<nuint>() != (nuint)1) return 4;
+                if (number.reinterpret<int>() != 42 || Mode::First.reinterpret<Mode>() != Mode::First || true.reinterpret<bool>() != true) return 5;
                 return 0;
             }
             """, optimization);
@@ -35,18 +37,37 @@ public sealed class ReinterpretCastTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void ConstantsPreserveFiniteFloatBitsNegativeZeroAndNumericConversionDistinction(int optimization)
+    public void ReferenceReinterpretationViewsExistingStorageWithoutCopyingOrConstructing(int optimization)
         => Run("""
-            const uint OneBits=(1.0f).reinterpret<uint>();
-            const uint ZeroBits=(-0.0f).reinterpret<uint>();
-            const float One=1065353216u.reinterpret<float>();
-            const ulong DoubleBits=(1.0).reinterpret<ulong>();
-            const long Signed=18446744073709551615ul.reinterpret<long>();
-            int main() nothrow {
-                if(OneBits!=1065353216u||ZeroBits!=2147483648u||One!=1.0f||DoubleBits!=4607182418800017408ul||Signed!=-1)return 1;
-                if((uint)1.0f!=1u)return 2;
-                return 0;
+            int destroyed = 0;
+            struct Owner { public int Value; public Owner(int value) { Value = value; } ~Owner() { destroyed++; } }
+            void Change(ref byte value) { value = (byte)7; }
+            int main()
+            {
+                int number = 0;
+                Change(ref number.reinterpret<ref byte>());
+                byte* bytes = (&number).reinterpret<byte*>();
+                if (bytes[0] != (byte)7) return 1;
+                number.reinterpret<ref byte>() = (byte)9;
+                if (bytes[0] != (byte)9) return 2;
+                readonly(int)* view = &number;
+                if ((*view).reinterpret<ref readonly(byte)>() != (byte)9) return 3;
+                {
+                    Owner owner = new(42);
+                    if (owner.reinterpret<ref Owner>().Value != 42 || destroyed != 0) return 4;
+                }
+                return destroyed == 1 ? 0 : 5;
             }
+            """, optimization);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void IntegralIdentityIsConstantButNumericValueConversionUsesAnOrdinaryCast(int optimization)
+        => Run("""
+            const int Value = 42.reinterpret<int>();
+            const uint Converted = (uint)-1;
+            int main() nothrow { return Value == 42 && Converted == 4294967295u ? 0 : 1; }
             """, optimization);
 
     [Theory]
@@ -63,6 +84,14 @@ public sealed class ReinterpretCastTests
     [Theory]
     [InlineData("int value=1;double result=value.reinterpret<double>();")]
     [InlineData("bool value=true;byte result=value.reinterpret<byte>();")]
+    [InlineData("int value=1;char result=value.reinterpret<char>();")]
+    [InlineData("float value=1.0f;uint result=value.reinterpret<uint>();")]
+    [InlineData("int value=1;uint result=value.reinterpret<uint>();")]
+    [InlineData("int value=1;int* address=&value;int truncated=address.reinterpret<int>();")]
+    [InlineData("int value=1;readonly(int)* view=&value;byte* changed=view.reinterpret<byte*>();")]
+    [InlineData("int value=1;readonly(int)* view=&value;(*view).reinterpret<ref byte>()=(byte)2;")]
+    [InlineData("(1+2).reinterpret<ref int>();")]
+    [InlineData("int*? value=null;int* changed=value.reinterpret<int*>();")]
     [InlineData("Plain value=new();int result=value.reinterpret<int>();")]
     [InlineData("int value=1;int result=value.reinterpret<int>(2);")]
     [InlineData("int value=1;int result=value.reinterpret();")]

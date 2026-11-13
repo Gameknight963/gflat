@@ -74,6 +74,7 @@ public sealed class GzipTests
     }
 
     private static SourceFile[] Sources(string program) => [
+        new("BitConverter.gf", Read("Binary/BitConverter.gf")),
         new("BinaryPrimitives.gf", Read("Binary/BinaryPrimitives.gf")),
         new("CRC32.gf", Read("Hashing/CRC32.gf")),
         new("Deflate.gf", Read("Compression/Deflate.gf")),

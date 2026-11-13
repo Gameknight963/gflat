@@ -77,7 +77,7 @@ public sealed class StopwatchTests
             int Digit(char value)nothrow{if(value<='9')return value-'0';return value-'A'+10;}
             int ReadByte(readonly(char)* text,ref nuint at)nothrow{int value=(Digit(text[at])<<4)|Digit(text[at+1]);at+=2;return value;}
             long ReadLong(readonly(char)* text,ref nuint at)nothrow{ulong value=0ul;for(int shift=0;shift<64;shift+=8)value=value|((ulong)ReadByte(text,ref at)<<shift);return (long)value;}
-            double ReadDouble(readonly(char)* text,ref nuint at)nothrow{long bits=ReadLong(text,ref at);return bits.reinterpret<double>();}
+            double ReadDouble(readonly(char)* text,ref nuint at)nothrow{long bits=ReadLong(text,ref at);return bits.reinterpret<ref immutable(double)>();}
             int main(){readonly(char)* data="{{hex}}";nuint at=0;
                 for(int row=0;row<{{rows.Count}};row++){
                     frequency=ReadLong(data,ref at);long ticks=ReadLong(data,ref at);double seconds=ReadDouble(data,ref at);

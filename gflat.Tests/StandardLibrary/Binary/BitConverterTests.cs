@@ -43,25 +43,25 @@ public class BitConverterTests
                 ulong[{{doubleReference.Length}}] expectedDoubles = [{{string.Join(",", doubleReference.Select(bits => bits + "ul"))}}];
                 for (int i = 0; i < {{floats.Length}}; i++) {
                     float decoded = BitConverter::UInt32BitsToFloat(singles[i]);
-                    if ((decoded).reinterpret<uint>() != expectedSingles[i]) return 1;
-                    float reference = (singles[i]).reinterpret<float>();
+                    if ((decoded).reinterpret<ref immutable(uint)>() != expectedSingles[i]) return 1;
+                    float reference = (singles[i]).reinterpret<ref immutable(float)>();
                     if (BitConverter::FloatToUInt32Bits(reference) != expectedSingles[i]) return 2;
                     if (BitConverter::FloatToUInt32Bits(decoded) != singles[i]) return 3;
                     int signedBits = BitConverter::FloatToInt32Bits(reference);
                     if (signedBits != (int)expectedSingles[i]) return 8;
                     float signedDecoded = BitConverter::Int32BitsToFloat((int)singles[i]);
-                    if ((signedDecoded).reinterpret<uint>() != expectedSingles[i]) return 9;
+                    if ((signedDecoded).reinterpret<ref immutable(uint)>() != expectedSingles[i]) return 9;
                 }
                 for (int i = 0; i < {{doubles.Length}}; i++) {
                     double decoded = BitConverter::UInt64BitsToDouble(doubles[i]);
-                    if ((decoded).reinterpret<ulong>() != expectedDoubles[i]) return 4;
-                    double reference = (doubles[i]).reinterpret<double>();
+                    if ((decoded).reinterpret<ref immutable(ulong)>() != expectedDoubles[i]) return 4;
+                    double reference = (doubles[i]).reinterpret<ref immutable(double)>();
                     if (BitConverter::DoubleToUInt64Bits(reference) != expectedDoubles[i]) return 5;
                     if (BitConverter::DoubleToUInt64Bits(decoded) != doubles[i]) return 6;
                     long signedBits = BitConverter::DoubleToInt64Bits(reference);
                     if (signedBits != (long)expectedDoubles[i]) return 10;
                     double signedDecoded = BitConverter::Int64BitsToDouble((long)doubles[i]);
-                    if ((signedDecoded).reinterpret<ulong>() != expectedDoubles[i]) return 11;
+                    if ((signedDecoded).reinterpret<ref immutable(ulong)>() != expectedDoubles[i]) return 11;
                 }
                 return 0;
             }

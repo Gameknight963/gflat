@@ -151,6 +151,20 @@ try {
     $compiler = Join-Path $extracted 'Compiler/gfc.exe'
     if (-not (Test-Path -LiteralPath $driver)) { throw 'VSIX is missing the project driver' }
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
+    $singleFile = Join-Path $extracted 'single-file-driver.gf'
+    @'
+using Standard::Collections;
+
+int Next() { static int value = 40; return ++value; }
+int main()
+{
+    Vector<int> values = new();
+    do { values.Add(Next()); } while (values.Count < 2);
+    return values[0] == 41 && values[1] == 42 ? 0 : 1;
+}
+'@ | Set-Content -LiteralPath $singleFile -Encoding Ascii
+    & $driver $singleFile -o (Join-Path $extracted 'single-file-driver.exe') --run
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged single-file driver did not supply Standard' }
     $runtimeSources = @('core/Attribute.gf', 'core/CompilerGeneratedAttribute.gf', 'core/Exception.gf', 'core/BadAllocException.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'core/IGarbageCollector.gf', 'libc/Memory/allocation.gf') | ForEach-Object { Join-Path $extracted ('Sdk/Standard/' + $_) }
     function Invoke-PackagedCompiler {
         $inputs = @($args)

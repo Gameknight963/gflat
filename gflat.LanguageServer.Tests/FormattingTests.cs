@@ -5,6 +5,17 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class FormattingTests
 {
+    [Fact]
+    public void ConditionalOperatorsAreSpacedWithoutChangingNullablePointerTypes()
+    {
+        var source = new SourceFile(Path.GetFullPath("format-conditional.gf"),
+            "int F(bool flag,int*? pointer){return flag?pointer!=null?*pointer:1:2;}");
+        string formatted = Apply(source, SourceFormatter.Format(source, new()));
+        Assert.Contains("int*? pointer", formatted);
+        Assert.Contains("return flag ? pointer != null ? *pointer : 1 : 2;", formatted);
+        Assert.Empty(SourceFormatter.Format(new(source.Path, formatted), new()));
+    }
+
     [Theory]
     [InlineData("\n")]
     [InlineData("\r\n")]

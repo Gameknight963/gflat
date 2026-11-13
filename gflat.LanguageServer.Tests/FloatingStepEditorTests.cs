@@ -18,7 +18,7 @@ public sealed class FloatingStepEditorTests
         var library=new SourceFile(path,File.ReadAllText(path));
         string text=type+" Probe() nothrow=>Standard::Numerics::Math::"+member+"("+literal+");";
         var source=new SourceFile(Path.GetFullPath("floating-step-editor.gf"),text);
-        SourceFile[] sources=[library,source];
+        SourceFile[] sources=[library,..StandardTestSources.Load("core/Binary/BitConverter.gf"),source];
         var snapshot=new AnalysisSnapshot(sources);
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var call=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==source.Id)

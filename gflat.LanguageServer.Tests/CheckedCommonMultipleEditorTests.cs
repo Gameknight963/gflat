@@ -17,7 +17,7 @@ public sealed class CheckedCommonMultipleEditorTests
             nuint Native()=>Standard::Numerics::Math::LeastCommonMultiple((nuint)6,(nuint)8);
             """;
         var source=new SourceFile(Path.GetFullPath("checked-common-multiple-editor.gf"),text);
-        SourceFile[] files=[library,source];
+        SourceFile[] files=[library,..StandardTestSources.Load("core/Binary/BitConverter.gf"),source];
         var snapshot=new AnalysisSnapshot(files);
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var calls=snapshot.Nodes.Where(node=>node.Span.SourceId==source.Id).Select(node=>node.Node)

@@ -39,6 +39,11 @@ public static class SourceFormatter
         var binaryOperators = new HashSet<int>();
         foreach (var node in syntax)
         {
+            if (node.Node is ConditionalExpression conditional)
+            {
+                AddConditionalSeparator(conditional.Condition, conditional.WhenTrue, TokenKind.QuestionMark);
+                AddConditionalSeparator(conditional.WhenTrue, conditional.WhenFalse, TokenKind.Colon);
+            }
             if (node.Node is UnaryExpression { IsPrefix: true } unary &&
                 unary.Operator is TokenKind.Minus or TokenKind.Star or TokenKind.Ampersand or TokenKind.Bang or TokenKind.Tilde or TokenKind.PlusPlus or TokenKind.MinusMinus &&
                 unary.Operand.Span.Source?.Path == source.Path)
@@ -65,6 +70,14 @@ public static class SourceFormatter
                 if (index < 0) index = ~index;
                 if (index < tokens.Length && tokens[index].Kind == postfix.Operator) postfixOperators.Add(tokens[index].Start);
             }
+        }
+        void AddConditionalSeparator(AstNode left, AstNode right, TokenKind kind)
+        {
+            if (left.Span.Source?.Path != source.Path || right.Span.Source?.Path != source.Path) return;
+            int index = Array.BinarySearch(tokenStarts, left.Span.Start + left.Span.Length);
+            if (index < 0) index = ~index;
+            for (; index < tokens.Length && tokens[index].Start < right.Span.Start; index++)
+                if (tokens[index].Kind == kind) { binaryOperators.Add(tokens[index].Start); break; }
         }
         var directives = new HashSet<int>();
         bool continued = false;

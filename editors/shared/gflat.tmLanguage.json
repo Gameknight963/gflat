@@ -140,7 +140,7 @@
       ]
     },
     {
-      "match": "\\b(class|struct|interface|enum)\\s+((?!(?:return|throw|if|else|while|for|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)",
+      "match": "\\b(class|struct|interface|enum)\\s+((?!(?:return|throw|if|else|while|do|for|foreach|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
         "1": {
           "name": "storage.type.gflat"
@@ -207,7 +207,7 @@
       "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=[A-Za-z0-9_ \\t:<>,()*^?\\[\\]]*\\boperator\\b)"
     },
     {
-      "match": "(?<![A-Za-z0-9_:.])(?![A-Za-z_][A-Za-z0-9_]*\\s*\\))\\b((?:(?:readonly|immutable)\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+((?!(?:return|throw|if|else|while|for|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:<[A-Za-z0-9_ \\t:,<>*^?\\[\\]]+>)?\\s*\\()",
+      "match": "(?<![A-Za-z0-9_:.])(?![A-Za-z_][A-Za-z0-9_]*\\s*\\))\\b((?:(?:readonly|immutable)\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+((?!(?:return|throw|if|else|while|do|for|foreach|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:<[A-Za-z0-9_ \\t:,<>*^?\\[\\]]+>)?\\s*\\()",
       "captures": {
         "1": {
           "patterns": [
@@ -222,7 +222,7 @@
       }
     },
     {
-      "match": "(?<![A-Za-z0-9_:.])(?![A-Za-z_][A-Za-z0-9_]*\\s*\\))\\b((?:(?:readonly|immutable)\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+((?!(?:return|throw|if|else|while|for|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:[;=,){\\[]|=>|$))",
+      "match": "(?<![A-Za-z0-9_:.])(?![A-Za-z_][A-Za-z0-9_]*\\s*\\))\\b((?:(?:readonly|immutable)\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+((?!(?:return|throw|if|else|while|do|for|foreach|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:[;=,){\\[]|=>|$))",
       "captures": {
         "1": {
           "patterns": [

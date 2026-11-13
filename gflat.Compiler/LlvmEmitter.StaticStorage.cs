@@ -56,6 +56,8 @@ public partial class LlvmEmitter
             bool live = constant != null || storage.Field.Initializer == null && !NeedsCleanup(storage.Field.Type);
             EmitGlobal($"{StaticLive(storage)} = internal global i1 {(live ? "true" : "false")}");
         }
+        EmitStaticLocalSupport(fields.Where(s => s.Local != null).ToArray());
+        fields = fields.Where(s => s.Local == null).ToArray();
         if (initializers.Count == 0) return;
         _registerStaticFinalizer = fields.Any(s => NeedsCleanup(s.Field.Type));
         EmitGlobal("@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @gflat$$static_init, i8* null }]");

@@ -336,7 +336,7 @@ namespace gflat.ast
             {
                 TypeExpression varType = varDecl.Type != null ? CloneType(varDecl.Type) : null!;
                 AstNode? init = varDecl.Initializer != null ? CloneNode(varDecl.Initializer) : null;
-                return new VariableDeclaration(varDecl.Name, varType, init, varDecl.Line, varDecl.IsConst);
+                return new VariableDeclaration(varDecl.Name, varType, init, varDecl.Line, varDecl.IsConst) { IsStatic = varDecl.IsStatic };
             }
             if (node is IfStatement ifStmt)
             {
@@ -384,6 +384,8 @@ namespace gflat.ast
             {
                 return new DeleteStatement(CloneNode(del.Target), del.Line);
             }
+            if (node is ConditionalExpression conditional)
+                return new ConditionalExpression(CloneNode(conditional.Condition), CloneNode(conditional.WhenTrue), CloneNode(conditional.WhenFalse), conditional.Line);
             if (node is BinaryExpression bin)
             {
                 return new BinaryExpression(CloneNode(bin.Left), CloneNode(bin.Right), bin.Operator, bin.Line);

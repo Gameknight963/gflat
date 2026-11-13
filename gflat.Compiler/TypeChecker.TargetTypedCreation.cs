@@ -11,7 +11,8 @@ public partial class TypeChecker
     private static bool IsUnboundCreation(AstNode node)
         => node is NewExpression { IsTargetTyped: true } creation && IsCreationPlaceholder(creation.Type);
     private static bool NeedsCreationTarget(AstNode node)
-        => IsUnboundCreation(node) || node is ArrayLiteralExpression array && array.Elements.Any(NeedsCreationTarget);
+        => IsUnboundCreation(node) || node is ArrayLiteralExpression array && array.Elements.Any(NeedsCreationTarget) ||
+            node is ConditionalExpression conditional && (NeedsCreationTarget(conditional.WhenTrue) || NeedsCreationTarget(conditional.WhenFalse));
 
     private void BindTargetTypedCreation(NewExpression creation, TypeExpression target)
     {

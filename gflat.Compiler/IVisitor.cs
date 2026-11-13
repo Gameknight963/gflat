@@ -26,6 +26,7 @@ namespace gflat
         void Visit(DeferStatement node);
         void Visit(ExpressionStatement node);
         void Visit(BinaryExpression node);
+        void Visit(ConditionalExpression node);
         void Visit(UnaryExpression node);
         void Visit(LiteralExpression node);
         void Visit(IdentifierExpression node);

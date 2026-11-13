@@ -580,6 +580,14 @@ namespace gflat.semantics
             else if (stmt is VariableDeclaration varDecl)
             {
                 TypeExpression resolved = _typeChecker.GetType(varDecl);
+                if (varDecl.IsStatic)
+                {
+                    var skipped = CloneState(_state);
+                    if (varDecl.Initializer != null) CheckValue(varDecl.Initializer);
+                    _state = IntersectStates(skipped, _state);
+                    DeclareLocal(varDecl.Name, resolved, isAssigned: true);
+                    return;
+                }
                 if (varDecl.Initializer != null)
                 {
                     // Declare as unassigned first to catch self-referential reads
@@ -893,6 +901,17 @@ namespace gflat.semantics
             {
                 if (unary.Operator == TokenKind.Ampersand) CheckValue(unary.Operand);
                 else CheckExpression(unary.Operand);
+            }
+            else if (expr is ConditionalExpression conditional)
+            {
+                var condition = CheckCondition(conditional.Condition);
+                _state = CloneState(condition.WhenTrue);
+                CheckValue(conditional.WhenTrue);
+                var whenTrue = CloneState(_state);
+                _state = CloneState(condition.WhenFalse);
+                CheckValue(conditional.WhenFalse);
+                bool? known = _controlFlow.ConstantCondition(conditional.Condition);
+                _state = known == true ? whenTrue : known == false ? _state : IntersectStates(whenTrue, _state);
             }
             else if (expr is BinaryExpression bin)
             {

@@ -193,6 +193,12 @@ namespace gflat
             Indented(() => node.Expression?.Accept(this));
         }
 
+        public void Visit(ConditionalExpression node)
+        {
+            Print("Conditional");
+            Indented(() => { node.Condition.Accept(this); node.WhenTrue.Accept(this); node.WhenFalse.Accept(this); });
+        }
+
         public void Visit(BinaryExpression node)
         {
             Print($"Binary: {node.Operator}");

@@ -6,7 +6,32 @@ namespace gflat;
 
 public partial class TypeChecker
 {
-    public sealed record StaticStorage(FieldDeclaration Field, string? Owner, string Namespace, string Symbol);
+    public sealed record StaticStorage(FieldDeclaration Field, string? Owner, string Namespace, string Symbol)
+    {
+        public VariableDeclaration? Local { get; init; }
+        public string? CleanupSymbol { get; init; }
+    }
+    private readonly Dictionary<VariableDeclaration, StaticStorage> staticLocals = new();
+    private readonly Dictionary<NullableBinding, FieldDeclaration> staticLocalBindings = new();
+    public StaticStorage? GetStaticLocal(VariableDeclaration node) => staticLocals.GetValueOrDefault(node);
+    private bool IsStaticLocalStorage(AstNode node) => NullableLocal(node) is { } binding && staticLocalBindings.ContainsKey(binding);
+
+    private void RegisterStaticLocal(VariableDeclaration node, TypeExpression type)
+    {
+        if (node.Initializer == null && !CanDefaultInitialize(type))
+            throw new TypeCheckException($"Static local '{node.Name}' requires an initializer", node.Span);
+        if (!staticLocals.TryGetValue(node, out var storage))
+        {
+            int index = staticLocals.Count;
+            var field = new FieldDeclaration(node.Name, type, node.Initializer, TokenKind.Private, false, true, node.Line) { Span = node.Span };
+            storage = new(field, null, "", "gflat$storage$local$" + index)
+                { Local = node, CleanupSymbol = "gflat$$local_fini$" + index };
+            staticLocals[node] = storage;
+            staticStorage[field] = storage;
+            RecordStaticInitializer(field);
+        }
+        staticLocalBindings[new(_scopes.Peek(), node.Name)] = storage.Field;
+    }
     private readonly Dictionary<FieldDeclaration, StaticStorage> staticStorage = new();
     private readonly Dictionary<AstNode, FieldDeclaration> staticStorageReads = new();
     private readonly Dictionary<MethodDeclaration, string> staticConstructors = new();
@@ -17,7 +42,7 @@ public partial class TypeChecker
     public StaticStorage GetStaticStorageInfo(FieldDeclaration field) => staticStorage[field];
     public IReadOnlyList<AstNode> GetStaticInitializers()
     {
-        var entries = GetStaticStorage().Where(s => !s.Field.IsConst &&
+        var entries = GetStaticStorage().Where(s => s.Local == null && !s.Field.IsConst &&
             !staticStorageConstants.ContainsKey(s.Field) && (s.Field.Initializer != null || ContainsManagedReference(s.Field.Type) || HasDestructor(s.Field.Type)))
             .Select(s => (Node: (AstNode)s.Field, Path: s.Field.Span.Source?.Path, Position: s.Field.Span.Start)).ToList();
         foreach (var (method, owner) in staticConstructors)
@@ -69,7 +94,8 @@ public partial class TypeChecker
 
     private FieldDeclaration? FindStaticStorage(string name)
     {
-        if (_scopes.Any(s => s.ContainsKey(name))) return null;
+        foreach (var scope in _scopes)
+            if (scope.ContainsKey(name)) return staticLocalBindings.GetValueOrDefault(new(scope, name));
         var field = _currentClass?.FieldDeclarationsByName.GetValueOrDefault(name) ??
             _currentStruct?.FieldDeclarationsByName.GetValueOrDefault(name);
         if (field != null) return field.IsStatic || field.IsConst ? field : null;

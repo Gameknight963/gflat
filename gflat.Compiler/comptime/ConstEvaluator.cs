@@ -203,6 +203,14 @@ namespace gflat.comptime
             _currentValue = val;
         }
 
+        public void Visit(ConditionalExpression node)
+        {
+            node.Condition.Accept(this);
+            if (_currentValue is not ConstValue.Boolean condition)
+                throw new ConstEvalException("Conditional expression requires a bool condition", node.Line);
+            _currentValue = EvaluateValueForTarget(condition.Value ? node.WhenTrue : node.WhenFalse, _context.GetType(node));
+        }
+
         public void Visit(BinaryExpression node)
         {
             EvaluateBinary(node);
@@ -1139,6 +1147,8 @@ namespace gflat.comptime
         public void Visit(VariableDeclaration node)
         {
             CheckSteps(node.Line);
+            if (node.IsStatic && !node.IsConst)
+                throw new ConstEvalException("Static local storage is not available during constant evaluation", node.Line);
             if (node.Initializer != null)
             {
                 _scopes.Peek()[node.Name] = EvaluateValueForTarget(node.Initializer, _context.GetType(node));

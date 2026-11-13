@@ -1797,6 +1797,11 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
+            if (valueNode is ConditionalExpression conditional && IsCreationPlaceholder(source))
+            {
+                BindConditionalResult(conditional, target);
+                source = GetType(conditional);
+            }
             if (valueNode is ArrayLiteralExpression array && NeedsCreationTarget(array) && ResolveAlias(target) is ArrayTypeExpression expectedArray)
             {
                 if (expectedArray.Size != null && expectedArray.Size != array.Elements.Count) return false;
@@ -3704,6 +3709,8 @@ namespace gflat
         public void Visit(VariableDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.IsStatic && !node.IsConst && (_currentFunction is MethodDeclaration { IsConst: true } || _currentConstructor?.IsConst == true))
+                throw new TypeCheckException("A const function cannot declare static local storage", node.Span);
             bool inferredInitializer = node.IsTypeInferred;
             if (inferredInitializer)
             {
@@ -3774,6 +3781,7 @@ namespace gflat
 
             RecordType(node, varType);
             DeclareVariable(node.Name, varType, node.Line, node);
+            if (node.IsStatic && !node.IsConst) RegisterStaticLocal(node, varType);
             if (node.IsConst) localConstants.Peek()[node.Name] = (_constValues[node], node);
             NullableAssignment(new IdentifierExpression(node.Name, node.Line), node.Initializer);
             if (node.Initializer != null && CopiesValue(node.Initializer, varType)) InvalidateNullableEscapes();

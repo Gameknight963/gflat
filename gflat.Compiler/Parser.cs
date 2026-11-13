@@ -1557,6 +1557,14 @@ namespace gflat
                     return ParseEnumDeclaration(TokenKind.Private, line);
             }
 
+            if (Match(TokenKind.Static))
+            {
+                bool isConst = Match(TokenKind.Const);
+                VariableDeclaration declaration = ParseVariableDeclaration(isConst);
+                return new VariableDeclaration(declaration.Name, declaration.Type, declaration.Initializer, line, isConst)
+                    { IsStatic = true, Span = declaration.Span };
+            }
+
             if (Check(TokenKind.Const))
             {
                 Consume();
@@ -1965,6 +1973,16 @@ namespace gflat
                     }
                     Expect(TokenKind.CloseParen);
                     left = new CallExpression(left, args, callLine, typeArgs);
+                    continue;
+                }
+
+                if (Check(TokenKind.QuestionMark) && minBindingPower < 2)
+                {
+                    int line = Consume().Line;
+                    AstNode whenTrue = ParseExpression();
+                    Expect(TokenKind.Colon);
+                    AstNode whenFalse = ParseExpression();
+                    left = new ConditionalExpression(left, whenTrue, whenFalse, line);
                     continue;
                 }
 

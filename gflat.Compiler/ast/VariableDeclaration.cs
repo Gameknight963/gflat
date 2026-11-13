@@ -10,6 +10,7 @@ namespace gflat.ast
         public TypeExpression Type { get; internal set; }
         public AstNode? Initializer { get; }
         public bool IsConst { get; }
+        public bool IsStatic { get; init; }
         public bool IsTypeInferred { get; }
 
         public VariableDeclaration(string name, TypeExpression type, AstNode? initializer, int line, bool isConst = false) : base(line)

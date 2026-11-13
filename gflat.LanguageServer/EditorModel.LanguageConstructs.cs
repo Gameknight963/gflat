@@ -44,7 +44,7 @@ public sealed partial class EditorModel
             "default" => "Produces the default value of the specified or contextually inferred type.",
             "static if" => "Selects a branch at compile time. The unselected branch is not instantiated.",
             "static foreach" => "Expands the body for each element of a compile-time list.",
-            "static" => "Declares a member belonging to the type rather than an instance.",
+            "static" => "Declares a type member or a local whose storage persists between calls. A local's initializer runs on first use.",
             "new" => "Constructs an object using the selected allocation form.",
             "delete" => "Destroys an object and releases its allocation.",
             "defer" => "Runs an action when the enclosing scope exits, including during exception unwinding.",

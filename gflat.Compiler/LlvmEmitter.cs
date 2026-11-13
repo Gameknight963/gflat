@@ -718,7 +718,7 @@ public partial class LlvmEmitter : IVisitor
             deref.Operand.Accept(this);
         }
         else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression or
-                 UnaryExpression or BinaryExpression or DefaultExpression or CastExpression or LiteralExpression or
+                 UnaryExpression or BinaryExpression or ConditionalExpression or DefaultExpression or CastExpression or LiteralExpression or
                  SizeofExpression or AlignofExpression or NameofExpression or LambdaExpression or AssignmentExpression ||
                  node is NamespaceAccessExpression enumMember && _typeChecker.TryGetEnumMember(enumMember, out _, out _))
         {
@@ -2652,6 +2652,11 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitVariable(VariableDeclaration node, int scope)
     {
+        if (_typeChecker.GetStaticLocal(node) is { } storage)
+        {
+            EmitStaticLocal(storage);
+            return;
+        }
         if (node.IsConst)
         {
             return;

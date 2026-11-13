@@ -20,13 +20,15 @@ public partial class TypeChecker
     private readonly HashSet<AstNode> _transferredPropertyArguments = new();
     public bool IsFreshValue(AstNode expression) => _transferredPropertyArguments.Contains(expression) ||
         !IsReferenceRead(expression) && (_propertyReads.ContainsKey(expression) || expression is
-            NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression or MoveExpression or CastExpression);
+            NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression or MoveExpression or CastExpression or ConditionalExpression);
 
     public void Visit(MoveExpression node)
     {
         using var context = SourceContext.Enter(node.Span);
         node.Operand.Accept(this);
         TypeExpression type = ResolveAlias(GetType(node.Operand));
+        if (IsStaticLocalStorage(node.Operand))
+            throw new TypeCheckException("move cannot consume static local storage", node.Operand.Span);
         bool local = node.Operand is IdentifierExpression id && id.Name != "this" &&
             _scopes.Any(scope => scope.ContainsKey(id.Name));
         bool rawStorage = node.Operand is UnaryExpression { Operator: TokenKind.Star, IsPrefix: true } dereference &&

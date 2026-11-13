@@ -17,6 +17,8 @@ internal static class NativeTestEnvironment
             Environment.SetEnvironmentVariable("TEMP", path);
             Environment.SetEnvironmentVariable("TMP", path);
             Environment.SetEnvironmentVariable("TMPDIR", path);
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GFLAT_RUNTIME_CACHE_DIRECTORY")))
+                Environment.SetEnvironmentVariable("GFLAT_RUNTIME_CACHE_DIRECTORY", Path.Combine(path, "native-runtime-cache"));
         }
 
         NativeTestFaultHandling.InitializeHost();

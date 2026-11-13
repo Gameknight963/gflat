@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory)][string]$ToolchainDirectory,
     [string]$CompilerDirectory
 )
@@ -8,7 +8,8 @@ if (-not $CompilerDirectory) { $CompilerDirectory = Join-Path $toolchain 'compil
 $compilerDirectory = [IO.Path]::GetFullPath($CompilerDirectory)
 $compilerName = if ([IO.Path]::DirectorySeparatorChar -eq '\') { 'gflat.exe' } else { 'gflat' }
 $compiler = Join-Path $compilerDirectory $compilerName
-foreach ($file in @($compiler, (Join-Path $compilerDirectory 'MSBuild.dll'), (Join-Path $compilerDirectory 'Sdks/Gflat.Sdk/Sdk/Sdk.props'), (Join-Path $compilerDirectory 'Sdks/Gflat.Sdk/Sdk/Sdk.targets'), (Join-Path $toolchain 'build/tasks/net10.0/gflat.Build.Tasks.dll'))) {
+$sourceCompiler = Join-Path $compilerDirectory $(if ([IO.Path]::DirectorySeparatorChar -eq '\') { 'gfc.exe' } else { 'gfc' })
+foreach ($file in @($compiler, $sourceCompiler, (Join-Path $compilerDirectory 'MSBuild.dll'), (Join-Path $compilerDirectory 'Sdks/Gflat.Sdk/Sdk/Sdk.props'), (Join-Path $compilerDirectory 'Sdks/Gflat.Sdk/Sdk/Sdk.targets'), (Join-Path $toolchain 'build/tasks/net10.0/gflat.Build.Tasks.dll'))) {
     if (-not (Test-Path -LiteralPath $file)) { throw "Bundle is missing $file" }
 }
 $testBase = if ($env:GFLAT_TEST_OUTPUT_ROOT) { $env:GFLAT_TEST_OUTPUT_ROOT } else { [IO.Path]::GetTempPath() }

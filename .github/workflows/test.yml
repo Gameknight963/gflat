@@ -100,6 +100,8 @@ jobs:
         run: |
           $runtime = if ($IsWindows) { 'win-x64' } else { 'linux-x64' }
           dotnet publish gflat/gflat.csproj -c Release -r $runtime --self-contained true -o artifacts/standalone/compiler
+          if ($LASTEXITCODE -ne 0) { throw 'Project driver publishing failed' }
+          dotnet publish gfc/gfc.csproj -c Release -r $runtime --self-contained true -o artifacts/standalone/compiler
           if ($LASTEXITCODE -ne 0) { throw 'Compiler publishing failed' }
           ./build/test-bundled-msbuild.ps1 -ToolchainDirectory . -CompilerDirectory artifacts/standalone/compiler
           dotnet publish gflat.LanguageServer/gflat.LanguageServer.csproj -c Release -r $runtime --self-contained true -o artifacts/standalone/server

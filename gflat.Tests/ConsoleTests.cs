@@ -241,8 +241,9 @@ public class ConsoleTests
                 UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
                 RedirectStandardOutput = true, RedirectStandardError = true
             };
-            start.ArgumentList.Add(typeof(Program).Assembly.Location);
-            foreach (var source in sources)
+            start.ArgumentList.Add(typeof(CompilerProgram).Assembly.Location);
+            foreach (var source in sources.Concat(StandardLibrary.AutomaticFiles.Select(relative =>
+                new SourceFile(relative, StandardLibrary.Load(relative).Text))))
             {
                 string file = Path.Combine(root, source.Path);
                 Directory.CreateDirectory(Path.GetDirectoryName(file)!);

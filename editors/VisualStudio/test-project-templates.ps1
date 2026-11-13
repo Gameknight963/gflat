@@ -1,6 +1,7 @@
-param([Parameter(Mandatory)][string]$PackageDirectory)
+﻿param([Parameter(Mandatory)][string]$PackageDirectory)
 $ErrorActionPreference = 'Stop'
-$compiler = Join-Path $PackageDirectory 'Compiler/gflat.exe'
+$compiler = Join-Path $PackageDirectory 'Compiler/gfc.exe'
+$driver = Join-Path $PackageDirectory 'Compiler/gflat.exe'
 $sdk = Join-Path $PackageDirectory 'Sdk'
 if (Test-Path -LiteralPath (Join-Path $sdk 'build/Sdks/Gflat.Sdk')) { throw 'VSIX must not ship MSBuild SDK registration files' }
 foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'Standard/Standard.gfproj', 'Standard/core/Text/String.gf', 'Standard/libc/GC.gf')) {
@@ -65,11 +66,11 @@ foreach ($kind in @('app', 'library')) {
     finally { $env:MSBuildSDKsPath = $previousSdkPath }
     # The standalone bundled compiler must discover the same SDK without VS.
     if ($kind -eq 'app') {
-        $result = & $compiler build $project --run
+        $result = & $driver build $project --run
         if ($LASTEXITCODE -ne 0 -or $result -notcontains 'Hello from gflat!') { throw 'Packaged application template failed to build and run' }
     }
     else {
-        & $compiler check $project
+        & $driver check $project
         if ($LASTEXITCODE -ne 0) { throw 'Packaged library template failed to check outside Visual Studio' }
     }
 }

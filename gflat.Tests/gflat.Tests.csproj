@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\gflat\gflat.csproj" />
+    <ProjectReference Include="../gfc/gfc.csproj" />
     <None Include="..\Standard\**\*.gf" Link="Standard\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/windows/*.gf" Link="Platform/windows/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/windows-random/*.gf" Link="Platform/windows-random/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
@@ -29,6 +30,7 @@
     <None Include="../libraries/platform/linux/*.gf" Link="Platform/linux/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/linux-random/*.gf" Link="Platform/linux-random/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\docs\LANGUAGE_SPEC.md" Link="LANGUAGE_SPEC.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../tutorial/**/*.md" Link="Tutorial/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\docs\*.md" Exclude="..\docs\LANGUAGE_SPEC.md" Link="Guides\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Standard\**\*.md" Link="Guides\Standard\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\seq\main.gf" Link="Examples\seq.gf" CopyToOutputDirectory="PreserveNewest" />

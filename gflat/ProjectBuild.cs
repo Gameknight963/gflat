@@ -20,7 +20,9 @@ internal static class ProjectBuild
         if (noBuiltins.HasValue) Property("NoBuiltins", noBuiltins.Value ? "true" : "false");
         if (project.SdkRoot != null) Property("GflatSdkRoot", project.SdkRoot);
         string appHost = Path.Combine(Path.GetDirectoryName(assembly)!, OperatingSystem.IsWindows() ? "gflat.exe" : "gflat");
-        string compiler = File.Exists(appHost) ? appHost : assembly;
+        string compilerAssembly = typeof(CompilerProgram).Assembly.Location;
+        string compilerHost = Path.Combine(Path.GetDirectoryName(compilerAssembly)!, OperatingSystem.IsWindows() ? "gfc.exe" : "gfc");
+        string compiler = File.Exists(compilerHost) ? compilerHost : compilerAssembly;
         Property("GflatCompilerPath", compiler);
         sourceGraph ??= ProjectGraph.Load(project.FilePath,
             (path, asReference) => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference, debugSymbols, noBuiltins));

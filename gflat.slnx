@@ -5,6 +5,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="gflat/gflat.csproj" />
+  <Project Path="gfc/gfc.csproj" />
   <Project Path="gflat.Compiler/gflat.Compiler.csproj" />
   <Project Path="gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj" />
   <Project Path="gflat.LanguageServer/gflat.LanguageServer.csproj" />

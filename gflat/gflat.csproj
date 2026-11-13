@@ -9,14 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="Runtime/Exceptions.cpp;Runtime/Stdio.c" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="program.gf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\gflat.Compiler\gflat.Compiler.csproj" />
+    <ProjectReference Include="../gfc/gfc.csproj" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../gflat.Projects/gflat.Projects.csproj" />

@@ -173,7 +173,9 @@ public sealed class DriverOutputProtectionTests
 
     private static ProcessResult Run(string root, string[] arguments)
     {
-        var result = NativeToolchain.Run("dotnet", [typeof(Program).Assembly.Location, .. arguments], 30000);
+        string assembly = arguments[0] is "build" or "check" or "clean"
+            ? typeof(Program).Assembly.Location : typeof(CompilerProgram).Assembly.Location;
+        var result = NativeToolchain.Run("dotnet", [assembly, .. arguments], 30000);
         File.WriteAllText(Path.Combine(root, "run.stdout"), result.StandardOutput);
         File.WriteAllText(Path.Combine(root, "run.stderr"), result.StandardError);
         return result;

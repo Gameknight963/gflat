@@ -29,16 +29,16 @@
     <TargetExt Condition="'$(OutputType)' == 'DynamicLibrary' and '$(TargetExt)' == ''">.so</TargetExt>
     <TargetPath Condition="'$(OutputType)' != 'SourceLibrary' and '$(TargetPath)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(OutputPath)', '$(TargetName)$(TargetExt)'))</TargetPath>
     <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and '$(GflatBundledCompiler)' != ''">$(GflatBundledCompiler)</GflatCompilerPath>
-    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gflat.exe')">$(GflatSdkRoot)/compiler/gflat.exe</GflatCompilerPath>
-    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gflat')">$(GflatSdkRoot)/compiler/gflat</GflatCompilerPath>
-    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gflat.dll')">$(GflatSdkRoot)/compiler/gflat.dll</GflatCompilerPath>
-    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/../Compiler/gflat.exe')">$(GflatSdkRoot)/../Compiler/gflat.exe</GflatCompilerPath>
-    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/gflat/bin/Debug/net10.0/gflat.dll')">$(GflatSdkRoot)/gflat/bin/Debug/net10.0/gflat.dll</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gfc.exe')">$(GflatSdkRoot)/compiler/gfc.exe</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gfc')">$(GflatSdkRoot)/compiler/gfc</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gfc.dll')">$(GflatSdkRoot)/compiler/gfc.dll</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/../Compiler/gfc.exe')">$(GflatSdkRoot)/../Compiler/gfc.exe</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/gfc/bin/Debug/net10.0/gfc.dll')">$(GflatSdkRoot)/gfc/bin/Debug/net10.0/gfc.dll</GflatCompilerPath>
     <_GflatKnownCompilerCommand Condition="'$(GflatCompilerPath)' != ''">&quot;$(GflatCompilerPath)&quot;</_GflatKnownCompilerCommand>
     <_GflatCompilerExtension>$([System.IO.Path]::GetExtension('$(GflatCompilerPath)'))</_GflatCompilerExtension>
     <_GflatKnownCompilerCommand Condition="'$(_GflatCompilerExtension)' == '.dll'">dotnet &quot;$(GflatCompilerPath)&quot;</_GflatKnownCompilerCommand>
     <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == '' and '$(_GflatKnownCompilerCommand)' != ''">$(_GflatKnownCompilerCommand)</GflatCompilerCommand>
-    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == ''">gflat</GflatCompilerCommand>
+    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == ''">gfc</GflatCompilerCommand>
     <_GflatSourceList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).sources'))</_GflatSourceList>
     <_GflatExportSourceList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).exportsources'))</_GflatExportSourceList>
     <_GflatExportOption Condition="'$(OutputType)' == 'StaticLibrary' or '$(OutputType)' == 'DynamicLibrary'">--export-source-list &quot;$(_GflatExportSourceList)&quot;</_GflatExportOption>

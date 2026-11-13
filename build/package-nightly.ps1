@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory)][ValidateSet('win-x64', 'linux-x64')][string]$Runtime,
     [string]$OutputDirectory
 )
@@ -9,9 +9,9 @@ $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw "Output already exists: $output. Use a fresh directory." }
 if (-not (Test-Path -LiteralPath (Join-Path $repo 'LICENSE'))) { throw 'Choose a project license before distributing builds.' }
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-foreach ($project in @('gflat', 'gflat.LanguageServer')) {
-    $folder = if ($project -eq 'gflat') { 'compiler' } else { 'language-server' }
-    dotnet publish (Join-Path $repo "$project/$project.csproj") -c Release -r $Runtime --self-contained true -o (Join-Path $output $folder)
+foreach ($project in @('gflat', 'gfc', 'gflat.LanguageServer')) {
+    $folder = if ($project -in @('gflat', 'gfc')) { 'compiler' } else { 'language-server' }
+    dotnet publish (Join-Path $repo "$project/$project.csproj") -c Release -r $Runtime --self-contained true -o (Join-Path $output $folder) -m:1 -nodeReuse:false
     if ($LASTEXITCODE -ne 0) { throw "Publishing $project failed" }
 }
 # The task is built ahead of time for both the bundled engine and VS's engine.

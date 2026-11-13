@@ -29,7 +29,7 @@ public sealed class TemporaryIrCleanupTests
                 UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true
             };
-            foreach (string argument in new[] { typeof(Program).Assembly.Location, source,
+            foreach (string argument in new[] { typeof(CompilerProgram).Assembly.Location, source,
                 "--no-stdlib", "-o", Path.Combine(directory, "program.exe"), "--run" })
                 start.ArgumentList.Add(argument);
             // Change only this child process; parallel compiler tests keep their own temp root.

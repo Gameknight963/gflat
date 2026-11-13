@@ -1,4 +1,4 @@
-#requires -PSEdition Desktop
+﻿#requires -PSEdition Desktop
 param([Parameter(Mandatory)][string]$PackageDirectory)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PackageDirectory 'sdk-paths.ps1')
@@ -17,7 +17,7 @@ foreach ($sdk in @($oldSdk, $newSdk)) {
     Copy-Item -LiteralPath (Join-Path $PackageDirectory 'Sdk/build') -Destination $sdk -Recurse
 }
 $project = Join-Path $testRoot 'Example.gfproj'
-$compiler = [Security.SecurityElement]::Escape((Join-Path $PackageDirectory 'Compiler/gflat.exe'))
+$compiler = [Security.SecurityElement]::Escape((Join-Path $PackageDirectory 'Compiler/gfc.exe'))
 "<Project Sdk=`"Gflat.Sdk`"><PropertyGroup><NoStdLib>true</NoStdLib><GflatEmitIR>true</GflatEmitIR><GflatCompilerPath>$compiler</GflatCompilerPath></PropertyGroup></Project>" | Set-Content -LiteralPath $project
 'int main() { return 0; }' | Set-Content -LiteralPath (Join-Path $testRoot 'main.gf')
 function Assert-Rejected([scriptblock]$Operation) {

@@ -54,7 +54,7 @@ public static class Program
                         Console.WriteLine("Debug symbols: -g or --debug; --no-debug disables the project's DebugSymbols setting.");
                         Console.WriteLine("Libc builtin recognition: --no-builtins disables it; --builtins overrides the project's NoBuiltins setting. Explicit calls/intrinsics may still require runtime helpers.");
                         Console.WriteLine("Native linking: repeat --native-library NAME, --native-library-file PATH, and --native-library-dir PATH. Project options append to declared requirements.");
-                        Console.WriteLine("Source lists contain one source-file path per line. Pass project files directly.");
+                        Console.WriteLine("Source builds include Standard unless --no-stdlib is specified. Use gfc for explicit compiler inputs. Pass project files directly to gflat.");
                         Console.WriteLine("Binary output: --output-type Executable|StaticLibrary|DynamicLibrary. Projects use the OutputType property.");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
@@ -216,131 +216,23 @@ public static class Program
                 if (result != 0 || !run) return result;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }
-            var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
-            var included = new HashSet<string>(pathComparer);
-            var compilationOptions = new CompilationOptions
+            var compilerArguments = args.ToList();
+            if (compilerArguments[0] is "build" or "check")
             {
-                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
-                BinaryInterfaces = binaryInterfaces,
-                ExportSources = outputType == "Executable" ? null : exportSources ?? sourcePaths,
-                IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
-                FileDeclarationScopes = preprocessing.DeclarationScopes.ToDictionary(pair => pair.Key,
-                    pair => Enum.Parse<DeclarationScope>(pair.Value), pathComparer),
-                ForeignCompilerResolver = () => NativeToolchain.FindClang(clang),
-                ForeignCompilerArguments = NativeRuntime.HostCompilerArguments(cpp: true, runtimeLibrary),
-                DependencyObserver = paths =>
-                {
-                    included.UnionWith(paths);
-                    if (included.Contains(outputPath) || irOnly && included.Contains(outputPath + ".foreign.json") || dependencyFile != null && (included.Contains(dependencyFile) || included.Contains(dependencyFile + ".state")))
-                        throw new ArgumentException("Output must differ from included source files.");
-                }
-            };
-            void WriteDependencies()
-            {
-                if (dependencyFile != null) PreprocessorInputs.WriteDependencies(dependencyFile, included);
+                string command = compilerArguments[0];
+                compilerArguments.RemoveAt(0);
+                if (command == "check") compilerArguments.Add("--check");
             }
-            if (check)
+            if (!noStdLib)
             {
-                Compiler.Check(sources, diagnostics, compilationOptions);
-                WriteDependencies();
-                if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
-                return 0;
+                IEnumerable<string> librarySources = sourceLists.Count != 0
+                    ? StandardLibrary.AutomaticFiles.Select(relative => StandardLibrary.Load(relative).Path)
+                    : Directory.EnumerateFiles(Path.Combine(ProjectCreation.FindToolchainRoot(), "Standard"), "*.gf", SearchOption.AllDirectories);
+                var supplied = sourcePaths.ToHashSet(pathComparer);
+                compilerArguments.AddRange(librarySources.Where(supplied.Add));
             }
-            var program = Compiler.EmitProgram(sources, diagnostics, compilationOptions);
-            string ir = program.Ir;
-            if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
-            // Use the native toolchain's emitted-IR predicate to validate its PDB output.
-            if (OperatingSystem.IsWindows() && !irOnly && NativeToolchain.HasDebugInformation(ir))
-            {
-                string pdb = Path.ChangeExtension(outputPath, ".pdb");
-                ValidateOutput(pdb);
-                if (pathComparer.Equals(pdb, dependencyFile) || pathComparer.Equals(pdb, dependencyFile == null ? null : dependencyFile + ".state"))
-                    throw new ArgumentException("PDB and dependency outputs must use different paths.");
-                if (included.Contains(pdb)) throw new ArgumentException("PDB output must differ from included source files.");
-            }
-            if (OperatingSystem.IsWindows() && !irOnly && outputType == "DynamicLibrary")
-            {
-                foreach (string suffix in new[] { ".lib", ".exp" })
-                {
-                    string companion = Path.ChangeExtension(outputPath, suffix);
-                    ValidateOutput(companion);
-                    if (pathComparer.Equals(companion, outputPath) || included.Contains(companion) || pathComparer.Equals(companion, dependencyFile) ||
-                        pathComparer.Equals(companion, dependencyFile == null ? null : dependencyFile + ".state"))
-                        throw new ArgumentException("Library companion outputs must differ from the library, included files, and dependency outputs.");
-                }
-            }
-            WriteDependencies();
-            if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            string[] interfaceOutputs = outputType == "Executable" ? [] : [outputPath + ".gfi", outputPath + ".gfi.gfh", outputPath + ".hpp", outputPath + ".cmake"];
-            foreach (string companion in interfaceOutputs)
-            {
-                ValidateOutput(companion);
-                if (included.Contains(companion) || pathComparer.Equals(companion, dependencyFile) || pathComparer.Equals(companion, dependencyFile == null ? null : dependencyFile + ".state"))
-                    throw new ArgumentException("Library interface output must differ from included files and dependency outputs.");
-            }
-            var deployments = runtimeFiles.Select(file => (Source: file, Destination: Path.Combine(Path.GetDirectoryName(outputPath)!, Path.GetFileName(file))))
-                .Where(pair => !pathComparer.Equals(pair.Source, pair.Destination)).ToArray();
-            foreach (var deployment in deployments)
-            {
-                ValidateOutput(deployment.Destination);
-                if (pathComparer.Equals(deployment.Destination, outputPath) || interfaceOutputs.Contains(deployment.Destination, pathComparer) ||
-                    included.Contains(deployment.Destination) || pathComparer.Equals(deployment.Destination, dependencyFile) ||
-                    pathComparer.Equals(deployment.Destination, dependencyFile == null ? null : dependencyFile + ".state"))
-                    throw new ArgumentException("Runtime library deployment conflicts with a build output or included source file.");
-            }
-            if (irOnly)
-            {
-                string manifest = outputPath + ".foreign.json";
-                ValidateOutput(manifest);
-                if (included.Contains(manifest)) throw new ArgumentException("Foreign manifest output must differ from included source files.");
-                if (program.ForeignUnits.Count > 0)
-                    File.WriteAllText(manifest, System.Text.Json.JsonSerializer.Serialize(program.ForeignUnits));
-                else if (File.Exists(manifest)) File.Delete(manifest);
-                File.WriteAllText(outputPath, ir);
-                return 0;
-            }
-            string temporaryIr = Path.Combine(Path.GetTempPath(), "gflat_" + Guid.NewGuid().ToString("N") + ".ll");
-            try
-            {
-                File.WriteAllText(temporaryIr, ir);
-                ProcessResult compiled = outputType == "StaticLibrary"
-                    ? NativeToolchain.CompileStaticLibrary(temporaryIr, outputPath, clang,
-                        optimizationLevel ?? OptimizationLevel.Parse(Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0"),
-                        program.ForeignUnits, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, runtimeLibrary)
-                    : NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs, program.ForeignUnits, sharedLibrary: outputType == "DynamicLibrary", runtimeLibrary: runtimeLibrary);
-                if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
-                if (program.Interface is { } libraryInterface)
-                {
-                    var manifest = libraryInterface.ToXml();
-                    manifest.SetAttributeValue("Library", Path.GetFileName(outputPath));
-                    manifest.SetAttributeValue("Kind", outputType);
-                    manifest.SetAttributeValue("RuntimeLibrary", runtimeLibrary);
-                    manifest.Add(new System.Xml.Linq.XElement("NativeLibraries", nativeLinkInputs.Libraries.Select(library =>
-                        new System.Xml.Linq.XElement("Library", new System.Xml.Linq.XAttribute("Kind", library.Kind),
-                            new System.Xml.Linq.XAttribute("Value", library.Kind == "File" ? Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, library.Value) : library.Value)))));
-                    manifest.Add(new System.Xml.Linq.XElement("NativeDirectories", nativeLinkInputs.Directories.Select(directory =>
-                        new System.Xml.Linq.XElement("Directory", Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, directory)))));
-                    manifest.SetAttributeValue("CppRuntime", NativeToolchain.RequiredNativeRuntimes(ir).Exceptions || program.ForeignUnits.Any(unit => unit.Language == "cpp"));
-                    manifest.Add(new System.Xml.Linq.XElement("RuntimeFiles", runtimeFiles.Select(file => new System.Xml.Linq.XElement("File",
-                        Path.GetRelativePath(Path.GetDirectoryName(outputPath)!, file)))));
-                    File.WriteAllText(interfaceOutputs[0], manifest.ToString());
-                    File.WriteAllText(interfaceOutputs[1], libraryInterface.HeaderText);
-                    File.WriteAllText(interfaceOutputs[2], libraryInterface.CppHeader());
-                    File.WriteAllText(interfaceOutputs[3], NativeCmakeExport.Generate(outputPath, outputType == "DynamicLibrary"));
-                }
-                foreach (var deployment in deployments) File.Copy(deployment.Source, deployment.Destination, overwrite: true);
-                if (!run) return 0;
-                return NativeToolchain.RunProgram(outputPath, programArguments);
-            }
-            finally
-            {
-                try { File.Delete(temporaryIr); }
-                catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
-                {
-                    // Cleanup must not replace a native diagnostic or the program's exit code.
-                    Console.Error.WriteLine($"Warning: could not delete temporary IR '{temporaryIr}': {cleanup.Message}");
-                }
-            }
+            if (programArguments.Length > 0) { compilerArguments.Add("--"); compilerArguments.AddRange(programArguments); }
+            return CompilerProgram.Run(compilerArguments.ToArray(), sourcePaths);
         }
         catch (ProjectException ex)
         {

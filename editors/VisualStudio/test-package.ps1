@@ -39,7 +39,7 @@ try {
     }
     # The complete optional source library lives in the project SDK. Compiler and
     # server Standard folders contain only the built-in runtime contract subset.
-    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'core/IO/MemoryStream.gf', 'core/IO/byte_reader_read_at_least.gf', 'core/Compression/ZipArchive.gf', 'core/Compression/ZipArchiveEntry.gf', 'core/Compression/ZipArchiveWriter.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/text_writer_join.gf', 'core/Csv/CsvWriter.gf', 'core/Csv/csv_reader_records.gf', 'core/Csv/csv_writer_records.gf', 'libc/Console/redirection.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
+    foreach ($source in @('core/TypeInfo.gf', 'core/FieldInfo.gf', 'core/type_descriptions.gf', 'core/IO/SeekOrigin.gf', 'core/IO/MemoryStream.gf', 'core/IO/byte_reader_read_at_least.gf', 'core/Compression/ZipArchive.gf', 'core/Compression/ZipArchiveEntry.gf', 'core/Compression/ZipArchiveWriter.gf', 'libc/IO/File.gf', 'libc/IO/FileStream.gf', 'libc/IO/Directory.gf', 'core/Text/String.gf', 'core/Text/text_writer_join.gf', 'core/Csv/CsvWriter.gf', 'core/Csv/csv_reader_records.gf', 'core/Csv/csv_writer_records.gf', 'libc/Console/redirection.gf', 'core/Text/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/hash_set_algebra.gf', 'core/Json/JsonString.gf', 'core/Json/json_string_writer.gf', 'core/Binary/VarInt.gf', 'core/Binary/BitConverter.gf', 'core/Binary/BinaryPrimitives.gf', 'core/Binary/BinaryBufferReader.gf', 'core/Binary/BinaryBufferWriter.gf', 'core/Text/IntegerFormatting.gf')) {
         $packagedSource = Join-Path $extracted "Sdk/Standard/$source"
         if (-not (Test-Path -LiteralPath $packagedSource)) { throw "VSIX is missing Sdk/Standard/$source" }
         $repositorySource = Join-Path $repoRoot "Standard/$source"
@@ -147,8 +147,18 @@ try {
     dotnet @editorTestArguments
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
-    $compiler = Join-Path $extracted 'Compiler/gflat.exe'
+    $driver = Join-Path $extracted 'Compiler/gflat.exe'
+    $compiler = Join-Path $extracted 'Compiler/gfc.exe'
+    if (-not (Test-Path -LiteralPath $driver)) { throw 'VSIX is missing the project driver' }
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
+    $runtimeSources = @('core/Attribute.gf', 'core/CompilerGeneratedAttribute.gf', 'core/Exception.gf', 'core/BadAllocException.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'core/IGarbageCollector.gf', 'libc/Memory/allocation.gf') | ForEach-Object { Join-Path $extracted ('Sdk/Standard/' + $_) }
+    function Invoke-PackagedCompiler {
+        $inputs = @($args)
+        if ($inputs -notcontains '--no-stdlib' -and $inputs -notcontains '--source-list') {
+            $inputs += @($runtimeSources | Where-Object { $inputs -notcontains $_ })
+        }
+        & $compiler @inputs
+    }
     $foreignConsumer = Join-Path $extracted 'foreign-consumer.gf'
     @'
 #lang cpp
@@ -193,11 +203,11 @@ int main()
 }
 '@ | Set-Content -LiteralPath $foreignConsumer -Encoding Ascii
     $foreignIr = Join-Path $extracted 'foreign-consumer.ll'
-    & $compiler $foreignConsumer --no-stdlib --emit-ir -o $foreignIr
+    Invoke-PackagedCompiler $foreignConsumer --no-stdlib --emit-ir -o $foreignIr
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath ($foreignIr + '.foreign.json'))) {
         throw 'Packaged foreign language source and IR companion emission failed'
     }
-    & $compiler $foreignConsumer --no-stdlib -o (Join-Path $extracted 'foreign-consumer.exe') --run
+    Invoke-PackagedCompiler $foreignConsumer --no-stdlib -o (Join-Path $extracted 'foreign-consumer.exe') --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged foreign language consumer failed' }
     Write-Host 'Packaged C++ headers, enums, records, references, native object lifetime, inherited dispatch, and IR companion passed.'
     $binarySource = Join-Path $extracted 'binary-interop-library.gf'
@@ -214,7 +224,7 @@ namespace LibraryInterop
         $stem = if ($kind -eq 'StaticLibrary') { 'interop-static' } else { 'interop-shared' }
         $suffix = if ($kind -eq 'StaticLibrary') { '.lib' } else { '.dll' }
         $binary = Join-Path $extracted ($stem + $suffix)
-        & $compiler $binarySource --no-stdlib --output-type $kind --optimization 2 -o $binary
+        Invoke-PackagedCompiler $binarySource --no-stdlib --output-type $kind --optimization 2 -o $binary
         if ($LASTEXITCODE -ne 0) { throw "Packaged $kind interop build failed" }
         foreach ($companion in @('.gfi', '.gfi.gfh', '.hpp', '.cmake')) {
             if (-not (Test-Path -LiteralPath ($binary + $companion))) { throw "Packaged $kind is missing $companion" }
@@ -225,11 +235,11 @@ namespace LibraryInterop
         $consumer = Join-Path $extracted ($stem + '-consumer.gf')
         $body = 'int main() { if (LibraryInterop::GetStatus() != LibraryInterop::Status::Answer) return 1; int value = 41; LibraryInterop::Increment(ref value); return LibraryInterop::Read(ref value) - 42; }'
         $body | Set-Content -LiteralPath $consumer -Encoding Ascii
-        & $compiler $consumer --no-stdlib --library-interface ($binary + '.gfi') -o (Join-Path $extracted ($stem + '-consumer.exe')) --run
+        Invoke-PackagedCompiler $consumer --no-stdlib --library-interface ($binary + '.gfi') -o (Join-Path $extracted ($stem + '-consumer.exe')) --run
         if ($LASTEXITCODE -ne 0) { throw "Packaged $kind binary interface consumer failed" }
         ("#lang cpp`n#include `"$stem$suffix.hpp`"`n#lang gflat`n" + $body) | Set-Content -LiteralPath $consumer -Encoding Ascii
         $linkLibrary = if ($kind -eq 'StaticLibrary') { $binary } else { [IO.Path]::ChangeExtension($binary, '.lib') }
-        & $compiler $consumer --no-stdlib --native-library-file $linkLibrary -o (Join-Path $extracted ($stem + '-cpp-consumer.exe')) --run
+        Invoke-PackagedCompiler $consumer --no-stdlib --native-library-file $linkLibrary -o (Join-Path $extracted ($stem + '-cpp-consumer.exe')) --run
         if ($LASTEXITCODE -ne 0) { throw "Packaged $kind C++ header consumer failed" }
     }
     Write-Host 'Packaged static and shared libraries passed reference calls through binary declarations and C++ headers, with CMake imports.'
@@ -257,7 +267,7 @@ struct Counter { public int Value; public Counter(int value) nothrow { Value=val
 int Pure() nothrow => 42;
 int main() { Counter value=new(Pure()); return value.Value; }
 '@ | Set-Content -LiteralPath $noThrowSource
-    & $compiler $noThrowSource --no-stdlib --emit-ir -o $noThrowIr
+    Invoke-PackagedCompiler $noThrowSource --no-stdlib --emit-ir -o $noThrowIr
     if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed the runtime-free nothrow check' }
     if ((Get-Content -Raw -LiteralPath $noThrowIr) -match '@__gflat_eh_|\bpersonality\b|\binvoke\b') {
         throw 'Known nothrow calls unexpectedly require exception support'
@@ -272,7 +282,7 @@ int main() nothrow {
     return 0;
 }
 '@ | Set-Content -LiteralPath $redirectionSource
-    & $compiler $redirectionSource (Join-Path $extracted 'Sdk/Standard/libc/Console/redirection.gf') --no-stdlib --no-builtins -o $redirectionExecutable
+    Invoke-PackagedCompiler $redirectionSource (Join-Path $extracted 'Sdk/Standard/libc/Console/redirection.gf') --no-stdlib --no-builtins -o $redirectionExecutable
     if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler could not build the Console C-only adapter consumer' }
     $redirectionInput = Join-Path $extracted 'console-redirection.in'
     $redirectionOutput = Join-Path $extracted 'console-redirection.out'
@@ -302,7 +312,7 @@ int main() nothrow {
 }
 '@ | Set-Content -LiteralPath $declarationQualifiers
     foreach ($optimization in @(0, 2)) {
-        & $compiler $declarationQualifiers --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "declaration-qualifiers-o$optimization.exe")
+        Invoke-PackagedCompiler $declarationQualifiers --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "declaration-qualifiers-o$optimization.exe")
         if ($LASTEXITCODE -ne 0) { throw "Packaged declaration qualifiers failed at O$optimization" }
     }
     @'
@@ -317,7 +327,7 @@ int main() nothrow {
 }
 '@ | Set-Content -LiteralPath $rawDeflate
     foreach ($optimization in @(0, 2)) {
-        & $compiler $rawDeflate (Join-Path $extracted 'Sdk/Standard/core/Compression/Deflate.gf') --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "raw-deflate-o$optimization.exe")
+        Invoke-PackagedCompiler $rawDeflate (Join-Path $extracted 'Sdk/Standard/core/Compression/Deflate.gf') --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "raw-deflate-o$optimization.exe")
         if ($LASTEXITCODE -ne 0) { throw "Packaged raw DEFLATE decoder failed at O$optimization" }
     }
     $gzipMember = Join-Path $extracted 'gzip-member.gf'
@@ -335,7 +345,7 @@ int main() nothrow {
     $gzipSources = @('Compression/Gzip.gf', 'Compression/Deflate.gf', 'Hashing/CRC32.gf', 'Binary/BinaryPrimitives.gf') |
         ForEach-Object { Join-Path $extracted "Sdk/Standard/core/$_" }
     foreach ($optimization in @(0, 2)) {
-        & $compiler $gzipMember @gzipSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "gzip-member-o$optimization.exe")
+        Invoke-PackagedCompiler $gzipMember @gzipSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "gzip-member-o$optimization.exe")
         if ($LASTEXITCODE -ne 0) { throw "Packaged gzip member decoder failed at O$optimization" }
     }
     $zlibStream = Join-Path $extracted 'zlib-stream.gf'
@@ -353,7 +363,7 @@ int main() nothrow {
     $zlibSources = @('Compression/Zlib.gf', 'Compression/Deflate.gf', 'Hashing/Adler32.gf', 'Binary/BinaryPrimitives.gf') |
         ForEach-Object { Join-Path $extracted "Sdk/Standard/core/$_" }
     foreach ($optimization in @(0, 2)) {
-        & $compiler $zlibStream @zlibSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "zlib-stream-o$optimization.exe")
+        Invoke-PackagedCompiler $zlibStream @zlibSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "zlib-stream-o$optimization.exe")
         if ($LASTEXITCODE -ne 0) { throw "Packaged zlib decoder failed at O$optimization" }
     }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
@@ -361,7 +371,7 @@ int main() nothrow {
 void Set(ref int value) { value = 42; throw new Exception(); }
 int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) { if (value == 42) return 0; return 1; } return 2; }
 '@ | Set-Content -LiteralPath $smoke
-    & $compiler $smoke --run -o (Join-Path $extracted 'unwinding-ref.exe')
+    Invoke-PackagedCompiler $smoke --run -o (Join-Path $extracted 'unwinding-ref.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged exception/ref smoke test failed' }
     $primitive = Join-Path $extracted 'primitive-interface.gf'
     @'
@@ -372,7 +382,7 @@ interface IHash {
 int Hash<T : IHash>(ref readonly(T) value) => value.Hash();
 int main() { int value = 21; IHash* view = &value; return Hash(ref value) + view.Hash() - 42; }
 '@ | Set-Content -LiteralPath $primitive
-    & $compiler $primitive --optimization 2 --run -o (Join-Path $extracted 'primitive-interface.exe')
+    Invoke-PackagedCompiler $primitive --optimization 2 --run -o (Join-Path $extracted 'primitive-interface.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged primitive interface smoke test failed' }
     $imports = Join-Path $extracted 'private-native-imports.gf'
     @'
@@ -386,7 +396,7 @@ int main() {
     Memory::Free(normal!); return 0;
 }
 '@ | Set-Content -LiteralPath $imports
-    & $compiler $imports --optimization 2 --run -o (Join-Path $extracted 'private-native-imports.exe')
+    Invoke-PackagedCompiler $imports --optimization 2 --run -o (Join-Path $extracted 'private-native-imports.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged private/native allocator import coexistence failed' }
 
     $invalidNumber = Join-Path $extracted 'invalid-unicode-number.gf'
@@ -394,7 +404,7 @@ int main() {
     $oldNumericErrorAction = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        $numericDiagnostics = & $compiler $invalidNumber --emit-ir -o (Join-Path $extracted 'invalid-unicode-number.ll') 2>&1
+        $numericDiagnostics = Invoke-PackagedCompiler $invalidNumber --emit-ir -o (Join-Path $extracted 'invalid-unicode-number.ll') 2>&1
         $numericExitCode = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldNumericErrorAction }
@@ -409,7 +419,7 @@ int main() {
     $oldLocalErrorAction = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        $localDiagnostics = & $compiler $invalidLocal --check 2>&1
+        $localDiagnostics = Invoke-PackagedCompiler $invalidLocal --check 2>&1
         $localExitCode = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldLocalErrorAction }
@@ -422,13 +432,13 @@ int main() {
     $callbackQualifiers = Join-Path $extracted 'callback-qualifiers.gf'
     $callbackSource = 'void F(readonly(int) value){} void F(long value){} int main(){void(readonly(int))* callback=F;callback(42);return 0;}'
     [IO.File]::WriteAllText($callbackQualifiers, $callbackSource)
-    & $compiler $callbackQualifiers --no-stdlib --check
+    Invoke-PackagedCompiler $callbackQualifiers --no-stdlib --check
     if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler rejected an exact protected callback signature' }
     [IO.File]::WriteAllText($callbackQualifiers, $callbackSource.Replace('void(readonly(int))* callback', 'void(int)* callback'))
     $oldCallbackErrorAction = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        $callbackDiagnostics = & $compiler $callbackQualifiers --no-stdlib --check 2>&1
+        $callbackDiagnostics = Invoke-PackagedCompiler $callbackQualifiers --no-stdlib --check 2>&1
         $callbackExitCode = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldCallbackErrorAction }
@@ -441,7 +451,7 @@ int main() {
     $oldArrayErrorAction = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        $arrayDiagnostics = & $compiler $arrayGroup --no-stdlib --check 2>&1
+        $arrayDiagnostics = Invoke-PackagedCompiler $arrayGroup --no-stdlib --check 2>&1
         $arrayExitCode = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldArrayErrorAction }
@@ -451,13 +461,13 @@ int main() {
 
     $lineEndings = Join-Path $extracted 'line-endings.gf'
     [IO.File]::WriteAllText($lineEndings, "// comment`rint main()=>0;`r")
-    & $compiler $lineEndings --no-stdlib --check
+    Invoke-PackagedCompiler $lineEndings --no-stdlib --check
     if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler did not terminate a line comment at CR' }
     [IO.File]::WriteAllText($lineEndings, "int main(){`r")
     $oldLineEndingErrorAction = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        $lineEndingDiagnostics = & $compiler $lineEndings --no-stdlib --check 2>&1
+        $lineEndingDiagnostics = Invoke-PackagedCompiler $lineEndings --no-stdlib --check 2>&1
         $lineEndingExitCode = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldLineEndingErrorAction }
@@ -476,7 +486,7 @@ namespace PackageCast {
 }
 int main(){Box<int>::Item item=new(42);void* raw=(void*)&item;Box<int>::Item* result=(Box<int>::Item*)raw;return result.Value-42;}
 '@ | Set-Content -LiteralPath $scopedCast
-    & $compiler $scopedCast --optimization 2 --run -o (Join-Path $extracted 'imported-cast.exe')
+    Invoke-PackagedCompiler $scopedCast --optimization 2 --run -o (Join-Path $extracted 'imported-cast.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler lost the checked imported nested cast target' }
 
     $console = Join-Path $extracted 'console.gf'
@@ -487,9 +497,9 @@ int main(){Box<int>::Item item=new(42);void* raw=(void*)&item;Box<int>::Item* re
 void Drop() { int^ value = new(42); }
 int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7); GC::Collect(); return *value - 7; }
 '@ | Set-Content -LiteralPath $managed
-    & $compiler $managed (Join-Path $std 'libc/GC.gf') (Join-Path $std 'libc/TracingCollector.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
+    Invoke-PackagedCompiler $managed (Join-Path $std 'libc/GC.gf') (Join-Path $std 'libc/TracingCollector.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged managed allocation/root/collector smoke test failed' }
-    $consoleResult = & $compiler $console (Join-Path $std 'core/IO/IOException.gf') (Join-Path $std 'core/IO/EndOfStreamException.gf') (Join-Path $std 'core/Text/BufferTooSmallException.gf') (Join-Path $std 'libc/Console/Console.gf') --run -o (Join-Path $extracted 'console.exe')
+    $consoleResult = Invoke-PackagedCompiler $console (Join-Path $std 'core/IO/IOException.gf') (Join-Path $std 'core/IO/EndOfStreamException.gf') (Join-Path $std 'core/Text/BufferTooSmallException.gf') (Join-Path $std 'libc/Console/Console.gf') --run -o (Join-Path $extracted 'console.exe')
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     $collections = Join-Path $extracted 'collections.gf'
     @'
@@ -517,7 +527,7 @@ int main() {
     $bundledStd = Join-Path $extracted 'Sdk/Standard/core'
     $querySources = @('Collections', 'Queries' | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $bundledStd $_) -Filter '*.gf' -File | ForEach-Object FullName })
     $contractSources = @('IHashable.gf', 'IEquatable.gf', 'IComparable.gf', 'Hashing/primitive_hashing.gf') | ForEach-Object { Join-Path $bundledStd $_ }
-    & $compiler $collections (Join-Path $bundledStd 'Memory/Span.gf') (Join-Path $bundledStd 'Text/String.gf') (Join-Path $bundledStd 'Text/ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
+    Invoke-PackagedCompiler $collections (Join-Path $bundledStd 'Memory/Span.gf') (Join-Path $bundledStd 'Text/String.gf') (Join-Path $bundledStd 'Text/ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
@@ -1662,10 +1672,10 @@ int main(int argc, char** argv) {
     [IO.File]::WriteAllLines($allSourcesList, $allSources, [Text.UTF8Encoding]::new($false))
     $boundedInput = Join-Path $extracted 'bounded input.bin'
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
-    & $compiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
+    Invoke-PackagedCompiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
     foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj', 'linux-random/LinuxRandom.gfproj', 'windows-network/WindowsNetwork.gfproj')) {
-        & $compiler check (Join-Path $extracted "Sdk/libraries/platform/$project")
+        & $driver check (Join-Path $extracted "Sdk/libraries/platform/$project")
         if ($LASTEXITCODE -ne 0) { throw "Packaged optional platform project check failed: $project" }
     }
     $clockProbe = Join-Path $extracted 'clock-provider.gf'
@@ -1680,7 +1690,7 @@ int main() {
     return 0;
 }
 '@ | Set-Content -LiteralPath $clockProbe
-    & $compiler $clockProbe --source-list $allSourcesList (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') (Join-Path $extracted 'Sdk/libraries/platform/windows/SystemClock.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
+    Invoke-PackagedCompiler $clockProbe --source-list $allSourcesList (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') (Join-Path $extracted 'Sdk/libraries/platform/windows/SystemClock.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged optional Windows clock provider failed to link or run' }
     $clockConsumer = Join-Path $extracted 'clock consumer'
     New-Item -ItemType Directory -Force -Path $clockConsumer | Out-Null
@@ -1693,7 +1703,7 @@ int main() {
   <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
 </Project>
 '@ | Set-Content -LiteralPath (Join-Path $clockConsumer 'clock.gfproj')
-    & $compiler build (Join-Path $clockConsumer 'clock.gfproj') --configuration Release --run
+    & $driver build (Join-Path $clockConsumer 'clock.gfproj') --configuration Release --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not build and run through the optional clock project reference' }
     $randomConsumer = Join-Path $extracted 'random consumer'
     New-Item -ItemType Directory -Force -Path $randomConsumer | Out-Null
@@ -1714,7 +1724,7 @@ int main()
   <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
 </Project>
 '@ | Set-Content -LiteralPath (Join-Path $randomConsumer 'random.gfproj')
-    & $compiler build (Join-Path $randomConsumer 'random.gfproj') --configuration Release --run
+    & $driver build (Join-Path $randomConsumer 'random.gfproj') --configuration Release --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not build and run through the optional Windows random project reference' }
     $networkConsumer = Join-Path $extracted 'network consumer'
     New-Item -ItemType Directory -Force -Path $networkConsumer | Out-Null
@@ -1741,19 +1751,19 @@ int main()
   <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
 </Project>
 '@ | Set-Content -LiteralPath (Join-Path $networkConsumer 'network.gfproj')
-    & $compiler build (Join-Path $networkConsumer 'network.gfproj') --configuration Release --run
+    & $driver build (Join-Path $networkConsumer 'network.gfproj') --configuration Release --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not link Winsock through the optional TCP project reference' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal
     if ($LASTEXITCODE -ne 0) { throw 'MSBuild could not invoke the bundled compiler' }
-    & $compiler check (Join-Path $repoRoot 'examples/hello/hello.gfproj')
+    & $driver check (Join-Path $repoRoot 'examples/hello/hello.gfproj')
     if ($LASTEXITCODE -ne 0) { throw 'Bundled compiler project check failed' }
-    & $compiler build (Join-Path $repoRoot 'examples/hello/hello.gfproj') --emit-ir -o (Join-Path $extracted 'hello.ll')
+    & $driver build (Join-Path $repoRoot 'examples/hello/hello.gfproj') --emit-ir -o (Join-Path $extracted 'hello.ll')
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'hello.ll'))) { throw 'Bundled compiler project build failed' }
-    & $compiler build (Join-Path $repoRoot 'examples/interpolation/interpolation.gfproj') --emit-ir -o (Join-Path $extracted 'interpolation.ll')
+    & $driver build (Join-Path $repoRoot 'examples/interpolation/interpolation.gfproj') --emit-ir -o (Join-Path $extracted 'interpolation.ll')
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'interpolation.ll'))) { throw 'Bundled compiler interpolation/std integration failed' }
-    & $compiler build (Join-Path $repoRoot 'examples/values/values.gfproj') --emit-ir -o (Join-Path $extracted 'values.ll')
+    & $driver build (Join-Path $repoRoot 'examples/values/values.gfproj') --emit-ir -o (Join-Path $extracted 'values.ll')
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'values.ll'))) { throw 'Bundled compiler owning-vector integration failed' }
     & (Join-Path $PSScriptRoot 'test-package-failure-retention.ps1')
     $packageSucceeded = $true

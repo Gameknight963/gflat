@@ -41,6 +41,8 @@ if ($NoRestore) { $restoreArguments += '--no-restore' }
 dotnet publish (Join-Path $repoRoot 'gflat.LanguageServer/gflat.LanguageServer.csproj') -c $Configuration -r win-x64 --self-contained true -o $serverOutput @restoreArguments -m:1 -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'Language server publishing failed' }
 dotnet publish (Join-Path $repoRoot 'gflat/gflat.csproj') -c $Configuration -r win-x64 --self-contained true -o $compilerOutput @restoreArguments -m:1 -nodeReuse:false
+if ($LASTEXITCODE -ne 0) { throw 'Project driver publishing failed' }
+dotnet publish (Join-Path $repoRoot 'gfc/gfc.csproj') -c $Configuration -r win-x64 --self-contained true -o $compilerOutput @restoreArguments -m:1 -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'Compiler publishing failed' }
 & (Join-Path $PSScriptRoot 'build-project-templates.ps1') -Compiler (Join-Path $PSScriptRoot 'obj/compiler/gflat.exe')
 # Preserve the notices from the exact runtime pack being redistributed.

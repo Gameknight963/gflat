@@ -29,12 +29,12 @@ public class DocumentationAndDriverTests
             string ir = Path.Combine(dir, "result.ll");
             string executable = Path.Combine(dir, "result.exe");
             File.WriteAllText(source, "int main() { return 7; }");
-            Assert.Equal(0, Program.Main([source, "--emit-ir", "-o", ir]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--emit-ir", "-o", ir]));
             Assert.Contains("define i32 @main", File.ReadAllText(ir));
-            Assert.Equal(0, Program.Main([source, "-o", executable]));
-            Assert.Equal(7, Program.Main([source, "-o", executable, "--run"]));
-            Assert.Equal(2, Program.Main([source, "--target", "i386-pc-windows-msvc"]));
-            Assert.Equal(2, Program.Main([source, "-o", source]));
+            Assert.Equal(0, CompilerProgram.Main([source, "-o", executable]));
+            Assert.Equal(7, CompilerProgram.Main([source, "-o", executable, "--run"]));
+            Assert.Equal(2, CompilerProgram.Main([source, "--target", "i386-pc-windows-msvc"]));
+            Assert.Equal(2, CompilerProgram.Main([source, "-o", source]));
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishReadyToRun Condition="'$(PublishReadyToRun)' == '' and '$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../gflat.Compiler/gflat.Compiler.csproj" />
+    <ProjectReference Include="../gflat.Projects/gflat.Projects.csproj" />
+    <Compile Include="../gflat/AssemblyInfo.cs" Link="AssemblyInfo.cs" />
+    <None Include="../gflat/Runtime/Exceptions.cpp;../gflat/Runtime/Stdio.c" Link="Runtime/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -96,7 +96,7 @@ public sealed class NativeRuntimeCacheTests
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
                 WorkingDirectory = fixture.Root,
             };
-            foreach (string argument in new[] { typeof(Program).Assembly.Location, fixture.Source,
+            foreach (string argument in new[] { typeof(CompilerProgram).Assembly.Location, fixture.Source,
                 "--no-stdlib", "--no-builtins", "-o", executable }) start.ArgumentList.Add(argument);
             start.Environment["GFLAT_RUNTIME_CACHE_DIRECTORY"] = fixture.Cache;
             start.Environment["GFLAT_PROFILE_DIRECTORY"] = traces;

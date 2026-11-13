@@ -20,7 +20,7 @@ public sealed class PipelineTimingTests
             var start = new ProcessStartInfo("dotnet") {
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
             };
-            foreach (string argument in new[] { typeof(Program).Assembly.Location, source, "--check", "--no-stdlib" })
+            foreach (string argument in new[] { typeof(CompilerProgram).Assembly.Location, source, "--check", "--no-stdlib" })
                 start.ArgumentList.Add(argument);
             start.Environment["GFLAT_PROFILE_DIRECTORY"] = traces;
             start.Environment["GFLAT_PROFILE_ALLOCATIONS"] = allocations ? "1" : "0";

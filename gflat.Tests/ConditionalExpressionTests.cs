@@ -95,4 +95,31 @@ public sealed class ConditionalExpressionTests
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source, options: new() { NoStdLib = true }));
         Assert.Contains(message, error.Description, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void CopyingASelectedBranchInvalidatesEscapedNullableStorageFacts()
+    {
+        const string source = """
+            int*?*? watched = null;
+            void Remember(ref int*? value) { watched = &value; }
+            struct Owner
+            {
+                public Owner() {}
+                public copy Owner(immutable(Owner)* source) { *(watched!) = null; }
+                ~Owner() {}
+            }
+            void Probe(bool flag)
+            {
+                int value = 42;
+                int*? pointer = &value;
+                Remember(ref pointer);
+                if (pointer == null) return;
+                Owner owner = new();
+                Owner selected = flag ? owner : owner;
+                *pointer = 9;
+            }
+            """;
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source, options: new() { NoStdLib = true }));
+        Assert.Contains("nullable", error.Description, StringComparison.OrdinalIgnoreCase);
+    }
 }

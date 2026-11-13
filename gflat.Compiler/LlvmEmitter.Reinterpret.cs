@@ -38,7 +38,8 @@ public partial class LlvmEmitter
             Emit($"    {converted} = {instruction} {source} {value} to {result}");
             value = converted;
         }
-        if (info.Result is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false })
+        if (info.Source is not (PointerTypeExpression or FunctionPointerTypeExpression or ArrayTypeExpression) &&
+            (info.Result is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false }))
             GuardNonNull(value, result);
         Push(value);
         return true;

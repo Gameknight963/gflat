@@ -1557,8 +1557,9 @@ namespace gflat
                     return ParseEnumDeclaration(TokenKind.Private, line);
             }
 
-            if (Match(TokenKind.Static))
+            if (Check(TokenKind.Static) && Peek(1).Kind != TokenKind.OpenParen)
             {
+                Consume();
                 bool isConst = Match(TokenKind.Const);
                 VariableDeclaration declaration = ParseVariableDeclaration(isConst);
                 return new VariableDeclaration(declaration.Name, declaration.Type, declaration.Initializer, line, isConst)

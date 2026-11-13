@@ -4,6 +4,15 @@ namespace gflat.Tests;
 
 public sealed class ReinterpretCastTests
 {
+    [Fact]
+    public void ATrustedNonNullPointerViewOnlyChangesItsPointerRepresentation()
+    {
+        string ir = Compiler.Emit("byte* View(int* pointer) => pointer.reinterpret<byte*>(); int main()=>0;",
+            options: new() { NoStdLib = true });
+        Assert.Contains("bitcast i32*", ir);
+        Assert.DoesNotContain("icmp ne", ir);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(2)]

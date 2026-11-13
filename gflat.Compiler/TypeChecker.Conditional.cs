@@ -53,5 +53,6 @@ public partial class TypeChecker
             if (!IsAssignable(target, GetType(branch), branch))
                 throw new TypeCheckException($"Conditional branch cannot produce '{DisplayTypeName(target)}'", branch.Span);
         RecordType(node, target);
+        if (CopiesValue(node.WhenTrue, target) || CopiesValue(node.WhenFalse, target)) InvalidateNullableEscapes();
     }
 }

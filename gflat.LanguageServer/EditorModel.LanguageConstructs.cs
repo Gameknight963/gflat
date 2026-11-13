@@ -31,6 +31,7 @@ public sealed partial class EditorModel
             "if" => "Executes a branch when its condition is true.",
             "else" => "Executes the alternative branch when the preceding condition is false.",
             "while" => "Repeats a body while its condition is true.",
+            "do" => "Runs a body, then repeats it while its condition is true.",
             "for" => "Repeats a body with initialization, a condition, and an iteration step.",
             "foreach" => "Visits elements supplied by an enumerable's iterator.",
             "in" => "Separates the iteration variable from the sequence in a foreach statement.",

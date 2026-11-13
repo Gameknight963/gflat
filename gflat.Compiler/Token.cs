@@ -99,6 +99,7 @@ namespace gflat
             TokenKind.For => "for",
             TokenKind.Foreach => "foreach",
             TokenKind.In => "in",
+            TokenKind.Do => "do",
             TokenKind.Repeat => "repeat",
             TokenKind.Break => "break",
             TokenKind.Continue => "continue",

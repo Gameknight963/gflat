@@ -166,7 +166,7 @@ namespace gflat.semantics
                     result = ConstantCondition(branch.Condition) switch { true => then, false => otherwise, _ => then | otherwise };
                     break;
                 case WhileStatement loop:
-                    result = LoopExits(loop.Body, ConstantCondition(loop.Condition));
+                    result = LoopExits(loop.Body, ConstantCondition(loop.Condition), testAfterBody: loop.TestAfterBody);
                     break;
                 case ForStatement loop:
                     result = LoopExits(loop.Body, loop.Condition == null ? true : ConstantCondition(loop.Condition), loop.Increment);
@@ -190,12 +190,13 @@ namespace gflat.semantics
         private static Exits Sequence(Exits first, Exits next) =>
             (first & ~Exits.Normal) | ((first & Exits.Normal) != 0 ? next : Exits.None);
 
-        private Exits LoopExits(AstNode body, bool? condition, AstNode? increment = null)
+        private Exits LoopExits(AstNode body, bool? condition, AstNode? increment = null, bool testAfterBody = false)
         {
             var exits = StatementExits(body);
-            if (condition == false) return Exits.Normal;
+            if (condition == false && !testAfterBody) return Exits.Normal;
             var result = exits & (Exits.Return | Exits.Throw);
-            if ((exits & Exits.Break) != 0 || condition == null) result |= Exits.Normal;
+            if ((exits & Exits.Break) != 0 || condition != true &&
+                (!testAfterBody || (exits & (Exits.Normal | Exits.Continue)) != 0)) result |= Exits.Normal;
             if (increment != null && (exits & (Exits.Normal | Exits.Continue)) != 0)
             {
                 var step = StatementExits(increment);
@@ -269,7 +270,7 @@ namespace gflat.semantics
 
             if (stmt is WhileStatement whileStmt)
             {
-                if (IsConstantFalse(whileStmt.Condition))
+                if (!whileStmt.TestAfterBody && IsConstantFalse(whileStmt.Condition))
                 {
                     _diagnostics.Report(DiagnosticRules.GF2001_UnreachableCode, whileStmt.Body.Line);
                     return false;
@@ -395,7 +396,7 @@ namespace gflat.semantics
         private bool IsConstantFalse(AstNode expr)
             => ConstantCondition(expr) == false;
 
-        private bool? ConstantCondition(AstNode expr)
+        internal bool? ConstantCondition(AstNode expr)
         {
             if (_conditions.TryGetValue(expr, out var cached)) return cached;
             bool? result = expr is LiteralExpression literal && literal.Token.Kind is TokenKind.True or TokenKind.False

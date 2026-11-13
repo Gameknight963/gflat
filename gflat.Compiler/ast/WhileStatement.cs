@@ -8,6 +8,7 @@ namespace gflat.ast
     {
         public AstNode Condition { get; }
         public BlockStatement Body { get; }
+        public bool TestAfterBody { get; init; }
 
         public WhileStatement(AstNode condition, BlockStatement body, int line) : base(line)
         {

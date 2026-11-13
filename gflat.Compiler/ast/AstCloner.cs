@@ -347,7 +347,7 @@ namespace gflat.ast
             }
             if (node is WhileStatement whileStmt)
             {
-                return new WhileStatement(CloneNode(whileStmt.Condition), (BlockStatement)CloneNode(whileStmt.Body), whileStmt.Line);
+                return new WhileStatement(CloneNode(whileStmt.Condition), (BlockStatement)CloneNode(whileStmt.Body), whileStmt.Line) { TestAfterBody = whileStmt.TestAfterBody };
             }
             if (node is ForStatement forStmt)
             {

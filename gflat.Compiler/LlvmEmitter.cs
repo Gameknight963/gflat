@@ -2461,7 +2461,7 @@ public partial class LlvmEmitter : IVisitor
         _continueLabels.Push(condLabel);
         _loopDeferDepths.Push(_deferScopes.Count);
 
-        Emit($"    br label %{condLabel}");
+        Emit($"    br label %{(node.TestAfterBody ? bodyLabel : condLabel)}");
         Emit($"{condLabel}:");
 
         EmitExpressionWithCleanup(() => node.Condition.Accept(this));

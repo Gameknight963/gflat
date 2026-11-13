@@ -20,6 +20,7 @@ public sealed class LanguageConstructHoverTests
     [InlineData("struct Sample { public int Value; }", "struct", "value type")]
     [InlineData("#define NUMBER 42\nint main() => NUMBER;", "define", "macro")]
     [InlineData("void F() { if (true) return; }", "if", "condition is true")]
+    [InlineData("void F() { do {} while (false); }", "do", "then repeats")]
     [InlineData("#if 0\nignored\n#endif\nint main() => 0;", "if", "preprocessor condition")]
     [InlineData("void F() { static if (true) {} }", "static", "compile time")]
     [InlineData("class Sample { private int value; }", "private", "declaring type")]

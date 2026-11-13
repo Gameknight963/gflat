@@ -73,6 +73,7 @@ namespace gflat
         If,
         Else,
         While,
+        Do,
         For,
         Foreach,
         In,

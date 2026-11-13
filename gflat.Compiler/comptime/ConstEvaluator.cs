@@ -1185,19 +1185,18 @@ namespace gflat.comptime
 
         public void Visit(WhileStatement node)
         {
+            bool first = true;
             while (true)
             {
                 CheckSteps(node.Line);
-                node.Condition.Accept(this);
-                if (_currentValue is not ConstValue.Boolean b)
+                if (!node.TestAfterBody || !first)
                 {
-                    throw new ConstEvalException("While condition must be boolean at compile time", node.Line);
+                    node.Condition.Accept(this);
+                    if (_currentValue is not ConstValue.Boolean b)
+                        throw new ConstEvalException("While condition must be boolean at compile time", node.Line);
+                    if (!b.Value) break;
                 }
-                if (!b.Value)
-                {
-                    break;
-                }
-
+                first = false;
                 node.Body.Accept(this);
 
                 if (_hasReturned) break;

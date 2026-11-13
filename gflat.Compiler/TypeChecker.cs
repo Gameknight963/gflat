@@ -3547,6 +3547,20 @@ namespace gflat
         {
             NullableLoopEntry();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.TestAfterBody)
+            {
+                _loopDepth++;
+                try
+                {
+                    node.Body.Accept(this);
+                    NullableLoopEntry();
+                    node.Condition.Accept(this);
+                    if (!TypesMatch(GetType(node.Condition), Bool))
+                        throw new TypeCheckException("Do-while condition must be bool", node.Line);
+                }
+                finally { NullableLoopEntry(); _loopDepth--; }
+                return;
+            }
             node.Condition.Accept(this);
             TypeExpression condType = GetType(node.Condition);
             if (!TypesMatch(condType, Bool))

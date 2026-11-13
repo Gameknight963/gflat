@@ -262,6 +262,7 @@ public class Lexer
             "if" => TokenKind.If,
             "else" => TokenKind.Else,
             "while" => TokenKind.While,
+            "do" => TokenKind.Do,
             "for" => TokenKind.For,
             "foreach" => TokenKind.Foreach,
             "in" => TokenKind.In,

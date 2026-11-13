@@ -131,7 +131,7 @@ namespace gflat
 
         public void Visit(WhileStatement node)
         {
-            Print("While");
+            Print(node.TestAfterBody ? "DoWhile" : "While");
             Indented(() =>
             {
                 Print("Condition:"); Indented(() => node.Condition.Accept(this));

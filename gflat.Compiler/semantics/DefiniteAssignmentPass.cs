@@ -83,14 +83,15 @@ namespace gflat.semantics
             => a.Count == b.Count && a.All(pair => b.TryGetValue(pair.Key, out var right) &&
                 pair.Value.Count == right.Count && pair.Value.Zip(right).All(p => p.First.IsFullyAssigned == p.Second.IsFullyAssigned && p.First.AssignedFields.SetEquals(p.Second.AssignedFields)));
 
-        private void CheckLoop(AstNode? condition, AstNode body, AstNode? increment = null, Action? beforeBody = null)
+        private void CheckLoop(AstNode? condition, AstNode body, AstNode? increment = null, Action? beforeBody = null,
+            bool testAfterBody = false)
         {
             var entry = CloneState(_state);
             var header = CloneState(entry);
             while (true)
             {
                 _state = CloneState(header);
-                CheckExpression(condition);
+                if (!testAfterBody) CheckExpression(condition);
                 var conditionExit = CloneState(_state);
                 _loopCleanupDepths.Push(_cleanupScopes.Count);
                 _breakStates.Push(new());
@@ -101,9 +102,18 @@ namespace gflat.semantics
                 var backs = _continueStates.Pop();
                 if (!_controlFlow.StatementTerminates(body)) backs.Add(CloneState(_state));
                 var exits = _breakStates.Pop();
+                if (testAfterBody)
+                {
+                    if (backs.Count == 0) { _state = MergeLoopStates(exits, header); return; }
+                    _state = MergeLoopStates(backs, header);
+                    CheckExpression(condition);
+                    conditionExit = CloneState(_state);
+                }
                 if (condition != null && condition is not LiteralExpression { Token.Kind: TokenKind.True }) exits.Add(conditionExit);
+                if (testAfterBody && condition != null && _controlFlow.ConstantCondition(condition) == false)
+                { _state = MergeLoopStates(exits, conditionExit); return; }
                 if (backs.Count == 0) { _state = MergeLoopStates(exits, conditionExit); return; }
-                _state = MergeLoopStates(backs, header);
+                if (!testAfterBody) _state = MergeLoopStates(backs, header);
                 CheckExpression(increment);
                 var next = IntersectStates(entry, _state);
                 if (SameAssignments(header, next)) { _state = MergeLoopStates(exits, conditionExit); return; }
@@ -651,7 +661,7 @@ namespace gflat.semantics
             }
             else if (stmt is WhileStatement whileStmt)
             {
-                CheckLoop(whileStmt.Condition, whileStmt.Body);
+                CheckLoop(whileStmt.Condition, whileStmt.Body, testAfterBody: whileStmt.TestAfterBody);
             }
             else if (stmt is ForStatement forStmt)
             {

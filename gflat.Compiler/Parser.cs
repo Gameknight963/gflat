@@ -1527,6 +1527,8 @@ namespace gflat
                     return ParseIfStatement();
                 case TokenKind.While:
                     return ParseWhileStatement();
+                case TokenKind.Do:
+                    return ParseDoWhileStatement();
                 case TokenKind.For:
                     return ParseForStatement();
                 case TokenKind.Foreach:
@@ -1803,6 +1805,18 @@ namespace gflat
         }
 
         private WhileStatement ParseWhileStatement() => Located(() => ParseWhileStatementCoreLocated());
+
+        private WhileStatement ParseDoWhileStatement()
+        {
+            int line = Consume().Line;
+            BlockStatement body = ParseBodyOrBlock();
+            Expect(TokenKind.While);
+            Expect(TokenKind.OpenParen);
+            AstNode condition = ParseExpression();
+            Expect(TokenKind.CloseParen);
+            Expect(TokenKind.Semicolon);
+            return new WhileStatement(condition, body, line) { TestAfterBody = true };
+        }
 
         private WhileStatement ParseWhileStatementCoreLocated()
         {

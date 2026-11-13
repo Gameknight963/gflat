@@ -188,7 +188,7 @@
     },
     {
       "name": "keyword.control.gflat",
-      "match": "\\b(return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|defer|throw|try|catch)\\b"
+      "match": "\\b(return|if|else|while|do|for|foreach|in|repeat|break|continue|switch|case|defer|throw|try|catch)\\b"
     },
     {
       "name": "keyword.other.gflat",

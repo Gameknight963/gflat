@@ -54,7 +54,7 @@ public sealed class ControlFlowGraph
                     bool? whileCondition = constantCondition(loop.Condition);
                     if (whileCondition != false) test.Successors.Add(bodyEntry);
                     if (whileCondition != true) test.Successors.Add(next);
-                    return test;
+                    return loop.TestAfterBody ? bodyEntry : test;
                 case ForStatement loop:
                     var condition = new Block(loop.Condition);
                     var increment = loop.Increment == null ? condition : Build(loop.Increment, condition, next, condition, throwTarget);

@@ -22,13 +22,13 @@ public sealed class NoBuiltinsDriverTests
             string source = Path.Combine(directory, "main.gf"), ir = Path.Combine(directory, "main.ll");
             File.WriteAllText(source, "int main() => 0;");
             string[] options = noStdLib ? ["--no-stdlib"] : [];
-            Assert.Equal(0, Program.Main([source, "--emit-ir", "-o", ir, .. options]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--emit-ir", "-o", ir, .. options]));
             Assert.DoesNotContain("\"no-builtins\"", File.ReadAllText(ir));
-            Assert.Equal(0, Program.Main([source, "--emit-ir", "-o", ir, "--no-builtins", .. options]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--emit-ir", "-o", ir, "--no-builtins", .. options]));
             Assert.Contains("\"no-builtins\"", File.ReadAllText(ir));
-            Assert.Equal(0, Program.Main([source, "--emit-ir", "-o", ir, "--no-builtins", "--builtins", .. options]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--emit-ir", "-o", ir, "--no-builtins", "--builtins", .. options]));
             Assert.DoesNotContain("\"no-builtins\"", File.ReadAllText(ir));
-            Assert.Equal(0, Program.Main([source, "--check", "--no-builtins", .. options]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--check", "--no-builtins", .. options]));
         });
     }
 

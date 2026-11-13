@@ -46,7 +46,7 @@ public sealed class BinaryEnumExportTests
                 public readonly(Status)* GetCurrent() nothrow => &current;
                 """);
             string library = Path.Combine(root, "answer" + (OperatingSystem.IsWindows() ? kind == "StaticLibrary" ? ".lib" : ".dll" : kind == "StaticLibrary" ? ".a" : ".so"));
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--output-type", kind, "--optimization", "2", "-o", library]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--output-type", kind, "--optimization", "2", "-o", library]));
             var metadata = XElement.Load(library + ".gfi");
             Assert.Equal("2", (string?)metadata.Attribute("Version"));
             Assert.Equal(4, metadata.Elements("Enum").Count());
@@ -71,7 +71,7 @@ public sealed class BinaryEnumExportTests
                 }
                 """);
             string executable = Path.Combine(root, "consumer.exe");
-            Assert.Equal(0, Program.Main([consumer, "--no-stdlib", "--library-interface", library + ".gfi", "--optimization", "2", "-o", executable]));
+            Assert.Equal(0, CompilerProgram.Main([consumer, "--no-stdlib", "--library-interface", library + ".gfi", "--optimization", "2", "-o", executable]));
             Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);
             string cpp = Path.Combine(root, "consumer.cpp");
             File.WriteAllText(cpp, "#include \"" + Path.GetFileName(library) + ".hpp\"\n" + """

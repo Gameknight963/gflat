@@ -44,7 +44,7 @@ public sealed class CmakeLibraryExportTests
             string dependencyKind = kind == "StaticLibrary" ? "DynamicLibrary" : "StaticLibrary";
             string dependencyName = "dependency" + (OperatingSystem.IsWindows() ? dependencyKind == "StaticLibrary" ? ".lib" : ".dll" : dependencyKind == "StaticLibrary" ? ".a" : ".so");
             string dependency = Path.Combine(distribution, dependencyName);
-            Assert.Equal(0, Program.Main([dependencySource, "--no-stdlib", "--output-type", dependencyKind, "--optimization", "2", "-o", dependency]));
+            Assert.Equal(0, CompilerProgram.Main([dependencySource, "--no-stdlib", "--output-type", dependencyKind, "--optimization", "2", "-o", dependency]));
             string source = Path.Combine(root, "answer.gf");
             File.WriteAllText(source, """
                 #lang cpp
@@ -58,7 +58,7 @@ public sealed class CmakeLibraryExportTests
                 """);
             string filename = "answer" + (OperatingSystem.IsWindows() ? kind == "StaticLibrary" ? ".lib" : ".dll" : kind == "StaticLibrary" ? ".a" : ".so");
             string library = Path.Combine(distribution, filename);
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--output-type", kind, "--optimization", "2", "--library-interface", dependency + ".gfi", "-o", library]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--output-type", kind, "--optimization", "2", "--library-interface", dependency + ".gfi", "-o", library]));
             string export = File.ReadAllText(library + ".cmake");
             Assert.DoesNotContain(distribution.Replace('\\', '/'), export);
             Assert.Contains("Gflat::answer", export);

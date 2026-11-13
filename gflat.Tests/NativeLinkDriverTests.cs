@@ -19,7 +19,7 @@ public sealed class NativeLinkDriverTests
                 ? ["--native-library", "answer", "--native-library-dir", directory]
                 : ["--native-library-file", obj];
             if (named) Archive(directory, "answer", obj);
-            Assert.Equal(42, Program.Main([source, "--no-stdlib", "-o", output, "--run", .. options]));
+            Assert.Equal(42, CompilerProgram.Main([source, "--no-stdlib", "-o", output, "--run", .. options]));
         });
     }
 
@@ -31,7 +31,7 @@ public sealed class NativeLinkDriverTests
         InDirectory(root => {
             string source = WriteSource(root);
             string absent = Path.Combine(root, "not installed", "missing library.o");
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", mode, "--native-library-file", absent, "-o", Path.Combine(root, "program.ll")]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", mode, "--native-library-file", absent, "-o", Path.Combine(root, "program.ll")]));
         });
     }
 
@@ -41,7 +41,7 @@ public sealed class NativeLinkDriverTests
         InDirectory(root => {
             string obj = CompileObject(root, "answer", "int native_answer(void) { return 42; }");
             byte[] original = File.ReadAllBytes(obj);
-            Assert.NotEqual(0, Program.Main([WriteSource(root), "--no-stdlib", "--native-library-file", obj, "-o", obj]));
+            Assert.NotEqual(0, CompilerProgram.Main([WriteSource(root), "--no-stdlib", "--native-library-file", obj, "-o", obj]));
             Assert.Equal(original, File.ReadAllBytes(obj));
         });
     }
@@ -129,7 +129,7 @@ public sealed class NativeLinkDriverTests
         InDirectory(root => {
             string manifest = Path.Combine(root, "broken.xml"); File.WriteAllText(manifest, "<unclosed");
             string source = WriteSource(root);
-            Assert.Equal(2, Program.Main([source, "--no-stdlib", "--check", "--native-link-inputs", manifest]));
+            Assert.Equal(2, CompilerProgram.Main([source, "--no-stdlib", "--check", "--native-link-inputs", manifest]));
         });
     }
 
@@ -191,7 +191,7 @@ public sealed class NativeLinkDriverTests
             {
                 NativeLinkInputs.Empty.Write(manifest);
                 byte[] original = File.ReadAllBytes(manifest);
-                Assert.Equal(2, Program.Main([source, "--no-stdlib", "--debug", "-o", output, "--native-link-inputs", manifest]));
+                Assert.Equal(2, CompilerProgram.Main([source, "--no-stdlib", "--debug", "-o", output, "--native-link-inputs", manifest]));
                 Assert.Equal(original, File.ReadAllBytes(manifest));
             }
         });

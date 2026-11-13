@@ -78,10 +78,10 @@ public class NoStandardLibraryTests
             string source = Path.Combine(root, "main.gf");
             string output = Path.Combine(root, "main.ll");
             File.WriteAllText(source, "class Attribute {} int main() => 42;");
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--emit-ir", "-o", output]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--emit-ir", "-o", output]));
             Assert.DoesNotContain("%Exception = type", File.ReadAllText(output));
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--check"]));
-            Assert.Equal(42, Program.Main([source, "--no-stdlib", "--run", "-o", Path.Combine(root, "bare.exe")]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--check"]));
+            Assert.Equal(42, CompilerProgram.Main([source, "--no-stdlib", "--run", "-o", Path.Combine(root, "bare.exe")]));
         }
         finally { Directory.Delete(root, true); }
     }

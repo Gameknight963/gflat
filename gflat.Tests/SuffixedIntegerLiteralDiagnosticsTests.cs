@@ -71,7 +71,7 @@ public sealed class SuffixedIntegerLiteralDiagnosticsTests
             string source = Path.Combine(directory, "main.gf"), output = Path.Combine(directory, "main.ll");
             File.WriteAllText(source, "int main() { return (int)9223372036854775809l; }");
             string[] arguments = check ? [source, "--no-stdlib", "--check"] : [source, "--no-stdlib", "--emit-ir", "-o", output];
-            Assert.Equal(1, Program.Main(arguments));
+            Assert.Equal(1, CompilerProgram.Main(arguments));
             Assert.False(File.Exists(output));
         }
         finally { Directory.Delete(directory, recursive: true); }

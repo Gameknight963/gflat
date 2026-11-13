@@ -45,7 +45,7 @@ public sealed class CppExceptionAdapterTests
             string library = Path.Combine(root, OperatingSystem.IsWindows() ? "errors." + (kind == "StaticLibrary" ? "lib" : "dll") :
                 "liberrors." + (kind == "StaticLibrary" ? "a" : "so"));
             string standard = Path.Combine(ProjectFileFixture.RepositoryRoot, "Standard");
-            Assert.Equal(0, Program.Main([source, support, Path.Combine(standard, "core", "Exception.gf"),
+            Assert.Equal(0, CompilerProgram.Main([source, support, Path.Combine(standard, "core", "Exception.gf"),
                 Path.Combine(standard, "libc", "Memory", "allocation.gf"), "--no-stdlib", "--output-type", kind,
                 "--export-source-list", exports, debug ? "--debug" : "--no-debug", "--optimization", optimization.ToString(), "-o", library]));
             string consumer = Path.Combine(root, "consumer.cpp"), executable = Path.Combine(root, "consumer.exe");

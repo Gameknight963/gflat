@@ -88,7 +88,7 @@ public sealed class LlvmDebugMarkerTests
             File.WriteAllText(source, text);
             const string sentinel = "preserve existing PDB-shaped user file";
             if (pdbState == "sentinel") File.WriteAllText(pdb, sentinel);
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--no-debug", "-o", output]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--no-debug", "-o", output]));
             Assert.True(File.Exists(output));
             Assert.Equal(text, File.ReadAllText(source));
             if (pdbState == "absent") Assert.False(File.Exists(pdb));

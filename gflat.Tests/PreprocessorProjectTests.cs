@@ -58,12 +58,12 @@ public sealed class PreprocessorProjectTests : IDisposable
         string header = Write("include/value.gfh", "#define ANSWER VALUE");
         string main = Write("main.gf", "#include <value.gfh>\nint main()=>ANSWER;");
         string ir = Path.Combine(root, "app.ll"), deps = Path.Combine(root, "app.includes");
-        Assert.Equal(0, Program.Main([main, "--no-stdlib", "--emit-ir", "-o", ir, "-I" + Path.Combine(root, "include"), "-DVALUE=42", "--dependencies", deps]));
+        Assert.Equal(0, CompilerProgram.Main([main, "--no-stdlib", "--emit-ir", "-o", ir, "-I" + Path.Combine(root, "include"), "-DVALUE=42", "--dependencies", deps]));
         Assert.Contains("ret i32 42", File.ReadAllText(ir));
         Assert.Contains(header, File.ReadAllLines(deps));
-        Assert.Equal(2, Program.Main([main, "--no-stdlib", "--emit-ir", "-o", header, "-I", Path.Combine(root, "include"), "-D", "VALUE=42"]));
+        Assert.Equal(2, CompilerProgram.Main([main, "--no-stdlib", "--emit-ir", "-o", header, "-I", Path.Combine(root, "include"), "-D", "VALUE=42"]));
         Assert.Equal("#define ANSWER VALUE", File.ReadAllText(header));
-        Assert.Equal(2, Program.Main([main, "--no-stdlib", "--emit-ir", "-o", ir, "-I", Path.Combine(root, "include"), "-DVALUE=42", "--dependencies", main]));
+        Assert.Equal(2, CompilerProgram.Main([main, "--no-stdlib", "--emit-ir", "-o", ir, "-I", Path.Combine(root, "include"), "-DVALUE=42", "--dependencies", main]));
         Assert.StartsWith("#include", File.ReadAllText(main));
     }
 

@@ -194,8 +194,8 @@ public class ExceptionReserveTests
             Assert.Equal(0, ProjectModel.Load(project).ExceptionReserveBytes);
             Assert.Equal(42, Program.Main([project, "--run", "--exception-reserve-bytes", "4096"]));
             Assert.NotEqual(42, Program.Main([project, "--run"]));
-            Assert.Equal(42, Program.Main([source, "--run", "--exception-reserve-bytes", "4096"]));
-            Assert.NotEqual(42, Program.Main([source, "--run", "--exception-reserve-bytes", "0"]));
+            Assert.Equal(42, CompilerProgram.Main([source, "--run", "--exception-reserve-bytes", "4096"]));
+            Assert.NotEqual(42, CompilerProgram.Main([source, "--run", "--exception-reserve-bytes", "0"]));
             File.WriteAllText(project, TestSupport.ProjectFileFixture.Xml(content:
                 "<PropertyGroup><NoStdLib>false</NoStdLib><GflatExceptionReserveBytes>bad</GflatExceptionReserveBytes></PropertyGroup>"));
             Assert.Throws<ProjectException>(() => ProjectModel.Load(project));

@@ -40,7 +40,7 @@ public sealed class NativeRuntimeLibraryTests
                     return 42;
                 }
                 """);
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--runtime-library", runtime, "-o", executable]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--runtime-library", runtime, "-o", executable]));
             Assert.Equal(42, NativeToolchain.Run(executable, []).ExitCode);
         }
         finally { Directory.Delete(directory, recursive: true); }

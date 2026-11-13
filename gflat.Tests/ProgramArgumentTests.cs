@@ -30,12 +30,13 @@ public sealed class ProgramArgumentTests
                 input = Path.Combine(directory, "app.gfproj");
                 File.WriteAllText(input, TestSupport.ProjectFileFixture.Xml());
             }
-            Assert.Equal(17, Program.Main([input, "--run", "--", "two words", "quote\"inside", "", "-o", "--check"]));
+            string[] arguments = [input, "--run", "--", "two words", "quote\"inside", "", "-o", "--check"];
+            Assert.Equal(17, project ? Program.Main(arguments) : CompilerProgram.Main(["--no-stdlib", .. arguments]));
         }
         finally { Directory.Delete(directory, recursive: true); }
     }
 
     [Fact]
     public void ProgramArgumentsRequireRunBeforeLoadingSources()
-        => Assert.Equal(2, Program.Main(["missing.gf", "--", "argument"]));
+        => Assert.Equal(2, CompilerProgram.Main(["missing.gf", "--", "argument"]));
 }

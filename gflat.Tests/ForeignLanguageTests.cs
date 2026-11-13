@@ -181,7 +181,7 @@ public sealed class ForeignLanguageTests
         {
             string source = Path.Combine(directory, "source.gf"), ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
             File.WriteAllText(source, code);
-            Assert.Equal(0, Program.Main([source, "--no-stdlib", "--emit-ir", "-o", ir]));
+            Assert.Equal(0, CompilerProgram.Main([source, "--no-stdlib", "--emit-ir", "-o", ir]));
             Assert.True(File.Exists(ir + ".foreign.json"));
             var compiled = NativeToolchain.Compile(ir, exe);
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);

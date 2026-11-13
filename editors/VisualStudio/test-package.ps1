@@ -549,7 +549,12 @@ int main() {
     $bundledStd = Join-Path $extracted 'Sdk/Standard/core'
     $querySources = @('Collections', 'Queries' | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $bundledStd $_) -Filter '*.gf' -File | ForEach-Object FullName })
     $contractSources = @('IHashable.gf', 'IEquatable.gf', 'IComparable.gf', 'Hashing/primitive_hashing.gf') | ForEach-Object { Join-Path $bundledStd $_ }
-    Invoke-PackagedCompiler $collections (Join-Path $bundledStd 'Memory/Span.gf') (Join-Path $bundledStd 'Text/String.gf') (Join-Path $bundledStd 'Text/ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
+    $collectionSources = @($collections, (Join-Path $bundledStd 'Memory/Span.gf'), (Join-Path $bundledStd 'Text/String.gf'),
+        (Join-Path $bundledStd 'Text/ByteSearch.gf'), (Join-Path $bundledStd 'IStringConvertable.gf')) +
+        $contractSources + $querySources + $runtimeSources
+    $collectionSourcesList = Join-Path $extracted 'collections.sources'
+    [IO.File]::WriteAllLines($collectionSourcesList, [string[]]@($collectionSources | Select-Object -Unique), [Text.UTF8Encoding]::new($false))
+    Invoke-PackagedCompiler --source-list $collectionSourcesList --no-stdlib --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'

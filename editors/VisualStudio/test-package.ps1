@@ -168,9 +168,16 @@ int main()
     $runtimeSources = @('core/Attribute.gf', 'core/CompilerGeneratedAttribute.gf', 'core/Exception.gf', 'core/BadAllocException.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'core/IGarbageCollector.gf', 'libc/Memory/allocation.gf') | ForEach-Object { Join-Path $extracted ('Sdk/Standard/' + $_) }
     function Invoke-PackagedCompiler {
         $inputs = @($args)
+        $separator = [Array]::IndexOf($inputs, '--')
+        $programInputs = @()
+        if ($separator -ge 0) {
+            $programInputs = @($inputs | Select-Object -Skip ($separator + 1))
+            $inputs = @($inputs | Select-Object -First $separator)
+        }
         if ($inputs -notcontains '--no-stdlib' -and $inputs -notcontains '--source-list') {
             $inputs += @($runtimeSources | Where-Object { $inputs -notcontains $_ })
         }
+        if ($separator -ge 0) { $inputs += @('--') + $programInputs }
         & $compiler @inputs
     }
     $foreignConsumer = Join-Path $extracted 'foreign-consumer.gf'
@@ -356,7 +363,7 @@ int main() nothrow {
     return 0;
 }
 '@ | Set-Content -LiteralPath $gzipMember
-    $gzipSources = @('Compression/Gzip.gf', 'Compression/Deflate.gf', 'Hashing/CRC32.gf', 'Binary/BinaryPrimitives.gf') |
+    $gzipSources = @('Compression/Gzip.gf', 'Compression/Deflate.gf', 'Hashing/CRC32.gf', 'Binary/BitConverter.gf', 'Binary/BinaryPrimitives.gf') |
         ForEach-Object { Join-Path $extracted "Sdk/Standard/core/$_" }
     foreach ($optimization in @(0, 2)) {
         Invoke-PackagedCompiler $gzipMember @gzipSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "gzip-member-o$optimization.exe")
@@ -374,7 +381,7 @@ int main() nothrow {
     return 0;
 }
 '@ | Set-Content -LiteralPath $zlibStream
-    $zlibSources = @('Compression/Zlib.gf', 'Compression/Deflate.gf', 'Hashing/Adler32.gf', 'Binary/BinaryPrimitives.gf') |
+    $zlibSources = @('Compression/Zlib.gf', 'Compression/Deflate.gf', 'Hashing/Adler32.gf', 'Binary/BitConverter.gf', 'Binary/BinaryPrimitives.gf') |
         ForEach-Object { Join-Path $extracted "Sdk/Standard/core/$_" }
     foreach ($optimization in @(0, 2)) {
         Invoke-PackagedCompiler $zlibStream @zlibSources --no-stdlib --no-builtins --optimization $optimization --run -o (Join-Path $extracted "zlib-stream-o$optimization.exe")
@@ -1686,7 +1693,7 @@ int main(int argc, char** argv) {
     [IO.File]::WriteAllLines($allSourcesList, $allSources, [Text.UTF8Encoding]::new($false))
     $boundedInput = Join-Path $extracted 'bounded input.bin'
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
-    Invoke-PackagedCompiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
+    Invoke-PackagedCompiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') '--' $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
     foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj', 'linux-random/LinuxRandom.gfproj', 'windows-network/WindowsNetwork.gfproj')) {
         & $driver check (Join-Path $extracted "Sdk/libraries/platform/$project")

@@ -242,6 +242,7 @@ public class ConsoleTests
                 RedirectStandardOutput = true, RedirectStandardError = true
             };
             start.ArgumentList.Add(typeof(CompilerProgram).Assembly.Location);
+            start.ArgumentList.Add("--no-stdlib");
             foreach (var source in sources.Concat(StandardLibrary.AutomaticFiles.Select(relative =>
                 new SourceFile(relative, StandardLibrary.Load(relative).Text))))
             {

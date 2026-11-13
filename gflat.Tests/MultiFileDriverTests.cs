@@ -12,10 +12,10 @@ public class MultiFileDriverTests
             string output = Path.Combine(dir, "program.exe");
             File.WriteAllText(main, "int main() => Helpers::answer();");
             File.WriteAllText(helper, "namespace Helpers { int answer() => 42; }");
-            Assert.Equal(42, CompilerProgram.Main([main, helper, "-o", output, "--run"]));
-            Assert.Equal(42, CompilerProgram.Main([helper, main, "-o", output, "--run"]));
+            Assert.Equal(42, CompilerProgram.Main(["--no-stdlib", main, helper, "-o", output, "--run"]));
+            Assert.Equal(42, CompilerProgram.Main(["--no-stdlib", helper, main, "-o", output, "--run"]));
             string ir = Path.Combine(dir, "program.ll");
-            Assert.Equal(0, CompilerProgram.Main([main, helper, "--emit-ir", "-o", ir]));
+            Assert.Equal(0, CompilerProgram.Main(["--no-stdlib", main, helper, "--emit-ir", "-o", ir]));
             Assert.Contains("@gflat$Helpers$answer", File.ReadAllText(ir));
         });
     }
@@ -29,8 +29,8 @@ public class MultiFileDriverTests
             string helper = Path.Combine(dir, "helper.gf");
             File.WriteAllText(main, "int main() => 0;");
             File.WriteAllText(helper, "int helper() => 42;");
-            Assert.Equal(2, CompilerProgram.Main([main, helper, "--emit-ir", "-o", helper]));
-            Assert.Equal(2, CompilerProgram.Main([main, Path.Combine(dir, ".", "main.gf"), "--emit-ir"]));
+            Assert.Equal(2, CompilerProgram.Main(["--no-stdlib", main, helper, "--emit-ir", "-o", helper]));
+            Assert.Equal(2, CompilerProgram.Main(["--no-stdlib", main, Path.Combine(dir, ".", "main.gf"), "--emit-ir"]));
             Assert.Equal("int helper() => 42;", File.ReadAllText(helper));
             Assert.Equal("int main() => 0;", File.ReadAllText(main));
         });
@@ -46,7 +46,7 @@ public class MultiFileDriverTests
             string ir = Path.Combine(dir, "program.ll");
             File.WriteAllText(main, "int main() => helper();");
             File.WriteAllText(broken, "int helper() {\n    return missing;\n}");
-            var result = NativeToolchain.Run("dotnet", [typeof(CompilerProgram).Assembly.Location, main, broken, "--emit-ir", "-o", ir]);
+            var result = NativeToolchain.Run("dotnet", [typeof(CompilerProgram).Assembly.Location, "--no-stdlib", main, broken, "--emit-ir", "-o", ir]);
             Assert.Equal(1, result.ExitCode);
             Assert.Contains(broken + "(2,12): error", result.StandardError);
             Assert.False(File.Exists(ir));
@@ -62,7 +62,7 @@ public class MultiFileDriverTests
             string second = Path.Combine(dir, "b.gf");
             File.WriteAllText(first, "int main() => 1;");
             File.WriteAllText(second, "int main() => 2;");
-            var result = NativeToolchain.Run("dotnet", [typeof(CompilerProgram).Assembly.Location, first, second, "--emit-ir"]);
+            var result = NativeToolchain.Run("dotnet", [typeof(CompilerProgram).Assembly.Location, "--no-stdlib", first, second, "--emit-ir"]);
             Assert.Equal(1, result.ExitCode);
             Assert.Contains(second + "(1,1): error", result.StandardError);
             Assert.Contains(first + "(1,1): note: previous declaration", result.StandardError);

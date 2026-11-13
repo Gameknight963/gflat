@@ -194,7 +194,7 @@ public sealed class ProjectCreationTests
             };
             foreach (string argument in new[] { "msbuild", path, "-t:Check", "-nologo", "-v:q",
                 "-p:GflatDefaultSdkRoot=" + ProjectCreation.FindToolchainRoot(),
-                "-p:GflatCompilerCommand=dotnet \"" + typeof(Program).Assembly.Location + "\"" })
+                "-p:GflatCompilerCommand=dotnet \"" + typeof(CompilerProgram).Assembly.Location + "\"" })
                 start.ArgumentList.Add(argument);
             start.Environment["MSBuildSDKsPath"] = Path.Combine(AppContext.BaseDirectory, "Sdks");
             using var process = System.Diagnostics.Process.Start(start)!;

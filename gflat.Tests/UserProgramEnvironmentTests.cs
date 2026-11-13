@@ -30,7 +30,8 @@ public sealed class UserProgramEnvironmentTests
             UseShellExecute = false, CreateNoWindow = true,
             RedirectStandardOutput = true, RedirectStandardError = true
         };
-        start.ArgumentList.Add(typeof(Program).Assembly.Location);
+        start.ArgumentList.Add(arguments[0] is "build" or "check" or "clean"
+            ? typeof(Program).Assembly.Location : typeof(CompilerProgram).Assembly.Location);
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
         foreach (string name in PrivateBuildVariables)
         {

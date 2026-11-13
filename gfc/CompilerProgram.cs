@@ -9,7 +9,7 @@ public static class CompilerProgram
     public static int Main(string[] args)
         => Run(args);
 
-    public static int Run(string[] args, IReadOnlyList<string>? defaultExportSources = null)
+    public static int Run(string[] args)
     {
         var diagnostics = new DiagnosticBag();
         try
@@ -20,7 +20,7 @@ public static class CompilerProgram
             var sourcePaths = new List<string>();
             string? outputPath = null, clang = null;
             string outputType = "Executable";
-            bool run = false, irOnly = false, check = false, noStdLib = true;
+            bool run = false, irOnly = false, check = false, noStdLib = false;
             int? exceptionReserveBytes = null;
             int? optimizationLevel = null;
             bool? debugSymbols = null;
@@ -48,7 +48,7 @@ public static class CompilerProgram
                         Console.WriteLine("gfc <source.gf> [more.gf ...] [-o output] [--check] [--emit-ir] [--run]");
                         Console.WriteLine("Explicit compiler inputs: --source-list FILE, -I PATH, -D NAME[=TOKENS], --library-interface FILE.");
                         Console.WriteLine("Native options: --clang PATH, --optimization 0|1|2|3, --debug, --no-builtins, --output-type Executable|StaticLibrary|DynamicLibrary.");
-                        Console.WriteLine("Sources and declarations are supplied explicitly. Use gflat for projects and automatic Standard references.");
+                        Console.WriteLine("Standard is included by default. Use --no-stdlib to supply all declarations yourself. Use gflat for projects.");
                         return 0;
                     case "--check": check = true; break;
                     case "--no-stdlib": noStdLib = true; break;
@@ -135,6 +135,15 @@ public static class CompilerProgram
                 throw new ArgumentException("Referenced runtime libraries have conflicting filenames.");
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
                 throw new ArgumentException("A source file may only be supplied once.");
+            IReadOnlyList<string> userSources = sourcePaths.ToArray();
+            if (!noStdLib)
+            {
+                string root = ProjectSdk.FindRoot(AppContext.BaseDirectory, Environment.GetEnvironmentVariable("GflatSdkRoot"))
+                    ?? throw new ArgumentException("Cannot locate Standard. Keep the SDK alongside gfc, or use --no-stdlib with explicit sources.");
+                var supplied = sourcePaths.ToHashSet(pathComparer);
+                sourcePaths.AddRange(Directory.EnumerateFiles(Path.Combine(root, "Standard"), "*.gf", SearchOption.AllDirectories)
+                    .Select(Path.GetFullPath).Where(supplied.Add));
+            }
             void ValidateOutput(string path)
             {
                 if (sourcePaths.Contains(path, pathComparer) || sourceLists.Contains(path, pathComparer))
@@ -157,9 +166,9 @@ public static class CompilerProgram
             var included = new HashSet<string>(pathComparer);
             var compilationOptions = new CompilationOptions
             {
-                NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
+                NoStdLib = true, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true,
                 BinaryInterfaces = binaryInterfaces,
-                ExportSources = outputType == "Executable" ? null : exportSources ?? defaultExportSources ?? sourcePaths,
+                ExportSources = outputType == "Executable" ? null : exportSources ?? userSources,
                 IncludeDirectories = preprocessing.Directories, Defines = preprocessing.Defines,
                 FileDeclarationScopes = preprocessing.DeclarationScopes.ToDictionary(pair => pair.Key,
                     pair => Enum.Parse<DeclarationScope>(pair.Value), pathComparer),

@@ -54,9 +54,9 @@ public static class Program
                         Console.WriteLine("Debug symbols: -g or --debug; --no-debug disables the project's DebugSymbols setting.");
                         Console.WriteLine("Libc builtin recognition: --no-builtins disables it; --builtins overrides the project's NoBuiltins setting. Explicit calls/intrinsics may still require runtime helpers.");
                         Console.WriteLine("Native linking: repeat --native-library NAME, --native-library-file PATH, and --native-library-dir PATH. Project options append to declared requirements.");
-                        Console.WriteLine("Source builds include Standard unless --no-stdlib is specified. Use gfc for explicit compiler inputs. Pass project files directly to gflat.");
+                        Console.WriteLine("Use gfc to compile source files. Standard is included by default unless --no-stdlib is specified.");
                         Console.WriteLine("Binary output: --output-type Executable|StaticLibrary|DynamicLibrary. Projects use the OutputType property.");
-                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
+                        Console.WriteLine("gflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
                     case "check" when i == 0: check = true; break;
@@ -152,21 +152,21 @@ public static class Program
                     if (run || irOnly || args.Contains("-o")) throw new ArgumentException("SourceLibrary projects have no standalone output; build an executable referencing them.");
                 }
             }
+            var projectGraph = graph ?? throw new ArgumentException("Specify a project file. Use gfc to compile source files.");
             if (clean)
             {
-                if (graph == null || run || irOnly || args.Contains("-o")) throw new ArgumentException("Use clean with a project file and no output options.");
+                if (run || irOnly || args.Contains("-o")) throw new ArgumentException("Use clean with a project file and no output options.");
                 // The SDK validates the actual executable/IR paths against all
                 // sources and imports before deleting those same normalized paths.
-                return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs);
+                return ProjectBuild.Run(projectGraph.Root, "Clean", configuration, platform, sourceGraph: projectGraph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs);
             }
-            if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (check && (run || irOnly)) throw new ArgumentException("--check cannot be combined with --run or --emit-ir.");
             if (run && irOnly) throw new ArgumentException("--run cannot be combined with --emit-ir.");
             if (run && outputType != "Executable") throw new ArgumentException("--run requires executable output.");
-            if (graph?.Root.Kind == ProjectKind.SourceLibrary)
-                return ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
+            if (projectGraph.Root.Kind == ProjectKind.SourceLibrary)
+                return ProjectBuild.Run(projectGraph.Root, check ? "Check" : "Build", configuration, platform,
                     clang: clang, exceptionReserveBytes: exceptionReserveBytes, optimizationLevel: optimizationLevel,
-                    sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs, preprocessorOverrides: preprocessing);
+                    sourceGraph: projectGraph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs, preprocessorOverrides: preprocessing);
             string extension = outputType switch { "StaticLibrary" => OperatingSystem.IsWindows() ? ".lib" : ".a",
                 "DynamicLibrary" => OperatingSystem.IsWindows() ? ".dll" : ".so", _ => ".exe" };
             outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : extension));
@@ -193,7 +193,7 @@ public static class Program
             void ValidateOutput(string path)
             {
                 if (sourcePaths.Contains(path, pathComparer) || sourceLists.Contains(path, pathComparer) ||
-                    graph?.Projects.Any(project => pathComparer.Equals(project.FilePath, path)) == true)
+                    projectGraph.Projects.Any(project => pathComparer.Equals(project.FilePath, path)))
                     throw new ArgumentException("Output must differ from every source file and source list.");
                 if (nativeLinkInputs.Libraries.Any(library => library.Kind == "File" && pathComparer.Equals(library.Value, path)) ||
                     nativeManifests.Contains(path, pathComparer) || preprocessorManifests.Contains(path, pathComparer) || binaryInterfaces.Contains(path, pathComparer) || runtimeFiles.Contains(path, pathComparer))
@@ -209,30 +209,10 @@ public static class Program
                 if (irOnly && (pathComparer.Equals(dependencyFile, outputPath + ".foreign.json") || pathComparer.Equals(dependencyFile + ".state", outputPath + ".foreign.json")))
                     throw new ArgumentException("Dependencies and foreign manifest output must use different paths.");
             }
-            if (graph != null)
-            {
-                int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib, debugSymbols, noBuiltins, nativeLinkInputs, preprocessing);
-                if (result != 0 || !run) return result;
-                return NativeToolchain.RunProgram(outputPath, programArguments);
-            }
-            var compilerArguments = args.ToList();
-            if (compilerArguments[0] is "build" or "check")
-            {
-                string command = compilerArguments[0];
-                compilerArguments.RemoveAt(0);
-                if (command == "check") compilerArguments.Add("--check");
-            }
-            if (!noStdLib)
-            {
-                IEnumerable<string> librarySources = sourceLists.Count != 0
-                    ? StandardLibrary.AutomaticFiles.Select(relative => StandardLibrary.Load(relative).Path)
-                    : Directory.EnumerateFiles(Path.Combine(ProjectCreation.FindToolchainRoot(), "Standard"), "*.gf", SearchOption.AllDirectories);
-                var supplied = sourcePaths.ToHashSet(pathComparer);
-                compilerArguments.AddRange(librarySources.Where(supplied.Add));
-            }
-            if (programArguments.Length > 0) { compilerArguments.Add("--"); compilerArguments.AddRange(programArguments); }
-            return CompilerProgram.Run(compilerArguments.ToArray(), sourcePaths);
+            int result = ProjectBuild.Run(projectGraph.Root, check ? "Check" : "Build", configuration, platform,
+                irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, projectGraph, noStdLib, debugSymbols, noBuiltins, nativeLinkInputs, preprocessing);
+            if (result != 0 || !run) return result;
+            return NativeToolchain.RunProgram(outputPath, programArguments);
         }
         catch (ProjectException ex)
         {

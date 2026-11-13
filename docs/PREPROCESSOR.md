@@ -187,7 +187,7 @@ number. Unknown directives are errors. Unknown pragmas produce warnings.
 ## Configure a build
 
 ```console
-gflat main.gf -I include -D ENABLE_TRACE=1
+gfc main.gf -I include -D ENABLE_TRACE=1
 gflat build app.gfproj -D ENABLE_TRACE=1
 ```
 

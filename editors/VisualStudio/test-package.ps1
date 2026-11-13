@@ -163,8 +163,8 @@ int main()
     return values[0] == 41 && values[1] == 42 ? 0 : 1;
 }
 '@ | Set-Content -LiteralPath $singleFile -Encoding Ascii
-    & $driver $singleFile -o (Join-Path $extracted 'single-file-driver.exe') --run
-    if ($LASTEXITCODE -ne 0) { throw 'Packaged single-file driver did not supply Standard' }
+    & $compiler $singleFile -o (Join-Path $extracted 'single-file-driver.exe') --run
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged single-file compiler did not supply Standard' }
     $runtimeSources = @('core/Attribute.gf', 'core/CompilerGeneratedAttribute.gf', 'core/Exception.gf', 'core/BadAllocException.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'core/IGarbageCollector.gf', 'libc/Memory/allocation.gf') | ForEach-Object { Join-Path $extracted ('Sdk/Standard/' + $_) }
     function Invoke-PackagedCompiler {
         $inputs = @($args)
@@ -177,6 +177,7 @@ int main()
         if ($inputs -notcontains '--no-stdlib' -and $inputs -notcontains '--source-list') {
             $inputs += @($runtimeSources | Where-Object { $inputs -notcontains $_ })
         }
+        if ($inputs -notcontains '--no-stdlib') { $inputs += '--no-stdlib' }
         if ($separator -ge 0) { $inputs += @('--') + $programInputs }
         & $compiler @inputs
     }

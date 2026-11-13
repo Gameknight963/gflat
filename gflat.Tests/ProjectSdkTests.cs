@@ -211,7 +211,7 @@ public sealed class ProjectSdkTests
             var start = new System.Diagnostics.ProcessStartInfo("dotnet") {
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
             };
-            foreach (string argument in new[] { "msbuild", project, "-nologo", "-v:q", "-p:GflatEmitIR=true", "-p:GflatCompilerCommand=dotnet \"" + typeof(Program).Assembly.Location + "\"" }) start.ArgumentList.Add(argument);
+            foreach (string argument in new[] { "msbuild", project, "-nologo", "-v:q", "-p:GflatEmitIR=true", "-p:GflatCompilerCommand=dotnet \"" + typeof(CompilerProgram).Assembly.Location + "\"" }) start.ArgumentList.Add(argument);
             using var process = System.Diagnostics.Process.Start(start)!;
             var stdout = process.StandardOutput.ReadToEndAsync();
             var stderr = process.StandardError.ReadToEndAsync();

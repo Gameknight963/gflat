@@ -50,7 +50,7 @@ public sealed class SourceLibraryProjectTests : IDisposable
     public void SourceLibraryTargetsReturnNoArtifactAndRejectDirectIrRequests()
     {
         string project = Project();
-        string compiler = "dotnet \"" + typeof(Program).Assembly.Location + "\"";
+        string compiler = "dotnet \"" + typeof(CompilerProgram).Assembly.Location + "\"";
         var built = NativeToolchain.Run("dotnet", ["msbuild", project, "-nologo", "-getTargetResult:Build,GetTargetPath", "-p:GflatCompilerCommand=" + compiler], 30000);
         Assert.Equal(0, built.ExitCode);
         using var json = JsonDocument.Parse(built.StandardOutput);

@@ -22,10 +22,11 @@ public sealed class IncrementalProjectBuildTests
                 """);
             string output = Path.Combine(directory, "bin", "Debug", "app.exe");
             string compiler = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location)!, "gflat.exe");
+            string sourceCompiler = Path.Combine(Path.GetDirectoryName(typeof(CompilerProgram).Assembly.Location)!, "gfc.exe");
             void BuildWithRuntime(string profile)
             {
                 var result = NativeToolchain.Run(compiler, ["--msbuild", project, "Build", "RuntimeLibrary", profile,
-                    "GflatCompilerPath", compiler, "GflatProjectInputs", project,
+                    "GflatCompilerPath", sourceCompiler, "GflatProjectInputs", project,
                     "GflatDefaultClangInput", NativeToolchain.FindClang()], 120000);
                 Assert.True(result.ExitCode == 0, result.StandardOutput + result.StandardError);
             }

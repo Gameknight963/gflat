@@ -33,7 +33,7 @@ int main() nothrow
 For selective compilation:
 
 ```powershell
-dotnet gflat/bin/Debug/net10.0/gflat.dll main.gf Standard/core/Threading/Interlocked.gf --no-stdlib --no-builtins --run
+dotnet gfc/bin/Debug/net10.0/gfc.dll main.gf Standard/core/Threading/Interlocked.gf --no-stdlib --no-builtins --run
 ```
 
 ## Shared storage

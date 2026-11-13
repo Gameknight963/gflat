@@ -107,10 +107,10 @@ gflat new MyApp
 gflat build MyApp/MyApp.gfproj --run
 ```
 
-You can also compile individual files with `gflat main.gf helper.gf --run`.
-Projects and direct `gflat` source-file commands include Standard by default.
+You can also compile individual files with `gfc main.gf helper.gf --run`.
+Projects and direct `gfc` source-file commands include Standard by default.
 
-`gfc` is the compiler for explicit source inputs, such as `gfc main.gf --check`. It does not discover projects or add Standard. Use `gflat main.gf --no-stdlib` to opt out of Standard in the driver. See
+`gfc` compiles source files and includes Standard by default. Use `gfc main.gf --no-stdlib` to supply all declarations yourself. `gflat` creates and builds projects. See
 [project setup and library selection](docs/PROJECTS.md).
 
 Run `gflat doctor --native` to check the toolchain if setup fails.
